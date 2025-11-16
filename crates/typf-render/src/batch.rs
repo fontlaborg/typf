@@ -3,7 +3,6 @@
 //! Batch rendering implementation for parallel text processing.
 
 use hdrhistogram::Histogram;
-use typf_core::{Backend, Font, RenderOptions, RenderOutput, Result, SegmentOptions, ShapingResult};
 use parking_lot::Mutex;
 use rayon::iter::IndexedParallelIterator;
 use rayon::prelude::*;
@@ -12,6 +11,9 @@ use std::sync::{
     Arc,
 };
 use std::time::{Duration, Instant};
+use typf_core::{
+    Backend, Font, RenderOptions, RenderOutput, Result, SegmentOptions, ShapingResult,
+};
 
 /// Item to be rendered in batch.
 #[derive(Clone)]
@@ -307,11 +309,11 @@ fn combine_shaped_results(results: Vec<ShapingResult>) -> ShapingResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::Ordering;
     use typf_core::{
         types::{BoundingBox, Direction, Glyph, TextRun},
         Result,
     };
-    use std::sync::atomic::Ordering;
 
     #[derive(Default)]
     struct DummyBackend;

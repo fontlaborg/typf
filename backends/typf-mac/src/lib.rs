@@ -31,17 +31,17 @@ use core_text::{
     string_attributes::{kCTFontAttributeName, kCTKernAttributeName, kCTLigatureAttributeName},
 };
 use lru::LruCache;
-use typf_core::{
-    types::{AntialiasMode, FontSource, FontStyle, RenderFormat},
-    Backend, Bitmap, Font, FontCache, Glyph, TypfError, RenderOptions, RenderOutput, RenderSurface,
-    Result, SegmentOptions, ShapingResult, TextRun,
-};
-use typf_fontdb::FontDatabase;
-use typf_unicode::TextSegmenter;
 use parking_lot::RwLock;
 use std::borrow::Cow;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
+use typf_core::{
+    types::{AntialiasMode, FontSource, FontStyle, RenderFormat},
+    Backend, Bitmap, Font, FontCache, Glyph, RenderOptions, RenderOutput, RenderSurface, Result,
+    SegmentOptions, ShapingResult, TextRun, TypfError,
+};
+use typf_fontdb::FontDatabase;
+use typf_unicode::TextSegmenter;
 
 pub struct CoreTextBackend {
     cache: FontCache,

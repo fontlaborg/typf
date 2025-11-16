@@ -6,8 +6,8 @@
 
 use typf_core::{
     types::{AntialiasMode, Direction, RenderFormat},
-    Backend, Bitmap, Font, FontCache, Glyph, TypfError, RenderOptions, RenderOutput, RenderSurface,
-    Result, SegmentOptions, ShapingResult, TextRun,
+    Backend, Bitmap, Font, FontCache, Glyph, RenderOptions, RenderOutput, RenderSurface, Result,
+    SegmentOptions, ShapingResult, TextRun, TypfError,
 };
 
 use windows::Win32::Graphics::DirectWrite::{

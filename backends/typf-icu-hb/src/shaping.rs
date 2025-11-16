@@ -6,9 +6,9 @@
 //! ligatures, kerning, and other OpenType features.
 
 use harfbuzz_rs::{Direction, Feature, GlyphBuffer, Language, Tag, UnicodeBuffer};
-use typf_fontdb::font_cache::FontInstance;
 use std::path::Path;
 use std::str::FromStr;
+use typf_fontdb::font_cache::FontInstance;
 
 /// Shaped text with positioned glyphs.
 ///

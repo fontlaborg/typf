@@ -3,8 +3,6 @@
 """Integration tests for typf Python bindings using the real native module."""
 
 import pytest
-import os
-import sys
 from pathlib import Path
 
 # Import the actual native module (no mocking)

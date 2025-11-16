@@ -4,8 +4,6 @@
 
 use crate::outlines::glyph_bez_path_with_variations;
 use kurbo::{BezPath, PathEl, Point};
-use typf_core::{types::BoundingBox, Font, Glyph, ShapingResult, SvgOptions};
-use typf_fontdb::FontDatabase;
 use parking_lot::RwLock;
 use read_fonts::{ReadError, TableProvider};
 use skrifa::{FontRef, GlyphId};
@@ -14,6 +12,8 @@ use std::convert::TryFrom;
 use std::fmt::Write;
 use std::sync::OnceLock;
 use thiserror::Error;
+use typf_core::{types::BoundingBox, Font, Glyph, ShapingResult, SvgOptions};
+use typf_fontdb::FontDatabase;
 
 /// SVG renderer for converting shaped text to SVG format.
 pub struct SvgRenderer {
@@ -331,10 +331,10 @@ enum FontLoadError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use typf_core::types::Direction;
     use skrifa::MetadataProvider;
     use std::fs;
     use std::path::PathBuf;
+    use typf_core::types::Direction;
 
     fn sample_shaping_result() -> ShapingResult {
         ShapingResult {

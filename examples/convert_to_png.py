@@ -3,7 +3,6 @@
 
 """Convert raw RGBA data to PNG for visualization."""
 
-import struct
 from PIL import Image
 from pathlib import Path
 import sys

@@ -3,13 +3,13 @@
 //! This module provides high-quality grayscale glyph rasterization using the Zeno library.
 //! Ported from haforu with exact algorithm preservation for pixel-perfect parity.
 
-use typf_fontdb::font_cache::FontInstance;
 use read_fonts::TableProvider;
 use skrifa::instance::Size;
 use skrifa::outline::{DrawSettings, OutlinePen};
 use skrifa::MetadataProvider;
 use std::path::Path;
 use thiserror::Error;
+use typf_fontdb::font_cache::FontInstance;
 use zeno::{Command, Mask, Transform};
 
 /// Error types for zeno rendering
@@ -19,10 +19,7 @@ pub enum ZenoError {
     InvalidParams(String),
 
     #[error("Failed to rasterize glyph {glyph_id}: {reason}")]
-    RasterizationFailed {
-        glyph_id: u32,
-        reason: String,
-    },
+    RasterizationFailed { glyph_id: u32, reason: String },
 
     #[error("Font error: {0}")]
     FontError(String),
@@ -170,7 +167,7 @@ impl Image {
     /// Compute normalized pixel density (0.0 - 1.0)
     #[inline]
     pub fn density(&self) -> f64 {
-        if self.len() == 0 {
+        if self.is_empty() {
             return 0.0;
         }
 
@@ -384,7 +381,15 @@ impl GlyphRasterizer {
             let glyph_x = cursor_x + (glyph.x_offset() as f32 * scale);
             let glyph_y = baseline_y - (glyph.y_offset() as f32 * scale);
 
-            self.composite_glyph(&mut canvas, &path_commands, glyph_x, glyph_y, scale, width, height)?;
+            self.composite_glyph(
+                &mut canvas,
+                &path_commands,
+                glyph_x,
+                glyph_y,
+                scale,
+                width,
+                height,
+            )?;
 
             cursor_x += (glyph.x_advance() as f32 + tracking) * scale;
         }

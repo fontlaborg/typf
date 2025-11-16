@@ -10,15 +10,15 @@ pub use font_cache::{FontCacheError, FontInstance, FontLoader};
 use dashmap::DashMap;
 use fontdb::{Database, Family, Query, Source, Stretch, Style, Weight};
 use log::warn;
-use typf_core::{
-    types::{Font, FontSource, FontStyle},
-    TypfError, Result,
-};
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use shellexpand::tilde;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use typf_core::{
+    types::{Font, FontSource, FontStyle},
+    Result, TypfError,
+};
 
 /// Global font database instance backed by `fontdb`.
 pub struct FontDatabase {

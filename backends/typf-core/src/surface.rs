@@ -4,7 +4,7 @@
 
 use crate::{
     types::{Bitmap, RenderFormat, RenderOutput},
-    TypfError, Result,
+    Result, TypfError,
 };
 
 /// Raw pixel format for a render surface.
@@ -177,10 +177,10 @@ fn unpremultiply(data: &mut [u8]) {
         let mut i = 1;
         while i < 255 {
             // (255 * 256) / i, rounded up
-            table[i] = ((255 * 256 + i - 1) / i) as u16;
+            table[i] = (255u32 * 256).div_ceil(i as u32) as u16;
             i += 1;
         }
-        table[0] = 0;     // Avoid division by zero
+        table[0] = 0; // Avoid division by zero
         table[255] = 256; // alpha=255 means already unpremultiplied
         table
     };

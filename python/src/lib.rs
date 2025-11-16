@@ -6,15 +6,6 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::Arc;
 
-use typf_core::{
-    types::{
-        AntialiasMode, BoundingBox, Direction, Features, FontSource, FontStyle, HintingMode,
-        RenderFormat,
-    },
-    utils::combine_shaped_results,
-    Backend, Font as CoreFont, Glyph as CoreGlyph, RenderOptions as CoreRenderOptions,
-    RenderOutput, SegmentOptions, ShapingResult as CoreShapingResult, TextRun,
-};
 use pyo3::types::PyType;
 use pyo3::PyAny;
 use pyo3::{
@@ -26,6 +17,15 @@ use pyo3::{
     IntoPy,
 };
 use pyo3::{Bound, PyRef};
+use typf_core::{
+    types::{
+        AntialiasMode, BoundingBox, Direction, Features, FontSource, FontStyle, HintingMode,
+        RenderFormat,
+    },
+    utils::combine_shaped_results,
+    Backend, Font as CoreFont, Glyph as CoreGlyph, RenderOptions as CoreRenderOptions,
+    RenderOutput, SegmentOptions, ShapingResult as CoreShapingResult, TextRun,
+};
 
 #[cfg(all(target_os = "macos", feature = "mac"))]
 use typf_mac::CoreTextBackend;

@@ -2,11 +2,52 @@
 
 ## I. CORE PHILOSOPHY: The Rendering Engine
 
-`typf` is the foundational rendering engine. Its development priorities are **performance**, **correctness**, and **API stability**. It must be a reliable, reusable, and panic-free library.
+`typf` is the foundational rendering engine providing cross-platform text layout and rasterization. Its development priorities are **performance**, **correctness**, and **API stability**.
 
-- **Performance**: We aim for state-of-the-art performance. This means minimizing allocations, using efficient data structures (e.g., `DashMap` for concurrency), and leveraging SIMD where appropriate. Every change should be considered for its performance impact.
-- **Correctness**: The engine must produce accurate and high-fidelity renderings. We rely on extensive testing, including visual regression tests (SSIM) and fuzzing, to ensure correctness.
-- **API Stability**: As a library, `typf`'s public API is its contract. Breaking changes should be avoided unless absolutely necessary and must be clearly documented in a migration guide.
+### The Three Pillars
+
+1. **Performance** - Sub-millisecond rendering for typical glyphs
+   - Minimize allocations (object pooling for hot paths)
+   - Efficient data structures (multi-shard LRU, DashMap for concurrency)
+   - SIMD acceleration where appropriate (F26Dot6 math, edge processing)
+   - Zero-copy font loading (memmap2)
+   - Lock-free concurrency (avoid global RwLock bottlenecks)
+
+2. **Correctness** - Pixel-perfect, high-fidelity output
+   - Visual regression testing (SSIM-based comparisons)
+   - Fuzzing critical paths (scan_converter, shaping, font parsing)
+   - Miri checks for undefined behavior in unsafe blocks
+   - Property-based testing (cache behavior, coordinate transformations)
+   - Multi-script validation (Latin, Arabic, Devanagari, CJK)
+
+3. **API Stability** - Library contract is sacred
+   - No breaking changes without migration guide
+   - Semantic versioning strictly enforced
+   - Comprehensive rustdoc (100% public API coverage)
+   - Example-driven documentation
+   - Clear error types (`TypfError` enum, no panics in public API)
+
+### Current Status (Nov 2025)
+
+**Production-Ready:**
+- ✅ All 3 platform backends (CoreText, DirectWrite, HarfBuzz)
+- ✅ Multi-shard LRU caching (16 shards, lock contention eliminated)
+- ✅ Python bindings via PyO3 (automatic backend selection)
+- ✅ CLI with batch/stream/render subcommands
+- ✅ 38+ integration tests passing
+- ✅ SVG/PNG output with COLRv1 color font support
+
+**In Progress:**
+- ⏳ Orge rasterizer integration (core algorithm complete, backend wiring needed)
+- ⏳ FFI panic handling (need std::panic::catch_unwind wrappers)
+- ⏳ Visual regression framework (SSIM infrastructure planned)
+- ⏳ Comprehensive README (currently minimal)
+
+**Planned:**
+- 📋 SIMD-accelerated fixed-point math
+- 📋 cargo-fuzz + cargo-miri in CI
+- 📋 Unified typf_error::Error enum
+- 📋 seccomp sandboxing for untrusted fonts
 
 ## II. PROJECT STRUCTURE
 

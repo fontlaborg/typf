@@ -15,9 +15,9 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kurbo::{BezPath, PathEl, Point};
 
+use typf_icu_hb::renderer::GlyphRenderer;
 #[cfg(feature = "orge")]
 use typf_icu_hb::renderer::OrgeRenderer;
-use typf_icu_hb::renderer::GlyphRenderer;
 #[cfg(feature = "tiny-skia-renderer")]
 use typf_icu_hb::renderer::TinySkiaRenderer;
 

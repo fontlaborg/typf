@@ -37,7 +37,7 @@ pub fn calculate_bbox(glyphs: &[Glyph]) -> BoundingBox {
 
         // Set a reasonable vertical bounds centered on the baseline
         min_y = -estimated_height * 0.75; // Ascent (75% above baseline)
-        max_y = estimated_height * 0.25;   // Descent (25% below baseline)
+        max_y = estimated_height * 0.25; // Descent (25% below baseline)
     }
 
     BoundingBox {

@@ -401,9 +401,3 @@ impl Backend for MyBackend {
 ```
 
 See `backends/typf-core/src/traits.rs` for the complete trait definition.
-
-## See Also
-
-- [README.md](../README.md) - Quick start and installation
-- [PLAN.md](../PLAN.md) - Implementation roadmap
-- [GOALS.md](../GOALS.md) - Project goals and vision

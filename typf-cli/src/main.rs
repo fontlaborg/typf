@@ -8,15 +8,15 @@ use anyhow::{Context, Result};
 use base64::Engine;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, Subcommand};
-use typf_batch::{Job, JobResult, JobSpec};
-use typf_core::types::{BoundingBox, Direction, Glyph, ShapingResult, SvgOptions};
-use typf_fontdb::FontLoader;
-use typf_icu_hb::shaping::{ShapedText, ShapeRequest, TextShaper};
-use typf_render::svg::SvgRenderer;
-use typf_zeno::GlyphRasterizer;
 use rayon::prelude::*;
 use std::io::{self, BufRead, Read, Write};
 use std::time::Instant;
+use typf_batch::{Job, JobResult, JobSpec};
+use typf_core::types::{BoundingBox, Direction, Glyph, ShapingResult, SvgOptions};
+use typf_fontdb::FontLoader;
+use typf_icu_hb::shaping::{ShapeRequest, ShapedText, TextShaper};
+use typf_render::svg::SvgRenderer;
+use typf_zeno::GlyphRasterizer;
 
 const DEFAULT_MAX_FONTS: usize = 512;
 
@@ -371,8 +371,7 @@ fn run_batch(max_fonts: usize, base_dir: Option<&Utf8Path>) -> Result<()> {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
     for result in results {
-        serde_json::to_writer(&mut handle, &result)
-            .context("Failed to write JSON result")?;
+        serde_json::to_writer(&mut handle, &result).context("Failed to write JSON result")?;
         writeln!(&mut handle).context("Failed to write newline")?;
     }
 
@@ -411,8 +410,7 @@ fn run_stream(max_fonts: usize, base_dir: Option<&Utf8Path>) -> Result<()> {
         let result = process_job(&job, &font_loader, base_dir);
 
         // Output result
-        serde_json::to_writer(&mut out_handle, &result)
-            .context("Failed to write JSON result")?;
+        serde_json::to_writer(&mut out_handle, &result).context("Failed to write JSON result")?;
         writeln!(&mut out_handle).context("Failed to write newline")?;
         out_handle.flush().context("Failed to flush stdout")?;
     }
@@ -560,14 +558,17 @@ fn process_job(job: &Job, font_loader: &FontLoader, base_dir: Option<&Utf8Path>)
                     };
 
                     // Convert ShapedText to ShapingResult for SVG renderer
-                    let shaping_result = shaped_text_to_shaping_result(&shaped, &job.text.content, bbox);
+                    let shaping_result =
+                        shaped_text_to_shaping_result(&shaped, &job.text.content, bbox);
 
                     let svg_renderer = SvgRenderer::new(&SvgOptions::default());
                     let svg_output = svg_renderer.render(&shaping_result, &SvgOptions::default());
 
                     // Encode as base64 for JSON transport
                     let data = match job.rendering.encoding.as_str() {
-                        "base64" => base64::engine::general_purpose::STANDARD.encode(svg_output.as_bytes()),
+                        "base64" => {
+                            base64::engine::general_purpose::STANDARD.encode(svg_output.as_bytes())
+                        }
                         "binary" => {
                             return JobResult::error(
                                 job.id.clone(),
@@ -644,11 +645,8 @@ fn process_job(job: &Job, font_loader: &FontLoader, base_dir: Option<&Utf8Path>)
                                 // PNG encoding
                                 let mut png_data = Vec::new();
                                 {
-                                    let mut encoder = png::Encoder::new(
-                                        &mut png_data,
-                                        width,
-                                        height,
-                                    );
+                                    let mut encoder =
+                                        png::Encoder::new(&mut png_data, width, height);
                                     encoder.set_color(png::ColorType::Grayscale);
                                     encoder.set_depth(png::BitDepth::Eight);
                                     let mut writer = encoder.write_header().unwrap();
@@ -738,8 +736,8 @@ fn run_render(
     direction: String,
     features: Option<String>,
 ) -> Result<()> {
-    use typf_batch::{FontConfig, Job, RenderingConfig, TextConfig};
     use std::collections::HashMap;
+    use typf_batch::{FontConfig, Job, RenderingConfig, TextConfig};
 
     // Parse variations from string format
     let mut var_map = HashMap::new();
@@ -777,8 +775,14 @@ fn run_render(
         width = estimated_width;
         height = estimated_height;
 
-        log::debug!("Auto-sized canvas: {}x{} (text: '{}', size: {}, padding: {})",
-                   width, height, text, font_size, padding);
+        log::debug!(
+            "Auto-sized canvas: {}x{} (text: '{}', size: {}, padding: {})",
+            width,
+            height,
+            text,
+            font_size,
+            padding
+        );
     }
 
     // Create a job
@@ -822,7 +826,8 @@ fn run_render(
             // Write SVG directly (SVG doesn't support crop)
             if result.status == "success" {
                 if let Some(rendering) = result.rendering {
-                    let svg_data = base64::engine::general_purpose::STANDARD.decode(rendering.data)?;
+                    let svg_data =
+                        base64::engine::general_purpose::STANDARD.decode(rendering.data)?;
                     std::fs::write(&output_path, svg_data)?;
                     println!("SVG written to: {}", output_path);
                 }
@@ -832,7 +837,8 @@ fn run_render(
             }
         } else if result.status == "success" {
             if let Some(rendering) = result.rendering {
-                let mut image_bytes = base64::engine::general_purpose::STANDARD.decode(rendering.data)?;
+                let mut image_bytes =
+                    base64::engine::general_purpose::STANDARD.decode(rendering.data)?;
 
                 // Apply crop if requested (only for bitmap formats)
                 if crop && (format == "pgm" || format == "png") {
@@ -841,7 +847,8 @@ fn run_render(
                         // Parse PGM header and extract pixels
                         if let Some(data_start) = find_pgm_data_start(&image_bytes) {
                             let pixels = &image_bytes[data_start..];
-                            let (cropped, new_width, new_height) = crop_image(pixels, rendering.width, rendering.height);
+                            let (cropped, new_width, new_height) =
+                                crop_image(pixels, rendering.width, rendering.height);
 
                             // Rebuild PGM with new dimensions
                             let mut new_pgm = Vec::new();
@@ -849,8 +856,13 @@ fn run_render(
                             new_pgm.extend_from_slice(&cropped);
                             image_bytes = new_pgm;
 
-                            log::debug!("Cropped PGM from {}x{} to {}x{}",
-                                       rendering.width, rendering.height, new_width, new_height);
+                            log::debug!(
+                                "Cropped PGM from {}x{} to {}x{}",
+                                rendering.width,
+                                rendering.height,
+                                new_width,
+                                new_height
+                            );
                         }
                     } else if format == "png" {
                         // For PNG, we'd need to decode, crop, re-encode
@@ -860,27 +872,29 @@ fn run_render(
                         if let Ok(img) = image::load_from_memory(&image_bytes) {
                             let gray_img = img.to_luma8();
                             let (img_width, img_height) = gray_img.dimensions();
-                            let (cropped_pixels, new_width, new_height) = crop_image(
-                                gray_img.as_raw(),
-                                img_width,
-                                img_height
-                            );
+                            let (cropped_pixels, new_width, new_height) =
+                                crop_image(gray_img.as_raw(), img_width, img_height);
 
                             // Create new image from cropped pixels
                             if let Some(cropped_img) = ImageBuffer::<Luma<u8>, Vec<u8>>::from_raw(
                                 new_width,
                                 new_height,
-                                cropped_pixels
+                                cropped_pixels,
                             ) {
                                 let mut png_data = Vec::new();
                                 cropped_img.write_to(
                                     &mut std::io::Cursor::new(&mut png_data),
-                                    image::ImageFormat::Png
+                                    image::ImageFormat::Png,
                                 )?;
                                 image_bytes = png_data;
 
-                                log::debug!("Cropped PNG from {}x{} to {}x{}",
-                                           img_width, img_height, new_width, new_height);
+                                log::debug!(
+                                    "Cropped PNG from {}x{} to {}x{}",
+                                    img_width,
+                                    img_height,
+                                    new_width,
+                                    new_height
+                                );
                             }
                         }
                     }
@@ -901,7 +915,8 @@ fn run_render(
             // Output SVG to stdout
             if result.status == "success" {
                 if let Some(rendering) = result.rendering {
-                    let svg_data = base64::engine::general_purpose::STANDARD.decode(rendering.data)?;
+                    let svg_data =
+                        base64::engine::general_purpose::STANDARD.decode(rendering.data)?;
                     std::io::stdout().write_all(&svg_data)?;
                 }
             } else {
@@ -910,7 +925,8 @@ fn run_render(
             }
         } else if result.status == "success" {
             if let Some(rendering) = result.rendering {
-                let image_bytes = base64::engine::general_purpose::STANDARD.decode(rendering.data)?;
+                let image_bytes =
+                    base64::engine::general_purpose::STANDARD.decode(rendering.data)?;
                 std::io::stdout().write_all(&image_bytes)?;
             }
         } else {

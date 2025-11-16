@@ -2,7 +2,7 @@
 
 //! Font caching infrastructure for efficient font management.
 
-use crate::{TypfError, Result, ShapingResult};
+use crate::{Result, ShapingResult, TypfError};
 use dashmap::DashMap;
 use lru::LruCache;
 use memmap2::Mmap;
@@ -79,8 +79,8 @@ impl ShardedShapeCache {
     #[inline]
     fn shard_index(&self, key: &ShapeKey) -> usize {
         // Hash the key to determine which shard to use
-        use std::hash::{Hash, Hasher};
         use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
 
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);

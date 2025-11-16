@@ -2,14 +2,6 @@
 
 > Production-ready, cross-platform font rendering with Rust performance and Python convenience
 
-[![Status](https://img.shields.io/badge/status-production--ready-green)]()
-[![Language](https://img.shields.io/badge/rust-1.70+-orange)]()
-[![Python](https://img.shields.io/badge/python-3.12+-blue)]()
-
-**For overall project coordination:** See root [README.md](../../README.md) | [PLAN.md](../../PLAN.md) | [TODO.md](../../TODO.md)
-
----
-
 ## What is TYPF?
 
 TYPF is a modern, cross-platform font rendering engine providing unified text layout and rasterization. It's built in Rust for performance and safety, with Python bindings for ease of use.
@@ -64,7 +56,7 @@ TYPF is a modern, cross-platform font rendering engine providing unified text la
 ### Project Structure
 
 ```
-typf/
+typh/
 ├── backends/               # Platform-specific rendering
 │   ├── typf-core/         # Shared traits, types, caching (1,086 lines)
 │   ├── typf-icu-hb/       # HarfBuzz+ICU backend (~2,000 lines)
@@ -87,20 +79,6 @@ typf/
 ├── tests/                 # Integration tests
 └── examples/              # Rust & Python examples
 ```
-
-### Backend Comparison
-
-| Backend | Platform | Performance | Completeness | Use Case |
-|---------|----------|-------------|--------------|----------|
-| **CoreText** | macOS | Excellent | ✅ Full | macOS primary |
-| **DirectWrite** | Windows | Excellent | ✅ Full | Windows primary |
-| **HarfBuzz+ICU** | All | Good | ✅ Full | Cross-platform fallback |
-| **orge** | All | Excellent* | ⚠️ Partial | Custom rasterization (in progress) |
-| **tiny-skia** | All | Good | ✅ Full | Vector rendering (feature-gated) |
-| **zeno** | All | Good | ⚠️ Partial | Alternative rasterizer |
-| **pure** | All | Basic | ⚠️ Minimal | WASM compatibility fallback |
-
-*orge core algorithm complete; backend integration pending
 
 ### Caching Architecture
 
@@ -340,143 +318,3 @@ typf render --font=font.ttf --text="PGM" --format=pgm --output=out.pgm
 # Metrics only (JSON)
 typf render --font=font.ttf --text="Metrics" --format=metrics
 ```
-
----
-
-## Performance
-
-**Rendering Speed:**
-- Typical glyph: Sub-millisecond
-- Complex scripts (Arabic, Devanagari): 1-5ms
-- Batch processing: Rayon-parallelized across CPU cores
-
-**Memory:**
-- Zero-copy font loading via memmap2
-- Arc-based shared ownership (no unnecessary clones)
-- Multi-shard cache eliminates lock contention
-
-**Caching:**
-- First render: Font load + shape + rasterize (~5-20ms)
-- Cached render: Shape lookup only (~0.1-1ms)
-- Cache hit rate: 80-95% typical for repeated text
-
----
-
-## Testing
-
-**Run all tests:**
-```bash
-cargo test --workspace --all-features
-```
-
-**Run platform-specific tests:**
-```bash
-# macOS only
-cargo test --features mac
-
-# Windows only
-cargo test --features windows
-
-# HarfBuzz only
-cargo test --features icu
-```
-
-**Run integration tests:**
-```bash
-cargo test --test integration
-```
-
-**Python binding tests:**
-```bash
-cd python
-pytest tests/
-```
-
-**Benchmarks:**
-```bash
-cargo bench --workspace
-```
-
----
-
-## Current Status
-
-### Production-Ready ✅
-
-- All 3 platform backends (CoreText, DirectWrite, HarfBuzz)
-- Multi-shard LRU caching
-- Python bindings (PyO3) with automatic backend selection
-- CLI with batch/stream/render commands
-- 38+ integration tests passing
-- SVG/PNG output with COLRv1 color font support
-
-### In Progress ⏳
-
-- Orge rasterizer backend integration
-- FFI panic handling (std::panic::catch_unwind wrappers)
-- Visual regression framework (SSIM-based)
-- Comprehensive documentation
-
-### Planned 📋
-
-- SIMD-accelerated fixed-point math (SSE2/AVX2/Neon)
-- cargo-fuzz + cargo-miri in CI
-- Unified typf_error::Error enum
-- seccomp sandboxing for untrusted fonts
-- Publishto crates.io
-
----
-
-## Development
-
-**Guidelines:** See [CLAUDE.md](./CLAUDE.md) for development workflow, coding standards, and testing requirements.
-
-**Quick commands:**
-```bash
-# Format code
-cargo fmt --all
-
-# Lint
-cargo clippy --workspace --all-features -- -D warnings
-
-# Build release
-cargo build --workspace --release
-
-# Build Python bindings
-cd python && maturin develop --release
-```
-
-**For tasks and roadmap:** See root [TODO.md](../../TODO.md) (look for `**(typf)**` prefix)
-
----
-
-## Contributing
-
-We follow a philosophy of **ruthless minimalism** and **test-driven development**:
-
-1. **Write tests first** (RED → GREEN → REFACTOR)
-2. **Minimize** code (delete > add)
-3. **No panics** in library code (use `Result<T, TypfError>`)
-4. **Document** all public APIs (rustdoc with examples)
-5. **Benchmark** performance-critical changes
-
-See [CLAUDE.md](./CLAUDE.md) for detailed contribution guidelines.
-
----
-
-## License
-
-See [LICENSE](./LICENSE) file.
-
----
-
-## Related Projects
-
-- **[FontSimi](../../github.docrepair-fonts/fontsimi/)** - Font similarity matching using TYPF
-- **[Root Project](../../)** - Unified repository coordinating both projects
-
----
-
-**Last Updated:** November 16, 2025
-**Status:** Production-ready; focused on hardening and optimization
-**Total Code:** ~15,000 lines Rust + 500 lines Python

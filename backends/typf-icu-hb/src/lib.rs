@@ -15,18 +15,6 @@ use kurbo::{BezPath, Shape};
 #[cfg(feature = "tiny-skia-renderer")]
 use kurbo::PathEl;
 use lru::LruCache;
-use typf_core::{
-    cache::{FontKey, GlyphKey, RenderedGlyph},
-    types::{Direction, FontSource, RenderFormat},
-    utils::{calculate_bbox, quantize_size},
-    Backend, Bitmap, Font, FontCache, Glyph, TypfError, RenderOptions, RenderOutput, RenderSurface,
-    Result, SegmentOptions, ShapingResult, TextRun,
-};
-use typf_fontdb::{script_fallbacks, FontDatabase, FontHandle};
-#[cfg(feature = "tiny-skia-renderer")]
-use typf_render::outlines::glyph_bez_path;
-use typf_render::outlines::glyph_bez_path_with_variations;
-use typf_unicode::TextSegmenter;
 use parking_lot::RwLock;
 use skrifa::{FontRef, GlyphId};
 use std::collections::HashMap;
@@ -35,6 +23,18 @@ use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use typf_core::{
+    cache::{FontKey, GlyphKey, RenderedGlyph},
+    types::{Direction, FontSource, RenderFormat},
+    utils::{calculate_bbox, quantize_size},
+    Backend, Bitmap, Font, FontCache, Glyph, RenderOptions, RenderOutput, RenderSurface, Result,
+    SegmentOptions, ShapingResult, TextRun, TypfError,
+};
+use typf_fontdb::{script_fallbacks, FontDatabase, FontHandle};
+#[cfg(feature = "tiny-skia-renderer")]
+use typf_render::outlines::glyph_bez_path;
+use typf_render::outlines::glyph_bez_path_with_variations;
+use typf_unicode::TextSegmenter;
 
 // tiny-skia is always available for image compositing
 use tiny_skia::{Color, Pixmap, PixmapPaint, PixmapRef, Transform};
@@ -327,11 +327,7 @@ impl HarfBuzzBackend {
         };
 
         // Use structured cache key (avoids string formatting on hot path)
-        let cache_key = HbCacheKey::new(
-            font_data.key(),
-            font.size,
-            &validated_variations,
-        );
+        let cache_key = HbCacheKey::new(font_data.key(), font.size, &validated_variations);
 
         {
             let mut cache = self.hb_cache.write();
