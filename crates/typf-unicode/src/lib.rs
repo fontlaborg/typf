@@ -2,12 +2,8 @@
 
 //! Unicode-aware text segmentation utilities shared across backends.
 
-use icu_properties::{
-    maps::{self, CodePointMapDataBorrowed},
-    names::PropertyEnumToValueNameLinearMapperBorrowed,
-    Script,
-};
-use icu_segmenter::{GraphemeClusterSegmenter, WordSegmenter};
+use icu_properties::{props::Script, CodePointMapData, CodePointMapDataBorrowed};
+use icu_segmenter::{options::WordBreakInvariantOptions, GraphemeClusterSegmenter, WordSegmenter};
 use typf_core::{
     types::{Direction, SegmentOptions, TextRun},
     Result,
@@ -17,15 +13,13 @@ use unicode_bidi::BidiInfo;
 /// Unicode-aware segmenter that powers all typf backends.
 pub struct TextSegmenter {
     script_map: CodePointMapDataBorrowed<'static, Script>,
-    script_name_mapper: PropertyEnumToValueNameLinearMapperBorrowed<'static, Script>,
 }
 
 impl TextSegmenter {
     /// Create a new segmenter with ICU data baked in.
     pub fn new() -> Self {
         Self {
-            script_map: maps::script(),
-            script_name_mapper: Script::enum_to_long_name_mapper(),
+            script_map: CodePointMapData::<Script>::new(),
         }
     }
 
@@ -55,7 +49,9 @@ impl TextSegmenter {
 
         let line_breaks = Self::hard_line_breaks(text);
         let word_breaks: Vec<usize> = if options.font_fallback {
-            WordSegmenter::new_auto().segment_str(text).collect()
+            WordSegmenter::new_auto(WordBreakInvariantOptions::default())
+                .segment_str(text)
+                .collect()
         } else {
             Vec::new()
         };
@@ -286,10 +282,36 @@ impl TextSegmenter {
     }
 
     fn script_label(&self, script: Script) -> String {
-        self.script_name_mapper
-            .get(script)
-            .unwrap_or("Unknown")
-            .to_string()
+        // ICU 2.x: PropertyEnumToValueNameLinearMapperBorrowed is private, so use match
+        match script {
+            Script::Common => "Common",
+            Script::Inherited => "Inherited",
+            Script::Unknown => "Unknown",
+            Script::Arabic => "Arabic",
+            Script::Armenian => "Armenian",
+            Script::Bengali => "Bengali",
+            Script::Cyrillic => "Cyrillic",
+            Script::Devanagari => "Devanagari",
+            Script::Greek => "Greek",
+            Script::Gujarati => "Gujarati",
+            Script::Gurmukhi => "Gurmukhi",
+            Script::Hangul => "Hangul",
+            Script::Han => "Han",
+            Script::Hebrew => "Hebrew",
+            Script::Hiragana => "Hiragana",
+            Script::Kannada => "Kannada",
+            Script::Katakana => "Katakana",
+            Script::Lao => "Lao",
+            Script::Latin => "Latin",
+            Script::Malayalam => "Malayalam",
+            Script::Oriya => "Oriya",
+            Script::Tamil => "Tamil",
+            Script::Telugu => "Telugu",
+            Script::Thai => "Thai",
+            Script::Tibetan => "Tibetan",
+            _ => "Other",
+        }
+        .to_string()
     }
 
     fn is_significant_script(&self, script: Script) -> bool {

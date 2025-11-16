@@ -1,4 +1,5 @@
 // this_file: python/src/lib.rs
+#![allow(clippy::useless_conversion)]
 
 //! Python bindings for the typf text rendering engine.
 
@@ -75,6 +76,7 @@ impl Font {
     }
 }
 
+#[allow(clippy::useless_conversion)]
 #[pymethods]
 impl Font {
     #[new]
@@ -120,12 +122,11 @@ impl Font {
         }
     }
 
-    #[classmethod]
+    #[staticmethod]
     #[pyo3(
         signature = (name, data, size=None, weight=None, style=None, variations=None, features=None)
     )]
     fn from_bytes(
-        _cls: &Bound<'_, PyType>,
         name: String,
         data: &Bound<'_, PyAny>,
         size: Option<f32>,
@@ -240,6 +241,7 @@ struct TextRenderer {
     backend: Box<dyn Backend>,
 }
 
+#[allow(clippy::useless_conversion)]
 #[pymethods]
 impl TextRenderer {
     #[new]
@@ -356,7 +358,7 @@ impl TextRenderer {
                 .get_item("font")?
                 .ok_or_else(|| PyValueError::new_err("Batch item missing 'font' key"))?;
             let font_py_ref: PyRef<'py, Font> = font_obj.extract()?;
-            let font_ref: &Font = &*font_py_ref;
+            let font_ref: &Font = &font_py_ref;
 
             let options_dict: Bound<'py, PyDict> = PyDict::new_bound(py);
             for (key, value) in dict.iter() {
@@ -392,26 +394,53 @@ impl TextRenderer {
 
 impl TextRenderer {
     fn auto_backend() -> PyResult<Box<dyn Backend>> {
-        #[cfg(all(target_os = "macos", feature = "mac"))]
-        {
-            return Ok(Box::new(CoreTextBackend::new()));
+        if let Some(result) = Self::try_coretext_backend() {
+            return result;
         }
-
-        #[cfg(all(target_os = "windows", feature = "windows"))]
-        {
-            return Ok(Box::new(DirectWriteBackend::new().map_err(|e| {
-                runtime_err("Failed to initialize DirectWrite backend", e)
-            })?));
+        if let Some(result) = Self::try_directwrite_backend() {
+            return result;
         }
-
-        #[cfg(feature = "icu")]
-        {
-            return Ok(Box::new(HarfBuzzBackend::new()));
+        if let Some(result) = Self::try_harfbuzz_backend() {
+            return result;
         }
 
         Err(PyRuntimeError::new_err(
             "No backend available for this platform",
         ))
+    }
+
+    #[cfg(all(target_os = "macos", feature = "mac"))]
+    fn try_coretext_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        Some(Ok(Box::new(CoreTextBackend::new())))
+    }
+
+    #[cfg(not(all(target_os = "macos", feature = "mac")))]
+    fn try_coretext_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        None
+    }
+
+    #[cfg(all(target_os = "windows", feature = "windows"))]
+    fn try_directwrite_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        Some(
+            DirectWriteBackend::new()
+                .map(|backend| Box::new(backend) as Box<dyn Backend>)
+                .map_err(|e| runtime_err("Failed to initialize DirectWrite backend", e)),
+        )
+    }
+
+    #[cfg(not(all(target_os = "windows", feature = "windows")))]
+    fn try_directwrite_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        None
+    }
+
+    #[cfg(feature = "icu")]
+    fn try_harfbuzz_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        Some(Ok(Box::new(HarfBuzzBackend::new())))
+    }
+
+    #[cfg(not(feature = "icu"))]
+    fn try_harfbuzz_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        None
     }
 
     fn render_internal<'py>(
@@ -504,8 +533,10 @@ fn build_render_config(
     options: Option<&Bound<'_, PyDict>>,
     format: RenderFormat,
 ) -> PyResult<RenderConfig> {
-    let mut render = CoreRenderOptions::default();
-    render.format = format;
+    let mut render = CoreRenderOptions {
+        format,
+        ..CoreRenderOptions::default()
+    };
     let mut segment = SegmentOptions::default();
     let mut overrides = ShapeOverrides::default();
 

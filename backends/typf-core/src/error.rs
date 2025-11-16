@@ -45,14 +45,19 @@ pub enum TypfError {
     /// Font loading error
     #[error("Failed to load font: {path:?}")]
     FontLoadError {
+        /// Path that failed to load.
         path: PathBuf,
+        /// Underlying IO or parsing error.
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
     },
 
     /// Font not found
     #[error("Font not found: {name}")]
-    FontNotFound { name: String },
+    FontNotFound {
+        /// Name of the font that could not be resolved.
+        name: String,
+    },
 
     /// Invalid font data
     #[error("Invalid font data")]
@@ -60,23 +65,40 @@ pub enum TypfError {
 
     /// Shaping error
     #[error("Failed to shape text: {reason}")]
-    ShapingError { reason: String },
+    ShapingError {
+        /// Explanation for the shaping failure.
+        reason: String,
+    },
 
     /// Rendering error
     #[error("Failed to render: {reason}")]
-    RenderError { reason: String },
+    RenderError {
+        /// Explanation for the rendering failure.
+        reason: String,
+    },
 
     /// Segmentation error
     #[error("Failed to segment text: {reason}")]
-    SegmentationError { reason: String },
+    SegmentationError {
+        /// Explanation for the segmentation failure.
+        reason: String,
+    },
 
     /// Invalid parameter
     #[error("Invalid parameter: {name} = {value}")]
-    InvalidParameter { name: String, value: String },
+    InvalidParameter {
+        /// Name of the invalid parameter.
+        name: String,
+        /// Value supplied for the parameter.
+        value: String,
+    },
 
     /// Backend not available
     #[error("Backend not available: {name}")]
-    BackendNotAvailable { name: String },
+    BackendNotAvailable {
+        /// Name of the backend that is unavailable.
+        name: String,
+    },
 
     /// IO error
     #[error("IO error: {0}")]

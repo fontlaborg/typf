@@ -66,6 +66,7 @@ pub struct Font {
 }
 
 impl Font {
+    /// Create a font using a family name and size with default styling.
     pub fn new(family: impl Into<String>, size: f32) -> Self {
         let family = family.into();
         Self {
@@ -141,8 +142,11 @@ mod arc_bytes {
 /// Font style
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FontStyle {
+    /// Upright roman styling.
     Normal,
+    /// Italic styling.
     Italic,
+    /// Oblique styling (synthetic slant).
     Oblique,
 }
 
@@ -166,8 +170,11 @@ pub struct TextRun {
 /// Text direction
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Direction {
+    /// Left-to-right scripts.
     LeftToRight,
+    /// Right-to-left scripts.
     RightToLeft,
+    /// Allow automatic detection.
     Auto,
 }
 
@@ -206,9 +213,13 @@ pub struct Glyph {
 /// Bounding box
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct BoundingBox {
+    /// Minimum x coordinate.
     pub x: f32,
+    /// Minimum y coordinate.
     pub y: f32,
+    /// Width in pixels.
     pub width: f32,
+    /// Height in pixels.
     pub height: f32,
 }
 
@@ -296,16 +307,22 @@ impl Default for RenderOptions {
 /// Antialiasing mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AntialiasMode {
+    /// Disable antialiasing entirely.
     None,
+    /// Grayscale antialiasing.
     Grayscale,
+    /// Sub-pixel antialiasing.
     Subpixel,
 }
 
 /// Hinting mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HintingMode {
+    /// Disable hinting.
     None,
+    /// Slight hinting (balance detail vs. crisp edges).
     Slight,
+    /// Full hinting (maximize crispness).
     Full,
 }
 

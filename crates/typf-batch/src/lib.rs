@@ -1,5 +1,7 @@
 // this_file: crates/typf-batch/src/lib.rs
 
+#![deny(missing_docs)]
+
 //! Batch job processing infrastructure for typf.
 //!
 //! Provides job specifications, validation, and processing utilities
@@ -107,30 +109,49 @@ impl Job {
 /// Validation errors for job specifications.
 #[derive(Debug, thiserror::Error)]
 pub enum ValidationError {
+    /// Unsupported API version (expected "1.0")
     #[error("Unsupported API version: {0}, expected '1.0'")]
     UnsupportedVersion(String),
 
+    /// Jobs array is empty (must contain at least one job)
     #[error("Jobs array is empty")]
     EmptyJobList,
 
+    /// Too many jobs in specification (exceeds MAX_JOBS_PER_SPEC)
     #[error("Too many jobs: {count} (max: {max})")]
-    TooManyJobs { count: usize, max: usize },
+    TooManyJobs {
+        /// Number of jobs in specification
+        count: usize,
+        /// Maximum allowed jobs
+        max: usize,
+    },
 
+    /// Job ID is empty (must be non-empty string)
     #[error("Job ID is empty")]
     EmptyJobId,
 
+    /// Invalid font size (must be 1-10000)
     #[error("Invalid font size: {0} (must be 1-10000)")]
     InvalidFontSize(u32),
 
+    /// Invalid canvas dimensions (must be non-zero)
     #[error("Invalid canvas dimensions: {width}x{height}")]
-    InvalidCanvasDimensions { width: u32, height: u32 },
+    InvalidCanvasDimensions {
+        /// Canvas width in pixels
+        width: u32,
+        /// Canvas height in pixels
+        height: u32,
+    },
 
+    /// Invalid output format (must be pgm, png, svg, or metrics)
     #[error("Invalid output format: {0} (must be pgm, png, svg, or metrics)")]
     InvalidFormat(String),
 
+    /// Invalid encoding (must be binary, base64, or json)
     #[error("Invalid encoding: {0} (must be binary, base64, or json)")]
     InvalidEncoding(String),
 
+    /// Security validation failed
     #[error("Security validation failed: {0}")]
     Security(String),
 }

@@ -6,8 +6,8 @@
 
 use typf_core::{
     types::{AntialiasMode, Direction, RenderFormat},
-    Backend, Bitmap, Font, FontCache, Glyph, RenderOptions, RenderOutput, RenderSurface, Result,
-    SegmentOptions, ShapingResult, TextRun, TypfError,
+    Backend, Bitmap, Font, FontCache, FontCacheConfig, Glyph, RenderOptions, RenderOutput,
+    RenderSurface, Result, SegmentOptions, ShapingResult, TextRun, TypfError,
 };
 
 use windows::Win32::Graphics::DirectWrite::{
@@ -330,6 +330,10 @@ unsafe impl Sync for DirectWriteBackend {}
 
 impl DirectWriteBackend {
     pub fn new() -> Result<Self> {
+        Self::with_cache_config(FontCacheConfig::default())
+    }
+
+    pub fn with_cache_config(cache_config: FontCacheConfig) -> Result<Self> {
         unsafe {
             // Initialize COM
             let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
@@ -355,7 +359,7 @@ impl DirectWriteBackend {
                 d2d_factory,
                 wic_factory,
                 text_analyzer,
-                cache: FontCache::new(512),
+                cache: FontCache::with_config(cache_config),
                 font_cache: RwLock::new(LruCache::new(NonZeroUsize::new(64).unwrap())),
                 shape_cache: RwLock::new(LruCache::new(NonZeroUsize::new(256).unwrap())),
             })

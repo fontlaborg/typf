@@ -470,6 +470,10 @@ See [LICENSE](./LICENSE) file.
 
 ---
 
+made by FontLab https://www.fontlab.com/
+
+---
+
 
 ---
 

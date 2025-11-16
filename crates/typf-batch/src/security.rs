@@ -18,23 +18,38 @@ pub const MAX_FONT_SIZE: u64 = 50 * 1024 * 1024;
 /// Default per-job timeout
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Validation errors.
+/// Security validation errors.
 #[derive(Debug, thiserror::Error)]
 pub enum SecurityError {
+    /// Invalid path format or forbidden characters
     #[error("Invalid path: {0}")]
     InvalidPath(String),
 
+    /// Path does not exist on filesystem
     #[error("Path not found: {0}")]
     PathNotFound(String),
 
+    /// Path is outside allowed base directory
     #[error("Path outside base directory")]
     PathOutsideBase,
 
+    /// Font file exceeds size limit
     #[error("Font file too large: {size} bytes (max: {max})")]
-    FontTooLarge { size: u64, max: u64 },
+    FontTooLarge {
+        /// Actual font file size in bytes
+        size: u64,
+        /// Maximum allowed size in bytes
+        max: u64,
+    },
 
+    /// Text input exceeds length limit
     #[error("Text too long: {len} characters (max: {max})")]
-    TextTooLong { len: usize, max: usize },
+    TextTooLong {
+        /// Actual text length in characters
+        len: usize,
+        /// Maximum allowed length
+        max: usize,
+    },
 }
 
 /// Validate and sanitize a font path.

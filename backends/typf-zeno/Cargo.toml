@@ -14,7 +14,7 @@ skrifa = { workspace = true }
 read-fonts = { workspace = true }
 
 # Rasterization
-zeno = "0.2"
+zeno = "0.3"
 
 # Error handling
 thiserror = { workspace = true }

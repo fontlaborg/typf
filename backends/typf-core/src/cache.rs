@@ -9,49 +9,138 @@ use memmap2::Mmap;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::File;
+use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
+/// Configurable cache limits for font-related resources.
+#[derive(Debug, Clone, Copy)]
+pub struct FontCacheConfig {
+    max_fonts: usize,
+    max_glyphs: usize,
+    max_shapes: usize,
+}
+
+impl FontCacheConfig {
+    /// Build a config with default production-friendly limits.
+    pub const fn new() -> Self {
+        Self {
+            max_fonts: 512,
+            max_glyphs: 2048,
+            max_shapes: 512,
+        }
+    }
+
+    /// Override the maximum number of cached fonts (0 disables font caching).
+    pub const fn with_max_fonts(mut self, max_fonts: usize) -> Self {
+        self.max_fonts = max_fonts;
+        self
+    }
+
+    /// Override the maximum number of cached glyph bitmaps (0 disables glyph caching).
+    pub const fn with_max_glyphs(mut self, max_glyphs: usize) -> Self {
+        self.max_glyphs = max_glyphs;
+        self
+    }
+
+    /// Override the maximum number of cached shaping results (0 disables shape caching).
+    pub const fn with_max_shapes(mut self, max_shapes: usize) -> Self {
+        self.max_shapes = max_shapes;
+        self
+    }
+
+    /// Helper for callers that need to set all limits at once.
+    pub const fn with_limits(
+        mut self,
+        max_fonts: usize,
+        max_glyphs: usize,
+        max_shapes: usize,
+    ) -> Self {
+        self.max_fonts = max_fonts;
+        self.max_glyphs = max_glyphs;
+        self.max_shapes = max_shapes;
+        self
+    }
+
+    /// Fetch the configured maximum number of cached fonts.
+    pub const fn max_fonts(&self) -> usize {
+        self.max_fonts
+    }
+
+    /// Fetch the configured maximum number of cached glyphs.
+    pub const fn max_glyphs(&self) -> usize {
+        self.max_glyphs
+    }
+
+    /// Fetch the configured maximum number of cached shaping results.
+    pub const fn max_shapes(&self) -> usize {
+        self.max_shapes
+    }
+}
+
+impl Default for FontCacheConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Key for font lookups
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FontKey {
+    /// Absolute font path for cache lookups.
     pub path: PathBuf,
+    /// Face index within a font collection.
     pub face_index: u32,
 }
 
 /// Key for shape cache lookups
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ShapeKey {
+    /// Text that produced the shaping result.
     pub text: String,
+    /// Font identity (path + face).
     pub font_key: FontKey,
-    pub size: u32, // Quantized size
+    /// Quantized font size used for shaping.
+    pub size: u32,
+    /// OpenType feature toggles applied during shaping.
     pub features: Vec<(String, bool)>,
 }
 
 /// Key for glyph cache lookups
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct GlyphKey {
+    /// Font identity (path + face).
     pub font_key: FontKey,
+    /// Glyph identifier from the font.
     pub glyph_id: u32,
-    pub size: u32, // Quantized size
+    /// Quantized glyph size.
+    pub size: u32,
+    /// Optional variation coordinates encoded as OpenType tags + bits.
     pub variations: Option<Vec<(String, u32)>>,
 }
 
 /// Parsed font face (backend-specific)
 pub struct FontFace {
+    /// Memory-mapped font bytes.
     pub data: Arc<Mmap>,
+    /// Face index from the source collection.
     pub face_index: u32,
     // Backend-specific parsed data would go here
 }
 
 /// Rendered glyph
 pub struct RenderedGlyph {
+    /// Glyph bitmap pixels in RGBA order.
     pub bitmap: Vec<u8>,
+    /// Bitmap width in pixels.
     pub width: u32,
+    /// Bitmap height in pixels.
     pub height: u32,
+    /// Left side bearing in pixels.
     pub left: f32,
+    /// Top bearing in pixels.
     pub top: f32,
 }
 
@@ -116,6 +205,7 @@ impl ShardedShapeCache {
 
 /// Font cache for efficient font and glyph management
 pub struct FontCache {
+    config: FontCacheConfig,
     /// Memory-mapped font files
     mmap_cache: DashMap<PathBuf, Arc<Mmap>>,
 
@@ -136,6 +226,7 @@ pub struct FontCache {
 }
 
 impl GlyphKey {
+    /// Build a glyph cache key from the glyph metadata.
     pub fn new(
         font_key: FontKey,
         glyph_id: u32,
@@ -163,12 +254,19 @@ impl GlyphKey {
 }
 
 impl FontCache {
-    /// Create a new font cache
+    /// Create a font cache with a custom shape cache capacity (legacy helper).
     pub fn new(cache_size: usize) -> Self {
+        Self::with_config(FontCacheConfig::default().with_max_shapes(cache_size))
+    }
+
+    /// Create a font cache with explicit limits for all layers.
+    pub fn with_config(config: FontCacheConfig) -> Self {
+        let shape_capacity = config.max_shapes().max(1);
         Self {
+            config,
             mmap_cache: DashMap::new(),
             face_cache: DashMap::new(),
-            shape_cache: ShardedShapeCache::new(cache_size),
+            shape_cache: ShardedShapeCache::new(shape_capacity),
             glyph_cache: DashMap::new(),
             glyph_hits: AtomicU64::new(0),
             glyph_misses: AtomicU64::new(0),
@@ -199,7 +297,10 @@ impl FontCache {
         });
 
         // Cache and return
-        self.face_cache.insert(key, face.clone());
+        if self.config.max_fonts() > 0 {
+            self.face_cache.insert(key, face.clone());
+            enforce_limit(&self.face_cache, self.config.max_fonts());
+        }
         Ok(face)
     }
 
@@ -217,7 +318,10 @@ impl FontCache {
             unsafe { Mmap::map(&file).map_err(|e| TypfError::font_load(path.to_owned(), e))? };
 
         let mmap = Arc::new(mmap);
-        self.mmap_cache.insert(path.to_owned(), mmap.clone());
+        if self.config.max_fonts() > 0 {
+            self.mmap_cache.insert(path.to_owned(), mmap.clone());
+            enforce_limit(&self.mmap_cache, self.config.max_fonts());
+        }
         Ok(mmap)
     }
 
@@ -235,7 +339,9 @@ impl FontCache {
     /// Cache shaped text
     pub fn cache_shaped(&self, key: ShapeKey, shaped: ShapingResult) -> Arc<ShapingResult> {
         let shaped = Arc::new(shaped);
-        self.shape_cache.put(key.clone(), shaped.clone());
+        if self.config.max_shapes() > 0 {
+            self.shape_cache.put(key.clone(), shaped.clone());
+        }
         shaped
     }
 
@@ -253,7 +359,12 @@ impl FontCache {
     /// Cache rendered glyph
     pub fn cache_glyph(&self, key: GlyphKey, glyph: RenderedGlyph) -> Arc<RenderedGlyph> {
         let glyph = Arc::new(glyph);
+        if self.config.max_glyphs() == 0 {
+            return glyph;
+        }
+
         self.glyph_cache.insert(key, glyph.clone());
+        enforce_limit(&self.glyph_cache, self.config.max_glyphs());
         glyph
     }
 
@@ -284,6 +395,33 @@ impl FontCache {
             glyph_misses: self.glyph_misses.load(Ordering::Relaxed),
             shape_hits: self.shape_hits.load(Ordering::Relaxed),
             shape_misses: self.shape_misses.load(Ordering::Relaxed),
+            max_fonts: self.config.max_fonts(),
+            max_glyphs: self.config.max_glyphs(),
+            max_shapes: self.config.max_shapes(),
+        }
+    }
+
+    /// Return the currently configured limits (useful for diagnostics).
+    pub fn config(&self) -> FontCacheConfig {
+        self.config
+    }
+}
+
+fn enforce_limit<K, V>(map: &DashMap<K, V>, limit: usize)
+where
+    K: Eq + Hash + Clone,
+{
+    if limit == 0 {
+        return;
+    }
+
+    while map.len() > limit {
+        if let Some(entry) = map.iter().next() {
+            let key = entry.key().clone();
+            drop(entry);
+            map.remove(&key);
+        } else {
+            break;
         }
     }
 }
@@ -299,6 +437,12 @@ pub struct CacheStats {
     pub shape_count: usize,
     /// Number of cached rendered glyphs
     pub glyph_count: usize,
+    /// Configured maximum number of cached fonts (0 disables caching)
+    pub max_fonts: usize,
+    /// Configured maximum number of cached glyphs (0 disables caching)
+    pub max_glyphs: usize,
+    /// Configured maximum number of cached shaping results (0 disables caching)
+    pub max_shapes: usize,
     /// Number of glyph cache hits
     pub glyph_hits: u64,
     /// Number of glyph cache misses
@@ -371,10 +515,63 @@ impl CacheStats {
 mod tests {
     use super::*;
     use crate::types::{BoundingBox, Direction, Font, Glyph};
+    use proptest::prelude::*;
     use std::path::PathBuf;
 
     fn test_font_path() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/fonts/NotoSans-Regular.ttf")
+    }
+
+    fn fake_font_key() -> FontKey {
+        FontKey {
+            path: PathBuf::from("/virtual/font.ttf"),
+            face_index: 0,
+        }
+    }
+
+    fn dummy_glyph(id: u32) -> RenderedGlyph {
+        RenderedGlyph {
+            bitmap: vec![255; 4],
+            width: 1,
+            height: 1,
+            left: id as f32,
+            top: 0.0,
+        }
+    }
+
+    fn dummy_shape_result(label: &str) -> ShapingResult {
+        ShapingResult {
+            text: label.to_string(),
+            glyphs: label
+                .chars()
+                .enumerate()
+                .map(|(idx, _)| Glyph {
+                    id: idx as u32,
+                    cluster: idx as u32,
+                    x: idx as f32,
+                    y: 0.0,
+                    advance: 10.0,
+                })
+                .collect(),
+            advance: 10.0 * label.len() as f32,
+            bbox: BoundingBox {
+                x: 0.0,
+                y: 0.0,
+                width: 10.0 * label.len() as f32,
+                height: 10.0,
+            },
+            font: Some(Font::new("Test", 12.0)),
+            direction: Direction::LeftToRight,
+        }
+    }
+
+    fn make_shape_key(font_key: &FontKey, text: String, size: u32, liga: bool) -> ShapeKey {
+        ShapeKey {
+            text,
+            font_key: font_key.clone(),
+            size,
+            features: vec![("liga".to_string(), liga)],
+        }
     }
 
     #[test]
@@ -438,5 +635,185 @@ mod tests {
         cache.clear();
         assert!(cache.is_empty(), "cache should be empty after clear");
         assert!(cache.stats().is_empty(), "stats should reset after clear");
+    }
+
+    proptest! {
+        #[test]
+        fn glyph_hit_miss_tracking_matches_queries(hit_pattern in proptest::collection::vec(any::<bool>(), 1..64)) {
+            let cache = FontCache::new(32);
+            let font_key = fake_font_key();
+
+            for glyph_id in 0..8u32 {
+                let variations = HashMap::new();
+                let key = GlyphKey::new(font_key.clone(), glyph_id, 1024, &variations);
+                cache.cache_glyph(key, dummy_glyph(glyph_id));
+            }
+
+            let mut expected_hits = 0u64;
+            let mut expected_misses = 0u64;
+
+            for (idx, should_hit) in hit_pattern.iter().enumerate() {
+                let glyph_id = if *should_hit {
+                    (idx as u32) % 8
+                } else {
+                    10_000 + idx as u32
+                };
+                let variations = HashMap::new();
+                let key = GlyphKey::new(font_key.clone(), glyph_id, 1024, &variations);
+                let result = cache.get_glyph(&key);
+
+                if *should_hit {
+                    prop_assert!(result.is_some(), "glyph {} should have been cached", glyph_id);
+                    expected_hits += 1;
+                } else {
+                    prop_assert!(result.is_none(), "glyph {} should miss", glyph_id);
+                    expected_misses += 1;
+                }
+            }
+
+            let stats = cache.stats();
+            prop_assert_eq!(stats.glyph_hits, expected_hits);
+            prop_assert_eq!(stats.glyph_misses, expected_misses);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn shape_hit_miss_tracking_matches_queries(pattern in proptest::collection::vec((any::<bool>(), any::<u16>()), 1..64)) {
+            let cache = FontCache::new(64);
+            let font_key = fake_font_key();
+
+            let seeded_keys: Vec<ShapeKey> = ["alpha", "beta", "gamma", "delta"]
+                .iter()
+                .enumerate()
+                .map(|(idx, label)| {
+                    let key = make_shape_key(
+                        &font_key,
+                        label.to_string(),
+                        900 + idx as u32,
+                        idx % 2 == 0,
+                    );
+                    cache.cache_shaped(key.clone(), dummy_shape_result(label));
+                    key
+                })
+                .collect();
+
+            let mut expected_hits = 0u64;
+            let mut expected_misses = 0u64;
+
+            for (idx, (expect_hit, salt)) in pattern.iter().enumerate() {
+                if *expect_hit {
+                    let key = seeded_keys[idx % seeded_keys.len()].clone();
+                    prop_assert!(
+                        cache.get_shaped(&key).is_some(),
+                        "shape {:?} should be cached",
+                        key.text
+                    );
+                    expected_hits += 1;
+                } else {
+                    let text = format!("miss-{}-{}", idx, salt);
+                    let key = make_shape_key(
+                        &font_key,
+                        text,
+                        800 + (salt % 32) as u32,
+                        idx % 2 == 0,
+                    );
+                    prop_assert!(cache.get_shaped(&key).is_none(), "shape miss should not be cached");
+                    expected_misses += 1;
+                }
+            }
+
+            let stats = cache.stats();
+            prop_assert_eq!(stats.shape_hits, expected_hits);
+            prop_assert_eq!(stats.shape_misses, expected_misses);
+        }
+    }
+
+    #[test]
+    fn face_cache_respects_max_fonts_limit() {
+        let config = FontCacheConfig::new()
+            .with_max_fonts(2)
+            .with_max_glyphs(8)
+            .with_max_shapes(16);
+        let cache = FontCache::with_config(config);
+        let path = test_font_path();
+
+        for face_index in 0..5 {
+            cache
+                .get_or_load_font(&path, face_index)
+                .expect("fixture font should load");
+        }
+
+        let stats = cache.stats();
+        assert_eq!(stats.face_count, 2, "face cache should enforce limit");
+        assert!(
+            stats.mmap_count <= 2,
+            "mmap cache should respect same limit"
+        );
+    }
+
+    #[test]
+    fn disabling_font_cache_bypasses_storage() {
+        let config = FontCacheConfig::new()
+            .with_max_fonts(0)
+            .with_max_glyphs(0)
+            .with_max_shapes(0);
+        let cache = FontCache::with_config(config);
+        let path = test_font_path();
+
+        cache
+            .get_or_load_font(&path, 0)
+            .expect("fixture font should load");
+        cache.cache_glyph(
+            GlyphKey::new(fake_font_key(), 1, 1024, &HashMap::new()),
+            dummy_glyph(1),
+        );
+        cache.cache_shaped(
+            make_shape_key(&fake_font_key(), "noop".into(), 900, true),
+            dummy_shape_result("noop"),
+        );
+
+        let stats = cache.stats();
+        assert_eq!(stats.face_count, 0, "font cache should be disabled");
+        assert_eq!(stats.mmap_count, 0, "mmap cache should be disabled");
+        assert_eq!(stats.glyph_count, 0, "glyph cache should be disabled");
+        assert_eq!(
+            stats.shape_count, 0,
+            "shape cache should not retain entries"
+        );
+    }
+
+    #[test]
+    fn glyph_cache_respects_capacity() {
+        let config = FontCacheConfig::new()
+            .with_max_fonts(4)
+            .with_max_glyphs(2)
+            .with_max_shapes(4);
+        let cache = FontCache::with_config(config);
+        let font_key = fake_font_key();
+
+        let miss_key = GlyphKey::new(font_key.clone(), 9999, 1024, &HashMap::new());
+        let keep_key = GlyphKey::new(font_key.clone(), 1, 1024, &HashMap::new());
+
+        cache.cache_glyph(keep_key.clone(), dummy_glyph(1));
+        cache.cache_glyph(
+            GlyphKey::new(font_key.clone(), 2, 1024, &HashMap::new()),
+            dummy_glyph(2),
+        );
+        cache.cache_glyph(
+            GlyphKey::new(font_key.clone(), 3, 1024, &HashMap::new()),
+            dummy_glyph(3),
+        );
+
+        let stats = cache.stats();
+        assert_eq!(stats.glyph_count, 2, "glyph cache should cap entries");
+        assert!(
+            cache.get_glyph(&keep_key).is_some(),
+            "recent glyph should remain"
+        );
+        assert!(
+            cache.get_glyph(&miss_key).is_none(),
+            "missing glyph should not be cached"
+        );
     }
 }

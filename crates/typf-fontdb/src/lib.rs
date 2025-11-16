@@ -1,5 +1,7 @@
 // this_file: crates/typf-fontdb/src/lib.rs
 
+#![deny(missing_docs)]
+
 //! Shared font discovery helpers and fallback metadata for typf.
 
 pub mod font_cache;
@@ -254,10 +256,15 @@ fn extra_font_dirs() -> Vec<PathBuf> {
 /// Font data resolved from the system or user-provided sources.
 #[derive(Debug, Clone)]
 pub struct FontHandle {
+    /// Unique identifier for this font (family + style).
     pub key: String,
+    /// Filesystem path to the font file, if available.
     pub path: Option<PathBuf>,
+    /// Index of the font face within the file (for font collections).
     pub face_index: u32,
+    /// Raw font file bytes (mmap'd or read into memory).
     pub bytes: Arc<[u8]>,
+    /// Font family name.
     pub family: String,
 }
 

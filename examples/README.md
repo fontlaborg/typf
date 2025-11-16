@@ -169,3 +169,5 @@ render_grayscale_direct(width, height, GrayscaleLevel::Level4x4, ...)
 - **CLAUDE.md** - Development guidelines
 - **backends/typf-orge/README.md** - orge backend details
 - **backends/typf-icu-hb/README.md** - ICU-HB backend details
+
+made by FontLab https://www.fontlab.com/

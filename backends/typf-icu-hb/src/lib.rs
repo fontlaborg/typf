@@ -27,8 +27,8 @@ use typf_core::{
     cache::{FontKey, GlyphKey, RenderedGlyph},
     types::{Direction, FontSource, RenderFormat},
     utils::{calculate_bbox, quantize_size},
-    Backend, Bitmap, Font, FontCache, Glyph, RenderOptions, RenderOutput, RenderSurface, Result,
-    SegmentOptions, ShapingResult, TextRun, TypfError,
+    Backend, Bitmap, Font, FontCache, FontCacheConfig, Glyph, RenderOptions, RenderOutput,
+    RenderSurface, Result, SegmentOptions, ShapingResult, TextRun, TypfError,
 };
 use typf_fontdb::{script_fallbacks, FontDatabase, FontHandle};
 #[cfg(feature = "tiny-skia-renderer")]
@@ -281,8 +281,12 @@ impl TtfFaceEntry {
 
 impl HarfBuzzBackend {
     pub fn new() -> Self {
+        Self::with_cache_config(FontCacheConfig::default())
+    }
+
+    pub fn with_cache_config(cache_config: FontCacheConfig) -> Self {
         Self {
-            cache: FontCache::new(512),
+            cache: FontCache::with_config(cache_config),
             hb_cache: RwLock::new(LruCache::new(NonZeroUsize::new(64).unwrap())),
             ttf_cache: RwLock::new(HashMap::new()),
             font_data_cache: RwLock::new(HashMap::new()),

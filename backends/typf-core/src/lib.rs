@@ -1,7 +1,6 @@
 // this_file: backends/typf-core/src/lib.rs
 
-// TODO: Add #![deny(missing_docs)] after documenting all public struct fields
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 //! Core traits and types for the typf text rendering engine.
 //!
@@ -18,7 +17,7 @@ pub mod traits;
 pub mod types;
 pub mod utils;
 
-pub use cache::FontCache;
+pub use cache::{FontCache, FontCacheConfig};
 pub use error::TypfError;
 pub use surface::{RenderSurface, SurfaceFormat};
 pub use traits::{Backend, FontShaper, GlyphRenderer, TextSegmenter};

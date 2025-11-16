@@ -235,7 +235,7 @@ impl Image {
     /// Compute longest contiguous non-zero run ratio (0.0 - 1.0)
     #[inline]
     pub fn beam(&self) -> f64 {
-        if self.len() == 0 {
+        if self.is_empty() {
             return 0.0;
         }
 
@@ -384,11 +384,9 @@ impl GlyphRasterizer {
             self.composite_glyph(
                 &mut canvas,
                 &path_commands,
-                glyph_x,
-                glyph_y,
+                (glyph_x, glyph_y),
                 scale,
-                width,
-                height,
+                (width, height),
             )?;
 
             cursor_x += (glyph.x_advance() as f32 + tracking) * scale;
@@ -406,12 +404,12 @@ impl GlyphRasterizer {
         &self,
         canvas: &mut [u8],
         path: &[Command],
-        x: f32,
-        y: f32,
+        origin: (f32, f32),
         scale: f32,
-        width: u32,
-        height: u32,
+        canvas_size: (u32, u32),
     ) -> Result<()> {
+        let (x, y) = origin;
+        let (width, height) = canvas_size;
         let transform = Transform::scale(scale, scale).then_translate(x, y);
 
         let mut mask = Mask::new(path);

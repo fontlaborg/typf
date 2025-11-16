@@ -427,27 +427,37 @@ impl FontInstance {
 pub enum FontCacheError {
     /// Font file not found at specified path.
     #[error("Font not found: {}", path.display())]
-    FontNotFound { path: std::path::PathBuf },
+    FontNotFound {
+        /// Path to the missing font file.
+        path: std::path::PathBuf
+    },
 
     /// Font file exceeds maximum size limit.
     #[error("Font file too large: {} bytes (max: {} bytes) at {}", size, max, path.display())]
     FontTooLarge {
+        /// Path to the oversized font file.
         path: std::path::PathBuf,
+        /// Actual size of the font file in bytes.
         size: u64,
+        /// Maximum allowed size in bytes.
         max: u64,
     },
 
     /// Memory mapping failed.
     #[error("Failed to memory-map font at {}: {}", path.display(), source)]
     Mmap {
+        /// Path to the font file that failed to mmap.
         path: std::path::PathBuf,
+        /// Underlying I/O error.
         source: std::io::Error,
     },
 
     /// Font data is invalid or corrupted.
     #[error("Invalid font at {}: {}", path.display(), reason)]
     InvalidFont {
+        /// Path to the invalid font file.
         path: std::path::PathBuf,
+        /// Reason why the font is invalid.
         reason: String,
     },
 }

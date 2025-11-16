@@ -149,33 +149,31 @@ impl GlyphRasterizer {
 
         // Set up drawing
         let axes = font.axes();
-        let location_coords: Vec<_> = location
-            .iter()
-            .map(|(name, val)| (name.as_ref(), *val))
-            .collect();
+        let location_coords = location.to_vec();
         let loc = axes.location(location_coords.iter().copied());
         let location_ref = loc.coords();
 
         // Get outline
         let outline_glyphs = font.outline_glyphs();
-        let glyph_outline = outline_glyphs.get(glyph_id.into()).ok_or_else(|| {
-            OrgeError::RasterizationFailed {
-                glyph_id,
-                reason: format!("Glyph {} not found in font", glyph_id),
-            }
-        })?;
+        let glyph_outline =
+            outline_glyphs
+                .get(glyph_id.into())
+                .ok_or_else(|| OrgeError::RasterizationFailed {
+                    glyph_id,
+                    reason: format!("Glyph {} not found in font", glyph_id),
+                })?;
 
         // Draw outline to scan converter
         let baseline_y = height as f32 * 0.75;
         let mut pen = OrgePen::new(&mut converter, scale, 0.0, baseline_y);
 
         let draw_settings = DrawSettings::unhinted(Size::unscaled(), location_ref);
-        glyph_outline
-            .draw(draw_settings, &mut pen)
-            .map_err(|e| OrgeError::RasterizationFailed {
+        glyph_outline.draw(draw_settings, &mut pen).map_err(|e| {
+            OrgeError::RasterizationFailed {
                 glyph_id,
                 reason: format!("Failed to draw outline: {}", e),
-            })?;
+            }
+        })?;
 
         // Rasterize
         let bitmap = converter.rasterize();

@@ -37,8 +37,8 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 use typf_core::{
     types::{AntialiasMode, FontSource, FontStyle, RenderFormat},
-    Backend, Bitmap, Font, FontCache, Glyph, RenderOptions, RenderOutput, RenderSurface, Result,
-    SegmentOptions, ShapingResult, TextRun, TypfError,
+    Backend, Bitmap, Font, FontCache, FontCacheConfig, Glyph, RenderOptions, RenderOutput,
+    RenderSurface, Result, SegmentOptions, ShapingResult, TextRun, TypfError,
 };
 use typf_fontdb::FontDatabase;
 use typf_unicode::TextSegmenter;
@@ -63,8 +63,12 @@ impl AsRef<[u8]> for ProviderData {
 
 impl CoreTextBackend {
     pub fn new() -> Self {
+        Self::with_cache_config(FontCacheConfig::default())
+    }
+
+    pub fn with_cache_config(cache_config: FontCacheConfig) -> Self {
         Self {
-            cache: FontCache::new(512),
+            cache: FontCache::with_config(cache_config),
             ct_font_cache: RwLock::new(LruCache::new(NonZeroUsize::new(64).unwrap())),
             shape_cache: RwLock::new(LruCache::new(NonZeroUsize::new(256).unwrap())),
             segmenter: TextSegmenter::new(),

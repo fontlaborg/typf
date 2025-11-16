@@ -20,6 +20,7 @@ pub struct PerfMetrics {
 }
 
 impl PerfMetrics {
+    /// Creates a new performance metrics collector with the specified maximum sample count
     pub fn new(max_samples: usize) -> Self {
         Self {
             render_times: RwLock::new(VecDeque::with_capacity(max_samples)),
@@ -32,6 +33,7 @@ impl PerfMetrics {
         }
     }
 
+    /// Records the duration of a render operation
     pub fn record_render(&self, duration: Duration) {
         let mut times = self.render_times.write();
         if times.len() >= self.max_samples {
@@ -41,6 +43,7 @@ impl PerfMetrics {
         self.total_renders.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// Records the duration of a shaping operation
     pub fn record_shape(&self, duration: Duration) {
         let mut times = self.shape_times.write();
         if times.len() >= self.max_samples {
@@ -49,14 +52,17 @@ impl PerfMetrics {
         times.push_back(duration);
     }
 
+    /// Records a cache hit event
     pub fn record_cache_hit(&self) {
         self.cache_hits.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// Records a cache miss event
     pub fn record_cache_miss(&self) {
         self.cache_misses.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// Computes and returns current performance statistics
     pub fn get_stats(&self) -> PerfStats {
         let render_times = self.render_times.read();
         let shape_times = self.shape_times.read();
@@ -102,6 +108,7 @@ impl PerfMetrics {
         }
     }
 
+    /// Resets all metrics to zero
     pub fn reset(&self) {
         self.render_times.write().clear();
         self.shape_times.write().clear();
@@ -111,13 +118,20 @@ impl PerfMetrics {
     }
 }
 
+/// Snapshot of performance statistics
 #[derive(Debug, Clone)]
 pub struct PerfStats {
+    /// Average time per render operation
     pub avg_render_time: Duration,
+    /// Average time per shaping operation
     pub avg_shape_time: Duration,
+    /// Cache hit rate (0.0 to 1.0)
     pub cache_hit_rate: f64,
+    /// Throughput in renders per second
     pub renders_per_second: f64,
+    /// Total number of renders since start
     pub total_renders: usize,
+    /// Time since metrics collection started
     pub uptime: Duration,
 }
 
@@ -127,12 +141,14 @@ pub struct BufferPool {
 }
 
 impl BufferPool {
+    /// Creates a new buffer pool with the specified maximum size
     pub fn new(max_size: usize) -> Self {
         Self {
             pools: Arc::new(RwLock::new(Vec::with_capacity(max_size))),
         }
     }
 
+    /// Gets a buffer from the pool or creates a new one with the specified capacity
     pub fn get(&self, capacity: usize) -> PooledBuffer {
         let mut pools = self.pools.write();
 
@@ -152,21 +168,25 @@ impl BufferPool {
         }
     }
 
+    /// Clears all buffers from the pool
     pub fn clear(&self) {
         self.pools.write().clear();
     }
 }
 
+/// A buffer obtained from a pool that returns to the pool when dropped
 pub struct PooledBuffer {
     buffer: Vec<u8>,
     pool: std::sync::Weak<RwLock<Vec<Vec<u8>>>>,
 }
 
 impl PooledBuffer {
+    /// Returns a mutable reference to the underlying buffer
     pub fn as_mut_buffer(&mut self) -> &mut Vec<u8> {
         &mut self.buffer
     }
 
+    /// Consumes the pooled buffer and returns the inner Vec, preventing pool return
     pub fn into_inner(mut self) -> Vec<u8> {
         // Prevent Drop from returning the buffer to the pool
         self.pool = std::sync::Weak::new();
@@ -265,12 +285,16 @@ pub struct PerfScope<'a> {
     metric_type: MetricType,
 }
 
+/// Type of performance metric being measured
 pub enum MetricType {
+    /// Rendering operation
     Render,
+    /// Text shaping operation
     Shape,
 }
 
 impl<'a> PerfScope<'a> {
+    /// Creates a new profiling scope that will record timing when dropped
     pub fn new(metrics: &'a PerfMetrics, metric_type: MetricType) -> Self {
         Self {
             metrics,

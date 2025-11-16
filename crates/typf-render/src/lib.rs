@@ -1,5 +1,6 @@
 // this_file: crates/typf-render/src/lib.rs
 
+// TODO: Add #![deny(missing_docs)] after documenting all public items (41 items)
 //! Rendering utilities for typf text engine.
 
 pub mod batch;

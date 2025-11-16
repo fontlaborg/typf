@@ -9,9 +9,9 @@ use typf_orge::GlyphRasterizer;
 fn test_render_simple_glyph_from_font() {
     // Try to load a common system font
     let font_paths = vec![
-        "/System/Library/Fonts/Helvetica.ttc",           // macOS
+        "/System/Library/Fonts/Helvetica.ttc",             // macOS
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", // Linux
-        "C:\\Windows\\Fonts\\arial.ttf",                 // Windows
+        "C:\\Windows\\Fonts\\arial.ttf",                   // Windows
     ];
 
     let font_data = font_paths
@@ -25,11 +25,11 @@ fn test_render_simple_glyph_from_font() {
     let rasterizer = GlyphRasterizer::new();
     let result = rasterizer.render_glyph(
         &font,
-        1, // GID 1 (typically .notdef or first real glyph)
-        64.0,   // 64px font size
-        &[],    // No variable font coordinates
-        128,    // width
-        128,    // height
+        1,    // GID 1 (typically .notdef or first real glyph)
+        64.0, // 64px font size
+        &[],  // No variable font coordinates
+        128,  // width
+        128,  // height
     );
 
     match result {

@@ -42,6 +42,7 @@ pub struct ShapedGlyph {
 ///
 /// Provides control over script detection, directionality, language,
 /// and OpenType feature activation.
+#[derive(Default)]
 pub struct ShapeRequest<'a> {
     /// Literal text to shape.
     pub text: &'a str,
@@ -58,18 +59,6 @@ pub struct ShapeRequest<'a> {
     /// OpenType features to force on/off.
     /// Format: "feature=value" (e.g., "liga=1", "kern=0").
     pub features: &'a [String],
-}
-
-impl<'a> Default for ShapeRequest<'a> {
-    fn default() -> Self {
-        Self {
-            text: "",
-            script: None,
-            direction: None,
-            language: None,
-            features: &[],
-        }
-    }
 }
 
 /// Text shaper using HarfBuzz.
