@@ -1,0 +1,27 @@
+thread 'main' panicked at compiler/rustc_data_structures/src/jobserver.rs:48:34:
+failed to create jobserver: Os { code: 23, kind: Uncategorized, message: "Too many open files in system" }
+stack backtrace:
+   0:        0x1107f4e04 - std::backtrace::Backtrace::create::h322b86c3898b15fa
+   1:        0x10e7fcb80 - std[dcdb8a79b2b43be4]::panicking::update_hook::<alloc[e924fcec0ad23c69]::boxed::Box<rustc_driver_impl[93380e43239406b8]::install_ice_hook::{closure#1}>>::{closure#0}
+   2:        0x1107f5d20 - std::panicking::panic_with_hook::hc216de099a2fe04e
+   3:        0x1107f59d0 - std::panicking::panic_handler::{{closure}}::hc0a7f90b1247e042
+   4:        0x1107ef2ec - std::sys::backtrace::__rust_end_short_backtrace::he22d41b92463e575
+   5:        0x1107d3a20 - __rustc[de0091b922c53d7e]::rust_begin_unwind
+   6:        0x113561dcc - core::panicking::panic_fmt::h9ec18d20141b7425
+   7:        0x113561550 - core::result::unwrap_failed::habea677b3c2575ba
+   8:        0x10e7991a4 - rustc_data_structures[bcfe4d3f2eb77d37]::jobserver::default_client
+   9:        0x10e79c268 - <rustc_data_structures[bcfe4d3f2eb77d37]::jobserver::GLOBAL_CLIENT::{closure#0} as core[137ed0b9e3cbed0c]::ops::function::FnOnce<()>>::call_once
+  10:        0x10f0bc2e8 - <std[dcdb8a79b2b43be4]::sync::poison::once::Once>::call_once_force::<<std[dcdb8a79b2b43be4]::sync::lazy_lock::LazyLock<core[137ed0b9e3cbed0c]::result::Result<jobserver[c02b5b4846df1e5c]::Client, alloc[e924fcec0ad23c69]::string::String>>>::force::{closure#0}>::{closure#0}
+  11:        0x1136e71cc - std::sys::sync::once::queue::Once::call::h0ad5a6a4a73ab900
+  12:        0x10f106420 - rustc_interface[458eaf07f27e250a]::interface::initialize_checked_jobserver
+  13:        0x10e804b4c - rustc_driver_impl[93380e43239406b8]::run_compiler
+  14:        0x10e80fcdc - rustc_driver_impl[93380e43239406b8]::main
+  15:        0x1021e5e78 - rustc_main[c98ec945246db0ae]::main
+  16:        0x1021e5e2c - std[dcdb8a79b2b43be4]::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  17:        0x1021e5e44 - std[dcdb8a79b2b43be4]::rt::lang_start::<()>::{closure#0}
+  18:        0x1107e0768 - std::rt::lang_start_internal::h7e788da8c79e20dc
+  19:        0x1021e5eac - _main
+
+
+rustc version: 1.91.0 (f8297e351 2025-10-28)
+platform: aarch64-apple-darwin
