@@ -1,9 +1,16 @@
 // this_file: backends/typf-orge/src/lib.rs
 
+#![deny(unsafe_code)]
+
 //! orge - ultra-smooth unhinted glyph rasterization.
 //!
 //! This crate provides a specialized scan converter for supersmooth, unhinted
 //! font rendering. It focuses ONLY on the scan conversion algorithm, NOT on hinting.
+//!
+//! ## Safety
+//!
+//! This crate is 100% safe Rust with no `unsafe` blocks. The `#![deny(unsafe_code)]`
+//! attribute ensures this property is maintained.
 //!
 //! ## Architecture
 //!
@@ -18,8 +25,12 @@ pub mod curves;
 pub mod edge;
 pub mod fixed;
 pub mod grayscale;
+pub mod renderer;
 pub mod scan_converter;
 // pub mod dropout;
+
+// Re-export main types
+pub use renderer::{GlyphRasterizer, Image, OrgeError, Result};
 
 /// Fill rule for scan conversion.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

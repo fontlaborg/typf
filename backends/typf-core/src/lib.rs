@@ -1,6 +1,15 @@
 // this_file: backends/typf-core/src/lib.rs
 
+// TODO: Add #![deny(missing_docs)] after documenting all public struct fields
+// #![deny(missing_docs)]
+
 //! Core traits and types for the typf text rendering engine.
+//!
+//! This crate provides the foundational infrastructure for all typf backends:
+//! - [`Backend`] trait for text segmentation, shaping, and rendering
+//! - [`FontCache`] for efficient font and glyph management
+//! - [`TypfError`] for unified error handling
+//! - Common types like [`Font`], [`Glyph`], and [`RenderOptions`]
 
 pub mod cache;
 pub mod error;

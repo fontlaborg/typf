@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 /// Key for font lookups
@@ -126,6 +127,12 @@ pub struct FontCache {
 
     /// Rendered glyph cache
     glyph_cache: DashMap<GlyphKey, Arc<RenderedGlyph>>,
+
+    /// Hit/miss statistics (atomic for lock-free updates)
+    glyph_hits: AtomicU64,
+    glyph_misses: AtomicU64,
+    shape_hits: AtomicU64,
+    shape_misses: AtomicU64,
 }
 
 impl GlyphKey {
@@ -163,6 +170,10 @@ impl FontCache {
             face_cache: DashMap::new(),
             shape_cache: ShardedShapeCache::new(cache_size),
             glyph_cache: DashMap::new(),
+            glyph_hits: AtomicU64::new(0),
+            glyph_misses: AtomicU64::new(0),
+            shape_hits: AtomicU64::new(0),
+            shape_misses: AtomicU64::new(0),
         }
     }
 
@@ -212,7 +223,13 @@ impl FontCache {
 
     /// Get cached shaped text
     pub fn get_shaped(&self, key: &ShapeKey) -> Option<Arc<ShapingResult>> {
-        self.shape_cache.get(key)
+        let result = self.shape_cache.get(key);
+        if result.is_some() {
+            self.shape_hits.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.shape_misses.fetch_add(1, Ordering::Relaxed);
+        }
+        result
     }
 
     /// Cache shaped text
@@ -224,7 +241,13 @@ impl FontCache {
 
     /// Get cached glyph
     pub fn get_glyph(&self, key: &GlyphKey) -> Option<Arc<RenderedGlyph>> {
-        self.glyph_cache.get(key).map(|g| g.clone())
+        let result = self.glyph_cache.get(key).map(|g| g.clone());
+        if result.is_some() {
+            self.glyph_hits.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.glyph_misses.fetch_add(1, Ordering::Relaxed);
+        }
+        result
     }
 
     /// Cache rendered glyph
@@ -257,25 +280,90 @@ impl FontCache {
             face_count: self.face_cache.len(),
             shape_count: self.shape_cache.len(),
             glyph_count: self.glyph_cache.len(),
+            glyph_hits: self.glyph_hits.load(Ordering::Relaxed),
+            glyph_misses: self.glyph_misses.load(Ordering::Relaxed),
+            shape_hits: self.shape_hits.load(Ordering::Relaxed),
+            shape_misses: self.shape_misses.load(Ordering::Relaxed),
         }
     }
 }
 
-/// Cache statistics
+/// Cache statistics for monitoring and debugging
 #[derive(Debug, Clone)]
 pub struct CacheStats {
+    /// Number of memory-mapped font files
     pub mmap_count: usize,
+    /// Number of parsed font faces
     pub face_count: usize,
+    /// Number of cached shaping results
     pub shape_count: usize,
+    /// Number of cached rendered glyphs
     pub glyph_count: usize,
+    /// Number of glyph cache hits
+    pub glyph_hits: u64,
+    /// Number of glyph cache misses
+    pub glyph_misses: u64,
+    /// Number of shape cache hits
+    pub shape_hits: u64,
+    /// Number of shape cache misses
+    pub shape_misses: u64,
 }
 
 impl CacheStats {
+    /// Returns true if all caches are empty
     pub fn is_empty(&self) -> bool {
         self.mmap_count == 0
             && self.face_count == 0
             && self.shape_count == 0
             && self.glyph_count == 0
+    }
+
+    /// Returns total number of cached items across all caches
+    pub fn total_items(&self) -> usize {
+        self.mmap_count + self.face_count + self.shape_count + self.glyph_count
+    }
+
+    /// Returns estimated memory usage in bytes (rough approximation)
+    pub fn estimated_memory_bytes(&self) -> usize {
+        // Rough estimates:
+        // - mmap: ~100KB per font file
+        // - face: ~50KB per parsed face
+        // - shape: ~1KB per shaping result
+        // - glyph: ~5KB per rendered glyph
+        (self.mmap_count * 100_000)
+            + (self.face_count * 50_000)
+            + (self.shape_count * 1_000)
+            + (self.glyph_count * 5_000)
+    }
+
+    /// Calculate glyph cache hit rate (0.0-1.0)
+    pub fn glyph_hit_rate(&self) -> f64 {
+        let total = self.glyph_hits + self.glyph_misses;
+        if total == 0 {
+            0.0
+        } else {
+            self.glyph_hits as f64 / total as f64
+        }
+    }
+
+    /// Calculate shape cache hit rate (0.0-1.0)
+    pub fn shape_hit_rate(&self) -> f64 {
+        let total = self.shape_hits + self.shape_misses;
+        if total == 0 {
+            0.0
+        } else {
+            self.shape_hits as f64 / total as f64
+        }
+    }
+
+    /// Calculate overall cache efficiency score (0.0-1.0)
+    ///
+    /// Weighted average of hit rates (glyph cache is weighted more heavily)
+    pub fn efficiency_score(&self) -> f64 {
+        let glyph_rate = self.glyph_hit_rate();
+        let shape_rate = self.shape_hit_rate();
+        // Weight glyph cache 70%, shape cache 30% (glyphs are more expensive to render)
+        glyph_rate * 0.7 + shape_rate * 0.3
     }
 }
 
