@@ -470,10 +470,6 @@ See [LICENSE](./LICENSE) file.
 
 ---
 
-## Related Projects
-
-- **[FontSimi](../../github.docrepair-fonts/fontsimi/)** - Font similarity matching using TYPF
-- **[Root Project](../../)** - Unified repository coordinating both projects
 
 ---
 
