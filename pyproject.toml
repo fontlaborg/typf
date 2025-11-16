@@ -1,0 +1,92 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "typf"
+version = "0.1.0"
+description = "High-performance, multi-backend text rendering for Python and Rust"
+authors = [
+    {name = "Font Laboratory", email = "team@fontlab.org"}
+]
+readme = "README.md"
+license = {text = "MIT OR Apache-2.0"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Text Processing :: Fonts",
+    "Topic :: Multimedia :: Graphics",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+# Note: Backend selection is handled at build time via cargo features.
+# These extras are provided for documentation and potential future use.
+# The appropriate backend is compiled into the wheel for each platform:
+#   - macOS wheels include CoreText (feature: mac)
+#   - Windows wheels include DirectWrite (feature: windows)
+#   - Linux/other wheels include ICU+HarfBuzz (feature: icu)
+#
+# Users should install: pip install typf
+# Advanced users can build from source with specific features:
+#   - pip install typf --no-binary typf (uses platform defaults)
+#
+mac = []      # CoreText backend (macOS only, compiled in by default on macOS)
+windows = []  # DirectWrite backend (Windows only, compiled in by default on Windows)
+icu = []      # ICU+HarfBuzz cross-platform backend (default on Linux)
+skia = []     # Skia backend (future)
+all = []      # All available backends for the current platform
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark",
+    "pillow",
+    "numpy",
+    "black",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/fontlaborg/typf"
+Repository = "https://github.com/fontlaborg/typf"
+Issues = "https://github.com/fontlaborg/typf/issues"
+
+[tool.maturin]
+python-source = "python"
+manifest-path = "python/Cargo.toml"
+# Default features: python (required) + icu (cross-platform fallback)
+# Platform-specific features should be added via --features flag in CI:
+#   macOS: --features "python,mac,icu"
+#   Windows: --features "python,windows,icu"
+#   Linux: --features "python,icu"
+features = ["python", "icu"]
+bindings = "pyo3"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "python/tests",
+]
+
+[tool.hatch.envs.test]
+dependencies = [
+    "pytest>=7.0",
+    "pytest-benchmark",
+    "pillow",
+    "numpy",
+]
+
+[tool.hatch.envs.test.scripts]
+test = "pytest python/tests"

@@ -1,0 +1,65 @@
+[workspace]
+resolver = "2"
+members = [
+    "backends/*",
+    "crates/*",
+    "python",
+    "typf-cli",
+]
+exclude = [
+    "fuzz",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Font Laboratory <team@fontlab.org>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fontlaborg/typf"
+
+[workspace.dependencies]
+# Core dependencies
+thiserror = "1.0"
+anyhow = "1.0"
+log = "0.4"
+env_logger = "0.11"
+
+# Performance
+rayon = "1.10"
+lru = "0.12"
+memmap2 = "0.9"
+parking_lot = "0.12"
+dashmap = "6.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Font/Text
+harfbuzz_rs = "2.0"
+icu_segmenter = { version = "1.5", features = ["compiled_data", "auto"] }
+icu_locid = "1.5"
+icu_properties = { version = "1.5", features = ["compiled_data"] }
+# Migrated to skrifa for better variable font support
+skrifa = "0.39"
+read-fonts = "0.36"
+png = "0.17"
+lyon_geom = "1.0"
+hdrhistogram = "7"
+unicode-bidi = "0.3"
+
+# Python bindings
+pyo3 = "0.22"
+
+# Platform-specific (to be added in individual crates)
+objc2 = "0.5"
+objc2-foundation = "0.2"
+core-foundation = "0.10"
+core-graphics = "0.24"
+core-text = "20.1"
+windows = { version = "0.58", features = [
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Direct2D",
+    "Win32_System_Com",
+]}
+camino = "1.1"

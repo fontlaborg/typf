@@ -1,0 +1,677 @@
+# Development Guide: Font Rendering Modernization
+
+## Project Overview
+
+**Goal:** Modernize typf font rendering with skrifa integration + orge scan converter port
+
+**Two Phases:**
+1. **Phase 1 (3 weeks):** Replace ttf-parser with skrifa for better variable font support
+2. **Phase 2 (9 weeks):** Port orge's scan converter to Rust for supersmooth unhinted rendering
+
+**Key Principle:** NO hinting - we want supersmooth, unhinted rasterization for modern high-DPI displays.
+
+---
+
+## Documentation Structure
+
+**Read these in order:**
+
+1. **`report/00.md`** - Table of Contents + TLDR (start here!)
+2. **`report/01.md`** - Executive Summary & Context
+3. **`report/02.md`** - typf Architecture (current state)
+4. **`report/03.md`** - haforu Reference (skrifa best practices)
+5. **`report/04.md`** - orge Scan Converter (what we're porting)
+6. **`report/05.md`** - skrifa Migration Plan (Phase 1 implementation)
+7. **`report/06.md`** - orge Port Strategy (Phase 2 implementation)
+8. **`report/07.md`** - Integration Architecture (how it all fits)
+9. **`report/08.md`** - Roadmap (timeline and milestones)
+10. **`report/09.md`** - Risk Mitigation (challenges and solutions)
+
+**Quick references:**
+
+- **`PLAN.md`** - Detailed development plan with week-by-week breakdown
+- **`TODO.md`** - Linearized flat task list with ~250 checkboxes
+- **`WORK.md`** - Daily progress notes (update as you work)
+
+---
+
+## Before Starting Work
+
+### 1. Understand the Context
+
+```bash
+# Read the executive summary
+cat report/00.md
+
+# Understand current architecture
+cat report/02.md  # typf current state
+cat report/03.md  # haforu reference
+
+# Read implementation guide for your phase
+cat report/05.md  # Phase 1: skrifa migration
+# OR
+cat report/06.md  # Phase 2: orge port
+```
+
+### 2. Check the Plan
+
+```bash
+# See the big picture
+cat PLAN.md
+
+# See your specific tasks
+cat TODO.md | grep "^- \[ \]"  # Uncompleted tasks
+
+# Check weekly schedule
+cat PLAN.md | grep "Week $(date +%U)"
+```
+
+### 3. Update WORK.md
+
+```markdown
+## [Date] - [Your Name]
+
+### Working On
+- [Task from TODO.md]
+
+### Progress
+- [What you accomplished]
+
+### Next Steps
+- [What's next]
+
+### Blockers
+- [Any issues or questions]
+```
+
+---
+
+## Development Workflow
+
+### Phase 1: skrifa Migration (Weeks 1-3)
+
+**Location:** `backends/typf-icu-hb/`
+
+**Key Files to Modify:**
+- `Cargo.toml` - Dependencies
+- `src/lib.rs` - Main backend, font loading
+- `src/fonts.rs` - Font structures (if exists)
+- `src/shaping.rs` - HarfBuzz integration (if exists)
+- `crates/typf-render/src/outlines.rs` - Outline extraction
+
+**Development Cycle:**
+```bash
+# 1. Make changes
+vim backends/typf-icu-hb/src/lib.rs
+
+# 2. Test
+cargo test --package typf-icu-hb
+
+# 3. Benchmark
+cargo bench --package typf-icu-hb
+
+# 4. Check for issues
+cargo clippy --package typf-icu-hb
+cargo +nightly miri test --package typf-icu-hb  # Check UB
+
+# 5. Update progress
+echo "- [x] Implemented FontDataEntry" >> TODO.md
+```
+
+**Testing Checklist:**
+- [ ] Unit tests pass
+- [ ] Benchmarks within ±10%
+- [ ] Variable fonts work (test with RobotoFlex)
+- [ ] Visual regression: zero diff
+- [ ] No memory leaks (valgrind)
+
+### Phase 2: orge Port (Weeks 4-12)
+
+**Location:** `backends/typf-orge/` (new crate)
+
+**Module Structure:**
+```
+backends/typf-orge/
+├── src/
+│   ├── lib.rs              # Public API
+│   ├── fixed.rs            # F26Dot6 fixed-point (Week 4)
+│   ├── edge.rs             # Edge lists (Week 5)
+│   ├── curves.rs           # Bézier subdivision (Week 8)
+│   ├── scan_converter.rs   # Main algorithm (Week 6-7)
+│   ├── dropout.rs          # Dropout control (Week 9)
+│   └── grayscale.rs        # Anti-aliasing (Week 10)
+├── tests/
+│   ├── integration.rs
+│   └── reference_glyphs.rs
+└── benches/
+    └── rasterization.rs
+```
+
+**Development Cycle:**
+```bash
+# 1. Implement module
+vim backends/typf-orge/src/fixed.rs
+
+# 2. Write tests FIRST (TDD recommended)
+vim backends/typf-orge/src/fixed.rs  # Add #[cfg(test)] mod tests
+
+# 3. Run tests
+cargo test --package typf-orge
+
+# 4. Check coverage
+cargo tarpaulin --package typf-orge  # Target: >80%
+
+# 5. Benchmark
+cargo bench --package typf-orge
+
+# 6. Update TODO
+vim TODO.md  # Check off completed items
+```
+
+**Quality Gates:**
+- [ ] Unit tests pass
+- [ ] Coverage >80%
+- [ ] Monochrome rendering works
+- [ ] Grayscale SSIM >0.90 vs tiny-skia
+- [ ] Performance within ±15% of tiny-skia
+
+---
+
+## Code Principles
+
+### Core Philosophy
+
+**From haforu's wisdom:**
+> "If it doesn't make rendering faster or more reliable, don't add it."
+
+**Apply to this project:**
+- ✅ skrifa integration → Better variable font support (adds value)
+- ✅ orge scan converter → Specialized rasterization (adds value)
+- ❌ Complex caching beyond LRU → Not needed
+- ❌ Analytics/monitoring → Not needed
+- ❌ Retry logic → Not needed
+
+### Rust Style
+
+**Keep it simple:**
+```rust
+// GOOD: Clear, direct
+pub struct F26Dot6(i32);
+
+impl F26Dot6 {
+    pub const fn from_int(x: i32) -> Self {
+        F26Dot6(x << 6)
+    }
+}
+
+// BAD: Over-engineered
+pub struct FixedPoint<const FRAC: u32>(i32);
+
+impl<const FRAC: u32> FixedPoint<FRAC> {
+    // ... generic madness
+}
+```
+
+**Type safety without complexity:**
+- Use newtypes (F26Dot6, not i32)
+- But don't over-abstract
+- Operator overloading is fine for math types
+- Traits when you need polymorphism (GlyphRenderer)
+
+**Error handling:**
+```rust
+// Return Result for recoverable errors
+pub fn load_font(path: &Path) -> Result<FontRef, FontError> {
+    // ...
+}
+
+// Use Option for "not found" scenarios
+pub fn get_glyph(id: GlyphId) -> Option<Glyph> {
+    // ...
+}
+
+// Panic only for programmer errors
+assert!(width > 0, "Width must be positive");
+```
+
+### Performance
+
+**Measure, don't guess:**
+```bash
+# Before optimization
+cargo bench > before.txt
+
+# Make changes
+# ...
+
+# After optimization
+cargo bench > after.txt
+
+# Compare
+diff before.txt after.txt
+```
+
+**Profile before optimizing:**
+```bash
+cargo flamegraph --bench rasterization
+# Open flamegraph.svg
+# Optimize the actual hot paths, not what you think is slow
+```
+
+**Caching strategy:**
+- Font data → Memory-mapped (memmap2)
+- Parsed fonts → DashMap (lock-free cache)
+- Rendered glyphs → DashMap or LRU
+- Don't cache what's cheap to recompute
+
+### Testing
+
+**Test pyramid:**
+- 70% unit tests (fast, specific)
+- 20% integration tests (real fonts, end-to-end)
+- 10% visual regression (PNG comparison)
+
+**Unit test example:**
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_f26dot6_conversions() {
+        assert_eq!(F26Dot6::from_int(5).to_int(), 5);
+        assert_eq!(F26Dot6::from_float(5.5).to_int_round(), 6);
+    }
+
+    #[test]
+    fn test_f26dot6_arithmetic() {
+        let a = F26Dot6::from_int(3);
+        let b = F26Dot6::from_int(2);
+        assert_eq!((a + b).to_int(), 5);
+        assert_eq!(a.mul(b).to_int(), 6);
+    }
+}
+```
+
+**Integration test example:**
+```rust
+#[test]
+fn test_render_glyph_a() {
+    let font_data = include_bytes!("../testdata/fonts/NotoSans-Regular.ttf");
+    let font = FontRef::new(font_data).unwrap().expect_font().unwrap();
+
+    let glyph_id = font.charmap().map('A').unwrap();
+    let bitmap = render_glyph(&font, glyph_id, 48.0, 64, 64);
+
+    // Compare with reference
+    let reference = include_bytes!("../testdata/reference/A_48pt.bin");
+    assert_eq!(bitmap.as_slice(), reference.as_slice());
+}
+```
+
+---
+
+## What We Don't Do
+
+### ❌ NO Hinting
+
+**Critical:** We are NOT porting orge's hinting engine!
+
+**What we skip:**
+- Auto-gridding (autogrid.c - 3,673 lines)
+- TrueType instruction interpreter (fnt.c - 4,380 lines)
+- Grid-fitting logic
+- Stem detection
+- Blue zone extraction
+
+**What we want:**
+- Scan converter (t2ksc.c - ~1,500 lines portable)
+- Supersmooth unhinted outlines
+- Modern high-DPI rendering
+
+**If someone suggests hinting:**
+> "No. We're focusing on supersmooth unhinted rendering. Hinting is out of scope. See report/04.md for rationale."
+
+### ❌ NO Enterprise Bloat
+
+- No analytics/metrics collection
+- No performance monitoring dashboards
+- No health checks
+- No retry logic or circuit breakers
+- No sophisticated caching (beyond LRU/DashMap)
+- No graceful degradation patterns (beyond basic fallback)
+
+### ❌ NO Over-Engineering
+
+```rust
+// BAD: Too many abstractions
+trait FontProvider {
+    type Font: FontInterface;
+    fn get_font(&self) -> Self::Font;
+}
+
+trait FontInterface {
+    fn render_glyph(&self, options: RenderOptions) -> Result<Output>;
+}
+
+// GOOD: Direct and simple
+pub fn render_glyph(
+    font: &FontRef,
+    glyph_id: GlyphId,
+    size: f32,
+) -> Vec<u8> {
+    // ...
+}
+```
+
+---
+
+## Git Workflow
+
+### Branches
+
+```bash
+# Phase 1
+git checkout -b feature/skrifa-migration
+
+# Phase 2
+git checkout -b feature/orge
+```
+
+### Commits
+
+**Good commit messages:**
+```
+Add F26Dot6 fixed-point type
+
+Implements 26.6 fixed-point arithmetic for scan conversion.
+Includes operator overloading and comprehensive tests.
+
+Ref: TODO.md Week 4
+```
+
+**Bad commit messages:**
+```
+fix stuff
+wip
+update
+```
+
+### Pull Requests
+
+**PR Template:**
+```markdown
+## Summary
+[What does this PR do?]
+
+## Changes
+- [ ] Code changes in [files]
+- [ ] Tests added/updated
+- [ ] Benchmarks run (paste results)
+- [ ] Documentation updated
+
+## Testing
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] Visual regression (if applicable)
+- [ ] Performance within bounds
+
+## Checklist
+- [ ] Read relevant chapter from report/
+- [ ] Updated WORK.md
+- [ ] Updated TODO.md
+- [ ] Updated CHANGELOG.md (if user-facing)
+
+Closes: [issue #]
+Ref: TODO.md [task], report/[chapter].md
+```
+
+---
+
+## Debugging
+
+### Common Issues
+
+**Issue: Performance regression**
+```bash
+# Compare benchmarks
+cargo bench > current.txt
+git checkout main
+cargo bench > baseline.txt
+diff baseline.txt current.txt
+
+# Profile
+cargo flamegraph --bench [your_bench]
+# Look for unexpected hot paths
+```
+
+**Issue: Memory leak**
+```bash
+# Run with valgrind
+cargo build --release
+valgrind --leak-check=full ./target/release/typf-test
+
+# Or use miri
+cargo +nightly miri test
+```
+
+**Issue: Rendering difference**
+```bash
+# Generate reference image
+cargo run --features=tiny-skia-renderer -- render A > reference.pgm
+
+# Generate test image
+cargo run --features=orge -- render A > test.pgm
+
+# Compare
+diff reference.pgm test.pgm
+# Or use image diff tool
+```
+
+### When Stuck
+
+1. **Read the relevant report chapter** (`report/05.md` or `report/06.md`)
+2. **Check haforu reference** (`haforu/` codebase, especially for skrifa patterns)
+3. **Check orge C code** (`fusehint-fontfusion7/` for scan converter reference)
+4. **Consult risk mitigation** (`report/09.md` - is this a known risk?)
+5. **Ask questions** (update WORK.md with blocker, ask for help)
+
+---
+
+## Weekly Workflow
+
+### Monday
+- Review TODO.md for the week
+- Check PLAN.md for weekly goals
+- Update WORK.md with weekly plan
+
+### Daily
+- Update WORK.md with progress
+- Check off TODO.md items as completed
+- Commit frequently with good messages
+
+### Friday
+- Write weekly status update
+- Review progress against PLAN.md
+- Identify blockers or risks
+- Update estimates if needed
+
+**Weekly Status Template:**
+```markdown
+## Week [N] Status - [Date]
+
+### Completed
+- [x] Task 1
+- [x] Task 2
+
+### In Progress
+- [~] Task 3 (80% done)
+
+### Blockers
+- [Issue description]
+- [Mitigation plan]
+
+### Next Week
+- [ ] Task 4
+- [ ] Task 5
+
+### Metrics
+- Tests passing: XX/YY
+- Coverage: XX%
+- Performance: ±X% vs baseline
+```
+
+---
+
+## Documentation
+
+### Code Documentation
+
+**Public APIs need rustdoc:**
+```rust
+/// Fixed-point number in 26.6 format.
+///
+/// Provides 26 bits of integer precision and 6 bits of fractional
+/// precision (1/64 pixel granularity).
+///
+/// # Examples
+///
+/// ```
+/// use typf_orge::F26Dot6;
+///
+/// let x = F26Dot6::from_float(5.5);
+/// assert_eq!(x.to_int_round(), 6);
+/// ```
+pub struct F26Dot6(i32);
+```
+
+**Internal code needs comments:**
+```rust
+// Y-flip: font space (Y-up) → graphics space (Y-down)
+let y = F26Dot6::from_float(-y_font_space);
+```
+
+### Update Documentation
+
+When you add features:
+- [ ] Update README.md (user-facing)
+- [ ] Update ARCHITECTURE.md (technical)
+- [ ] Update CHANGELOG.md (all changes)
+- [ ] Update rustdoc (inline docs)
+
+---
+
+## Quality Gates
+
+### Before Every Commit
+
+```bash
+# Tests must pass
+cargo test
+
+# No warnings (in your code)
+cargo clippy
+
+# Format code
+cargo fmt
+```
+
+### Before Every PR
+
+```bash
+# All tests
+cargo test --all
+
+# Benchmarks
+cargo bench > bench.txt
+# Check performance vs baseline
+
+# Coverage (if modified core code)
+cargo tarpaulin --packages typf-orge
+# Target: >80%
+
+# Visual regression (if modified rendering)
+./scripts/visual_regression.sh  # (create this script)
+```
+
+### Before Release
+
+```bash
+# All quality checks
+cargo test --all
+cargo clippy --all
+cargo bench --all
+
+# Platform checks
+# Test on Linux, macOS, Windows
+
+# Documentation
+cargo doc --no-deps --open
+# Verify docs look good
+
+# Changelog
+cat CHANGELOG.md
+# Verify all changes documented
+```
+
+---
+
+## Resources
+
+### Learning
+
+**Rust:**
+- [The Rust Book](https://doc.rust-lang.org/book/)
+- [Rust by Example](https://doc.rust-lang.org/rust-by-example/)
+
+**Font Technology:**
+- [OpenType Spec](https://docs.microsoft.com/en-us/typography/opentype/spec/)
+- [TrueType Reference](https://developer.apple.com/fonts/TrueType-Reference-Manual/)
+- skrifa docs: https://docs.rs/skrifa/
+
+**Graphics:**
+- [Scan Conversion Tutorial](http://www.cs.unc.edu/~mcmillan/comp136/Lecture6/Lines.html)
+- Bézier curves: https://pomax.github.io/bezierinfo/
+
+### Tools
+
+**Development:**
+```bash
+# Install tools
+cargo install cargo-flamegraph
+cargo install cargo-tarpaulin
+cargo install cargo-edit
+cargo install cargo-watch
+
+# Usage
+cargo watch -x test           # Auto-run tests
+cargo flamegraph --bench foo  # Profile
+cargo tarpaulin              # Coverage
+```
+
+**Testing:**
+```bash
+# Miri (UB detection)
+rustup +nightly component add miri
+cargo +nightly miri test
+
+# Valgrind (memory leaks)
+# Build without jemalloc first
+valgrind --leak-check=full ./target/debug/your-test
+```
+
+---
+
+## Summary
+
+**Remember:**
+1. Read `report/` for context
+2. Use `PLAN.md` for big picture
+3. Use `TODO.md` for daily tasks
+4. Update `WORK.md` as you go
+5. Keep it simple
+6. Test everything
+7. NO hinting!
+8. Ask when stuck
+
+**Let's build supersmooth font rendering!** 🚀

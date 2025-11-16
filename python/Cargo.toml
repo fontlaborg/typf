@@ -1,0 +1,34 @@
+[package]
+name = "typf-python"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "typf"
+crate-type = ["cdylib"]
+
+[dependencies]
+typf-core = { path = "../backends/typf-core" }
+typf-render = { path = "../crates/typf-render" }
+typf-unicode = { path = "../crates/typf-unicode" }
+pyo3 = { version = "0.22", features = ["extension-module"] }
+
+# Platform-specific backends
+[target.'cfg(target_os = "macos")'.dependencies]
+typf-mac = { path = "../backends/typf-mac", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+typf-win = { path = "../backends/typf-win", optional = true }
+
+[dependencies.typf-icu-hb]
+path = "../backends/typf-icu-hb"
+optional = true
+
+[features]
+default = []
+python = ["pyo3/extension-module"]
+mac = ["typf-mac"]
+windows = ["typf-win"]
+icu = ["typf-icu-hb"]

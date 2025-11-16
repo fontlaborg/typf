@@ -1,0 +1,9 @@
+[package]
+name = "typf-shaping"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+typf-core = { path = "../../backends/typf-core" }

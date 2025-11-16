@@ -1,0 +1,12 @@
+[package]
+name = "typf-unicode"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+typf-core = { path = "../../backends/typf-core" }
+icu_segmenter.workspace = true
+icu_properties.workspace = true
+unicode-bidi.workspace = true

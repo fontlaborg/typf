@@ -1,0 +1,18 @@
+[package]
+name = "typf-orge"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+skrifa.workspace = true
+read-fonts.workspace = true
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "edge_allocation"
+harness = false
