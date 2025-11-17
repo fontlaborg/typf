@@ -1,28 +1,19 @@
 [project]
-site_name = "TYPF"
-site_url = "https://fontlaborg.github.io/typf/"
-docs_dir = "src_docs"
-site_dir = "docs"
-
-# Enable directory URLs & nice nav
+site_name = "TYPF Documentation"
+site_url  = "https://typf.fontlab.com/"
+docs_dir  = "src_docs"
+site_dir  = "docs"
 use_directory_urls = true
 
-nav = [
-  { "Home" = "index.md" },
-  { "Backends" = "backends.md" },
-]
-
-# Basic theme setup (modern variant)
 [project.theme]
 variant   = "modern"
 language  = "en"
 
 [project.theme.palette]
 scheme  = "default"
-primary = "indigo"
-accent  = "indigo"
+primary = "blue"
+accent  = "blue"
 
-# Enable key features mirrored from mkdocs-material
 [project.theme.features]
 features = [
   "announce.dismiss",
@@ -39,9 +30,64 @@ features = [
   "navigation.tabs",
   "navigation.top",
   "search.highlight",
+  "search.suggest",
 ]
 
-# Markdown extensions: copy the “default config” from docs, adapted:
+# Navigation structure
+[[project.nav]]
+Home = "index.md"
+
+[[project.nav]]
+"Getting Started" = [
+  "getting-started/installation.md",
+  "getting-started/quick-start.md",
+  "getting-started/python-bindings.md",
+]
+
+[[project.nav]]
+"User Guide" = [
+  "guide/cli-usage.md",
+  "guide/output-formats.md",
+  "guide/variable-fonts.md",
+]
+
+[[project.nav]]
+Architecture = [
+  "architecture/overview.md",
+  "architecture/caching.md",
+  "architecture/threading.md",
+]
+
+[[project.nav]]
+Backends = [
+  "backends/comparison.md",
+  "backends/coretext.md",
+  "backends/directwrite.md",
+  "backends/harfbuzz.md",
+  "backends/orge.md",
+]
+
+[[project.nav]]
+Development = [
+  "development/setup.md",
+  "development/testing.md",
+  "development/contributing.md",
+]
+
+[[project.nav]]
+"API Reference" = [
+  "api/rust.md",
+  "api/python.md",
+  "api/cli.md",
+]
+
+[[project.nav]]
+About = [
+  "about/changelog.md",
+  "about/license.md",
+]
+
+# Markdown extensions
 [project.markdown_extensions.abbr]
 [project.markdown_extensions.admonition]
 [project.markdown_extensions.attr_list]
@@ -60,6 +106,7 @@ smart_enable = "all"
 
 [project.markdown_extensions.pymdownx.caret]
 [project.markdown_extensions.pymdownx.details]
+
 [project.markdown_extensions.pymdownx.emoji]
 emoji_generator = "zensical.extensions.emoji.to_svg"
 emoji_index     = "zensical.extensions.emoji.twemoji"
@@ -74,7 +121,6 @@ pygments_lang_class = true
 [project.markdown_extensions.pymdownx.mark]
 [project.markdown_extensions.pymdownx.smartsymbols]
 [project.markdown_extensions.pymdownx.snippets]
-
 [project.markdown_extensions.pymdownx.superfences]
 
 [project.markdown_extensions.pymdownx.tabbed]
@@ -86,6 +132,12 @@ custom_checkbox = true
 
 [project.markdown_extensions.pymdownx.tilde]
 
-# Tags support, if you want tag icons etc
-[project.extra.tags]
-default = "default"
+# Extra configuration
+[project.extra]
+version = "0.3.0"
+status = "Production Ready"
+generator = "Made by FontLab - https://www.fontlab.com/"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/fontlaborg/typf"
