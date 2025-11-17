@@ -150,11 +150,39 @@ cargo test --workspace --all-features  # Run tests
 ```
 
 **Python Bindings:**
+
+> ⚠️ **Important**: Python bindings MUST be built inside an active virtual environment. System Python builds will fail with linker errors.
+
 ```bash
+# 1. Create and activate virtual environment
+cd github.fontlaborg/typf
+uv venv --python 3.12      # or: python3.12 -m venv .venv
+source .venv/bin/activate  # macOS/Linux
+# .venv\Scripts\activate   # Windows
+
+# 2. Install maturin in the venv
+uv pip install maturin     # or: pip install maturin
+
+# 3. Build the bindings
 cd python
-pip install maturin
-maturin develop --release  # Development install
-# OR
+maturin develop --release --features "python,icu,mac"  # macOS
+# maturin develop --release --features "python,icu"    # Linux
+# maturin develop --release --features "python,windows" # Windows
+
+# 4. Verify installation
+python -c "import typf; print(typf.__version__)"
+```
+
+**Troubleshooting:**
+
+If you encounter linker errors or missing Python symbols:
+- **macOS**: Install Xcode CLI tools: `xcode-select --install`
+- **Linux**: Install Python dev headers: `sudo apt install python3-dev` (Debian/Ubuntu) or `sudo dnf install python3-devel` (Fedora/RHEL)
+- **Windows**: Install Visual Studio Build Tools with Python development workload
+- **All platforms**: Ensure you're inside an activated virtual environment before running `maturin develop`
+
+To build a distributable wheel:
+```bash
 maturin build --release    # Build wheel
 pip install target/wheels/typf-*.whl
 ```

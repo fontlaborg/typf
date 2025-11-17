@@ -429,7 +429,7 @@ pub enum FontCacheError {
     #[error("Font not found: {}", path.display())]
     FontNotFound {
         /// Path to the missing font file.
-        path: std::path::PathBuf
+        path: std::path::PathBuf,
     },
 
     /// Font file exceeds maximum size limit.

@@ -242,8 +242,55 @@ uvx ruff check --fix . && uvx ruff format . && pytest
 - Enable integer overflow checks in debug
 - Validate ALL external input
 - Use `cargo-audit` in CI
-- Prefer safe concurrency primitives (`Arc`, `Mutex`) 
+- Prefer safe concurrency primitives (`Arc`, `Mutex`)
 - Use vetted crypto crates only (`ring`, `rustls`)
+
+#### Python Bindings with PyO3 (TYPF-Specific)
+
+##### Build Requirements (MUST)
+
+**Critical**: Python bindings MUST be built inside an active virtual environment. System Python builds will fail with linker errors.
+
+```bash
+# 1. Create venv (REQUIRED)
+cd github.fontlaborg/typf
+uv venv --python 3.12
+
+# 2. Activate venv (REQUIRED)
+source .venv/bin/activate  # macOS/Linux
+# .venv\Scripts\activate   # Windows
+
+# 3. Install maturin IN the venv
+uv pip install maturin
+
+# 4. Build with platform features
+cd python
+maturin develop --release --features "python,icu,mac"  # macOS
+# maturin develop --release --features "python,icu"    # Linux
+# maturin develop --release --features "python,windows"  # Windows
+
+# 5. Verify
+python -c "import typf; print(typf.__version__)"
+```
+
+##### Troubleshooting (Common Issues)
+
+**Linker errors / undefined symbols:**
+- **Cause**: Building outside venv or missing Python dev headers
+- **macOS Fix**: `xcode-select --install`
+- **Linux Fix**: `sudo apt install python3-dev` (Debian/Ubuntu) or `sudo dnf install python3-devel` (Fedora/RHEL)
+- **Windows Fix**: Install Visual Studio Build Tools with Python development workload
+- **Universal Fix**: Activate venv before running `maturin develop`
+
+**Import errors after build:**
+- Verify venv is activated: `which python` should show `.venv/bin/python`
+- Rebuild: `cd python && maturin develop --release --features "python,icu,mac"`
+
+**Feature flag selection:**
+- macOS: Use `mac` feature (CoreText backend)
+- Linux: Use `icu` feature (HarfBuzz+ICU backend)
+- Windows: Use `windows` feature (DirectWrite backend)
+- Cross-platform: Always include `python` and `icu` features
 
 ### 4.3 Web Development
 
