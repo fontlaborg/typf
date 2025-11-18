@@ -1,6 +1,58 @@
 # TYPF v2.0 Work Log
 
-## Session Complete (2025-11-18 - Round 5) ✅
+## Current Session (2025-11-18 - Round 7)
+
+### Summary: Orge Glyph Rasterization Complete ✅
+
+**Round 7: Orge Glyph Outline Integration** ✅
+- Created complete `GlyphRasterizer` (290 lines) integrating skrifa + scan_converter
+- Glyph outline extraction using skrifa OutlinePen interface
+- Automatic bounds calculation via BoundsCalculator pen
+- Replaced placeholder `render_glyph()` with real font rasterization
+- All 68 Orge tests passing (no regressions)
+- CLI builds successfully
+
+**Implementation Details**:
+- `backends/typf-render-orge/src/rasterizer.rs` (290 lines)
+  - `GlyphRasterizer` struct with font parsing and size handling
+  - `BoundsCalculator` pen for automatic bounding box calculation
+  - `TransformPen` for coordinate transformation (font units → pixels)
+  - Integration with `GrayscaleLevel` for anti-aliasing
+  - `GlyphBitmap` output structure with positioning data
+- Updated `lib.rs` to use real rasterization instead of placeholder boxes
+- Updated `composite_glyph()` to handle `GlyphBitmap` structure with bearings
+
+**Files Modified**:
+- `backends/typf-render-orge/src/lib.rs` (render_glyph + composite_glyph)
+- `backends/typf-render-orge/src/rasterizer.rs` (new, 290 lines)
+
+**Test Results**:
+- Orge tests: 68 passed ✅
+- No regressions in existing tests
+- Ready for end-to-end integration testing with real fonts
+
+---
+
+## Previous Session (Round 6)
+
+### Summary: Variable Fonts + Batch Processing Complete
+
+**Round 6: Variable Font Support** ✅
+- Added variation axis support to HarfBuzz backend (20 lines)
+- Created comprehensive variable_fonts.rs example (175 lines)
+- Demonstrates 5 common axes: wght, wdth, slnt, opsz, ital
+- All tests passing with new variable font functionality
+
+**Round 6.5: Batch Processing Mode** ✅
+- Created `crates/typf-cli/src/batch.rs` (325 lines)
+- `BatchConfig` with flexible input (file or stdin)
+- Pattern-based filename generation
+- Successfully tested with 3-line input file
+- All documentation updated
+
+---
+
+## Previous: Orge Rasterizer Complete (Round 5) ✅
 
 ### Summary: Orge Rasterizer - Complete Pipeline Implementation
 

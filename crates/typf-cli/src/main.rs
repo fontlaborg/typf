@@ -1,5 +1,6 @@
 //! TYPF CLI - Command-line interface for the TYPF text rendering pipeline
 
+mod batch;
 mod repl;
 
 use std::fs::File;
@@ -35,15 +36,26 @@ impl Args {
         let args: Vec<String> = std::env::args().collect();
 
         if args.len() < 2 {
-            eprintln!("Usage: {} <text|--repl> [options]", args[0]);
-            eprintln!("Options:");
-            eprintln!("  --output <file>  Output file (default: output.ppm)");
-            eprintln!("  --size <size>    Font size in points (default: 16)");
-            eprintln!("  --format <fmt>   Output format: ppm, pgm, pbm (default: ppm)");
-            eprintln!("  --repl           Start interactive REPL mode");
+            eprintln!("Usage: {} <text|--repl|--batch> [options]", args[0]);
             eprintln!();
-            eprintln!("Example:");
+            eprintln!("Single Mode Options:");
+            eprintln!("  --output <file>       Output file (default: output.ppm)");
+            eprintln!("  --size <size>         Font size in points (default: 16)");
+            eprintln!("  --format <fmt>        Output format: ppm, pgm, pbm (default: ppm)");
+            eprintln!();
+            eprintln!("Batch Mode Options:");
+            eprintln!("  --batch-input <file>  Input file with one text per line (default: stdin)");
+            eprintln!("  --batch-output <dir>  Output directory (default: current)");
+            eprintln!("  --batch-pattern <p>   Output filename pattern with {{}} (default: output_{{}}.ppm)");
+            eprintln!("  --quiet, -q           Suppress progress output");
+            eprintln!();
+            eprintln!("Other Modes:");
+            eprintln!("  --repl, -i            Start interactive REPL mode");
+            eprintln!();
+            eprintln!("Examples:");
             eprintln!("  {} \"Hello World\" --output hello.ppm --size 24", args[0]);
+            eprintln!("  {} --batch-input lines.txt --batch-output out/ --size 20", args[0]);
+            eprintln!("  cat lines.txt | {} --batch-output rendered/", args[0]);
             eprintln!("  {} --repl", args[0]);
             std::process::exit(1);
         }
@@ -139,10 +151,30 @@ fn main() -> Result<()> {
     // Initialize logging
     env_logger::init();
 
-    // Check for REPL mode first
+    // Check for special modes first
     let cli_args: Vec<String> = std::env::args().collect();
+
+    // REPL mode
     if cli_args.len() >= 2 && (cli_args[1] == "--repl" || cli_args[1] == "-i") {
         return repl::run_repl().map_err(|e| TypfError::Other(e.to_string()));
+    }
+
+    // Batch mode
+    if cli_args.iter().any(|arg| arg == "--batch" || arg.starts_with("--batch-")) {
+        let config = batch::BatchConfig::parse(&cli_args[1..])?;
+        let font = Arc::new(StubFont::new());
+        let shaper = Arc::new(NoneShaper::new());
+        let renderer = Arc::new(OrgeRenderer::new());
+
+        let exporter = match config.format.as_str() {
+            "ppm" => Arc::new(PnmExporter::ppm()),
+            "pgm" => Arc::new(PnmExporter::pgm()),
+            "pbm" => Arc::new(PnmExporter::new(typf_export::PnmFormat::Pbm)),
+            _ => unreachable!(),
+        };
+
+        batch::process_batch(&config, shaper, renderer, exporter, font)?;
+        return Ok(());
     }
 
     // Parse command-line arguments

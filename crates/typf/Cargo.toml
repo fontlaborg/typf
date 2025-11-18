@@ -98,3 +98,8 @@ required-features = ["minimal", "export-pnm"]
 name = "harfbuzz"
 path = "../../examples/harfbuzz.rs"
 required-features = ["fontdb", "shaping-hb"]
+
+[[example]]
+name = "variable_fonts"
+path = "../../examples/variable_fonts.rs"
+required-features = ["shaping-hb"]

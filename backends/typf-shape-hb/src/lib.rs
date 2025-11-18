@@ -112,6 +112,29 @@ impl Shaper for HarfBuzzShaper {
         let scale = (params.size * 64.0) as i32; // 64 units per point
         hb_font.set_scale(scale, scale);
 
+        // Set variable font variations if specified
+        if !params.variations.is_empty() {
+            let variations: Vec<harfbuzz_rs::Variation> = params
+                .variations
+                .iter()
+                .filter_map(|(tag_str, value)| {
+                    if tag_str.len() == 4 {
+                        let bytes = tag_str.as_bytes();
+                        let tag = Tag::new(
+                            bytes[0] as char,
+                            bytes[1] as char,
+                            bytes[2] as char,
+                            bytes[3] as char,
+                        );
+                        Some(harfbuzz_rs::Variation::new(tag, *value))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            hb_font.set_variations(&variations);
+        }
+
         // Create and configure buffer using builder pattern
         let mut buffer = UnicodeBuffer::new()
             .add_str(text)

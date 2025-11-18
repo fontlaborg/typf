@@ -19,6 +19,7 @@ pub mod curves;
 pub mod edge;
 pub mod fixed;
 pub mod grayscale;
+pub mod rasterizer;
 pub mod scan_converter;
 
 /// Fill rule for scan conversion.
@@ -76,54 +77,66 @@ impl OrgeRenderer {
         parallel::ParallelRenderer::new()
     }
 
-    /// Create a simple bitmap for a glyph (placeholder implementation)
-    fn render_glyph(&self, glyph_id: u32, size: f32) -> Vec<u8> {
-        // For now, just create a simple box for each glyph
-        // In a real implementation, this would rasterize the actual glyph outline
-        let glyph_size = (size * 0.8) as usize;
-        let mut bitmap = vec![0u8; glyph_size * glyph_size];
+    /// Rasterize a glyph using the Orge scan converter
+    ///
+    /// # Arguments
+    ///
+    /// * `font_data` - Raw font bytes
+    /// * `glyph_id` - Glyph ID to render
+    /// * `size` - Font size in pixels
+    ///
+    /// # Returns
+    ///
+    /// Grayscale bitmap data, or None if glyph cannot be rendered
+    fn render_glyph(&self, font_data: &[u8], glyph_id: u32, size: f32) -> Option<rasterizer::GlyphBitmap> {
+        use rasterizer::GlyphRasterizer;
 
-        // Draw a simple box outline
-        for i in 0..glyph_size {
-            // Top and bottom edges
-            bitmap[i] = 255;
-            bitmap[(glyph_size - 1) * glyph_size + i] = 255;
+        // Create rasterizer for this font and size
+        let rasterizer = match GlyphRasterizer::new(font_data, size) {
+            Ok(r) => r,
+            Err(e) => {
+                log::warn!("Failed to create rasterizer: {}", e);
+                return None;
+            }
+        };
 
-            // Left and right edges
-            bitmap[i * glyph_size] = 255;
-            bitmap[i * glyph_size + glyph_size - 1] = 255;
-        }
-
-        // Add some internal pattern based on glyph ID
-        let pattern = (glyph_id % 4) as usize;
-        for y in 2..glyph_size - 2 {
-            for x in 2..glyph_size - 2 {
-                if (x + y) % (pattern + 2) == 0 {
-                    bitmap[y * glyph_size + x] = 128;
-                }
+        // Render glyph with non-zero winding rule (standard for fonts)
+        match rasterizer.render_glyph(glyph_id, FillRule::NonZeroWinding, DropoutMode::None) {
+            Ok(bitmap) => Some(bitmap),
+            Err(e) => {
+                log::warn!("Failed to render glyph {}: {}", glyph_id, e);
+                None
             }
         }
-
-        bitmap
     }
 
     /// Composite a grayscale glyph onto an RGBA canvas
     /// Uses SIMD optimizations when available for high-performance blending
-    #[allow(clippy::too_many_arguments)]
     fn composite_glyph(
         &self,
         canvas: &mut [u8],
         canvas_width: u32,
-        glyph_bitmap: &[u8],
-        glyph_size: u32,
+        glyph: &rasterizer::GlyphBitmap,
         x: i32,
         y: i32,
         color: Color,
     ) {
+        // Early return for empty glyphs
+        if glyph.width == 0 || glyph.height == 0 {
+            return;
+        }
+
+        let glyph_bitmap = &glyph.data;
+        let glyph_width = glyph.width;
+        let glyph_height = glyph.height;
+
+        // Adjust position for glyph bearings
+        let x = x + glyph.left;
+        let y = y - glyph.top; // Note: top bearing is positive upward
         let canvas_height = canvas.len() as u32 / (canvas_width * 4);
 
         // Create a temporary buffer for the colored glyph
-        let mut colored_glyph = Vec::with_capacity((glyph_size * glyph_size * 4) as usize);
+        let mut colored_glyph = Vec::with_capacity((glyph_width * glyph_height * 4) as usize);
 
         // Convert grayscale glyph to RGBA with the specified color
         for coverage in glyph_bitmap.iter() {
@@ -137,14 +150,14 @@ impl OrgeRenderer {
         // Try to use SIMD for row-by-row blending if possible
         #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
         {
-            for gy in 0..glyph_size {
+            for gy in 0..glyph_height {
                 let py = y + gy as i32;
                 if py < 0 || py >= canvas_height as i32 {
                     continue;
                 }
 
                 let px_start = x.max(0);
-                let px_end = (x + glyph_size as i32).min(canvas_width as i32);
+                let px_end = (x + glyph_width as i32).min(canvas_width as i32);
                 if px_start >= px_end {
                     continue;
                 }
@@ -154,7 +167,7 @@ impl OrgeRenderer {
                 let row_width = (glyph_x_end - glyph_x_start) as usize * 4;
 
                 let canvas_row_start = ((py as u32 * canvas_width + px_start as u32) * 4) as usize;
-                let glyph_row_start = ((gy * glyph_size + glyph_x_start) * 4) as usize;
+                let glyph_row_start = ((gy * glyph_width + glyph_x_start) * 4) as usize;
 
                 // Use SIMD blend for this row
                 simd::blend_over(
@@ -167,8 +180,8 @@ impl OrgeRenderer {
         // Fallback to scalar blending
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         {
-            for gy in 0..glyph_size {
-                for gx in 0..glyph_size {
+            for gy in 0..glyph_height {
+                for gx in 0..glyph_width {
                     let px = x + gx as i32;
                     let py = y + gy as i32;
 
@@ -177,7 +190,7 @@ impl OrgeRenderer {
                         continue;
                     }
 
-                    let coverage = glyph_bitmap[(gy * glyph_size + gx) as usize];
+                    let coverage = glyph_bitmap[(gy * glyph_width + gx) as usize];
                     if coverage == 0 {
                         continue;
                     }
@@ -217,10 +230,13 @@ impl Renderer for OrgeRenderer {
     fn render(
         &self,
         shaped: &ShapingResult,
-        _font: Arc<dyn FontRef>,
+        font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
         log::debug!("OrgeRenderer: Rendering {} glyphs", shaped.glyphs.len());
+
+        // Get font data for rasterization
+        let font_data = font.data();
 
         // Calculate canvas size
         let padding = params.padding as f32;
@@ -264,21 +280,23 @@ impl Renderer for OrgeRenderer {
         // Render each glyph
         for glyph in &shaped.glyphs {
             let glyph_size = shaped.advance_height;
-            let glyph_bitmap = self.render_glyph(glyph.id, glyph_size);
-            let actual_glyph_size = (glyph_size * 0.8) as u32; // Match render_glyph's size
 
-            let x = (glyph.x + padding) as i32;
-            let y = padding as i32;
+            // Render glyph using real font data
+            if let Some(glyph_bitmap) = self.render_glyph(font_data, glyph.id, glyph_size) {
+                let x = (glyph.x + padding) as i32;
+                let y = padding as i32;
 
-            self.composite_glyph(
-                &mut canvas,
-                width,
-                &glyph_bitmap,
-                actual_glyph_size,
-                x,
-                y,
-                params.foreground,
-            );
+                self.composite_glyph(
+                    &mut canvas,
+                    width,
+                    &glyph_bitmap,
+                    x,
+                    y,
+                    params.foreground,
+                );
+            } else {
+                log::warn!("Failed to render glyph {}", glyph.id);
+            }
         }
 
         Ok(RenderOutput::Bitmap(BitmapData {

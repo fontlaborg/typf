@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Glyph Rasterization**: Complete real glyph outline rendering in Orge backend (2025-11-18)
+  - New `rasterizer.rs` module (290 lines) integrating skrifa outline extraction with scan converter
+  - `GlyphRasterizer` struct for parsing fonts and rendering glyphs at specified sizes
+  - `BoundsCalculator` pen for automatic glyph bounding box calculation
+  - `TransformPen` for coordinate transformation from font units to oversampled pixels
+  - Integration with `GrayscaleLevel` for 2x/4x/8x anti-aliasing
+  - `GlyphBitmap` structure with width, height, bearings, and grayscale data
+  - Updated `OrgeRenderer` to use real rasterization instead of placeholder boxes
+  - All 68 Orge tests passing with real glyph rendering
+- **Batch Processing**: New `--batch` mode for CLI (2025-11-18)
+  - `crates/typf-cli/src/batch.rs` (325 lines) for bulk text processing
+  - `BatchConfig` with flexible input from file or stdin
+  - Pattern-based output filenames (e.g., `output_{}.ppm`)
+  - Progress reporting with `--quiet` flag option
+  - Error handling that continues processing despite individual failures
+  - Tested with PPM, PGM, and PBM formats
+- **Variable Fonts**: Full variable font support with variation axes (2025-11-18)
+  - HarfBuzz backend now supports font variations (wght, wdth, slnt, opsz, ital)
+  - ShapingParams.variations field allows dynamic font adjustment
+  - Comprehensive example demonstrating 5 common variation axes
+  - Works with any variable font supporting OpenType Variations
 - **Rasterization**: Complete Orge rasterization pipeline with 2,095 lines of code (2025-11-18)
   - `fixed.rs` (365 lines, 20 tests) - F26Dot6 fixed-point arithmetic for 1/64 pixel precision
   - `curves.rs` (341 lines, 5 tests) - Bézier curve subdivision with de Casteljau algorithm
