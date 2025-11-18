@@ -9,6 +9,8 @@ license.workspace = true
 typf-core = { workspace = true }
 log = { workspace = true }
 rayon = { version = "1.8", optional = true }
+read-fonts = { workspace = true }
+skrifa = { workspace = true }
 
 [features]
 default = []

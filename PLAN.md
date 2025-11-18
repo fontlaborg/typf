@@ -132,10 +132,11 @@
 - [x] Image crate integration with proper color space conversion
 - [x] 4 comprehensive PNG tests
 
-#### Week 12: Orge Rasterizer
-- [ ] Full rasterization pipeline
-- [ ] Anti-aliasing support
-- [ ] Coverage calculation
+#### Week 12: Orge Rasterizer ✅ (Completed 2025-11-18)
+- [x] Full rasterization pipeline (fixed, curves, edge, scan_converter, grayscale)
+- [x] Anti-aliasing support (grayscale oversampling with 5 tests)
+- [x] Coverage calculation (scan conversion with 11 tests)
+- [ ] Integration with real glyph outlines (in progress)
 
 #### Weeks 13-14: Skia Integration
 - [ ] Bitmap rendering with tiny-skia

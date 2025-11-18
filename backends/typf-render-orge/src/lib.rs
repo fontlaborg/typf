@@ -1,9 +1,46 @@
-//! Orge Renderer - Basic bitmap rasterization
+//! Orge Renderer - Ultra-smooth unhinted glyph rasterization
 //!
-//! A simple renderer that produces bitmap output without external dependencies.
+//! Specialized scan converter for supersmooth, unhinted font rendering.
 //! Includes SIMD optimizations for high-performance blending operations.
+//!
+//! ## Architecture
+//!
+//! - `fixed`: F26Dot6 fixed-point arithmetic (26.6 format)
+//! - `curves`: Bézier curve subdivision for outline linearization
+//! - `edge`: Edge list management for scan line algorithm
+//! - `scan_converter`: Main rasterization algorithm
+//! - `grayscale`: Anti-aliasing via oversampling
+//! - `simd`: SIMD-accelerated blending (AVX2, SSE4.1, NEON)
+//! - `parallel`: Multi-threaded rendering support
 
 use std::sync::Arc;
+
+pub mod curves;
+pub mod edge;
+pub mod fixed;
+pub mod grayscale;
+pub mod scan_converter;
+
+/// Fill rule for scan conversion.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum FillRule {
+    /// Non-zero winding rule (recommended for fonts).
+    NonZeroWinding,
+    /// Even-odd rule.
+    EvenOdd,
+}
+
+/// Dropout control mode.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum DropoutMode {
+    /// No dropout control.
+    None,
+    /// Simple dropout (fill gaps in thin stems).
+    Simple,
+    /// Smart dropout (perpendicular scan + stub detection).
+    Smart,
+}
+
 use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},

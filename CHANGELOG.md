@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Rasterization**: Complete Orge rasterization pipeline with 2,095 lines of code (2025-11-18)
+  - `fixed.rs` (365 lines, 20 tests) - F26Dot6 fixed-point arithmetic for 1/64 pixel precision
+  - `curves.rs` (341 lines, 5 tests) - Bézier curve subdivision with de Casteljau algorithm
+  - `edge.rs` (481 lines) - Edge list management for scan line algorithm
+  - `scan_converter.rs` (546 lines, 11 tests) - Main rasterization with non-zero/even-odd fill rules
+  - `grayscale.rs` (362 lines, 5 tests) - Anti-aliasing via 4x oversampling
+  - FillRule enum (NonZeroWinding, EvenOdd) for scan conversion
+  - DropoutMode enum (None, Simple, Smart) for thin feature handling
+  - skrifa and read-fonts dependencies for glyph outline extraction
 - **Documentation**: Comprehensive `BENCHMARKS.md` with performance targets, methodology, current results, and optimization guides
 - **Documentation**: Complete `SECURITY.md` with vulnerability reporting, security considerations, and best practices
 - **Documentation**: Professional `CONTRIBUTING.md` with development workflows, code standards, and contributor guidelines
