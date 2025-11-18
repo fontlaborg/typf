@@ -63,10 +63,7 @@ impl CoreGraphicsRenderer {
     }
 
     /// Calculate dimensions for the rendered bitmap
-    fn calculate_dimensions(
-        shaped: &ShapingResult,
-        params: &RenderParams,
-    ) -> (u32, u32, f32) {
+    fn calculate_dimensions(shaped: &ShapingResult, params: &RenderParams) -> (u32, u32, f32) {
         // Calculate content dimensions from glyphs
         let mut min_x = f32::MAX;
         let mut max_x = f32::MIN;
@@ -130,10 +127,7 @@ impl Renderer for CoreGraphicsRenderer {
         font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
-        log::debug!(
-            "CoreGraphicsRenderer: Rendering {} glyphs",
-            shaped.glyphs.len()
-        );
+        log::debug!("CoreGraphicsRenderer: Rendering {} glyphs", shaped.glyphs.len());
 
         // Handle empty glyph case
         if shaped.glyphs.is_empty() {
@@ -229,7 +223,7 @@ impl Renderer for CoreGraphicsRenderer {
 
         // Draw glyphs using CGContext
         if !glyph_ids.is_empty() {
-            let context_ref: CGContextRef = unsafe { std::mem::transmute(&context) };
+            let context_ref: CGContextRef = &context as *const _ as *mut _;
             unsafe {
                 CGContextShowGlyphsAtPositions(
                     context_ref,

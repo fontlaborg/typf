@@ -29,9 +29,7 @@ impl WasmRenderer {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<WasmRenderer, JsValue> {
         #[cfg(not(all(feature = "shaping-none", feature = "render-orge")))]
-        return Err(JsValue::from_str(
-            "WASM build requires shaping-none and render-orge features",
-        ));
+        return Err(JsValue::from_str("WASM build requires shaping-none and render-orge features"));
 
         #[cfg(all(feature = "shaping-none", feature = "render-orge"))]
         {

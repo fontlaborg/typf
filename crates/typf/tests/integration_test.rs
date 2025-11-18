@@ -88,11 +88,8 @@ fn test_full_pipeline() {
             assert!(bitmap.width > 0);
             assert!(bitmap.height > 0);
             assert!(!bitmap.data.is_empty());
-            assert_eq!(
-                bitmap.data.len(),
-                (bitmap.width * bitmap.height * 4) as usize
-            );
-        }
+            assert_eq!(bitmap.data.len(), (bitmap.width * bitmap.height * 4) as usize);
+        },
         _ => panic!("Expected bitmap output"),
     }
 
@@ -170,11 +167,8 @@ fn test_empty_text() {
         RenderOutput::Bitmap(bitmap) => {
             // Should have minimum dimensions for empty text (at least 1x16 with no padding)
             assert!(bitmap.width >= 1, "Width should be at least 1");
-            assert!(
-                bitmap.height >= 16,
-                "Height should be at least 16 for empty text"
-            );
-        }
+            assert!(bitmap.height >= 16, "Height should be at least 16 for empty text");
+        },
         _ => panic!("Expected bitmap output"),
     }
 }
@@ -207,7 +201,7 @@ fn test_large_text() {
             // Large text should produce a wide bitmap
             assert!(bitmap.width > 100);
             assert!(bitmap.height > 20);
-        }
+        },
         _ => panic!("Expected bitmap output"),
     }
 }
@@ -253,7 +247,7 @@ fn test_pipeline_with_colors() {
                     assert_eq!(bitmap.data[2], bg_color.b, "Blue channel mismatch");
                     assert_eq!(bitmap.data[3], bg_color.a, "Alpha channel mismatch");
                 }
-            }
+            },
             _ => panic!("Expected bitmap output"),
         }
 

@@ -1,5 +1,5 @@
 [package]
-name = "typf-unicode"
+name = "typf-export"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -9,10 +9,6 @@ repository.workspace = true
 
 [dependencies]
 typf-core = { workspace = true }
-icu_segmenter = "1.5"
-icu_properties = "1.5"
-unicode-bidi = "0.3"
-unicode-normalization = "0.1"
-
-[dev-dependencies]
-proptest = "1.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+image = { version = "0.25", default-features = false, features = ["png"] }

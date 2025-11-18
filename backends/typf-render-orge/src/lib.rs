@@ -72,6 +72,7 @@ impl OrgeRenderer {
 
     /// Composite a grayscale glyph onto an RGBA canvas
     /// Uses SIMD optimizations when available for high-performance blending
+    #[allow(clippy::too_many_arguments)]
     fn composite_glyph(
         &self,
         canvas: &mut [u8],
@@ -124,7 +125,6 @@ impl OrgeRenderer {
                     &colored_glyph[glyph_row_start..glyph_row_start + row_width],
                 );
             }
-            return;
         }
 
         // Fallback to scalar blending
@@ -314,11 +314,8 @@ mod tests {
                 assert_eq!(bitmap.format, BitmapFormat::Rgba8);
                 assert!(bitmap.width > 0);
                 assert!(bitmap.height > 0);
-                assert_eq!(
-                    bitmap.data.len(),
-                    (bitmap.width * bitmap.height * 4) as usize
-                );
-            }
+                assert_eq!(bitmap.data.len(), (bitmap.width * bitmap.height * 4) as usize);
+            },
             _ => panic!("Expected bitmap output"),
         }
     }
@@ -365,7 +362,7 @@ mod tests {
                 assert_eq!(bitmap.data[1], 0); // G
                 assert_eq!(bitmap.data[2], 0); // B
                 assert_eq!(bitmap.data[3], 255); // A
-            }
+            },
             _ => panic!("Expected bitmap output"),
         }
     }

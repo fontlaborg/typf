@@ -34,12 +34,7 @@ impl Typf {
 
         let renderer: Arc<dyn Renderer + Send + Sync> = match renderer {
             "orge" => Arc::new(typf_render_orge::OrgeRenderer::new()),
-            _ => {
-                return Err(PyValueError::new_err(format!(
-                    "Unknown renderer: {}",
-                    renderer
-                )))
-            }
+            _ => return Err(PyValueError::new_err(format!("Unknown renderer: {}", renderer))),
         };
 
         Ok(Self { shaper, renderer })
@@ -103,7 +98,7 @@ impl Typf {
                 result.set_item("format", format!("{:?}", bitmap.format))?;
                 result.set_item("data", PyBytes::new_bound(py, &bitmap.data))?;
                 Ok(result.into())
-            }
+            },
             _ => Err(PyValueError::new_err("Unexpected render output format")),
         }
     }
@@ -161,9 +156,17 @@ fn export_image(py: Python, image_data: PyObject, format: &str) -> PyResult<PyOb
     // Handle dict input from render_text() or tuple of (data, width, height)
     let bitmap = if let Ok(dict) = image_data.downcast_bound::<PyDict>(py) {
         // Extract from dictionary
-        let width: u32 = dict.get_item("width")?.ok_or_else(|| PyValueError::new_err("Missing 'width' in image data"))?.extract()?;
-        let height: u32 = dict.get_item("height")?.ok_or_else(|| PyValueError::new_err("Missing 'height' in image data"))?.extract()?;
-        let data_bytes = dict.get_item("data")?.ok_or_else(|| PyValueError::new_err("Missing 'data' in image data"))?;
+        let width: u32 = dict
+            .get_item("width")?
+            .ok_or_else(|| PyValueError::new_err("Missing 'width' in image data"))?
+            .extract()?;
+        let height: u32 = dict
+            .get_item("height")?
+            .ok_or_else(|| PyValueError::new_err("Missing 'height' in image data"))?
+            .extract()?;
+        let data_bytes = dict
+            .get_item("data")?
+            .ok_or_else(|| PyValueError::new_err("Missing 'data' in image data"))?;
         let data: Vec<u8> = data_bytes.extract()?;
 
         BitmapData {
@@ -208,8 +211,12 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
     }
 
     impl FontRef for StubFont {
-        fn data(&self) -> &[u8] { &[] }
-        fn units_per_em(&self) -> u16 { 1000 }
+        fn data(&self) -> &[u8] {
+            &[]
+        }
+        fn units_per_em(&self) -> u16 {
+            1000
+        }
         fn glyph_id(&self, ch: char) -> Option<u32> {
             if ch.is_alphanumeric() || ch.is_whitespace() {
                 Some(ch as u32)
@@ -217,7 +224,9 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
                 Some(0)
             }
         }
-        fn advance_width(&self, _: u32) -> f32 { self.size * 0.5 }
+        fn advance_width(&self, _: u32) -> f32 {
+            self.size * 0.5
+        }
     }
 
     let typf = Typf::new("none", "orge")?;
@@ -229,7 +238,8 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
         ..Default::default()
     };
 
-    let shaped = typf.shaper
+    let shaped = typf
+        .shaper
         .shape(text, font.clone(), &shaping_params)
         .map_err(|e| PyRuntimeError::new_err(format!("Shaping failed: {:?}", e)))?;
 
@@ -240,7 +250,8 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
         ..Default::default()
     };
 
-    let rendered = typf.renderer
+    let rendered = typf
+        .renderer
         .render(&shaped, font, &render_params)
         .map_err(|e| PyRuntimeError::new_err(format!("Rendering failed: {:?}", e)))?;
 
@@ -252,7 +263,7 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
             result.set_item("format", format!("{:?}", bitmap.format))?;
             result.set_item("data", PyBytes::new_bound(py, &bitmap.data))?;
             Ok(result.into())
-        }
+        },
         _ => Err(PyValueError::new_err("Unexpected render output format")),
     }
 }

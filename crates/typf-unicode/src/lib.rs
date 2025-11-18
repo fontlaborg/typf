@@ -54,10 +54,10 @@ impl UnicodeProcessor {
 
         // Bidirectional text analysis if requested
         let runs = if options.bidi_resolve {
-            self.create_bidi_runs(&normalized, scripts, &options)?
+            self.create_bidi_runs(&normalized, scripts, options)?
         } else {
             // Simple runs without bidi analysis
-            self.create_simple_runs(&normalized, scripts, &options, Direction::LeftToRight)?
+            self.create_simple_runs(&normalized, scripts, options, Direction::LeftToRight)?
         };
 
         Ok(runs)
@@ -431,7 +431,8 @@ mod tests {
     #[test]
     fn test_line_breaking_long_text() {
         let processor = UnicodeProcessor::new();
-        let text = "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.";
+        let text =
+            "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.";
         let breaks = processor.segment_lines(text).unwrap();
 
         // Should have multiple break opportunities (spaces, punctuation)

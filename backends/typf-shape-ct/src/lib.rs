@@ -62,12 +62,8 @@ impl CoreTextShaper {
     /// Create a new CoreText shaper
     pub fn new() -> Self {
         Self {
-            font_cache: RwLock::new(LruCache::new(
-                std::num::NonZeroUsize::new(100).unwrap(),
-            )),
-            shape_cache: RwLock::new(LruCache::new(
-                std::num::NonZeroUsize::new(1000).unwrap(),
-            )),
+            font_cache: RwLock::new(LruCache::new(std::num::NonZeroUsize::new(100).unwrap())),
+            shape_cache: RwLock::new(LruCache::new(std::num::NonZeroUsize::new(1000).unwrap())),
         }
     }
 
@@ -266,11 +262,7 @@ impl CoreTextShaper {
 
         // Use FFI to call CTRunGetAdvances
         unsafe {
-            CTRunGetAdvances(
-                run.as_concrete_TypeRef(),
-                CFRange::init(0, 0),
-                advances.as_mut_ptr(),
-            );
+            CTRunGetAdvances(run.as_concrete_TypeRef(), CFRange::init(0, 0), advances.as_mut_ptr());
         }
 
         advances

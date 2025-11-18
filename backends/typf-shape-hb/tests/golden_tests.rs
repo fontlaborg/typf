@@ -7,8 +7,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use typf_core::{
-    types::{Direction, ShapingResult},
     traits::{FontRef, Shaper},
+    types::{Direction, ShapingResult},
     ShapingParams,
 };
 use typf_shape_hb::HarfBuzzShaper;
@@ -72,8 +72,12 @@ fn check_golden(name: &str, actual: &str) {
         eprintln!("Updated golden file: {}", path.display());
     } else {
         // Test mode: compare against existing golden file
-        let expected = fs::read_to_string(&path)
-            .unwrap_or_else(|_| panic!("Golden file not found: {}. Run with UPDATE_GOLDEN=1 to create it.", path.display()));
+        let expected = fs::read_to_string(&path).unwrap_or_else(|_| {
+            panic!(
+                "Golden file not found: {}. Run with UPDATE_GOLDEN=1 to create it.",
+                path.display()
+            )
+        });
 
         if actual.trim() != expected.trim() {
             eprintln!("=== EXPECTED ===");

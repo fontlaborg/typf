@@ -149,7 +149,8 @@ pub unsafe fn blend_over_neon(dst: &mut [u8], src: &[u8]) {
     let simd_len = len - (len % 16); // Process 16 bytes at a time (4 pixels)
 
     let mut i = 0;
-    while i < simd_len {
+    #[allow(clippy::never_loop, clippy::while_immutable_condition)]
+    if i < simd_len {
         // Load 4 pixels
         let _src_vec = vld1q_u8(src.as_ptr().add(i));
         let _dst_vec = vld1q_u8(dst.as_ptr().add(i));
@@ -157,7 +158,6 @@ pub unsafe fn blend_over_neon(dst: &mut [u8], src: &[u8]) {
         // Extract alpha channel (simplified for NEON)
         // TODO: Complete NEON implementation
         // For now, use scalar fallback on ARM
-        break;
     }
 
     // Scalar fallback for ARM (or when NEON not fully implemented)
@@ -176,6 +176,7 @@ pub unsafe fn blend_over_neon(dst: &mut [u8], src: &[u8]) {
 
 /// Scalar fallback for platforms without SIMD
 #[inline]
+#[allow(dead_code)]
 pub fn blend_over_scalar(dst: &mut [u8], src: &[u8]) {
     debug_assert_eq!(dst.len(), src.len());
     debug_assert_eq!(dst.len() % 4, 0);
@@ -211,7 +212,6 @@ pub fn blend_over(dst: &mut [u8], src: &[u8]) {
     #[cfg(target_arch = "aarch64")]
     unsafe {
         blend_over_neon(dst, src);
-        return;
     }
 
     // Fallback to scalar

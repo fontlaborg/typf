@@ -43,6 +43,7 @@ repository = "https://github.com/typf/typf"
 
 [workspace.dependencies]
 # Internal crates
+typf = { path = "crates/typf" }
 typf-core = { path = "crates/typf-core" }
 typf-input = { path = "crates/typf-input" }
 typf-unicode = { path = "crates/typf-unicode" }
