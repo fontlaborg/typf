@@ -5,6 +5,7 @@ members = [
     "crates/*",
     "python",
     "typf-cli",
+    "backend_benches",
 ]
 exclude = [
     "fuzz",
@@ -48,6 +49,7 @@ png = "0.17"
 lyon_geom = "1.0"
 hdrhistogram = "7"
 unicode-bidi = "0.3"
+kurbo = "0.11"
 
 # Python bindings
 pyo3 = "0.22"

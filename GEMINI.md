@@ -15,7 +15,7 @@
 - **`backends/`**: Contains the platform-specific and platform-agnostic rendering backends.
   - `typf-core`: Core traits, types, and caching infrastructure.
   - `typf-icu-hb`: The main cross-platform backend using HarfBuzz for shaping.
-  - `typf-orge`: Our custom, high-performance CPU rasterizer.
+- `typf-orge`: Our custom, high-performance CPU rasterizer \"orge\" (open rasterizer glyph engine), made by FontLab https://www.fontlab.com/.
   - `typf-mac`/`typf-win`: Platform-native backends (CoreText/DirectWrite).
 - **`crates/`**: Contains modular, reusable components.
   - `typf-api`: The high-level, unified public API.
@@ -66,7 +66,7 @@
 ## V. SPECIFIC GUIDELINES
 
 - **Error Handling**: All public functions in `typf-api` and other core crates should return a `Result<T, typf_error::Error>`. Do not allow panics to cross API boundaries.
-- **Feature Flags**: Use Cargo feature flags to manage optional dependencies and backends (e.g., `orge`, `tiny-skia-renderer`). Ensure the default feature set is sensible.
+- **Feature Flags**: Use Cargo feature flags to manage optional dependencies and backends (e.g., `orge` (open rasterizer glyph engine, made by FontLab https://www.fontlab.com/), `tiny-skia-renderer`). Ensure the default feature set is sensible.
 - **FFI (Python)**: When working in the `python/` directory, remember that you are in a guest environment. Catch all panics, convert errors to `PyErr`, and release the GIL for any long-running operations.
 - **Documentation**: All public modules, types, and functions MUST have clear documentation (`rustdoc`). Add examples to show how to use the API.
 

@@ -277,6 +277,10 @@ pub struct RenderOptions {
     pub dpi: f32,
     /// Padding around text
     pub padding: u32,
+    /// Font size in pixels
+    pub font_size: f32,
+    /// Whether to render in grayscale
+    pub grayscale: bool,
 }
 
 /// Output format for rendering
@@ -300,6 +304,8 @@ impl Default for RenderOptions {
             hinting: HintingMode::Slight,
             dpi: 72.0,
             padding: 10,
+            font_size: 24.0, // Default font size
+            grayscale: false, // Default to not grayscale
         }
     }
 }

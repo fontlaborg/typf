@@ -7,3 +7,15 @@ license.workspace = true
 
 [dependencies]
 typf-core = { path = "../../backends/typf-core" }
+typf-icu-hb = { path = "../../backends/typf-icu-hb", optional = true }
+typf-mac = { path = "../../backends/typf-mac", optional = true }
+typf-orge = { path = "../../backends/typf-orge", optional = true }
+typf-win = { path = "../../backends/typf-win", optional = true }
+
+[features]
+default = ["backend-orge"] # Orge is the default cross-platform backend
+
+backend-harfbuzz = ["typf-icu-hb"]
+backend-coretext = ["typf-mac"]
+backend-orge = ["typf-orge"]
+backend-directwrite = ["typf-win"]

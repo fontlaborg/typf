@@ -37,8 +37,9 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 use typf_core::{
     types::{AntialiasMode, FontSource, FontStyle, RenderFormat},
-    Backend, Bitmap, Font, FontCache, FontCacheConfig, Glyph, RenderOptions, RenderOutput,
+    traits::Backend as TypfCoreBackend, Bitmap, Font, FontCache, FontCacheConfig, Glyph, RenderOptions, RenderOutput,
     RenderSurface, Result, SegmentOptions, ShapingResult, TextRun, TypfError,
+    DynBackend, BackendFeatures, FontMetrics,
 };
 use typf_fontdb::FontDatabase;
 use typf_unicode::TextSegmenter;
@@ -431,7 +432,7 @@ impl CoreTextBackend {
     }
 }
 
-impl Backend for CoreTextBackend {
+impl TypfCoreBackend for CoreTextBackend {
     fn segment(&self, text: &str, options: &SegmentOptions) -> Result<Vec<TextRun>> {
         self.segmenter.segment(text, options)
     }
@@ -489,7 +490,7 @@ impl Backend for CoreTextBackend {
         let font = shaped
             .font
             .as_ref()
-            .ok_or_else(|| TypfError::render("Font information missing from shaped result"))?;
+            .ok_or_else(|| TypfError::render("Font information missing from shaped result".to_string()))?;
 
         let ct_font = self.get_or_create_ct_font(font)?;
         let padding = options.padding as f32;
@@ -546,12 +547,10 @@ impl Backend for CoreTextBackend {
             text_a as f64 / 255.0,
         );
 
-        // Flip coordinate system (CoreGraphics uses bottom-left origin)
-        context.translate(0.0, height as f64);
-        context.scale(1.0, -1.0);
-
         // Calculate baseline position
-        let baseline_y = padding as f64 + ct_font.ascent();
+        // CoreGraphics uses bottom-left origin. We want text positioned from the top,
+        // so calculate baseline from the bottom: height - (padding + descent)
+        let baseline_y = (height as f64) - (padding as f64 + ct_font.descent());
 
         let glyph_ids: Vec<CGGlyph> = shaped
             .glyphs
@@ -598,6 +597,123 @@ impl Backend for CoreTextBackend {
 impl Default for CoreTextBackend {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl DynBackend for CoreTextBackend {
+    fn name(&self) -> &'static str {
+        "CoreText"
+    }
+
+    fn shape_text(&self, text: &str, font: &Font) -> ShapingResult {
+        let options = SegmentOptions::default();
+        let runs = self
+            .segment(text, &options)
+            .expect("text segmentation failed");
+        // For simplicity, we assume a single run for now, or merge them.
+        // A more robust implementation would shape each run separately and combine.
+        let first_run = runs.into_iter().next().unwrap_or_else(|| TextRun {
+            text: text.to_string(),
+            range: (0, text.len()),
+            script: "Unknown".to_string(),
+            language: "und".to_string(),
+            direction: typf_core::types::Direction::LeftToRight,
+            font: None,
+        });
+        self.shape(&first_run, font).expect("text shaping failed")
+    }
+
+    fn render_glyph(&self, font: &Font, glyph_id: u32, options: RenderOptions) -> Option<Bitmap> {
+        let ct_font = self.get_or_create_ct_font(font).ok()?;
+
+        let width = options.font_size * 2.0; // Estimate width for a single glyph
+        let height = options.font_size * 2.0; // Estimate height
+
+        let bytes_per_row = (width.ceil() as usize).max(1) * 4;
+        let mut buffer = vec![0u8; (height.ceil() as usize).max(1) * bytes_per_row];
+
+        let color_space = CGColorSpace::create_device_rgb();
+        let context = CGContext::create_bitmap_context(
+            Some(buffer.as_mut_ptr() as *mut _),
+            (width.ceil() as usize).max(1),
+            (height.ceil() as usize).max(1),
+            8,
+            bytes_per_row,
+            &color_space,
+            core_graphics::base::kCGImageAlphaPremultipliedLast,
+        );
+        Self::configure_antialias(&context, options.antialias);
+
+        let (text_r, text_g, text_b, text_a) =
+            typf_core::utils::parse_color(&options.color).map_err(|e| TypfError::render(e.to_string())).ok()?;
+
+        // Fill background if not transparent
+        if options.background != "transparent" {
+            let (bg_r, bg_g, bg_b, bg_a) =
+                typf_core::utils::parse_color(&options.background).map_err(|e| TypfError::render(e.to_string())).ok()?;
+            context.set_rgb_fill_color(
+                bg_r as f64 / 255.0,
+                bg_g as f64 / 255.0,
+                bg_b as f64 / 255.0,
+                bg_a as f64 / 255.0,
+            );
+            context.fill_rect(CGRect::new(
+                &CGPoint::new(0.0, 0.0),
+                &CGSize::new(width.into(), height.into()),
+            ));
+        }
+
+        // Set text color
+        context.set_rgb_fill_color(
+            text_r as f64 / 255.0,
+            text_g as f64 / 255.0,
+            text_b as f64 / 255.0,
+            text_a as f64 / 255.0,
+        );
+
+        // Flip coordinate system (CoreGraphics uses bottom-left origin)
+        context.translate(0.0, height as f64);
+        context.scale(1.0, -1.0);
+
+        let glyph = glyph_id.min(u16::MAX as u32) as CGGlyph;
+        let position = CGPoint { x: 0.0, y: ct_font.ascent() as f64 }; // Render at baseline
+
+        context.save();
+        context.set_text_drawing_mode(CGTextDrawingMode::CGTextFill);
+        ct_font.draw_glyphs(&[glyph], &[position], context.clone());
+        context.restore();
+
+        Some(Bitmap {
+            width: width.ceil() as u32,
+            height: height.ceil() as u32,
+            data: buffer,
+        })
+    }
+
+    fn render_shaped_text(&self, shaped_text: &ShapingResult, options: RenderOptions) -> Option<Bitmap> {
+        match self.render(shaped_text, &options) {
+            Ok(RenderOutput::Bitmap(bitmap)) => Some(bitmap),
+            _ => None, // Handle other RenderOutput variants or errors as needed
+        }
+    }
+
+    fn font_metrics(&self, font: &Font) -> FontMetrics {
+        let ct_font = self.get_or_create_ct_font(font).expect("failed to get CTFont for metrics");
+        FontMetrics {
+            units_per_em: 2048, // CoreText doesn't expose this directly, common default
+            ascender: ct_font.ascent() as i16,
+            descender: ct_font.descent() as i16,
+            line_gap: ct_font.leading() as i16,
+        }
+    }
+
+    fn supported_features(&self) -> BackendFeatures {
+        BackendFeatures {
+            monochrome: true,
+            grayscale: true,
+            subpixel: true, // CoreText supports subpixel AA
+            color_emoji: true, // CoreText supports color emoji
+        }
     }
 }
 
@@ -679,7 +795,7 @@ mod tests {
     #[test]
     fn test_backend_creation() {
         let backend = CoreTextBackend::new();
-        assert_eq!(backend.name(), "CoreText");
+        assert_eq!(DynBackend::name(&backend), "CoreText");
     }
 
     #[test]

@@ -11,8 +11,10 @@ use alloc::vec::Vec;
 
 use typf_core::{
     types::{Direction, RenderFormat},
-    Backend, Bitmap, Font, Glyph, RenderOptions, RenderOutput, RenderSurface, Result,
+    Bitmap, Font, Glyph, RenderOptions, RenderOutput, RenderSurface, Result,
     SegmentOptions, ShapingResult, TextRun,
+    traits::Backend as CoreBackendTrait,
+    backend_trait::{BackendFeatures, DynBackend, FontMetrics},
 };
 
 /// Pure Rust backend using rustybuzz for shaping and tiny-skia for rendering
@@ -150,7 +152,7 @@ impl PureRustBackend {
     }
 }
 
-impl Backend for PureRustBackend {
+impl CoreBackendTrait for PureRustBackend {
     fn segment(&self, text: &str, _options: &SegmentOptions) -> Result<Vec<TextRun>> {
         Ok(self.segment_text(text))
     }
@@ -240,6 +242,79 @@ impl Default for PureRustBackend {
         Self::new()
     }
 }
+
+impl DynBackend for PureRustBackend {
+    fn name(&self) -> &'static str {
+        "PureRust"
+    }
+
+    fn shape_text(&self, text: &str, font: &Font) -> ShapingResult {
+        // PureRustBackend has its own segment_text, which is then passed to shape.
+        // We replicate this behavior here.
+        let runs = self.segment_text(text);
+        let first_run = runs.into_iter().next().unwrap_or_else(|| TextRun {
+            text: text.to_string(),
+            range: (0, text.len()),
+            script: "Unknown".to_string(),
+            language: "und".to_string(),
+            direction: Direction::LeftToRight,
+            font: None,
+        });
+        self.shape(&first_run, font).expect("PureRust shaping failed")
+    }
+
+    fn render_glyph(&self, _font: &Font, _glyph_id: u32, options: RenderOptions) -> Option<Bitmap> {
+        // For PureRust, a simple rectangle for the glyph
+        let width = options.font_size as u32;
+        let height = options.font_size as u32;
+
+        let mut data = vec![0u8; (width * height * 4) as usize];
+        let (text_r, text_g, text_b, text_a) = parse_color(&options.color);
+
+        for y in 0..height {
+            for x in 0..width {
+                let idx = (y * width + x) as usize * 4;
+                data[idx] = text_r;
+                data[idx + 1] = text_g;
+                data[idx + 2] = text_b;
+                data[idx + 3] = text_a;
+            }
+        }
+
+        Some(Bitmap {
+            width,
+            height,
+            data,
+        })
+    }
+
+    fn render_shaped_text(&self, shaped_text: &ShapingResult, options: RenderOptions) -> Option<Bitmap> {
+        match self.render(shaped_text, &options) {
+            Ok(RenderOutput::Bitmap(bitmap)) => Some(bitmap),
+            _ => None, // PureRust's render can also return Svg, so we only return Bitmap
+        }
+    }
+
+    fn font_metrics(&self, font: &Font) -> FontMetrics {
+        // PureRust doesn't parse full font metrics, so provide reasonable defaults.
+        FontMetrics {
+            units_per_em: 1000,
+            ascender: (font.size * 0.8) as i16,
+            descender: (font.size * -0.2) as i16,
+            line_gap: (font.size * 0.2) as i16,
+        }
+    }
+
+    fn supported_features(&self) -> BackendFeatures {
+        BackendFeatures {
+            monochrome: true,
+            grayscale: true,
+            subpixel: false,
+            color_emoji: false,
+        }
+    }
+}
+
 
 // Simple script detection
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -352,7 +427,7 @@ mod tests {
     #[test]
     fn test_pure_rust_backend() {
         let backend = PureRustBackend::new();
-        assert_eq!(backend.name(), "PureRust");
+        assert_eq!(DynBackend::name(&backend), "PureRust");
     }
 
     #[test]

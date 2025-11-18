@@ -26,9 +26,19 @@ typf-win = { path = "../backends/typf-win", optional = true }
 path = "../backends/typf-icu-hb"
 optional = true
 
+[dependencies.typf-skiahb]
+path = "../backends/typf-skiahb"
+optional = true
+
+[dependencies.typf-orge]
+path = "../backends/typf-orge"
+optional = true
+
 [features]
 default = []
 python = ["pyo3/extension-module"]
 mac = ["typf-mac"]
 windows = ["typf-win"]
 icu = ["typf-icu-hb"]
+skiahb = ["typf-skiahb"]
+orge = ["typf-orge"]

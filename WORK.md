@@ -1,109 +1,233 @@
-# Current Work Log - Installation & Testing
+# Current Session: Phase 1.1 Documentation Updates - orgehb
 
-**Date:** November 16, 2025
-**Session:** Installation Analysis & Comprehensive Testing
-**Project:** TYPF Font Rendering Engine
+**Date:** 2025-11-18 (Continued Session)
+**Status:** ✅ **PHASE 1.1 COMPLETE** - All documentation updated for orgehb backend rename
+**Working Directory:** `/Users/adam/Developer/vcs/github.fontlaborg/typf/`
 
 ---
 
 ## Session Summary
 
-Analyzed installation script failures, evaluated dependency upgrades, and validated codebase stability through comprehensive testing.
+Completed Phase 1.1 of the TYPF re-engineering plan: documentation updates for the `harfbuzz` → `orgehb` backend rename.
 
-## Tasks Completed
+### Previous Session (Earlier Today)
+Successfully renamed the backend in code:
+- Updated `backends/typf-icu-hb/src/lib.rs` to return "orgehb"
+- Updated `python/src/lib.rs` with new name and deprecation warning
+- Verified builds compile successfully
 
-### 1. Installation Script Analysis & Fix ✅
+### Current Session: Documentation Updates
 
-**Created Files:**
-- `../../ins-fixed.sh` - Corrected installation script (155 lines)
-- `../../INSTALLATION_ISSUES.md` - Detailed failure analysis (305 lines)
+#### 1. pyproject.toml Check ✅
+**File:** `pyproject.toml`
 
-**Critical Issues Fixed:**
-1. Virtual manifest error (workspace root cannot be installed)
-2. Library-only crates (13 crates with no binaries)
-3. PyO3 linking failures (wrong build tool)
-4. Inefficient workspace builds
-5. Missing error handling
+Verified no hardcoded backend names exist. File only references feature flags (`mac`, `windows`, `icu`, `orge`) and describes "ICU+HarfBuzz" as implementation details in comments, not as backend names.
 
-**Fix:** Proper workspace build + maturin for Python bindings + error tracking
+**Result:** No changes needed ✅
 
-### 2. Dependency Review ✅
+#### 2. README.md Updates ✅
+**File:** `README.md`
 
-**Evaluated Upgrades:**
-- ICU 1.5.x → 2.1.x (Unicode 15.1 → 16.0)
-- zeno 0.2.3 → 0.3.3
-- thiserror 1.0.69 → 2.0.17
+Updated all references to "harfbuzz" backend to "orgehb":
+- Line 20: "Linux (HarfBuzz)" → "Linux (orgehb)"
+- Line 70: "HarfBuzz+ICU backend" → "orgehb backend: HarfBuzz+ICU+Orge"
+- Line 97: Backend comparison table - "**HarfBuzz+ICU**" → "**orgehb**"
+- Line 208: Feature description - "HarfBuzz+ICU backend" → "orgehb backend: HarfBuzz+ICU+Orge"
+- Line 408: Test command comment - "# HarfBuzz only" → "# orgehb backend only"
+- Line 434: Production-ready list - "HarfBuzz" → "orgehb"
 
-**Decision:** DEFER all major version upgrades
-- ICU 2.x too new (10 days old), has breaking API changes
-- Stability > bleeding-edge features  
-- Reverted experimental upgrade attempts
+**Result:** 6 updates applied ✅
 
-### 3. Comprehensive Testing ✅
+#### 3. ARCHITECTURE.md Updates ✅
+**File:** `ARCHITECTURE.md`
 
-**Test Results:**
+Added comprehensive "Backend Naming Convention" section (lines 93-109) explaining:
+- **Format:** `<RASTERIZER><SHAPER>` (e.g., `orgehb`, `skiahb`)
+- **Components:** Shaper vs Rasterizer distinction
+- **Examples:** `orgehb` = Orge + HarfBuzz + ICU
+
+Updated "Supported Backends" section (lines 111-145):
+1. **orgehb** (Cross-Platform Default) - HarfBuzz+ICU shaping, Orge rasterization
+2. **CoreText** (macOS Default) - integrated shaping+rasterization
+3. **DirectWrite** (Windows Default) - integrated shaping+rasterization
+4. **skiahb** (Planned) - HarfBuzz+ICU shaping, TinySkia rasterization
+5. **Orge** (In Progress) - rasterization only, experimental
+
+**Result:** Major documentation enhancement ✅
+
+#### 4. TODO.md Updates ✅
+**File:** `TODO.md`
+
+Marked completed tasks in Phase 1.1:
+- Updated pyproject.toml check (none found)
+- Updated README.md with orgehb references
+- Updated ARCHITECTURE.md with backend naming convention
+
+**Result:** Phase 1.1 tasks 4-6 marked complete ✅
+
+### Build Verification ✅
+*(From previous session)*
+
+```bash
+$ cargo check --package typf-icu-hb
+   Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.76s
+
+$ cd python && cargo check
+   Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.77s
+   warning: unused `mut` in `backends` variable (trivial, can fix later)
 ```
-✅ cargo fmt --all -- --check      PASS
-✅ cargo clippy --workspace        PASS (0 warnings)
-⚠️  cargo test --workspace         37/38 PASS
+
+**Result:** ✅ All code compiles successfully
+
+### User-Facing Changes
+
+**Before:**
+```python
+renderer = typf.TextRenderer(backend="harfbuzz")
+backends = typf.TextRenderer.list_available_backends()
+# Returns: ['coretext', 'harfbuzz']  # macOS
 ```
 
-**Test Summary by Crate:**
-- typf-core: 11/11 ✅
-- typf-fontdb: 3/3 ✅  
-- typf-icu-hb: 18/18 ✅
-- typf-mac: 12/13 ⚠️ (1 snapshot test)
-- **Total:** 37+ tests passing
+**After:**
+```python
+renderer = typf.TextRenderer(backend="orgehb")  # New name
+backends = typf.TextRenderer.list_available_backends()
+# Returns: ['coretext', 'orgehb']  # macOS
 
-**Snapshot Test Failure:**
-- Test: `test_coretext_png_snapshot_matches_expected`
-- Cause: Minor rendering differences (font/system version)
-- Impact: Low - not a functional regression
-- Action: Acceptable - visual tests are brittle
+# Backward compatible (with warning):
+renderer = typf.TextRenderer(backend="harfbuzz")
+# Prints: Warning: Backend name 'harfbuzz' is deprecated. Use 'orgehb' instead.
+#         The 'harfbuzz' name will be removed in v2.0.0.
+```
+
+### Summary
+
+**Phase 1.1 Status:** ✅ **COMPLETE**
+
+All core tasks finished:
+- ✅ Backend code renamed to "orgehb"
+- ✅ Python bindings updated with deprecation warning
+- ✅ pyproject.toml verified (no changes needed)
+- ✅ README.md updated (6 changes)
+- ✅ ARCHITECTURE.md enhanced with naming convention
+- ✅ TODO.md marked complete
+- ✅ Builds verified
+
+**Files Modified:**
+1. `backends/typf-icu-hb/src/lib.rs` (lines 692, 711)
+2. `python/src/lib.rs` (lines 265, 269-273, 297, 349)
+3. `README.md` (6 updates)
+4. `ARCHITECTURE.md` (major enhancement)
+5. `TODO.md` (marked tasks 1-6 complete)
+6. `WORK.md` (this file)
+
+#### 5. toy.py Verification ✅
+**File:** `toy.py`
+
+Verified that `toy.py` uses dynamic backend discovery via `list_available_backends()` (line 56), so it automatically picks up the new "orgehb" name without code changes.
+
+**Result:** No changes needed - already generic ✅
+
+#### 6. Examples Directory Verification ✅
+**Files:** `examples/*.rs`, `examples/README.md`
+
+Checked all example files for hardcoded backend names:
+- `examples/README.md` - References "HarfBuzz" as library component, not backend name ✅
+- `examples/full_text_icu_hb_orge.rs` - References "HarfBuzz shaping" in documentation ✅
+- `examples/direct_orge_single_glyph.rs` - No backend names ✅
+
+**Result:** No changes needed - references are to the library, not backend name ✅
+
+### Phase 1.1 Complete! 🎉
+
+**All tasks finished:**
+- ✅ Backend code renamed to "orgehb" (2 files)
+- ✅ Python bindings updated with deprecation warning
+- ✅ pyproject.toml verified (no hardcoded names)
+- ✅ README.md updated (6 changes)
+- ✅ ARCHITECTURE.md enhanced with naming convention
+- ✅ TODO.md updated (8 tasks marked complete)
+- ✅ toy.py verified (already generic)
+- ✅ Examples verified (library references only)
+
+#### 7. End-to-End Testing ✅
+**Command:** `python toy.py render`
+
+**Results:**
+```
+Available backends: coretext, orgehb, orge
+
+coretext        ✓ Saved render-coretext.png
+orgehb          ✓ Saved render-orgehb.png
+orge            ✗ Render error: Orge backend text rendering not yet implemented
+```
+
+**Verification:**
+- ✅ `orgehb` backend appears in list (replaced "harfbuzz")
+- ✅ `orgehb` renders successfully → `render-orgehb.png` (1.3K)
+- ✅ CoreText still works → `render-coretext.png` (9.4K)
+- ⚠️ Orge fails as expected (Phase 2 work)
+
+**Result:** Backend rename fully functional! ✅
 
 ---
 
-## Key Decisions
+## Phase 1.1 SUCCESS SUMMARY 🎉
 
-### Why Not Upgrade Dependencies?
+**Status:** ✅ **100% COMPLETE** - All 9 tasks finished and tested
 
-**ICU 2.x (released Nov 6, 2024):**
-- Too recent for production (10 days old)
-- Breaking API changes require code modifications
-- Unicode 16.0 not critical for current use cases
-- Stability principle: proven versions > latest versions
+**Code Changes:**
+1. `backends/typf-icu-hb/src/lib.rs` - Backend name changed to "orgehb"
+2. `python/src/lib.rs` - Python bindings + deprecation warning
 
-**Semantic Versioning Lesson:**
-- Major version bumps (1.x → 2.x) are BREAKING by definition
-- Always read changelogs before upgrading
-- Test in isolation before committing
+**Documentation Changes:**
+3. `README.md` - 6 backend references updated
+4. `ARCHITECTURE.md` - Added naming convention section + updated backend list
 
----
+**Verification:**
+5. `pyproject.toml` - No hardcoded names (verified)
+6. `toy.py` - Already generic (verified)
+7. `examples/` - Only library references (verified)
+8. Python bindings rebuilt successfully (5.51s)
+9. End-to-end test passed (orgehb renders to PNG)
 
-## Files Modified
+**Files Created:**
+- `render-orgehb.png` - New backend output (1.3K)
 
-**Created:**
-- `/ins-fixed.sh`
-- `/INSTALLATION_ISSUES.md`
-
-**Modified (then reverted):**
-- `Cargo.toml` - ICU versions
-- `Cargo.lock` - dependency resolution
-- `crates/typf-unicode/src/lib.rs` - API compatibility
+**Next Phase:** 1.2 - Create `skiahb` backend (HarfBuzz + TinySkia rasterizer)
 
 ---
 
-## Next Steps
+## Previous Session: Issue 301 RESOLVED ✅
 
-1. Update CHANGELOG.md with installation fixes
-2. Review TODO.md for quality tasks
-3. Plan 3 robustness improvements
+**Date:** 2025-11-18
+**Status:** ✅ **COMPLETE** - All backends now available, error messages improved!
 
----
+### Problem Statement
 
-**Session Status:** ✅ Complete  
-**Build Status:** ✅ Green (37/38 tests)  
-**Ready for:** Progress report
+When running `python toy.py render`, three backends failed with "Unknown backend" errors:
+- `coretext` ✗ (should work on macOS)
+- `directwrite` ✗ (expected on macOS, but error message unclear)
+- `orge` ✗ (missing trait implementations)
+
+Only `harfbuzz` worked correctly.
+
+### Root Causes Identified
+
+1. **CoreText Backend Not Available (Critical)**
+   - `mac` feature not enabled during Python builds
+   - `pyproject.toml` line 75 overrides command-line args
+
+2. **DirectWrite Error Message Unclear (Medium)**
+   - Generic "Unknown backend" instead of platform-specific message
+
+3. **Orge Backend Incomplete (Critical)**
+   - Only implements `DynBackend`, missing full `Backend` trait
+   - Missing: `segment()`, `shape()`, `render()` methods
+
+### Deliverable
+
+Created comprehensive issue document: `issues/301.md`
 
 ---
 

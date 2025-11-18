@@ -24,7 +24,7 @@ use typf_core::{
         RenderFormat,
     },
     utils::combine_shaped_results,
-    Backend, Font as CoreFont, Glyph as CoreGlyph, RenderOptions as CoreRenderOptions,
+    traits::Backend, Font as CoreFont, Glyph as CoreGlyph, RenderOptions as CoreRenderOptions,
     RenderOutput, SegmentOptions, ShapingResult as CoreShapingResult, TextRun,
 };
 
@@ -36,6 +36,12 @@ use typf_win::DirectWriteBackend;
 
 #[cfg(feature = "icu")]
 use typf_icu_hb::HarfBuzzBackend;
+
+#[cfg(feature = "skiahb")]
+use typf_skiahb::HarfBuzzBackend as SkiaHbBackend;
+
+#[cfg(feature = "orge")]
+use typf_orge::OrgeBackend;
 
 /// Python-facing font specification.
 #[pyclass]
@@ -259,20 +265,70 @@ impl TextRenderer {
             ),
 
             #[cfg(feature = "icu")]
-            "harfbuzz" => Box::new(HarfBuzzBackend::new()),
+            "orgehb" => Box::new(HarfBuzzBackend::new()),
+
+            #[cfg(feature = "skiahb")]
+            "skiahb" => Box::new(SkiaHbBackend::new()),
+
+            // Backward compatibility with deprecation warning
+            #[cfg(feature = "icu")]
+            "harfbuzz" => {
+                eprintln!("Warning: Backend name 'harfbuzz' is deprecated. Use 'orgehb' instead.");
+                eprintln!("The 'harfbuzz' name will be removed in v2.0.0.");
+                Box::new(HarfBuzzBackend::new())
+            }
+
+            #[cfg(feature = "orge")]
+            "orge" => Box::new(OrgeBackend::new()),
 
             "auto" => Self::auto_backend()?,
 
-            #[cfg(not(feature = "icu"))]
-            "harfbuzz" => {
+            // Platform-specific error messages for unavailable backends
+            #[cfg(not(target_os = "windows"))]
+            "directwrite" => {
                 return Err(PyRuntimeError::new_err(
-                    "HarfBuzz backend is not available in this build",
+                    "DirectWrite backend is only available on Windows"
+                ))
+            }
+
+            #[cfg(not(target_os = "macos"))]
+            "coretext" => {
+                return Err(PyRuntimeError::new_err(
+                    "CoreText backend is only available on macOS"
+                ))
+            }
+
+            // Feature-disabled error messages
+            #[cfg(not(feature = "icu"))]
+            "orgehb" | "harfbuzz" => {
+                return Err(PyRuntimeError::new_err(
+                    "orgehb backend (HarfBuzz+Orge) is not available in this build. \
+                     Rebuild with: maturin develop --features icu"
+                ))
+            }
+
+            #[cfg(not(feature = "skiahb"))]
+            "skiahb" => {
+                return Err(PyRuntimeError::new_err(
+                    "skiahb backend (HarfBuzz+TinySkia) is not available in this build. \
+                     Rebuild with: maturin develop --features skiahb"
+                ))
+            }
+
+            #[cfg(not(feature = "orge"))]
+            "orge" => {
+                return Err(PyRuntimeError::new_err(
+                    "Orge backend is not available in this build. \
+                     Rebuild with: maturin develop --features orge"
                 ))
             }
 
             _ => {
+                let available = Self::list_available_backends();
                 return Err(PyValueError::new_err(format!(
-                    "Unknown backend: {backend_name}"
+                    "Unknown backend: '{}'. Available backends: {}",
+                    backend_name,
+                    available.join(", ")
                 )))
             }
         };
@@ -290,6 +346,29 @@ impl TextRenderer {
     #[staticmethod]
     fn version() -> String {
         env!("CARGO_PKG_VERSION").to_string()
+    }
+
+    /// List all backends available in this build.
+    #[staticmethod]
+    fn list_available_backends() -> Vec<&'static str> {
+        let mut backends = Vec::new();
+
+        #[cfg(all(target_os = "macos", feature = "mac"))]
+        backends.push("coretext");
+
+        #[cfg(all(target_os = "windows", feature = "windows"))]
+        backends.push("directwrite");
+
+        #[cfg(feature = "icu")]
+        backends.push("orgehb");
+
+        #[cfg(feature = "skiahb")]
+        backends.push("skiahb");
+
+        #[cfg(feature = "orge")]
+        backends.push("orge");
+
+        backends
     }
 
     /// Render text to the requested format.
@@ -403,6 +482,9 @@ impl TextRenderer {
         if let Some(result) = Self::try_harfbuzz_backend() {
             return result;
         }
+        if let Some(result) = Self::try_orge_backend() {
+            return result;
+        }
 
         Err(PyRuntimeError::new_err(
             "No backend available for this platform",
@@ -440,6 +522,16 @@ impl TextRenderer {
 
     #[cfg(not(feature = "icu"))]
     fn try_harfbuzz_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        None
+    }
+
+    #[cfg(feature = "orge")]
+    fn try_orge_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        Some(Ok(Box::new(OrgeBackend::new())))
+    }
+
+    #[cfg(not(feature = "orge"))]
+    fn try_orge_backend() -> Option<PyResult<Box<dyn Backend>>> {
         None
     }
 

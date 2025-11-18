@@ -1,6 +1,6 @@
 # typf-orge
 
-**orge - ultra-smooth unhinted font rasterization engine**
+**orge (open rasterizer glyph engine) - ultra-smooth unhinted font rasterization engine, made by FontLab https://www.fontlab.com/**
 
 ## Overview
 

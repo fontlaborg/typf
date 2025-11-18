@@ -17,7 +17,7 @@ TYPF is a modern, cross-platform font rendering engine providing unified text la
 **Key Design Goals:**
 - **Performance:** Sub-millisecond rendering, lock-free concurrency, zero-copy font loading
 - **Correctness:** Pixel-perfect output, comprehensive testing, fuzzing-ready
-- **Cross-Platform:** Native backends for macOS (CoreText), Windows (DirectWrite), Linux (HarfBuzz)
+- **Cross-Platform:** Native backends for macOS (CoreText), Windows (DirectWrite), Linux (orgehb)
 - **Flexible Output:** PNG, SVG, NumPy arrays, PGM, raw bitmaps
 
 ---
@@ -33,7 +33,7 @@ TYPF is a modern, cross-platform font rendering engine providing unified text la
 - Automatic backend selection based on platform
 
 ✅ **Multiple Rasterizers**
-- `orge` - Custom CPU rasterizer (F26Dot6 fixed-point, scan conversion)
+- `orge` (open rasterizer glyph engine) - Custom CPU rasterizer (F26Dot6 fixed-point, scan conversion), made by FontLab https://www.fontlab.com/
 - `tiny-skia` - Vector renderer (feature-gated)
 - `zeno` - Alternative rasterizer (feature-gated)
 
@@ -67,8 +67,8 @@ TYPF is a modern, cross-platform font rendering engine providing unified text la
 typf/
 ├── backends/               # Platform-specific rendering
 │   ├── typf-core/         # Shared traits, types, caching (1,086 lines)
-│   ├── typf-icu-hb/       # HarfBuzz+ICU backend (~2,000 lines)
-│   ├── typf-orge/         # Custom rasterizer (~500 lines)
+│   ├── typf-icu-hb/       # orgehb backend: HarfBuzz+ICU+Orge (~2,000 lines)
+│   ├── typf-orge/         # \"orge\" (open rasterizer glyph engine) custom rasterizer (~500 lines), made by FontLab https://www.fontlab.com/
 │   ├── typf-mac/          # CoreText backend (~800 lines)
 │   ├── typf-win/          # DirectWrite backend (~1,000 lines)
 │   ├── typf-pure/         # Minimal pure-Rust fallback (~350 lines)
@@ -94,13 +94,13 @@ typf/
 |---------|----------|-------------|--------------|----------|
 | **CoreText** | macOS | Excellent | ✅ Full | macOS primary |
 | **DirectWrite** | Windows | Excellent | ✅ Full | Windows primary |
-| **HarfBuzz+ICU** | All | Good | ✅ Full | Cross-platform fallback |
-| **orge** | All | Excellent* | ⚠️ Partial | Custom rasterization (in progress) |
+| **orgehb** | All | Good | ✅ Full | Cross-platform (HarfBuzz+ICU+Orge) |
+| **orge** (open rasterizer glyph engine) | All | Excellent* | ⚠️ Partial | Custom rasterization (in progress), made by FontLab https://www.fontlab.com/ |
 | **tiny-skia** | All | Good | ✅ Full | Vector rendering (feature-gated) |
 | **zeno** | All | Good | ⚠️ Partial | Alternative rasterizer |
 | **pure** | All | Basic | ⚠️ Minimal | WASM compatibility fallback |
 
-*orge core algorithm complete; backend integration pending
+*orge (open rasterizer glyph engine) core algorithm complete; backend integration pending; made by FontLab https://www.fontlab.com/
 
 ### Caching Architecture
 
@@ -205,9 +205,9 @@ typf = { version = "*", features = ["mac", "tiny-skia-renderer"] }
 **Available features:**
 - `mac` - CoreText backend (macOS only, default on macOS)
 - `windows` - DirectWrite backend (Windows only, default on Windows)
-- `icu` - HarfBuzz+ICU backend (cross-platform, default)
+- `icu` - orgehb backend: HarfBuzz+ICU+Orge (cross-platform, default on Linux)
 - `tiny-skia-renderer` - tiny-skia rasterizer (optional)
-- `orge` - Custom orge rasterizer (experimental)
+- `orge` (open rasterizer glyph engine) - Custom rasterizer (experimental), made by FontLab https://www.fontlab.com/
 
 ---
 
@@ -405,7 +405,7 @@ cargo test --features mac
 # Windows only
 cargo test --features windows
 
-# HarfBuzz only
+# orgehb backend only
 cargo test --features icu
 ```
 
@@ -431,7 +431,7 @@ cargo bench --workspace
 
 ### Production-Ready ✅
 
-- All 3 platform backends (CoreText, DirectWrite, HarfBuzz)
+- All 3 platform backends (CoreText, DirectWrite, orgehb)
 - Multi-shard LRU caching
 - Python bindings (PyO3) with automatic backend selection
 - CLI with batch/stream/render commands

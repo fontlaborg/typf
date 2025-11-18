@@ -6,8 +6,9 @@
 
 use typf_core::{
     types::{AntialiasMode, Direction, RenderFormat},
-    Backend, Bitmap, Font, FontCache, FontCacheConfig, Glyph, RenderOptions, RenderOutput,
+    Backend as TypfCoreBackend, Bitmap, Font, FontCache, FontCacheConfig, Glyph, RenderOptions, RenderOutput,
     RenderSurface, Result, SegmentOptions, ShapingResult, TextRun, TypfError,
+    Point, FontMetrics,
 };
 
 use windows::Win32::Graphics::DirectWrite::{
@@ -669,7 +670,7 @@ impl DirectWriteBackend {
             target.SetAntialiasMode(antialias_mode);
             target
                 .SetTextRenderingParams(&rendering_params)
-                .map_err(|e| TypfError::render(format!("SetTextRenderingParams failed: {e}")))?;
+                .map_err(|e| TypfError::Render(format!("SetTextRenderingParams failed: {e}")))?;
         }
         Ok(())
     }
@@ -695,7 +696,7 @@ impl DirectWriteBackend {
         unsafe {
             self.dwrite_factory
                 .CreateCustomRenderingParams(2.2, 1.0, cleartype_level, geometry, rendering_mode)
-                .map_err(|e| TypfError::render(format!("CreateCustomRenderingParams failed: {e}")))
+                .map_err(|e| TypfError::Render(format!("CreateCustomRenderingParams failed: {e}")))
         }
     }
 
@@ -711,7 +712,7 @@ impl DirectWriteBackend {
     }
 }
 
-impl Backend for DirectWriteBackend {
+impl TypfCoreBackend for DirectWriteBackend {
     fn segment(&self, text: &str, options: &SegmentOptions) -> Result<Vec<TextRun>> {
         if text.is_empty() {
             return Ok(Vec::new());
@@ -906,7 +907,7 @@ impl Backend for DirectWriteBackend {
         let font = shaped
             .font
             .as_ref()
-            .ok_or_else(|| TypfError::render("Font information missing from shaped result"))?;
+            .ok_or_else(|| TypfError::Render("Font information missing from shaped result".to_string()))?;
 
         let font_face = self.get_or_create_font_face(font)?;
         let (ascent, descent) = Self::font_metrics(&font_face, font.size);
@@ -941,12 +942,12 @@ impl Backend for DirectWriteBackend {
             self.configure_antialias(&render_target, options.antialias)?;
 
             let (text_r, text_g, text_b, text_a) =
-                typf_core::utils::parse_color(&options.color).map_err(|e| TypfError::render(e))?;
+                typf_core::utils::parse_color(&options.color).map_err(TypfError::Render)?;
 
             render_target.BeginDraw();
             if options.background != "transparent" {
                 let (bg_r, bg_g, bg_b, bg_a) = typf_core::utils::parse_color(&options.background)
-                    .map_err(|e| TypfError::render(e))?;
+                    .map_err(TypfError::Render)?;
                 let clear_color = D2D1_COLOR_F {
                     r: bg_r as f32 / 255.0,
                     g: bg_g as f32 / 255.0,
@@ -1016,7 +1017,7 @@ impl Backend for DirectWriteBackend {
                     &brush,
                     DWRITE_MEASURING_MODE_NATURAL,
                 )
-                .map_err(|e| TypfError::render(format!("DrawGlyphRun failed: {e}")))?;
+                .map_err(|e| TypfError::Render(format!("DrawGlyphRun failed: {e}")))?;
             render_target.EndDraw(None, None)?;
 
             if options.format == RenderFormat::Svg {
@@ -1053,6 +1054,168 @@ impl Backend for DirectWriteBackend {
 impl Default for DirectWriteBackend {
     fn default() -> Self {
         Self::new().expect("Failed to initialize DirectWrite backend")
+    }
+}
+
+impl DynBackend for DirectWriteBackend {
+    fn name(&self) -> &'static str {
+        self.name()
+    }
+
+    fn shape_text(&self, text: &str, font: &Font) -> ShapingResult {
+        let options = SegmentOptions::default();
+        let runs = self
+            .segment(text, &options)
+            .expect("text segmentation failed");
+        // For simplicity, we assume a single run for now, or merge them.
+        // A more robust implementation would shape each run separately and combine.
+        let first_run = runs.into_iter().next().unwrap_or_else(|| TextRun {
+            text: text.to_string(),
+            range: (0, text.len()),
+            script: "Unknown".to_string(),
+            language: "und".to_string(),
+            direction: Direction::LeftToRight,
+            font: None,
+        });
+        self.shape(&first_run, font).expect("text shaping failed")
+    }
+
+    fn render_glyph(&self, font: &Font, glyph_id: u32, options: RenderOptions) -> Option<Bitmap> {
+        unsafe {
+            let font_face = self.get_or_create_font_face(font).ok()?;
+            let (ascent, descent) = Self::font_metrics(&font_face, options.font_size);
+            let padding = options.padding as f32;
+            let width = (font.size + padding * 2.0).ceil().max(1.0) as u32; // Estimate width
+            let height = (ascent + descent + padding * 2.0).ceil().max(1.0) as u32; // Estimate height
+
+            let bitmap = self.wic_factory.CreateBitmap(
+                width,
+                height,
+                &GUID_WICPixelFormat32bppPBGRA,
+                WICBitmapCacheOnDemand,
+            ).ok()?;
+
+            let render_props = D2D1_RENDER_TARGET_PROPERTIES {
+                r#type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
+                pixelFormat: D2D1_PIXEL_FORMAT {
+                    format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+                },
+                dpiX: 96.0,
+                dpiY: 96.0,
+                usage: D2D1_RENDER_TARGET_USAGE_NONE,
+                minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
+            };
+            let render_target = self
+                .d2d_factory
+                .CreateWicBitmapRenderTarget(&bitmap, &render_props).ok()?;
+            self.configure_antialias(&render_target, options.antialias).ok()?;
+
+            let (text_r, text_g, text_b, text_a) =
+                typf_core::utils::parse_color(&options.color).map_err(TypfError::Render).ok()?;
+
+            render_target.BeginDraw();
+            if options.background != "transparent" {
+                let (bg_r, bg_g, bg_b, bg_a) = typf_core::utils::parse_color(&options.background)
+                    .map_err(TypfError::Render).ok()?;
+                let clear_color = D2D1_COLOR_F {
+                    r: bg_r as f32 / 255.0,
+                    g: bg_g as f32 / 255.0,
+                    b: bg_b as f32 / 255.0,
+                    a: bg_a as f32 / 255.0,
+                };
+                render_target.Clear(Some(&clear_color));
+            } else {
+                render_target.Clear(Some(&D2D1_COLOR_F {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.0,
+                }));
+            }
+
+            let brush = render_target.CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: text_r as f32 / 255.0,
+                    g: text_g as f32 / 255.0,
+                    b: text_b as f32 / 255.0,
+                    a: text_a as f32 / 255.0,
+                },
+                None,
+            ).ok()?;
+
+            let glyph_run = DWRITE_GLYPH_RUN {
+                fontFace: ManuallyDrop::new(Some(font_face.clone())),
+                fontEmSize: options.font_size,
+                glyphCount: 1,
+                glyphIndices: &glyph_id as *const u32 as *const u16, // DirectWrite expects u16
+                glyphAdvances: &0.0f32,
+                glyphOffsets: &DWRITE_GLYPH_OFFSET::default(),
+                isSideways: BOOL::from(false),
+                bidiLevel: 0,
+            };
+
+            let origin = D2D_POINT_2F {
+                x: padding,
+                y: padding + ascent,
+            };
+            render_target
+                .DrawGlyphRun(
+                    origin,
+                    &glyph_run,
+                    None,
+                    &brush,
+                    DWRITE_MEASURING_MODE_NATURAL,
+                ).ok()?;
+            render_target.EndDraw(None, None).ok()?;
+
+            let mut buffer = vec![0u8; (width * height * 4) as usize];
+            let rect = WICRect {
+                X: 0,
+                Y: 0,
+                Width: width as i32,
+                Height: height as i32,
+            };
+            bitmap.CopyPixels(&rect, width * 4, &mut buffer).ok()?;
+            
+            Some(Bitmap {
+                width,
+                height,
+                data: buffer,
+            })
+        }
+    }
+
+    fn render_shaped_text(&self, shaped_text: &ShapingResult, options: RenderOptions) -> Option<Bitmap> {
+        match self.render(shaped_text, &options) {
+            Ok(RenderOutput::Bitmap(bitmap)) => Some(bitmap),
+            _ => None, // Handle other RenderOutput variants or errors as needed
+        }
+    }
+
+    fn font_metrics(&self, font: &Font) -> FontMetrics {
+        let font_face = self.get_or_create_font_face(font).expect("failed to get IDWriteFontFace for metrics");
+        let mut metrics = DWRITE_FONT_METRICS::default();
+        unsafe {
+            font_face.GetMetrics(&mut metrics);
+        }
+        let units = metrics.designUnitsPerEm.max(1) as f32;
+        let scale = font.size / units;
+        FontMetrics {
+            units_per_em: metrics.designUnitsPerEm,
+            ascender: (metrics.ascent as f32 * scale).round() as i16,
+            descender: (metrics.descent as f32 * scale).round() as i16,
+            line_gap: (metrics.lineGap as f32 * scale).round() as i16,
+        }
+    }
+
+    fn supported_features(&self) -> BackendFeatures {
+        BackendFeatures {
+            monochrome: true,
+            grayscale: true,
+            subpixel: true, // DirectWrite supports subpixel AA (ClearType)
+            color_emoji: true, // DirectWrite supports color emoji
+        }
     }
 }
 

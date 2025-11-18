@@ -1,34 +1,352 @@
-# typf Todo List
+# TYPF TODO List
 
-This file lists tasks specific to the `typf` project. For the overall development plan, see the root [PLAN.md](../../PLAN.md) and [TODO.md](../../TODO.md).
+**Status:** Active
+**Last Updated:** 2025-11-18
+**Made by FontLab** https://www.fontlab.com/
 
----
-
-## Active Development Tasks
-
-See the root [TODO.md](../../TODO.md) for the comprehensive, prioritized task list. All active TYPF tasks are tracked there with the `**(typf)**` prefix.
+This is a flat, actionable task list derived from PLAN.md. Tasks are organized by phase but can be executed in any order within phase dependencies.
 
 ---
 
-## Project-Specific Notes
+## Phase 1: Backend Architecture Restructuring
 
-**Current Focus:** Performance hardening and safety improvements
+### 1.1 Rename `harfbuzz` Backend to `orgehb`
+- [x] Update `backends/typf-icu-hb/src/lib.rs` - Change `DynBackend::name()` to return `"orgehb"`
+- [x] Update `python/src/lib.rs` - Change backend matching from `"harfbuzz"` to `"orgehb"`
+- [x] Add deprecation warning in `python/src/lib.rs` for `"harfbuzz"` → `"orgehb"` mapping
+- [x] Update `pyproject.toml` if any hardcoded backend names exist (2025-11-18 - none found)
+- [x] Update `README.md` - Replace all references to `harfbuzz` backend with `orgehb` (2025-11-18)
+- [x] Update `ARCHITECTURE.md` - Document backend naming convention (2025-11-18)
+- [x] Update `toy.py` - Change expected backend name to `orgehb` (2025-11-18 - already generic, uses list_available_backends())
+- [x] Update all code examples in `examples/` directory (2025-11-18 - only reference HarfBuzz library, not backend name)
+- [x] Run `python toy.py render` and verify `orgehb` works (2025-11-18 - ✅ SUCCESS: orgehb renders to render-orgehb.png)
 
-**Key Areas:**
-- Concurrency optimization (cache improvements)
-- Rasterizer hot-path optimization (orge integration, SIMD)
-- FFI safety (panic handling, unified errors)
-- Testing infrastructure (visual regression, fuzzing, Miri)
-- Documentation (comprehensive README, API docs)
+### 1.2 Create `skiahb` Backend
+- [ ] Copy `backends/typf-icu-hb/` directory to `backends/typf-skiahb/`
+- [ ] Update `backends/typf-skiahb/Cargo.toml` - Set `default = ["tiny-skia-renderer"]`
+- [ ] Remove `orge` feature from `backends/typf-skiahb/Cargo.toml`
+- [ ] Update `backends/typf-skiahb/src/renderer.rs` - Force `TinySkiaRenderer` in `create_renderer()`
+- [ ] Update `backends/typf-skiahb/src/lib.rs` - Change `DynBackend::name()` to return `"skiahb"`
+- [ ] Add `typf-skiahb` to workspace `Cargo.toml` members list
+- [ ] Add `skiahb` feature to `python/Cargo.toml`
+- [ ] Add `skiahb` backend case to `python/src/lib.rs::TextRenderer::new()`
+- [ ] Add `skiahb` to `python/src/lib.rs::list_available_backends()`
+- [ ] Build and test: `cd python && maturin develop --release --features "python,icu,mac,orge,skiahb"`
+- [ ] Verify `skiahb` appears in `typf.TextRenderer.list_available_backends()`
+- [ ] Visual test: Render identical text with `orgehb` and `skiahb`, compare outputs
+- [ ] Benchmark: Compare `orgehb` vs `skiahb` rasterization speed
+- [ ] Benchmark: `python toy.py render` does render all backends. `python toy.py bench` should benchmark all backends (grayscale and monochrome), and present the results in a nice table
 
-**Completed Milestones:**
-- ✅ All core backends implemented (CoreText, DirectWrite, HarfBuzz)
-- ✅ Python bindings fully functional via PyO3
-- ✅ CLI with batch/stream/render commands
-- ✅ Multi-shard LRU caching
-- ✅ Integration tests (38+ tests passing)
-- ✅ SVG/PNG output with color font support
+---
+$ python toy.py render
+Rendering sample text with all available backends...
+
+Available backends: coretext, orgehb, skiahb, orge
+
+coretext        ✓ Saved render-coretext.png
+orgehb          DEBUG OrgeHB: bbox.y=-29.559055, bbox.height=39.412075, height=40, baseline_y=29.559055, padding=0
+✓ Saved render-orgehb.png
+skiahb          ✓ Saved render-skiahb.png
+orge            ✗ Render error: Failed to render: Orge backend text rendering not yet implemented. Use for glyph-level rendering only.
+0
+
+~/Developer/vcs/github.fontlaborg/typf
+$ python toy.py bench
+Running benchmarks...
+
+    Finished `bench` profile [optimized] target(s) in 0.10s
+     Running benches/speed.rs (target/release/deps/speed-857adbd4d9b20cd9)
+render_monochrome       time:   [71.265 ns 71.802 ns 72.377 ns]
+                        change: [-0.7302% +0.3361% +1.4816%] (p = 0.53 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
+render_grayscale        time:   [71.009 ns 75.347 ns 81.906 ns]
+                        change: [+2.2019% +9.5699% +18.651%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 12 outliers among 100 measurements (12.00%)
+  2 (2.00%) high mild
+  10 (10.00%) high severe
+
+0
+
+~/Developer/vcs/github.fontlaborg/typf
+---
+
+- [ ] Plan and implement `zenohb` 
+
+### 1.3 Update Auto-Selection Logic
+- [ ] Update `python/src/lib.rs::auto_backend()` to prefer `orgehb` over `skiahb`
+- [ ] Test auto-selection on macOS (should pick `coretext`)
+- [ ] Test auto-selection on Linux (should pick `orgehb`)
+- [ ] Test auto-selection with only `skiahb` enabled (fallback case)
 
 ---
 
-For detailed task tracking and dependencies, refer to the root TODO.md.
+## Phase 2: Complete Orge Backend Implementation
+
+### 2.1 Implement `Backend` Trait for Orge
+- [ ] Add `use typf_core::traits::Backend as TypfCoreBackend` to `backends/typf-orge/src/lib.rs`
+- [ ] Implement `segment()` method with simple single-run segmentation
+- [ ] Implement `shape()` method with basic horizontal layout (no ligatures/kerning)
+- [ ] Implement character-to-glyph mapping using `skrifa::charmap()`
+- [ ] Implement advance width calculation using `skrifa::advance_width()`
+- [ ] Implement `render()` method by compositing individual glyphs
+- [ ] Add `calculate_bbox()` helper for bounding box calculation
+- [ ] Implement `name()` method returning `"Orge"`
+- [ ] Implement `clear_cache()` method
+
+### 2.2 Implement `render_glyph()` Using GlyphRasterizer
+- [ ] Create `SkrifaPenAdapter` struct to convert skrifa outlines to Orge calls
+- [ ] Implement `OutlinePen::move_to()` for `SkrifaPenAdapter`
+- [ ] Implement `OutlinePen::line_to()` for `SkrifaPenAdapter`
+- [ ] Implement `OutlinePen::quad_to()` for `SkrifaPenAdapter`
+- [ ] Implement `OutlinePen::curve_to()` for `SkrifaPenAdapter`
+- [ ] Implement `OutlinePen::close()` for `SkrifaPenAdapter`
+- [ ] Update `DynBackend::render_glyph()` to use `GlyphRasterizer`
+- [ ] Add antialias mode branching (monochrome vs grayscale)
+- [ ] Implement `image_to_bitmap_alpha()` conversion helper
+
+### 2.3 Testing and Verification
+- [ ] Write unit test `test_orge_backend_implements_backend_trait()`
+- [ ] Write unit test `test_orge_segment_single_run()`
+- [ ] Write unit test `test_orge_shape_horizontal_layout()`
+- [ ] Write unit test `test_orge_render_composites_glyphs()`
+- [ ] Write Python integration test `test_orge_text_rendering()`
+- [ ] Run `cargo test --package typf-orge --all-features`
+- [ ] Visual inspection: Render "Hello World" with Orge, save PNG
+- [ ] Compare Orge output vs CoreText output visually
+- [ ] Fix any rendering issues found in visual inspection
+- [ ] Re-test and iterate until quality acceptable
+
+---
+
+## Phase 3: Performance Optimizations
+
+### 3.1 SIMD Grayscale Downsampling
+- [ ] Add `wide = "0.7"` dependency to `backends/typf-orge/Cargo.toml`
+- [ ] Add `use wide::u8x16` to `backends/typf-orge/src/grayscale.rs`
+- [ ] Implement `downsample_to_grayscale_simd()` function
+- [ ] Add SIMD loop to process 16-byte chunks
+- [ ] Add scalar loop for remainder bytes
+- [ ] Create benchmark `benches/simd_grayscale.rs`
+- [ ] Run benchmark: `cargo bench --package typf-orge --bench simd_grayscale`
+- [ ] Verify 4-8x speedup over scalar version
+- [ ] Replace existing downsampling with SIMD version
+- [ ] Re-run all Orge tests to ensure no regressions
+
+### 3.2 Optimize Active Edge List Sorting
+- [ ] Implement `merge_edges()` helper function in `backends/typf-orge/src/scan_converter.rs`
+- [ ] Update `scan_line_mono()` to use merge instead of full sort
+- [ ] Add `next_active_edges` temporary buffer
+- [ ] Sort only `new_edges` per scanline
+- [ ] Replace `self.active_edges.sort_by_x()` with `merge_edges()`
+- [ ] Benchmark before/after: `cargo bench --package typf-orge`
+- [ ] Verify 30%+ scanline performance improvement
+- [ ] Run all Orge tests to ensure correctness
+
+### 3.3 Optimize `fill_span()` with memset
+- [ ] Update `fill_span()` in `backends/typf-orge/src/scan_converter.rs`
+- [ ] Replace `for` loop with `span.fill(1)`
+- [ ] Add bounds checking with `get_mut()`
+- [ ] Add early return for invalid spans
+- [ ] Benchmark before/after
+- [ ] Verify compiler generates `memset` call (check assembly)
+
+### 3.4 Parallelize Batch Rendering
+- [ ] Add `rayon = { workspace = true }` to `python/Cargo.toml`
+- [ ] Add `use rayon::prelude::*` to `python/src/lib.rs`
+- [ ] Update `TextRenderer::render_batch()` to use `par_iter()`
+- [ ] Add `py.allow_threads()` wrapper for GIL release
+- [ ] Add `max_workers` parameter for thread pool configuration
+- [ ] Write Python test for batch rendering
+- [ ] Benchmark batch rendering with 1/2/4/8 threads
+- [ ] Verify linear scaling with CPU cores
+
+---
+
+## Phase 4: Visual Quality Verification Workflow
+
+### 4.1 Enhanced `toy.py` Implementation
+- [ ] Add Pillow dependency: `uv pip install pillow`
+- [ ] Add scikit-image dependency: `uv pip install scikit-image`
+- [ ] Implement `Toy.__init__()` with `visual_tests/` directory creation
+- [ ] Implement `Toy.render()` with multiple test samples
+- [ ] Add test samples: latin, arabic, numbers, small, large
+- [ ] Implement per-backend rendering loop
+- [ ] Implement `_generate_comparison_html()` method
+- [ ] Add CSS styling for comparison page
+- [ ] Test: `python toy.py render` and verify HTML output
+
+### 4.2 SSIM Comparison Tool
+- [ ] Implement `Toy.compare()` method
+- [ ] Add reference/baseline backend parameters
+- [ ] Load PNG images with Pillow
+- [ ] Resize images to same dimensions if needed
+- [ ] Compute SSIM using `skimage.metrics.structural_similarity`
+- [ ] Generate diff images
+- [ ] Save diff images to `diff_<ref>_vs_<baseline>/` directory
+- [ ] Print SSIM scores to console
+- [ ] Test: `python toy.py compare --reference=coretext --baseline=orgehb`
+
+### 4.3 Iteration Mode
+- [ ] Implement `Toy.iterate()` method
+- [ ] Add interactive render loop
+- [ ] Auto-open rendered image (macOS: `open`, Linux: `xdg-open`)
+- [ ] Add iteration counter to filenames
+- [ ] Test: `python toy.py iterate orgehb`
+- [ ] Verify workflow: edit code → press Enter → see new render
+
+### 4.4 Automated Visual Regression Tests
+- [ ] Create `tests/visual_regression.rs`
+- [ ] Implement `render_with_backend()` helper
+- [ ] Implement `compute_ssim()` using `image` crate
+- [ ] Write `test_latin_text_regression()` test
+- [ ] Write `test_arabic_text_regression()` test (if supported)
+- [ ] Add SSIM threshold assertions (>0.95)
+- [ ] Run tests: `cargo test --test visual_regression`
+
+---
+
+## Phase 5: Build System Improvements
+
+### 5.1 Enhanced `build.sh` Script
+- [ ] Update `build.sh` with platform detection
+- [ ] Add Step 1: Build Rust workspace
+- [ ] Add Step 2: Install CLI tool with `cargo install --path typf-cli`
+- [ ] Add Step 3: Check for virtual environment, create if missing
+- [ ] Add Step 4: Build Python bindings with `maturin develop`
+- [ ] Add Step 5: Install Python package with `uv pip install --upgrade .`
+- [ ] Add Step 6: Verification (check CLI, Python module, backends)
+- [ ] Add platform-specific feature selection (mac/windows/linux)
+- [ ] Test `build.sh` on macOS
+- [ ] Test `build.sh` on Linux (if available)
+- [ ] Verify all components install successfully
+
+### 5.2 Platform-Conditional Features
+- [ ] Update `pyproject.toml` with `[tool.maturin.target]` sections
+- [ ] Add macOS-specific features: `features = ["mac"]`
+- [ ] Add Windows-specific features: `features = ["windows"]`
+- [ ] Add Linux-specific features: `features = ["icu"]`
+- [ ] Test that `maturin build` picks correct features per platform
+- [ ] Verify `cargo rustc -- --print cfg | grep feature` shows correct features
+
+### 5.3 Installation Verification
+- [ ] Write script to verify `typf` CLI in PATH
+- [ ] Write script to verify Python module imports
+- [ ] Write script to list available backends
+- [ ] Add to end of `build.sh`
+- [ ] Test full build → install → verify workflow
+
+---
+
+## Phase 6: Comprehensive Backend Benchmarking
+
+### 6.1 Backend Comparison Benchmarks
+- [ ] Create `backend_benches/benches/backend_comparison.rs`
+- [ ] Implement `bench_backends_monochrome()` function
+- [ ] Add CoreText monochrome benchmark (macOS only)
+- [ ] Add `orgehb` monochrome benchmark
+- [ ] Add `skiahb` monochrome benchmark
+- [ ] Implement `bench_backends_grayscale()` function
+- [ ] Add CoreText grayscale benchmark (macOS only)
+- [ ] Add `orgehb` grayscale benchmark
+- [ ] Add `skiahb` grayscale benchmark
+- [ ] Add to `backend_benches/Cargo.toml` as `[[bench]]`
+- [ ] Run benchmarks: `cargo bench --bench backend_comparison`
+- [ ] Generate comparison report
+- [ ] Document performance characteristics per backend
+
+### 6.2 Performance Reporting
+- [ ] Create `docs/PERFORMANCE.md` with benchmark results
+- [ ] Add monochrome rendering times per backend
+- [ ] Add grayscale rendering times per backend
+- [ ] Add SIMD speedup measurements
+- [ ] Add batch rendering scaling graphs
+- [ ] Add memory usage comparison (optional)
+
+---
+
+## Documentation Updates
+
+- [ ] Update `README.md` - Backend table with `orgehb` and `skiahb`
+- [ ] Update `README.md` - Installation instructions for new backends
+- [ ] Update `ARCHITECTURE.md` - Explain shaping vs rasterization split
+- [ ] Update `ARCHITECTURE.md` - Document backend naming convention
+- [ ] Create `docs/BACKEND-SELECTION.md` - Guide for choosing backends
+- [ ] Update Python docstrings in `python/typf/__init__.py`
+- [ ] Add rustdoc comments to `OrgeBackend::segment()`
+- [ ] Add rustdoc comments to `OrgeBackend::shape()`
+- [ ] Add rustdoc comments to `OrgeBackend::render()`
+- [ ] Update `CHANGELOG.md` with v1.1.0 changes
+
+---
+
+## Testing Checklist
+
+### Unit Tests
+- [ ] All `cargo test --workspace` passes
+- [ ] All `pytest` tests pass (Python bindings)
+- [ ] Visual regression tests pass
+
+### Integration Tests
+- [ ] `python toy.py render` works for all backends
+- [ ] `python toy.py compare` generates valid comparisons
+- [ ] `./build.sh` completes without errors
+
+### Visual Quality
+- [ ] SSIM > 0.95 for Latin text (orgehb vs coretext)
+- [ ] SSIM > 0.90 for Arabic text (if supported)
+- [ ] No visual artifacts in generated PNGs
+- [ ] HTML comparison page loads correctly
+
+### Performance
+- [ ] SIMD downsampling 4-8x faster than scalar
+- [ ] Batch rendering scales linearly (2x cores = ~2x speed)
+- [ ] Edge merge reduces scanline time by 30%+
+- [ ] No performance regressions vs baseline
+
+---
+
+## Success Criteria
+
+### Phase 1 Complete When:
+- [x] `orgehb` backend renders text successfully
+- [ ] `skiahb` backend renders text successfully
+- [x] `orgehb` backend available in `list_available_backends()`
+- [x] Deprecation warning shows for `"harfbuzz"` name
+
+### Phase 2 Complete When:
+- [ ] `orge` backend implements full `Backend` trait
+- [ ] `orge` backend renders simple Latin text
+- [ ] Visual quality acceptable for Latin text
+- [ ] All unit tests pass
+
+### Phase 3 Complete When:
+- [ ] SIMD benchmarks show 4x+ speedup
+- [ ] Batch rendering parallelizes correctly
+- [ ] All optimizations verified with benchmarks
+- [ ] No performance regressions
+
+### Phase 4 Complete When:
+- [ ] `toy.py render` generates HTML comparison
+- [ ] `toy.py compare` computes SSIM scores
+- [ ] Visual regression tests integrated in `cargo test`
+- [ ] Iteration workflow functional
+
+### Phase 5 Complete When:
+- [ ] `build.sh` installs all components
+- [ ] Platform-conditional features work
+- [ ] Installation verification passes
+- [ ] `typf` CLI exposes a `--backend` flag that selects the rendering backend
+
+### Phase 6 Complete When:
+- [ ] Backend benchmarks run for all available backends
+- [ ] Performance report documents results
+- [ ] No unexpected performance gaps
+
+---
+
+**Made by FontLab** https://www.fontlab.com/

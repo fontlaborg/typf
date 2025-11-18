@@ -4,7 +4,7 @@ this_file: typf/examples/README.md
 
 # typf Examples
 
-This directory contains examples demonstrating all rendering paths in typf.
+This directory contains examples demonstrating all rendering paths in typf, including the `orge` (open rasterizer glyph engine) rasterizer made by FontLab https://www.fontlab.com/.
 
 ## Quick Start
 

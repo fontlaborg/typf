@@ -189,7 +189,7 @@ impl Default for GlyphRasterizer {
 }
 
 /// Outline pen that feeds skrifa outlines into orge scan converter
-struct OrgePen<'a> {
+pub struct OrgePen<'a> {
     converter: &'a mut ScanConverter,
     scale: f32,
     offset_x: f32,
@@ -197,13 +197,23 @@ struct OrgePen<'a> {
 }
 
 impl<'a> OrgePen<'a> {
-    fn new(converter: &'a mut ScanConverter, scale: f32, offset_x: f32, offset_y: f32) -> Self {
+    pub fn new(converter: &'a mut ScanConverter, scale: f32, offset_x: f32, offset_y: f32) -> Self {
         Self {
             converter,
             scale,
             offset_x,
             offset_y,
         }
+    }
+
+    /// Get a reference to the underlying scan converter
+    pub fn converter(&self) -> &ScanConverter {
+        self.converter
+    }
+
+    /// Get a mutable reference to the underlying scan converter
+    pub fn converter_mut(&mut self) -> &mut ScanConverter {
+        self.converter
     }
 
     #[inline]

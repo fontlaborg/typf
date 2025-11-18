@@ -690,7 +690,7 @@ impl TypfCoreBackend for HarfBuzzBackend {
     }
 
     fn name(&self) -> &str {
-        "orgehb"
+        "skiahb"
     }
 
     fn clear_cache(&self) {
@@ -709,7 +709,7 @@ impl Default for HarfBuzzBackend {
 
 impl DynBackend for HarfBuzzBackend {
     fn name(&self) -> &'static str {
-        "orgehb"
+        "skiahb"
     }
 
     fn shape_text(&self, text: &str, font: &Font) -> ShapingResult {

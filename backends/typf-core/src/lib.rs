@@ -10,6 +10,9 @@
 //! - [`TypfError`] for unified error handling
 //! - Common types like [`Font`], [`Glyph`], and [`RenderOptions`]
 
+pub mod backend_trait;
+pub use backend_trait::{DynBackend, BackendFeatures, Point, FontMetrics};
+
 pub mod cache;
 pub mod error;
 pub mod surface;
@@ -20,7 +23,7 @@ pub mod utils;
 pub use cache::{FontCache, FontCacheConfig};
 pub use error::TypfError;
 pub use surface::{RenderSurface, SurfaceFormat};
-pub use traits::{Backend, FontShaper, GlyphRenderer, TextSegmenter};
+pub use traits::{Backend as CoreBackendTrait, FontShaper, GlyphRenderer, TextSegmenter}; // Renamed Backend
 pub use types::{
     Bitmap, Features, Font, Glyph, RenderFormat, RenderOptions, RenderOutput, SegmentOptions,
     ShapingResult, SvgOptions, TextRun,

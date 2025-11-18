@@ -280,6 +280,17 @@ class TextRenderer:
         >>> renderer.render_to_file("Text", Font("Times", 18), "output.png")
     """
 
+    @staticmethod
+    def list_available_backends() -> List[str]:
+        """List all backends available in this build.
+
+        Returns:
+            List of backend names (e.g., ["coretext", "harfbuzz", "orge"])
+        """
+        if _TextRenderer is None:
+            return []
+        return _TextRenderer.list_available_backends()
+
     def __init__(
         self,
         backend: Optional[str] = None,
@@ -290,7 +301,7 @@ class TextRenderer:
         """Create a new text renderer.
 
         Args:
-            backend: Backend to use ("coretext", "directwrite", "harfbuzz", "pure", or None for auto)
+            backend: Backend to use ("coretext", "directwrite", "harfbuzz", "orge", or None for auto)
             cache_size: Number of shaped text results to cache
             parallel: Enable parallel processing for batch operations
             timeout: Maximum time in seconds for rendering operations

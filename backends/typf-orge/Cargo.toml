@@ -10,6 +10,11 @@ repository.workspace = true
 skrifa.workspace = true
 read-fonts.workspace = true
 thiserror.workspace = true
+kurbo = { workspace = true }
+typf-core = { path = "../typf-core" }
+typf-fontdb = { path = "../../crates/typf-fontdb" }
+
+parking_lot = { workspace = true }
 
 [dev-dependencies]
 criterion = "0.5"

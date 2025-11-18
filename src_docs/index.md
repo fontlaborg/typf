@@ -28,7 +28,7 @@ TYPF is a modern, cross-platform font rendering engine providing unified text la
 - Automatic backend selection based on platform
 
 ✅ **Multiple Rasterizers**
-- `orge` - Custom CPU rasterizer (F26Dot6 fixed-point, scan conversion)
+- `orge` (open rasterizer glyph engine) - Custom CPU rasterizer (F26Dot6 fixed-point, scan conversion), made by FontLab https://www.fontlab.com/
 - `tiny-skia` - Vector renderer (feature-gated)
 - `zeno` - Alternative rasterizer (feature-gated)
 

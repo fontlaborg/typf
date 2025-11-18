@@ -1,15 +1,15 @@
 [package]
-name = "typf-icu-hb"
+name = "typf-skiahb"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "ICU+HarfBuzz backend for typf text rendering"
+description = "HarfBuzz+ICU+TinySkia backend for typf text rendering"
 
 [features]
-default = ["orge"]
-orge = ["typf-orge"]
+default = ["tiny-skia-renderer"]
 tiny-skia-renderer = []
+# orge feature removed - skiahb always uses TinySkia for rasterization
 zeno-traits = ["typf-zeno"]
 
 [dependencies]
@@ -17,7 +17,7 @@ typf-core = { path = "../typf-core" }
 typf-render = { path = "../../crates/typf-render" }
 typf-unicode = { path = "../../crates/typf-unicode" }
 typf-fontdb = { path = "../../crates/typf-fontdb" }
-typf-orge = { path = "../typf-orge", optional = true }
+# typf-orge removed - skiahb uses TinySkia exclusively
 typf-zeno = { path = "../typf-zeno", optional = true }
 thiserror.workspace = true
 anyhow.workspace = true

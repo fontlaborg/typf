@@ -12,7 +12,7 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 use typf_core::{
-    Backend, Font, RenderOptions, RenderOutput, Result, SegmentOptions, ShapingResult,
+    CoreBackendTrait, Font, RenderOptions, RenderOutput, Result, SegmentOptions, ShapingResult,
 };
 
 /// Item to be rendered in batch.
@@ -40,12 +40,12 @@ pub struct BatchResult {
 
 /// Batch renderer for parallel text rendering.
 pub struct BatchRenderer {
-    backend: Arc<dyn Backend>,
+    backend: Arc<dyn CoreBackendTrait>,
 }
 
 impl BatchRenderer {
     /// Create a new batch renderer with the given backend.
-    pub fn new(backend: Arc<dyn Backend>) -> Self {
+    pub fn new(backend: Arc<dyn CoreBackendTrait>) -> Self {
         Self { backend }
     }
 
@@ -316,9 +316,9 @@ mod tests {
     };
 
     #[derive(Default)]
-    struct DummyBackend;
+    struct DummyCoreBackendTrait;
 
-    impl Backend for DummyBackend {
+    impl CoreBackendTrait for DummyCoreBackendTrait {
         fn segment(&self, text: &str, _options: &SegmentOptions) -> Result<Vec<TextRun>> {
             Ok(vec![TextRun {
                 text: text.to_string(),
@@ -420,7 +420,7 @@ mod tests {
 
     #[test]
     fn test_progress_callback_receives_updates() {
-        let renderer = BatchRenderer::new(Arc::new(DummyBackend::default()));
+        let renderer = BatchRenderer::new(Arc::new(DummyCoreBackendTrait::default()));
         let items = make_items(5);
         let invocations = Arc::new(AtomicUsize::new(0));
 
@@ -439,7 +439,7 @@ mod tests {
     }
 
     fn assert_large_batch(count: usize) {
-        let renderer = BatchRenderer::new(Arc::new(DummyBackend::default()));
+        let renderer = BatchRenderer::new(Arc::new(DummyCoreBackendTrait::default()));
         let results = renderer.render_batch(make_items(count));
         assert_eq!(results.len(), count);
         assert!(results.iter().all(|result| result.result.is_ok()));
@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_combined_glyphs_have_monotonic_offsets() {
-        let renderer = DummyBackend::default();
+        let renderer = DummyCoreBackendTrait::default();
         let font = Font::new("Test", 12.0);
         let run = TextRun {
             text: "abc".into(),
