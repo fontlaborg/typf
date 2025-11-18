@@ -118,9 +118,9 @@
 
 ### Platform Backends
 
-* [ ] CoreText shaper (macOS)
+* [x] CoreText shaper (macOS) (2025-11-18)
 * [ ] DirectWrite shaper (Windows)
-* [ ] CoreGraphics renderer (macOS)
+* [x] CoreGraphics renderer (macOS) (2025-11-18)
 * [ ] Direct2D renderer (Windows)
 
 ### Python Bindings (COMPLETED)

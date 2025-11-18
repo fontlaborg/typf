@@ -9,17 +9,17 @@ use std::sync::Arc;
 use typf_core::{
     error::{RenderError, Result, TypfError},
     traits::{FontRef, Renderer},
-    types::{BitmapData, Color, RenderOutput, ShapingResult},
-    RenderParams,
+    types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult},
+    Color, RenderParams,
 };
 
-use core_foundation::base::TCFType;
 use core_graphics::{
     color_space::CGColorSpace,
     context::{CGContext, CGTextDrawingMode},
     data_provider::CGDataProvider,
     font::{CGFont, CGGlyph},
     geometry::{CGPoint, CGRect, CGSize},
+    sys::CGContextRef,
 };
 
 /// Wrapper for font data to pass to CGDataProvider
@@ -141,6 +141,7 @@ impl Renderer for CoreGraphicsRenderer {
             return Ok(RenderOutput::Bitmap(BitmapData {
                 width: 1,
                 height: 1,
+                format: BitmapFormat::Rgba8,
                 data: vec![0, 0, 0, 255], // Transparent pixel
             }));
         }
@@ -228,9 +229,10 @@ impl Renderer for CoreGraphicsRenderer {
 
         // Draw glyphs using CGContext
         if !glyph_ids.is_empty() {
+            let context_ref: CGContextRef = unsafe { std::mem::transmute(&context) };
             unsafe {
-                core_graphics::context::CGContextShowGlyphsAtPositions(
-                    context.as_concrete_TypeRef(),
+                CGContextShowGlyphsAtPositions(
+                    context_ref,
                     glyph_ids.as_ptr(),
                     glyph_positions.as_ptr(),
                     glyph_ids.len(),
@@ -244,6 +246,7 @@ impl Renderer for CoreGraphicsRenderer {
         Ok(RenderOutput::Bitmap(BitmapData {
             width,
             height,
+            format: BitmapFormat::Rgba8,
             data: buffer,
         }))
     }
@@ -257,7 +260,7 @@ impl Renderer for CoreGraphicsRenderer {
 #[link(name = "CoreGraphics", kind = "framework")]
 extern "C" {
     fn CGContextShowGlyphsAtPositions(
-        c: core_graphics::sys::CGContextRef,
+        c: CGContextRef,
         glyphs: *const CGGlyph,
         positions: *const CGPoint,
         count: usize,
@@ -328,6 +331,7 @@ mod tests {
         if let Ok(RenderOutput::Bitmap(bitmap)) = result {
             assert_eq!(bitmap.width, 1);
             assert_eq!(bitmap.height, 1);
+            assert_eq!(bitmap.format, BitmapFormat::Rgba8);
         }
     }
 }

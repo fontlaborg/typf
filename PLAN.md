@@ -115,8 +115,10 @@
 - [ ] Full ICU preprocessing pipeline documentation (deferred to documentation phase)
 
 #### Weeks 9-10: Platform Backends
-- [ ] CoreText shaper (macOS)
+- [x] CoreText shaper (macOS) (2025-11-18)
+- [x] CoreGraphics renderer (macOS) (2025-11-18)
 - [ ] DirectWrite shaper (Windows)
+- [ ] Direct2D renderer (Windows)
 - [ ] Optimized native paths
 - [ ] Auto-backend selection logic
 
@@ -145,7 +147,7 @@
 - [ ] Performance comparison
 
 #### Week 16: Platform Renderers
-- [ ] CoreGraphics (macOS)
+- [x] CoreGraphics (macOS) (2025-11-18)
 - [ ] Direct2D (Windows)
 - [ ] Optimized compositing
 
@@ -264,9 +266,12 @@ All Phase 7 documentation tasks completed ahead of schedule.
 
 **NEXT DEVELOPMENT PHASES**:
 
-### Short-term (Blocked - Requires macOS/Windows)
-1. **Weeks 9-10**: Platform Backends (CoreText, DirectWrite)
-2. **Week 16**: Platform Renderers (CoreGraphics, Direct2D)
+### Short-term (Partially Complete ✅)
+1. **Weeks 9-10**: Platform Backends
+   - ✅ CoreText shaper (macOS) - Complete
+   - ✅ CoreGraphics renderer (macOS) - Complete
+   - ⏸️ DirectWrite shaper (Windows) - Blocked
+   - ⏸️ Direct2D renderer (Windows) - Blocked
 
 ### Medium-term (Available Now)
 1. **Week 12**: Orge Rasterizer improvements (anti-aliasing, coverage)
