@@ -1,173 +1,178 @@
+# TYPF Examples
+
+This directory contains working examples demonstrating various features of the TYPF text rendering pipeline.
+
+## Running Examples
+
+Each example can be run using cargo:
+
+```bash
+cargo run --example <example_name>
+```
+
+## Available Examples
+
+### 1. **basic** - Simple text rendering
+Demonstrates the most basic usage of TYPF for rendering text.
+
+```bash
+cargo run --example basic
+```
+
+**Features shown:**
+- Creating a simple shaper (NoneShaper)
+- Rendering with OrgeRenderer
+- Exporting to PNM format
+- Basic color and background settings
+
+**Output:** `examples/basic_output.ppm`
+
 ---
-this_file: typf/examples/README.md
+
+### 2. **formats** - All export formats showcase
+Demonstrates all supported export formats in a single example.
+
+```bash
+cargo run --example formats
+```
+
+**Features shown:**
+- PNG export (production-ready compressed format)
+- SVG export (vector graphics with embedded bitmap)
+- PNM formats:
+  - PPM (Portable Pixmap - color)
+  - PGM (Portable Graymap - grayscale)
+  - PBM (Portable Bitmap - black/white)
+- Bitmap metadata inspection
+
+**Output:** `examples/output/test.{ppm,pgm,pbm,png,svg}`
+
 ---
 
-# typf Examples
-
-This directory contains examples demonstrating all rendering paths in typf, including the `orge` (open rasterizer glyph engine) rasterizer made by FontLab https://www.fontlab.com/.
-
-## Quick Start
+### 3. **harfbuzz** - Complex script shaping
+Demonstrates HarfBuzz integration for complex text shaping.
 
 ```bash
-# Run direct orge example (single glyph, no ICU-HB overhead)
-cargo run --example direct_orge_single_glyph
-
-# Run full text rendering with ICU-HB + orge
-cargo run --example full_text_icu_hb_orge --features orge
-
-# Run full text rendering with ICU-HB + tiny-skia
-cargo run --example full_text_icu_hb_orge --no-default-features --features tiny-skia-renderer
+cargo run --example harfbuzz --features shaping-hb
 ```
 
-## Examples
+**Features shown:**
+- HarfBuzz shaper integration
+- OpenType feature support (liga, kern, smcp)
+- Language and script tags
+- Complex script handling (Arabic, Devanagari, etc.)
+- Shaping cache usage
 
-### Pattern 1: Full Unicode Text Line Rendering
+**Output:** `examples/harfbuzz_output.ppm`
 
-**`full_text_icu_hb_orge.rs`** - Complete text processing pipeline
-- ICU segmentation (grapheme, word, line breaks)
-- HarfBuzz shaping (complex scripts, ligatures)
-- skrifa font parsing (TrueType, CFF, variable fonts)
-- orge rendering (ultra-smooth unhinted)
+**Note:** Requires `shaping-hb` feature to be enabled.
 
-**Use when:**
-- Rendering complete text lines
-- Need complex script support (Arabic, Devanagari, etc.)
-- Need BiDi text handling
-- Need OpenType feature control (liga, kern, etc.)
-- Working with variable fonts
+---
 
-### Pattern 2: Direct Single Glyph Rendering
-
-**`direct_orge_single_glyph.rs`** - High-performance direct path
-- Unicode codepoint → skrifa → orge
-- NO ICU overhead
-- NO HarfBuzz overhead
-- ~100μs per glyph target
-
-**Use when:**
-- Rendering individual glyphs
-- Building glyph atlases
-- Need maximum performance
-- Don't need text processing
-- Have pre-shaped glyph IDs
-
-### Platform-Specific Examples (Future)
-
-**`full_text_coretext.rs`** (macOS only)
-- Native CoreText rendering
-- Includes platform hinting
-- Best integration on macOS
-
-**`full_text_directwrite.rs`** (Windows only)
-- Native DirectWrite rendering
-- Includes platform hinting
-- Best integration on Windows
-
-## Rendering Paths Comparison
-
-| Path | Unicode | Shaping | Hinting | Speed | Use Case |
-|------|---------|---------|---------|-------|----------|
-| CoreText | ✅ | ✅ | ✅ | Fast | macOS native |
-| DirectWrite | ✅ | ✅ | ✅ | Fast | Windows native |
-| ICU-HB + orge | ✅ | ✅ | ❌ | Medium | Cross-platform text |
-| Direct orge | ❌ | ❌ | ❌ | Very Fast | Single glyphs |
-
-## Font Support
-
-**All examples support:**
-- ✅ Variable fonts (OpenType Variations)
-- ✅ Static fonts
-- ✅ TrueType outlines (quadratic Bézier)
-- ✅ CFF/CFF2 outlines (cubic Bézier)
-- ❌ Color fonts (out of scope)
-
-## Building
+### 4. **pipeline** - Pipeline builder pattern
+Demonstrates the Pipeline builder API for composing stages.
 
 ```bash
-# Build all examples
-cargo build --examples
-
-# Build with specific renderer
-cargo build --examples --features orge
-cargo build --examples --no-default-features --features tiny-skia-renderer
-
-# Build with all features (for comparison)
-cargo build --examples --all-features
+cargo run --example pipeline
 ```
 
-## Testing
+**Features shown:**
+- Pipeline builder pattern
+- Custom shaping parameters
+- Custom render parameters
+- Foreground and background colors
+- Padding control
 
-```bash
-# Run example with test data
-cargo run --example direct_orge_single_glyph
+**Output:** `examples/pipeline_output.ppm`
 
-# Run with specific font
-FONT_PATH=testdata/fonts/NotoSans-Regular.ttf cargo run --example direct_orge_single_glyph
+---
 
-# Run with variable font
-FONT_PATH=testdata/fonts/RobotoFlex-VariableFont_wght.ttf cargo run --example direct_orge_single_glyph
-```
+## Output Directory
 
-## Performance Notes
+All examples create output files in:
+- Individual examples: `examples/*.ppm`
+- Formats example: `examples/output/*`
 
-### Direct orge Path
-- **Target:** <100μs per glyph (48pt, simple shapes)
-- **Overhead:** Minimal (skrifa parsing + scan conversion)
-- **Memory:** ~50KB per glyph cache entry
-- **Best for:** Glyph atlases, icon rendering, single character display
+The `examples/output/` directory is created automatically and is git-ignored.
 
-### Full ICU-HB + orge Path
-- **Target:** <1ms per text line (typical)
-- **Overhead:** ICU segmentation + HarfBuzz shaping
-- **Memory:** <50MB cache (fonts + glyphs)
-- **Best for:** Paragraphs, complex scripts, full text layout
+## Feature Requirements
 
-## Architecture
+Some examples require specific Cargo features to be enabled:
 
-```
-┌─────────────────────────────────────────┐
-│         Pattern 1: Full Text            │
-│                                         │
-│  Text → ICU → HarfBuzz → skrifa → orge │
-│                                         │
-└─────────────────────────────────────────┘
+| Example | Required Features | Default? |
+|---------|------------------|----------|
+| `basic` | (none) | ✓ |
+| `formats` | `export-png`, `export-svg` | ✓ |
+| `harfbuzz` | `shaping-hb` | ✓ |
+| `pipeline` | (none) | ✓ |
 
-┌─────────────────────────────────────────┐
-│      Pattern 2: Direct Glyph            │
-│                                         │
-│      Codepoint → skrifa → orge          │
-│                                         │
-└─────────────────────────────────────────┘
-```
+All examples work with the default feature set when building with `cargo run --example <name>`.
 
-## Common Issues
+## Example Descriptions
 
-### Font Not Found
-```
-Error: Font "Noto Sans" not found
-```
-**Solution:** Install system fonts or specify path to TTF/OTF file
+### Text Used
 
-### Variable Font Not Working
-```
-Warning: Axis 'wght' not found in font
-```
-**Solution:** Verify font has variations: `otfinfo -i font.ttf`
+- **basic**: "Hello, TYPF!"
+- **formats**: "Format Test"
+- **harfbuzz**: "Complex Text with لغة"
+- **pipeline**: "Pipeline Example"
 
-### Rendering Quality Issues
-```
-Bitmap appears jagged
-```
-**Solution:** Use grayscale rendering instead of monochrome:
+### Font Handling
+
+Most examples use mock/stub fonts for demonstration purposes. For real font rendering:
+
+1. Load a TrueType or OpenType font file
+2. Use `typf_fontdb::Font::from_file(path)`
+3. Pass the font to the shaper
+
+Example:
 ```rust
-render_grayscale_direct(width, height, GrayscaleLevel::Level4x4, ...)
+use typf_fontdb::Font;
+let font = Font::from_file("path/to/font.ttf")?;
 ```
 
-## See Also
+## Troubleshooting
 
-- **ARCHITECTURE.md** - Complete system architecture
-- **CLAUDE.md** - Development guidelines
-- **backends/typf-orge/README.md** - orge backend details
-- **backends/typf-icu-hb/README.md** - ICU-HB backend details
+### "No such file or directory" errors
+The `formats` example creates the `examples/output/` directory automatically. For other examples, ensure you're running from the project root.
 
-made by FontLab https://www.fontlab.com/
+### HarfBuzz not found
+If the `harfbuzz` example fails to compile, ensure HarfBuzz is installed:
+
+```bash
+# macOS
+brew install harfbuzz
+
+# Ubuntu/Debian
+sudo apt-get install libharfbuzz-dev
+
+# Fedora
+sudo dnf install harfbuzz-devel
+```
+
+### Viewing output files
+
+**PNM files (PPM/PGM/PBM):**
+- macOS: Preview.app, GIMP
+- Linux: GIMP, ImageMagick (`display file.ppm`)
+- Windows: IrfanView, GIMP
+
+**PNG files:**
+- Any modern image viewer
+
+**SVG files:**
+- Any modern web browser
+- Inkscape
+- Adobe Illustrator
+
+## Next Steps
+
+After exploring these examples, check out:
+
+- **Architecture docs**: `PLAN/00.md` - Full system design
+- **API docs**: Run `cargo doc --open`
+- **Tests**: Run `cargo test --workspace` to see more usage patterns
+
+---
+
+*Made by FontLab - https://www.fontlab.com/*

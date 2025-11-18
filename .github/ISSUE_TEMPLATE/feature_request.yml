@@ -1,0 +1,105 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please fill out the information below.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What is your use case?
+      placeholder: I'm trying to... but there's no way to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How do you envision this feature working?
+      placeholder: Add a new function/API that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component would this affect?
+      options:
+        - Core (pipeline, traits)
+        - Shaping (new backend)
+        - Rendering (new backend)
+        - Export (new format)
+        - Unicode processing
+        - Font loading
+        - Python bindings
+        - CLI
+        - Documentation
+        - Performance
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical - Blocking my work
+        - High - Very important
+        - Medium - Would be nice to have
+        - Low - Minor improvement
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example Usage
+      description: Show how you would like to use this feature
+      render: rust
+      placeholder: |
+        // Proposed API
+        let result = typf.new_feature(...)?;
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: What are the benefits of implementing this feature?
+      placeholder: |
+        - Enables use case X
+        - Improves performance by Y
+        - Makes API more intuitive
+
+  - type: checkboxes
+    id: willingness
+    attributes:
+      label: Implementation
+      options:
+        - label: I am willing to implement this feature
+        - label: I am willing to write tests for this feature
+        - label: I am willing to update documentation
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: This feature aligns with TYPF's scope and goals
+          required: true

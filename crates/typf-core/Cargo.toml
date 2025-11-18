@@ -1,0 +1,19 @@
+[package]
+name = "typf-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+log.workspace = true
+icu_properties = "1.5"
+parking_lot = "0.12"
+lru = "0.12"
+
+[features]
+default = []
+parallel = []
+simd = []
+cache-aggressive = []

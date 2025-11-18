@@ -1,0 +1,10 @@
+Glyph count: 5
+Advance width: 40.00
+Advance height: 16.00
+Direction: LeftToRight
+Glyphs:
+  0: id=72, advance=500.00, pos=(0.00, 0.00), cluster=0
+  1: id=101, advance=500.00, pos=(8.00, 0.00), cluster=0
+  2: id=108, advance=500.00, pos=(16.00, 0.00), cluster=0
+  3: id=108, advance=500.00, pos=(24.00, 0.00), cluster=0
+  4: id=111, advance=500.00, pos=(32.00, 0.00), cluster=0

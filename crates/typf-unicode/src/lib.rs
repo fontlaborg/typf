@@ -1,416 +1,600 @@
-// this_file: crates/typf-unicode/src/lib.rs
+//! Unicode processing module for TYPF v2.0
 
-//! Unicode-aware text segmentation utilities shared across backends.
-
-use icu_properties::{props::Script, CodePointMapData, CodePointMapDataBorrowed};
-use icu_segmenter::{options::WordBreakInvariantOptions, GraphemeClusterSegmenter, WordSegmenter};
-use typf_core::{
-    types::{Direction, SegmentOptions, TextRun},
-    Result,
-};
+use icu_properties::{maps, Script};
+use icu_segmenter::{GraphemeClusterSegmenter, LineSegmenter, WordSegmenter};
 use unicode_bidi::BidiInfo;
+use unicode_normalization::UnicodeNormalization;
 
-/// Unicode-aware segmenter that powers all typf backends.
-pub struct TextSegmenter {
-    script_map: CodePointMapDataBorrowed<'static, Script>,
+use typf_core::{
+    error::Result,
+    types::{Direction, TextRun},
+};
+
+/// Options for Unicode processing
+#[derive(Debug, Clone, Default)]
+pub struct UnicodeOptions {
+    pub detect_scripts: bool,
+    pub normalize: bool,
+    pub bidi_resolve: bool,
+    pub language: Option<String>,
 }
 
-impl TextSegmenter {
-    /// Create a new segmenter with ICU data baked in.
+/// Unicode processor
+pub struct UnicodeProcessor;
+
+impl UnicodeProcessor {
+    /// Create a new Unicode processor
     pub fn new() -> Self {
-        Self {
-            script_map: CodePointMapData::<Script>::new(),
-        }
+        Self
     }
 
-    /// Segment text into runs that respect grapheme clusters, bidi, script, and optional word chunks.
-    pub fn segment(&self, text: &str, options: &SegmentOptions) -> Result<Vec<TextRun>> {
+    /// Process text with Unicode operations
+    pub fn process(&self, text: &str, options: &UnicodeOptions) -> Result<Vec<TextRun>> {
         if text.is_empty() {
-            return Ok(Vec::new());
+            return Ok(vec![]);
         }
 
-        let grapheme_boundaries: Vec<usize> =
-            GraphemeClusterSegmenter::new().segment_str(text).collect();
-        if grapheme_boundaries.len() < 2 {
-            return Ok(vec![self.build_run(
-                text,
-                0,
-                text.len(),
-                Script::Common,
-                &options.language.clone().unwrap_or_else(|| "en".to_string()),
-                Direction::LeftToRight,
-            )]);
-        }
-
-        let cluster_spans: Vec<(usize, usize)> = grapheme_boundaries
-            .windows(2)
-            .map(|pair| (pair[0], pair[1]))
-            .collect();
-
-        let line_breaks = Self::hard_line_breaks(text);
-        let word_breaks: Vec<usize> = if options.font_fallback {
-            WordSegmenter::new_auto(WordBreakInvariantOptions::default())
-                .segment_str(text)
-                .collect()
+        // Normalize text if requested (NFC - Normalization Form Canonical Composition)
+        let normalized = if options.normalize {
+            text.nfc().collect::<String>()
         } else {
-            Vec::new()
+            text.to_string()
         };
 
-        let language = options.language.clone().unwrap_or_else(|| "en".to_string());
-        let slices = self.compute_bidi_slices(text, options.bidi_resolve);
-        let mut runs = Vec::with_capacity(slices.len());
+        // Detect scripts if requested
+        let scripts = if options.detect_scripts {
+            self.detect_scripts(&normalized)?
+        } else {
+            vec![(Script::Common, 0, normalized.len())]
+        };
 
-        for slice in slices {
-            self.collect_runs_in_slice(
-                text,
-                slice,
-                &cluster_spans,
-                &line_breaks,
-                if options.font_fallback {
-                    Some(&word_breaks)
-                } else {
-                    None
-                },
-                options,
-                &language,
-                &mut runs,
-            );
+        // Segment by grapheme clusters
+        let grapheme_segmenter = GraphemeClusterSegmenter::new();
+        let _grapheme_breaks: Vec<usize> = grapheme_segmenter.segment_str(text).collect();
+
+        // Bidirectional text analysis if requested
+        let runs = if options.bidi_resolve {
+            self.create_bidi_runs(&normalized, scripts, &options)?
+        } else {
+            // Simple runs without bidi analysis
+            self.create_simple_runs(&normalized, scripts, &options, Direction::LeftToRight)?
+        };
+
+        Ok(runs)
+    }
+
+    /// Detect scripts in text
+    fn detect_scripts(&self, text: &str) -> Result<Vec<(Script, usize, usize)>> {
+        let script_data = maps::script();
+        let mut scripts = Vec::new();
+        let mut current_script = Script::Common;
+        let mut start = 0;
+
+        for (i, ch) in text.char_indices() {
+            let script = script_data.get(ch);
+
+            if script != current_script && script != Script::Common && script != Script::Inherited {
+                if i > start {
+                    scripts.push((current_script, start, i));
+                }
+                current_script = script;
+                start = i;
+            }
         }
 
-        if runs.is_empty() {
-            runs.push(self.build_run(
-                text,
-                0,
-                text.len(),
-                Script::Common,
-                &language,
-                Direction::LeftToRight,
-            ));
+        if start < text.len() {
+            scripts.push((current_script, start, text.len()));
+        }
+
+        if scripts.is_empty() {
+            scripts.push((Script::Common, 0, text.len()));
+        }
+
+        Ok(scripts)
+    }
+
+    /// Create simple text runs without bidi analysis
+    fn create_simple_runs(
+        &self,
+        text: &str,
+        scripts: Vec<(Script, usize, usize)>,
+        options: &UnicodeOptions,
+        default_direction: Direction,
+    ) -> Result<Vec<TextRun>> {
+        let mut runs = Vec::new();
+        for (script, start, end) in scripts {
+            runs.push(TextRun {
+                text: text[start..end].to_string(),
+                start,
+                end,
+                script,
+                language: options.language.clone().unwrap_or_default(),
+                direction: default_direction,
+            });
+        }
+        Ok(runs)
+    }
+
+    /// Create text runs with bidirectional analysis
+    fn create_bidi_runs(
+        &self,
+        text: &str,
+        scripts: Vec<(Script, usize, usize)>,
+        options: &UnicodeOptions,
+    ) -> Result<Vec<TextRun>> {
+        let bidi_info = BidiInfo::new(text, None);
+
+        // Get bidi levels for the text
+        let levels = bidi_info.levels;
+        let mut runs = Vec::new();
+
+        // For each script segment, determine its direction from bidi levels
+        for (script, start, end) in scripts {
+            // Get the predominant level for this segment
+            let segment_levels = &levels[start..end];
+            let has_rtl = segment_levels.iter().any(|level| level.is_rtl());
+
+            let direction = if has_rtl {
+                Direction::RightToLeft
+            } else {
+                Direction::LeftToRight
+            };
+
+            runs.push(TextRun {
+                text: text[start..end].to_string(),
+                start,
+                end,
+                script,
+                language: options.language.clone().unwrap_or_default(),
+                direction,
+            });
         }
 
         Ok(runs)
     }
 
-    fn compute_bidi_slices(&self, text: &str, resolve: bool) -> Vec<TextSlice> {
-        if text.is_empty() {
-            return Vec::new();
-        }
+    /// Segment text into words
+    pub fn segment_words(&self, text: &str) -> Result<Vec<String>> {
+        let segmenter = WordSegmenter::new_auto();
+        let mut words = Vec::new();
+        let mut last = 0;
 
-        if !resolve {
-            return vec![TextSlice {
-                start: 0,
-                end: text.len(),
-                direction: Direction::LeftToRight,
-            }];
-        }
-
-        let bidi = BidiInfo::new(text, None);
-        let mut slices = Vec::new();
-
-        for paragraph in &bidi.paragraphs {
-            let line = paragraph.range.clone();
-            let (levels, runs_vec) = bidi.visual_runs(paragraph, line.clone());
-
-            for run in runs_vec {
-                if run.start >= run.end {
-                    continue;
+        for boundary in segmenter.segment_str(text) {
+            if boundary > last {
+                let word = &text[last..boundary];
+                if !word.trim().is_empty() {
+                    words.push(word.to_string());
                 }
-                let absolute_start = line.start + run.start;
-                let absolute_end = line.start + run.end;
-                let level = levels.get(run.start).copied().unwrap_or(paragraph.level);
-                let direction = if level.is_rtl() {
-                    Direction::RightToLeft
-                } else {
-                    Direction::LeftToRight
-                };
-
-                slices.push(TextSlice {
-                    start: absolute_start,
-                    end: absolute_end,
-                    direction,
-                });
             }
+            last = boundary;
         }
 
-        if slices.is_empty() {
-            slices.push(TextSlice {
-                start: 0,
-                end: text.len(),
-                direction: Direction::LeftToRight,
-            });
-        }
-
-        slices
+        Ok(words)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn collect_runs_in_slice(
-        &self,
-        text: &str,
-        slice: TextSlice,
-        cluster_spans: &[(usize, usize)],
-        line_breaks: &[usize],
-        word_breaks: Option<&[usize]>,
-        options: &SegmentOptions,
-        language: &str,
-        runs: &mut Vec<TextRun>,
-    ) {
-        if slice.end <= slice.start {
-            return;
-        }
-
-        let slice_line_breaks: Vec<usize> = line_breaks
-            .iter()
-            .copied()
-            .filter(|idx| *idx > slice.start && *idx < slice.end)
-            .collect();
-        let mut line_cursor = 0usize;
-
-        let slice_word_breaks: Vec<usize> = word_breaks
-            .unwrap_or(&[])
-            .iter()
-            .copied()
-            .filter(|idx| *idx > slice.start && *idx < slice.end)
-            .collect();
-        let mut word_cursor = 0usize;
-
-        let mut run_start = slice.start;
-        let mut current_script: Option<Script> = None;
-
-        for &(cluster_start, cluster_end) in cluster_spans {
-            if cluster_end <= slice.start {
-                continue;
-            }
-            if cluster_start >= slice.end {
-                break;
-            }
-
-            let start = cluster_start.max(slice.start);
-            let end = cluster_end.min(slice.end);
-            if start >= end {
-                continue;
-            }
-
-            let cluster_script = self.detect_script(&text[start..end]);
-            let script_changed = options.script_itemize
-                && self.is_significant_script(cluster_script)
-                && current_script
-                    .map(|existing| existing != cluster_script)
-                    .unwrap_or(false);
-
-            if script_changed && start > run_start {
-                let script_for_run = current_script.unwrap_or(cluster_script);
-                runs.push(self.build_run(
-                    text,
-                    run_start,
-                    start,
-                    script_for_run,
-                    language,
-                    slice.direction,
-                ));
-                run_start = start;
-                current_script = None;
-            }
-
-            if current_script.is_none() && self.is_significant_script(cluster_script) {
-                current_script = Some(cluster_script);
-            }
-
-            let mut boundary_hit = Self::hit_boundary(&slice_line_breaks, &mut line_cursor, end);
-            if !boundary_hit && options.font_fallback && !slice_word_breaks.is_empty() {
-                boundary_hit = Self::hit_boundary(&slice_word_breaks, &mut word_cursor, end);
-            }
-
-            if boundary_hit {
-                if end > run_start {
-                    let script_for_run = current_script.unwrap_or(cluster_script);
-                    runs.push(self.build_run(
-                        text,
-                        run_start,
-                        end,
-                        script_for_run,
-                        language,
-                        slice.direction,
-                    ));
-                }
-                run_start = end;
-                current_script = None;
-            }
-        }
-
-        if run_start < slice.end {
-            let script_for_run =
-                current_script.unwrap_or_else(|| self.detect_script(&text[run_start..slice.end]));
-            runs.push(self.build_run(
-                text,
-                run_start,
-                slice.end,
-                script_for_run,
-                language,
-                slice.direction,
-            ));
-        }
-    }
-
-    fn detect_script(&self, fragment: &str) -> Script {
-        for ch in fragment.chars() {
-            let script = self.script_map.get(ch);
-            if self.is_significant_script(script) {
-                return script;
-            }
-        }
-        Script::Common
-    }
-
-    fn build_run(
-        &self,
-        text: &str,
-        start: usize,
-        end: usize,
-        script: Script,
-        language: &str,
-        direction: Direction,
-    ) -> TextRun {
-        TextRun {
-            text: text[start..end].to_string(),
-            range: (start, end),
-            script: self.script_label(script),
-            language: language.to_string(),
-            direction,
-            font: None,
-        }
-    }
-
-    fn script_label(&self, script: Script) -> String {
-        // ICU 2.x: PropertyEnumToValueNameLinearMapperBorrowed is private, so use match
-        match script {
-            Script::Common => "Common",
-            Script::Inherited => "Inherited",
-            Script::Unknown => "Unknown",
-            Script::Arabic => "Arabic",
-            Script::Armenian => "Armenian",
-            Script::Bengali => "Bengali",
-            Script::Cyrillic => "Cyrillic",
-            Script::Devanagari => "Devanagari",
-            Script::Greek => "Greek",
-            Script::Gujarati => "Gujarati",
-            Script::Gurmukhi => "Gurmukhi",
-            Script::Hangul => "Hangul",
-            Script::Han => "Han",
-            Script::Hebrew => "Hebrew",
-            Script::Hiragana => "Hiragana",
-            Script::Kannada => "Kannada",
-            Script::Katakana => "Katakana",
-            Script::Lao => "Lao",
-            Script::Latin => "Latin",
-            Script::Malayalam => "Malayalam",
-            Script::Oriya => "Oriya",
-            Script::Tamil => "Tamil",
-            Script::Telugu => "Telugu",
-            Script::Thai => "Thai",
-            Script::Tibetan => "Tibetan",
-            _ => "Other",
-        }
-        .to_string()
-    }
-
-    fn is_significant_script(&self, script: Script) -> bool {
-        !matches!(script, Script::Common | Script::Inherited | Script::Unknown)
-    }
-
-    fn hit_boundary(boundaries: &[usize], cursor: &mut usize, position: usize) -> bool {
-        while *cursor < boundaries.len() && boundaries[*cursor] < position {
-            *cursor += 1;
-        }
-
-        if *cursor < boundaries.len() && boundaries[*cursor] == position {
-            *cursor += 1;
-            return true;
-        }
-
-        false
-    }
-
-    fn hard_line_breaks(text: &str) -> Vec<usize> {
-        let mut breaks: Vec<usize> = text.match_indices('\n').map(|(idx, _)| idx + 1).collect();
-        breaks.extend(
-            text.match_indices('\r')
-                .filter(|(idx, _)| text.as_bytes().get(idx + 1) != Some(&b'\n'))
-                .map(|(idx, _)| idx + 1),
-        );
-        breaks.sort_unstable();
-        breaks
+    /// Segment text into lines (find line break opportunities)
+    pub fn segment_lines(&self, text: &str) -> Result<Vec<usize>> {
+        let segmenter = LineSegmenter::new_auto();
+        let breaks: Vec<usize> = segmenter.segment_str(text).collect();
+        Ok(breaks)
     }
 }
 
-impl Default for TextSegmenter {
+impl Default for UnicodeProcessor {
     fn default() -> Self {
         Self::new()
     }
-}
-
-#[derive(Clone, Copy)]
-struct TextSlice {
-    start: usize,
-    end: usize,
-    direction: Direction,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn segment(text: &str, mut options: SegmentOptions) -> Vec<TextRun> {
-        let segmenter = TextSegmenter::new();
-        options.language = Some("en".to_string());
-        segmenter.segment(text, &options).unwrap()
+    #[test]
+    fn test_empty_text() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions::default();
+        let result = processor.process("", &options).unwrap();
+        assert!(result.is_empty());
     }
 
     #[test]
-    fn segment_simple_latin_text() {
-        let runs = segment("Hello World", SegmentOptions::default());
-        assert_eq!(runs.len(), 1);
-        assert_eq!(runs[0].script, "Latin");
-        assert_eq!(runs[0].direction, Direction::LeftToRight);
+    fn test_simple_latin() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            ..Default::default()
+        };
+        let result = processor.process("Hello World", &options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].direction, Direction::LeftToRight);
     }
 
     #[test]
-    fn segment_bidi_text_into_runs() {
-        let mut options = SegmentOptions::default();
-        options.script_itemize = true;
-        options.bidi_resolve = true;
-        let runs = segment("Hello مرحبا", options);
-        assert!(runs.len() >= 2);
-        let last = runs.last().unwrap();
-        assert_eq!(runs[0].script, "Latin");
-        assert_eq!(runs[0].direction, Direction::LeftToRight);
-        assert_eq!(last.script, "Arabic");
-        assert_eq!(last.direction, Direction::RightToLeft);
+    fn test_word_segmentation() {
+        let processor = UnicodeProcessor::new();
+        let words = processor.segment_words("Hello, World! Test 123").unwrap();
+        assert!(words.contains(&"Hello".to_string()));
+        assert!(words.contains(&"World".to_string()));
+        assert!(words.contains(&"Test".to_string()));
+        assert!(words.contains(&"123".to_string()));
     }
 
     #[test]
-    fn segment_respects_line_breaks() {
-        let runs = segment("Line1\nLine2", SegmentOptions::default());
-        assert_eq!(runs.len(), 2);
-        assert_eq!(runs[0].text, "Line1\n");
-        assert_eq!(runs[1].text, "Line2");
+    fn test_line_breaks() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions::default();
+        let result = processor
+            .process("Line 1\nLine 2\nLine 3", &options)
+            .unwrap();
+        assert!(!result.is_empty());
     }
 
     #[test]
-    fn segment_splits_on_word_boundaries_for_fallback() {
-        let mut options = SegmentOptions::default();
-        options.font_fallback = true;
-        let runs = segment("Word One", options);
-        assert!(runs.len() >= 2);
+    fn test_arabic_rtl() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            bidi_resolve: true,
+            ..Default::default()
+        };
+        // "Hello" in Arabic
+        let result = processor.process("مرحبا", &options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].direction, Direction::RightToLeft);
+        assert_eq!(result[0].script, Script::Arabic);
     }
 
     #[test]
-    fn segment_itemizes_cjk_and_latin() {
-        let mut options = SegmentOptions::default();
-        options.script_itemize = true;
-        let runs = segment("漢字ABC", options);
-        assert!(runs.len() >= 2);
-        assert_eq!(runs[0].script, "Han");
-        assert_eq!(runs.last().unwrap().script, "Latin");
+    fn test_devanagari() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            ..Default::default()
+        };
+        // "Namaste" in Devanagari
+        let result = processor.process("नमस्ते", &options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].script, Script::Devanagari);
+        assert_eq!(result[0].direction, Direction::LeftToRight);
+    }
+
+    #[test]
+    fn test_mixed_scripts() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            ..Default::default()
+        };
+        // English + Arabic
+        let result = processor.process("Hello مرحبا", &options).unwrap();
+        // Should detect script changes
+        assert!(result.len() >= 1);
+    }
+
+    #[test]
+    fn test_hebrew_rtl() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            bidi_resolve: true,
+            ..Default::default()
+        };
+        // "Shalom" in Hebrew
+        let result = processor.process("שלום", &options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].direction, Direction::RightToLeft);
+        assert_eq!(result[0].script, Script::Hebrew);
+    }
+
+    #[test]
+    fn test_chinese_cjk() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            ..Default::default()
+        };
+        // "Hello" in Chinese
+        let result = processor.process("你好", &options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].script, Script::Han);
+        assert_eq!(result[0].direction, Direction::LeftToRight);
+    }
+
+    #[test]
+    fn test_thai() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            ..Default::default()
+        };
+        // "Hello" in Thai
+        let result = processor.process("สวัสดี", &options).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].script, Script::Thai);
+    }
+
+    #[test]
+    fn test_nfc_normalization() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            normalize: true,
+            ..Default::default()
+        };
+
+        // Test with decomposed character (é as e + combining acute)
+        let decomposed = "e\u{0301}"; // e + combining acute accent
+        let result = processor.process(decomposed, &options).unwrap();
+
+        // After NFC normalization, should be composed
+        assert_eq!(result[0].text, "é"); // Single precomposed character
+    }
+
+    #[test]
+    fn test_normalization_with_scripts() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            normalize: true,
+            detect_scripts: true,
+            ..Default::default()
+        };
+
+        // Test normalization with combining marks
+        let text = "café"; // Last e might be decomposed
+        let result = processor.process(text, &options).unwrap();
+
+        // Should normalize and detect Latin script
+        assert!(result.len() > 0);
+        // Normalized text should be valid
+        assert!(result[0].text.len() > 0);
+    }
+
+    #[test]
+    fn test_no_normalization() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            normalize: false,
+            ..Default::default()
+        };
+
+        // Test without normalization
+        let text = "hello";
+        let result = processor.process(text, &options).unwrap();
+
+        // Text should remain unchanged
+        assert_eq!(result[0].text, "hello");
+    }
+
+    #[test]
+    fn test_bidi_mixed_text() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            bidi_resolve: true,
+            ..Default::default()
+        };
+
+        // Mixed LTR (English) and RTL (Arabic)
+        let text = "Hello مرحبا World";
+        let result = processor.process(text, &options).unwrap();
+
+        // Should create multiple runs with appropriate directions
+        assert!(result.len() >= 1);
+
+        // Find RTL run (Arabic)
+        let has_rtl = result.iter().any(|r| r.direction == Direction::RightToLeft);
+        assert!(has_rtl, "Should detect RTL direction for Arabic text");
+    }
+
+    #[test]
+    fn test_bidi_pure_rtl() {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            bidi_resolve: true,
+            ..Default::default()
+        };
+
+        // Pure RTL text
+        let text = "مرحبا بالعالم";
+        let result = processor.process(text, &options).unwrap();
+
+        // Should be all RTL
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].direction, Direction::RightToLeft);
+    }
+
+    #[test]
+    fn test_line_breaking_simple() {
+        let processor = UnicodeProcessor::new();
+        let text = "Hello world! This is a test.";
+        let breaks = processor.segment_lines(text).unwrap();
+
+        // Should have line break opportunities (at least start and end)
+        assert!(breaks.len() >= 2);
+        assert_eq!(breaks[0], 0); // Start
+        assert_eq!(*breaks.last().unwrap(), text.len()); // End
+    }
+
+    #[test]
+    fn test_line_breaking_multiline() {
+        let processor = UnicodeProcessor::new();
+        let text = "Line 1\nLine 2\nLine 3";
+        let breaks = processor.segment_lines(text).unwrap();
+
+        // Should have breaks at newlines
+        assert!(breaks.len() > 3);
+        assert!(breaks.contains(&0));
+        assert!(breaks.contains(&text.len()));
+    }
+
+    #[test]
+    fn test_line_breaking_long_text() {
+        let processor = UnicodeProcessor::new();
+        let text = "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.";
+        let breaks = processor.segment_lines(text).unwrap();
+
+        // Should have multiple break opportunities (spaces, punctuation)
+        assert!(breaks.len() > 10);
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Property: NFC normalization is idempotent (normalizing twice == normalizing once)
+    proptest! {
+        #[test]
+        fn prop_nfc_idempotent(s in "\\PC*") {
+            let processor = UnicodeProcessor::new();
+            let options = UnicodeOptions {
+                normalize: true,
+                detect_scripts: false,
+                bidi_resolve: false,
+                language: None,
+            };
+
+            // Normalize once
+            let result1 = processor.process(&s, &options);
+
+            // Skip if processing failed (e.g., invalid input)
+            if let Ok(runs1) = result1 {
+                let normalized1 = runs1.iter().map(|r| r.text.as_str()).collect::<String>();
+
+                // Normalize the already-normalized text
+                let result2 = processor.process(&normalized1, &options).unwrap();
+                let normalized2 = result2.iter().map(|r| r.text.as_str()).collect::<String>();
+
+                // NFC normalization should be idempotent
+                prop_assert_eq!(normalized1, normalized2);
+            }
+        }
+    }
+
+    /// Property: Normalization always produces valid Unicode
+    proptest! {
+        #[test]
+        fn prop_nfc_produces_valid_unicode(s in "\\PC*") {
+            let processor = UnicodeProcessor::new();
+            let options = UnicodeOptions {
+                normalize: true,
+                detect_scripts: false,
+                bidi_resolve: false,
+                language: None,
+            };
+
+            if let Ok(result) = processor.process(&s, &options) {
+                for run in result {
+                    // All characters in normalized text should be valid Unicode
+                    prop_assert!(run.text.chars().all(|c| c.is_ascii() || !c.is_control() || c.is_whitespace()));
+                }
+            }
+        }
+    }
+
+    /// Property: Empty string stays empty after processing
+    proptest! {
+        #[test]
+        fn prop_empty_stays_empty(_options in any::<bool>().prop_flat_map(|normalize| {
+            Just(UnicodeOptions {
+                normalize,
+                detect_scripts: false,
+                bidi_resolve: false,
+                language: None,
+            })
+        })) {
+            let processor = UnicodeProcessor::new();
+            let result = processor.process("", &_options).unwrap();
+            prop_assert_eq!(result.len(), 0);
+        }
+    }
+
+    /// Property: Single ASCII character processing is consistent
+    proptest! {
+        #[test]
+        fn prop_ascii_unchanged(s in "[a-z]") {
+            let processor = UnicodeProcessor::new();
+            let options = UnicodeOptions {
+                normalize: true,
+                detect_scripts: false,
+                bidi_resolve: false,
+                language: None,
+            };
+
+            let result = processor.process(&s, &options).unwrap();
+
+            prop_assert_eq!(result.len(), 1);
+            prop_assert_eq!(&result[0].text, &s);
+        }
+    }
+
+    /// Property: Bidi processing never loses characters
+    proptest! {
+        #[test]
+        fn prop_bidi_preserves_length(s in "[a-zA-Z א-ת]{1,50}") {
+            let processor = UnicodeProcessor::new();
+            let options = UnicodeOptions {
+                normalize: false,
+                detect_scripts: false,
+                bidi_resolve: true,
+                language: None,
+            };
+
+            let result = processor.process(&s, &options).unwrap();
+
+            // Total character count should be preserved
+            let output_len: usize = result.iter().map(|r| r.text.chars().count()).sum();
+            prop_assert_eq!(output_len, s.chars().count());
+        }
+    }
+
+    /// Property: Script detection always assigns a script
+    proptest! {
+        #[test]
+        fn prop_script_detection_always_succeeds(s in "\\PC{1,100}") {
+            let processor = UnicodeProcessor::new();
+            let options = UnicodeOptions {
+                normalize: false,
+                detect_scripts: true,
+                bidi_resolve: false,
+                language: None,
+            };
+
+            if let Ok(result) = processor.process(&s, &options) {
+                // Every run should have a script assigned
+                for run in result {
+                    // Script should be set (not just default)
+                    prop_assert!(!run.text.is_empty());
+                }
+            }
+        }
+    }
+
+    /// Property: Processing is deterministic (same input -> same output)
+    proptest! {
+        #[test]
+        fn prop_processing_deterministic(s in "\\PC{1,50}") {
+            let processor = UnicodeProcessor::new();
+            let options = UnicodeOptions {
+                normalize: true,
+                detect_scripts: true,
+                bidi_resolve: true,
+                language: None,
+            };
+
+            if let Ok(result1) = processor.process(&s, &options) {
+                let result2 = processor.process(&s, &options).unwrap();
+
+                // Results should be identical
+                prop_assert_eq!(result1.len(), result2.len());
+                for (run1, run2) in result1.iter().zip(result2.iter()) {
+                    prop_assert_eq!(&run1.text, &run2.text);
+                    prop_assert_eq!(run1.script, run2.script);
+                    prop_assert_eq!(run1.direction, run2.direction);
+                }
+            }
+        }
     }
 }

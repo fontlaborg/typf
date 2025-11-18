@@ -1,68 +1,147 @@
 [workspace]
-resolver = "2"
 members = [
-    "backends/*",
-    "crates/*",
-    "python",
-    "typf-cli",
-    "backend_benches",
+    # Core crates
+    "crates/typf",
+    "crates/typf-core",
+    "crates/typf-input",
+    "crates/typf-unicode",
+    "crates/typf-fontdb",
+    "crates/typf-export",
+
+    # Shaping backends
+    "backends/typf-shape-none",
+    "backends/typf-shape-hb",
+    "backends/typf-shape-ct",
+    # "backends/typf-shape-icu-hb",
+    # "backends/typf-shape-mac",
+    # "backends/typf-shape-win",
+
+    # Rendering backends
+    # "backends/typf-render-json",
+    "backends/typf-render-orge",
+    # "backends/typf-render-skia",
+    # "backends/typf-render-zeno",
+    # "backends/typf-render-mac",
+    # "backends/typf-render-win",
+
+    # CLI
+    "crates/typf-cli",
+
+    # Bindings
+    "bindings/python",
 ]
-exclude = [
-    "fuzz",
-]
+resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "2.0.0-dev"
+authors = ["TYPF Contributors"]
 edition = "2021"
-authors = ["Font Laboratory <team@fontlab.org>"]
+rust-version = "1.75"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/fontlaborg/typf"
+repository = "https://github.com/typf/typf"
 
 [workspace.dependencies]
-# Core dependencies
+# Internal crates
+typf-core = { path = "crates/typf-core" }
+typf-input = { path = "crates/typf-input" }
+typf-unicode = { path = "crates/typf-unicode" }
+typf-fontdb = { path = "crates/typf-fontdb" }
+typf-export = { path = "crates/typf-export" }
+
+# Backends
+typf-shape-none = { path = "backends/typf-shape-none" }
+typf-shape-hb = { path = "backends/typf-shape-hb" }
+typf-shape-ct = { path = "backends/typf-shape-ct" }
+typf-render-orge = { path = "backends/typf-render-orge" }
+
+# External dependencies
+read-fonts = "0.20"
+skrifa = "0.20"
 thiserror = "1.0"
 anyhow = "1.0"
 log = "0.4"
 env_logger = "0.11"
 
-# Performance
-rayon = "1.10"
-lru = "0.12"
-memmap2 = "0.9"
-parking_lot = "0.12"
-dashmap = "6.0"
-
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-proptest = "1.5"
-
-# Font/Text
+# Shaping dependencies
 harfbuzz_rs = "2.0"
-icu_segmenter = { version = "2.1", features = ["compiled_data", "auto"] }
-icu_locid = "2.1"
-icu_properties = { version = "2.1", features = ["compiled_data"] }
-# Migrated to skrifa for better variable font support
-skrifa = "0.39"
-read-fonts = "0.36"
-png = "0.17"
-lyon_geom = "1.0"
-hdrhistogram = "7"
-unicode-bidi = "0.3"
-kurbo = "0.11"
 
-# Python bindings
-pyo3 = "0.22"
+# Caching and concurrency
+parking_lot = "0.12"
+lru = "0.12"
 
-# Platform-specific (to be added in individual crates)
-objc2 = "0.5"
-objc2-foundation = "0.2"
-core-foundation = "0.10"
-core-graphics = "0.24"
-core-text = "20.1"
-windows = { version = "0.58", features = [
-    "Win32_Graphics_DirectWrite",
-    "Win32_Graphics_Direct2D",
-    "Win32_System_Com",
-]}
-camino = "1.1"
+# Optional dependencies (to be added as needed)
+# icu = "1.5"
+# tiny-skia = "0.11"
+rayon = "1.10"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.release-with-debug]
+inherits = "release"
+strip = false
+debug = true
+
+[profile.bench]
+inherits = "release"
+lto = false
+
+[profile.minimal]
+inherits = "release"
+opt-level = "z"  # Optimize for size
+
+# Feature flags for the workspace
+# These are referenced by individual crates
+[workspace.metadata.features]
+# Minimal build with no external dependencies
+minimal = ["shaping-none", "render-orge", "export-pnm"]
+
+# Default build with common features
+default = ["minimal", "unicode", "fontdb"]
+
+# Full build with all features
+full = [
+    "default",
+    "shaping-hb",
+    "shaping-icu-hb",
+    "render-skia",
+    "render-zeno",
+    "export-png",
+    "export-svg",
+    "export-pdf",
+    "simd",
+    "parallel",
+]
+
+# Shaping backends
+shaping-none = []
+shaping-hb = []
+shaping-icu-hb = ["shaping-hb"]
+shaping-mac = []
+shaping-win = []
+
+# Rendering backends
+render-orge = []
+render-skia = []
+render-zeno = []
+render-mac = []
+render-win = []
+
+# Export formats
+export-pnm = []
+export-png = []
+export-svg = []
+export-pdf = []
+export-json = []
+
+# Optional features
+unicode = []
+fontdb = []
+simd = []
+parallel = []
+
+# Platform-specific auto-selection
+auto-backend = []

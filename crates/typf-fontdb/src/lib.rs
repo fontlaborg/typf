@@ -1,316 +1,180 @@
-// this_file: crates/typf-fontdb/src/lib.rs
+//! Font database and loading module for TYPF
 
-#![deny(missing_docs)]
-
-//! Shared font discovery helpers and fallback metadata for typf.
-
-pub mod font_cache;
-
-// Re-export font_cache types for convenience
-pub use font_cache::{FontCacheError, FontInstance, FontLoader};
-
-use dashmap::DashMap;
-use fontdb::{Database, Family, Query, Source, Stretch, Style, Weight};
-use log::warn;
-use once_cell::sync::OnceCell;
-use parking_lot::RwLock;
-use shellexpand::tilde;
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
+
+use read_fonts::{FontRef as ReadFontRef, TableProvider};
+
 use typf_core::{
-    types::{Font, FontSource, FontStyle},
-    Result, TypfError,
+    error::{FontLoadError, Result},
+    traits::FontRef as TypfFontRef,
 };
 
-/// Global font database instance backed by `fontdb`.
-pub struct FontDatabase {
-    db: RwLock<Database>,
-    cache: DashMap<String, Arc<FontHandle>>,
+/// A loaded font with its data
+pub struct Font {
+    data: Vec<u8>,
+    font_ref: Option<ReadFontRef<'static>>,
+    units_per_em: u16,
 }
 
-fn load_font_data_from_path(db: &mut Database, path: &PathBuf) -> anyhow::Result<()> {
-    for entry in walkdir::WalkDir::new(path)
-        .max_depth(1)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        if entry.file_type().is_file() {
-            let file_path = entry.path();
-            if let Some(ext) = file_path.extension().and_then(|s| s.to_str()) {
-                if matches!(ext.to_lowercase().as_str(), "ttf" | "otf" | "ttc" | "otc") {
-                    log::debug!("Explicitly loading font file: {}", file_path.display());
-                    let font_bytes = std::fs::read(file_path)?;
-                    db.load_font_data(font_bytes);
-                }
-            }
-        }
+impl Font {
+    /// Load a font from a file path
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
+        let data = fs::read(path.as_ref())
+            .map_err(|_| FontLoadError::FileNotFound(path.as_ref().display().to_string()))?;
+
+        Self::from_data(data)
     }
-    Ok(())
+
+    /// Load a font from raw data
+    pub fn from_data(data: Vec<u8>) -> Result<Self> {
+        // Leak the data to get a 'static reference (font will own the data)
+        let data_ref: &'static [u8] = Box::leak(data.clone().into_boxed_slice());
+
+        // Parse the font (handle TrueType Collections)
+        let font_ref =
+            ReadFontRef::from_index(data_ref, 0).map_err(|_| FontLoadError::InvalidData)?;
+
+        // Get units per em
+        let units_per_em = font_ref
+            .head()
+            .map(|head| head.units_per_em())
+            .unwrap_or(1000);
+
+        Ok(Font {
+            data,
+            font_ref: Some(font_ref),
+            units_per_em,
+        })
+    }
+
+    /// Get glyph ID for a character
+    pub fn glyph_id(&self, ch: char) -> Option<u32> {
+        self.font_ref
+            .as_ref()
+            .and_then(|font| font.cmap().ok()?.map_codepoint(ch).map(|gid| gid.to_u32()))
+    }
+
+    /// Get advance width for a glyph
+    pub fn advance_width(&self, glyph_id: u32) -> f32 {
+        self.font_ref
+            .as_ref()
+            .and_then(|font| {
+                // Get horizontal metrics table
+                let hmtx = font.hmtx().ok()?;
+
+                // Get advance width for this glyph
+                use read_fonts::types::GlyphId;
+                let glyph = GlyphId::new(glyph_id);
+                let advance = hmtx.advance(glyph)?;
+
+                // Convert from font units to a standard value
+                let upem = self.units_per_em as f32;
+                Some(advance as f32 / upem * 1000.0)
+            })
+            .unwrap_or(500.0)
+    }
+}
+
+impl TypfFontRef for Font {
+    fn data(&self) -> &[u8] {
+        &self.data
+    }
+
+    fn units_per_em(&self) -> u16 {
+        self.units_per_em
+    }
+
+    fn glyph_id(&self, ch: char) -> Option<u32> {
+        self.glyph_id(ch)
+    }
+
+    fn advance_width(&self, glyph_id: u32) -> f32 {
+        self.advance_width(glyph_id)
+    }
+}
+
+/// Font database for managing multiple fonts
+pub struct FontDatabase {
+    fonts: Vec<Arc<Font>>,
+    default_font: Option<Arc<Font>>,
 }
 
 impl FontDatabase {
-    /// Access the process-wide font database.
-    pub fn global() -> &'static Self {
-        static INSTANCE: OnceCell<FontDatabase> = OnceCell::new();
-        INSTANCE.get_or_init(|| {
-            let mut db = Database::new();
-            db.load_system_fonts();
-            for extra in extra_font_dirs() {
-                if extra.exists() {
-                    // Try to explicitly load known test fonts
-                    if extra.to_string_lossy().contains("testdata/fonts") {
-                        if let Err(e) = load_font_data_from_path(&mut db, &extra) {
-                            log::warn!(
-                                "Failed to explicitly load fonts from {}: {}",
-                                extra.display(),
-                                e
-                            );
-                        }
-                    } else {
-                        db.load_fonts_dir(extra);
-                    }
-                }
-            }
-
-            FontDatabase {
-                db: RwLock::new(db),
-                cache: DashMap::new(),
-            }
-        })
-    }
-
-    /// Resolve a [`Font`] into a concrete handle that backends can load.
-    pub fn resolve(&self, font: &Font) -> Result<Arc<FontHandle>> {
-        self.resolve_inner(Some(font), &font.source, &font.family)
-    }
-
-    /// Resolve a [`FontSource`] without a full [`Font`] context.
-    pub fn resolve_source(
-        &self,
-        source: &FontSource,
-        fallback_name: &str,
-    ) -> Result<Arc<FontHandle>> {
-        self.resolve_inner(None, source, fallback_name)
-    }
-
-    fn resolve_inner(
-        &self,
-        font: Option<&Font>,
-        source: &FontSource,
-        fallback_name: &str,
-    ) -> Result<Arc<FontHandle>> {
-        match source {
-            FontSource::Family(name) => self.resolve_family(font, name, fallback_name),
-            FontSource::Path(path) => self.resolve_path(path, fallback_name),
-            FontSource::Bytes { name, data } => Ok(self.resolve_bytes(name, data.clone())),
+    /// Create a new empty font database
+    pub fn new() -> Self {
+        Self {
+            fonts: Vec::new(),
+            default_font: None,
         }
     }
 
-    fn resolve_family(
-        &self,
-        font: Option<&Font>,
-        name: &str,
-        fallback_name: &str,
-    ) -> Result<Arc<FontHandle>> {
-        let db = self.db.read();
-        let families_vec: Vec<Family<'_>> = if name == fallback_name {
-            vec![Family::Name(name)]
-        } else {
-            vec![Family::Name(name), Family::Name(fallback_name)]
-        };
-        let (weight, style) = if let Some(font) = font {
-            (
-                Weight(font.weight),
-                match font.style {
-                    FontStyle::Normal => Style::Normal,
-                    FontStyle::Italic => Style::Italic,
-                    FontStyle::Oblique => Style::Oblique,
-                },
-            )
-        } else {
-            (Weight::NORMAL, Style::Normal)
-        };
-        let query = Query {
-            families: &families_vec,
-            weight,
-            stretch: Stretch::Normal,
-            style,
-        };
+    /// Load a font and add it to the database
+    pub fn load_font(&mut self, path: impl AsRef<Path>) -> Result<Arc<Font>> {
+        let font = Arc::new(Font::from_file(path)?);
+        self.fonts.push(font.clone());
 
-        if let Some(id) = db.query(&query) {
-            let face = db
-                .face(id)
-                .ok_or_else(|| TypfError::FontNotFound { name: name.into() })?;
-            return self.resolve_face(face);
+        // Set as default if it's the first font
+        if self.default_font.is_none() {
+            self.default_font = Some(font.clone());
         }
 
-        drop(db);
-        warn!("Font '{}' not found in system database", name);
-        Err(TypfError::FontNotFound {
-            name: name.to_string(),
-        })
+        Ok(font)
     }
 
-    fn resolve_path(&self, path: &str, label: &str) -> Result<Arc<FontHandle>> {
-        let expanded = tilde(path).to_string();
-        let canonical = canonicalize(&expanded);
-        let key = format!("file:{}#0", canonical.to_string_lossy());
-        if let Some(entry) = self.cache.get(&key) {
-            return Ok(entry.clone());
+    /// Load font from data
+    pub fn load_font_data(&mut self, data: Vec<u8>) -> Result<Arc<Font>> {
+        let font = Arc::new(Font::from_data(data)?);
+        self.fonts.push(font.clone());
+
+        // Set as default if it's the first font
+        if self.default_font.is_none() {
+            self.default_font = Some(font.clone());
         }
 
-        let bytes =
-            std::fs::read(&canonical).map_err(|e| TypfError::font_load(canonical.clone(), e))?;
-        let handle = Arc::new(FontHandle {
-            key: key.clone(),
-            path: Some(canonical),
-            face_index: 0,
-            bytes: Arc::from(bytes.into_boxed_slice()),
-            family: label.to_string(),
-        });
-        self.cache.insert(key, handle.clone());
-        Ok(handle)
+        Ok(font)
     }
 
-    fn resolve_bytes(&self, name: &str, data: Arc<[u8]>) -> Arc<FontHandle> {
-        let key = format!("memory:{name}:{:p}", Arc::as_ptr(&data));
-        if let Some(entry) = self.cache.get(&key) {
-            return entry.clone();
-        }
-
-        let handle = Arc::new(FontHandle {
-            key: key.clone(),
-            path: None,
-            face_index: 0,
-            bytes: data,
-            family: name.to_string(),
-        });
-        self.cache.insert(key, handle.clone());
-        handle
+    /// Get the default font
+    pub fn default_font(&self) -> Option<Arc<Font>> {
+        self.default_font.clone()
     }
 
-    fn resolve_face(&self, face: &fontdb::FaceInfo) -> Result<Arc<FontHandle>> {
-        let key = cache_key(face);
-        if let Some(entry) = self.cache.get(&key) {
-            return Ok(entry.clone());
-        }
+    /// Get all fonts
+    pub fn fonts(&self) -> &[Arc<Font>] {
+        &self.fonts
+    }
 
-        let (path, bytes) = match &face.source {
-            Source::File(path) => {
-                let canonical = canonicalize(path);
-                let data = std::fs::read(&canonical)
-                    .map_err(|e| TypfError::font_load(canonical.clone(), e))?;
-                (Some(canonical), Arc::from(data.into_boxed_slice()))
-            }
-            Source::Binary(data) => {
-                let owned = data.as_ref().as_ref().to_vec();
-                (None, Arc::from(owned.into_boxed_slice()))
-            }
-            Source::SharedFile(path, data) => {
-                let owned = data.as_ref().as_ref().to_vec();
-                (Some(path.clone()), Arc::from(owned.into_boxed_slice()))
-            }
-        };
-
-        let handle = Arc::new(FontHandle {
-            key: key.clone(),
-            path,
-            face_index: face.index,
-            bytes,
-            family: face
-                .families
-                .first()
-                .map(|(name, _)| name.clone())
-                .unwrap_or_else(|| face.post_script_name.clone()),
-        });
-        self.cache.insert(key, handle.clone());
-        Ok(handle)
+    /// Find fonts by name (simplified - would need metadata in real implementation)
+    pub fn find_font(&self, _name: &str) -> Option<Arc<Font>> {
+        self.default_font.clone()
     }
 }
 
-fn cache_key(face: &fontdb::FaceInfo) -> String {
-    match &face.source {
-        Source::File(path) => format!("file:{}#{}", path.display(), face.index),
-        Source::Binary(_) => format!("memory:{}#{}", face.post_script_name, face.index),
-        Source::SharedFile(path, _) => format!("file:{}#{}", path.display(), face.index),
+impl Default for FontDatabase {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-fn canonicalize(path: impl AsRef<Path>) -> PathBuf {
-    path.as_ref()
-        .canonicalize()
-        .unwrap_or_else(|_| path.as_ref().to_path_buf())
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-fn extra_font_dirs() -> Vec<PathBuf> {
-    let mut dirs = Vec::new();
-    if let Ok(value) = std::env::var("TYPF_FONT_DIRS") {
-        dirs.extend(std::env::split_paths(&value));
+    #[test]
+    fn test_empty_database() {
+        let db = FontDatabase::new();
+        assert!(db.default_font().is_none());
+        assert_eq!(db.fonts().len(), 0);
     }
-    for sys in typf_core::utils::system_font_dirs() {
-        dirs.push(PathBuf::from(tilde(&sys).to_string()));
-    }
-    dirs
-}
 
-/// Font data resolved from the system or user-provided sources.
-#[derive(Debug, Clone)]
-pub struct FontHandle {
-    /// Unique identifier for this font (family + style).
-    pub key: String,
-    /// Filesystem path to the font file, if available.
-    pub path: Option<PathBuf>,
-    /// Index of the font face within the file (for font collections).
-    pub face_index: u32,
-    /// Raw font file bytes (mmap'd or read into memory).
-    pub bytes: Arc<[u8]>,
-    /// Font family name.
-    pub family: String,
-}
-
-impl FontHandle {
-    /// A [`FontSource`] that points directly at this handle's bytes.
-    pub fn to_source(&self) -> FontSource {
-        match &self.path {
-            Some(path) => FontSource::Path(path.to_string_lossy().into_owned()),
-            None => FontSource::Bytes {
-                name: self.family.clone(),
-                data: self.bytes.clone(),
-            },
-        }
+    #[test]
+    fn test_font_from_data() {
+        // Create a minimal font data (empty for test)
+        let data = vec![0; 100];
+        let result = Font::from_data(data);
+        // This will fail with invalid data, which is expected
+        assert!(result.is_err());
     }
 }
-
-/// Return script-specific fallback font families.
-pub fn script_fallbacks(script: &str) -> &'static [&'static str] {
-    match script.to_ascii_lowercase().as_str() {
-        "arabic" => &ARABIC_FALLBACKS,
-        "devanagari" => &DEVANAGARI_FALLBACKS,
-        "han" | "hiragana" | "katakana" => &CJK_FALLBACKS,
-        "hangul" => &HANGUL_FALLBACKS,
-        "hebrew" => &HEBREW_FALLBACKS,
-        "thai" => &THAI_FALLBACKS,
-        "cyrillic" => &CYRILLIC_FALLBACKS,
-        "greek" => &GREEK_FALLBACKS,
-        _ => &DEFAULT_FALLBACKS,
-    }
-}
-
-const ARABIC_FALLBACKS: [&str; 4] = [
-    "Noto Naskh Arabic", // Updated from "NotoNaskhArabic-Regular"
-    "NotoNaskhArabic",
-    "GeezaPro",
-    "ArialUnicodeMS",
-];
-const DEVANAGARI_FALLBACKS: [&str; 3] = [
-    "Noto Sans Devanagari", // Updated from "NotoSansDevanagari-Regular"
-    "NotoSansDevanagari",
-    "KohinoorDevanagari",
-];
-const CJK_FALLBACKS: [&str; 3] = ["NotoSansCJKsc-Regular", "PingFangSC", "NotoSansJP-Regular"];
-const HANGUL_FALLBACKS: [&str; 2] = ["NotoSansKR-Regular", "AppleSDGothicNeo-Regular"];
-const HEBREW_FALLBACKS: [&str; 2] = ["NotoSansHebrew-Regular", "ArialHebrew"];
-const THAI_FALLBACKS: [&str; 2] = ["NotoSansThai-Regular", "Thonburi"];
-const CYRILLIC_FALLBACKS: [&str; 3] = ["NotoSans-Regular", "PTSans-Regular", "ArialUnicodeMS"];
-const GREEK_FALLBACKS: [&str; 2] = ["NotoSans-Regular", "ArialUnicodeMS"];
-const DEFAULT_FALLBACKS: [&str; 3] = ["NotoSans-Regular", "DejaVuSans", "ArialUnicodeMS"];

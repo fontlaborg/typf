@@ -1,0 +1,39 @@
+[package]
+name = "typf-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.typf-unicode]
+path = "../crates/typf-unicode"
+
+[dependencies.typf-shape-hb]
+path = "../backends/typf-shape-hb"
+
+[dependencies.typf-core]
+path = "../crates/typf-core"
+
+# Prevent this from interfering with workspaces
+[[bin]]
+name = "fuzz_unicode_process"
+path = "fuzz_targets/fuzz_unicode_process.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_harfbuzz_shape"
+path = "fuzz_targets/fuzz_harfbuzz_shape.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_pipeline"
+path = "fuzz_targets/fuzz_pipeline.rs"
+test = false
+doc = false

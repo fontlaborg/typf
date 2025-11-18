@@ -1,0 +1,27 @@
+[package]
+name = "typf-py"
+version = "2.0.0-dev"
+edition = "2021"
+authors = ["FontLab <dev@fontlab.com>"]
+license = "MIT OR Apache-2.0"
+description = "Python bindings for TYPF text rendering pipeline"
+
+[lib]
+name = "typf"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+typf = { path = "../../crates/typf", features = ["default"] }
+typf-core = { path = "../../crates/typf-core" }
+typf-fontdb = { path = "../../crates/typf-fontdb" }
+typf-shape-none = { path = "../../backends/typf-shape-none" }
+typf-shape-hb = { path = "../../backends/typf-shape-hb", optional = true }
+typf-render-orge = { path = "../../backends/typf-render-orge" }
+typf-export = { path = "../../crates/typf-export" }
+
+[features]
+default = ["shaping-hb", "export-png", "export-svg"]
+shaping-hb = ["typf-shape-hb", "typf/shaping-hb"]
+export-png = ["typf/export-png"]
+export-svg = ["typf/export-svg"]

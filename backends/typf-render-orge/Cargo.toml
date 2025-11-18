@@ -1,0 +1,15 @@
+[package]
+name = "typf-render-orge"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+log = { workspace = true }
+rayon = { version = "1.8", optional = true }
+
+[features]
+default = []
+parallel = ["rayon"]

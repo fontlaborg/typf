@@ -1,0 +1,44 @@
+#!/bin/sh
+# TYPF pre-commit hook
+# To install: cp .github/hooks/pre-commit.sample .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# 1. Format check
+echo "Checking code formatting..."
+if ! cargo fmt --all -- --check; then
+    echo "❌ Code formatting check failed"
+    echo "Run: cargo fmt --all"
+    exit 1
+fi
+echo "✓ Code formatting OK"
+
+# 2. Clippy check
+echo "Running clippy..."
+if ! cargo clippy --workspace --all-features -- -D warnings; then
+    echo "❌ Clippy check failed"
+    echo "Fix warnings before committing"
+    exit 1
+fi
+echo "✓ Clippy OK"
+
+# 3. Tests
+echo "Running tests..."
+if ! cargo test --workspace --all-features; then
+    echo "❌ Tests failed"
+    echo "Fix failing tests before committing"
+    exit 1
+fi
+echo "✓ Tests OK"
+
+# 4. Check for debugging artifacts
+echo "Checking for debugging artifacts..."
+if git diff --cached --name-only | xargs grep -l "dbg!\|println!\|eprintln!" 2>/dev/null; then
+    echo "⚠️  Warning: Found debugging statements (dbg!, println!, eprintln!)"
+    echo "Consider removing them before committing"
+    # Don't fail, just warn
+fi
+
+echo "✅ All pre-commit checks passed!"

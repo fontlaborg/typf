@@ -1,0 +1,18 @@
+[package]
+name = "typf-shape-hb"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+harfbuzz_rs = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+
+# Pool management
+parking_lot = "0.12"
+
+[dev-dependencies]
+read-fonts = { workspace = true }

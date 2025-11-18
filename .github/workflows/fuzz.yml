@@ -1,0 +1,156 @@
+name: Fuzz Testing
+
+on:
+  schedule:
+    # Run fuzz tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+    inputs:
+      duration:
+        description: 'Fuzz duration in seconds'
+        required: false
+        default: '300'
+      target:
+        description: 'Specific fuzz target (or "all")'
+        required: false
+        default: 'all'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  fuzz:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - fuzz_unicode_process
+          - fuzz_harfbuzz_shape
+          - fuzz_pipeline
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: rustfmt, clippy
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libharfbuzz-dev
+
+    - name: Install cargo-fuzz
+      run: cargo install cargo-fuzz
+
+    - name: Cache fuzz corpus
+      uses: actions/cache@v4
+      with:
+        path: fuzz/corpus
+        key: ${{ runner.os }}-fuzz-corpus-${{ matrix.target }}-${{ hashFiles('fuzz/fuzz_targets/*.rs') }}
+        restore-keys: |
+          ${{ runner.os }}-fuzz-corpus-${{ matrix.target }}-
+          ${{ runner.os }}-fuzz-corpus-
+
+    - name: Create initial corpus
+      run: |
+        mkdir -p fuzz/corpus/${{ matrix.target }}
+        if [ -z "$(ls -A fuzz/corpus/${{ matrix.target }} 2>/dev/null)" ]; then
+          echo "Creating seed corpus for ${{ matrix.target }}..."
+          case "${{ matrix.target }}" in
+            fuzz_unicode_process)
+              echo "Hello, World!" > fuzz/corpus/${{ matrix.target }}/hello.txt
+              echo "مرحبا بالعالم" > fuzz/corpus/${{ matrix.target }}/arabic.txt
+              echo "你好世界" > fuzz/corpus/${{ matrix.target }}/chinese.txt
+              ;;
+            fuzz_harfbuzz_shape)
+              echo "abcdefg" > fuzz/corpus/${{ matrix.target }}/latin.txt
+              echo "مرحبا" > fuzz/corpus/${{ matrix.target }}/arabic.txt
+              ;;
+            fuzz_pipeline)
+              echo "Test" > fuzz/corpus/${{ matrix.target }}/simple.txt
+              ;;
+          esac
+        fi
+
+    - name: Run fuzz test
+      run: |
+        DURATION="${{ github.event.inputs.duration || '300' }}"
+        cd fuzz
+        timeout ${DURATION}s cargo fuzz run ${{ matrix.target }} -- -max_total_time=${DURATION} || true
+
+    - name: Check for crashes
+      id: check_crashes
+      run: |
+        if [ -d "fuzz/artifacts/${{ matrix.target }}" ] && [ "$(ls -A fuzz/artifacts/${{ matrix.target }} 2>/dev/null)" ]; then
+          echo "crashes_found=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Crashes found in ${{ matrix.target }}"
+          ls -lh fuzz/artifacts/${{ matrix.target }}
+        else
+          echo "crashes_found=false" >> $GITHUB_OUTPUT
+          echo "✓ No crashes found in ${{ matrix.target }}"
+        fi
+
+    - name: Upload crash artifacts
+      if: steps.check_crashes.outputs.crashes_found == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: fuzz-crashes-${{ matrix.target }}-${{ github.run_number }}
+        path: fuzz/artifacts/${{ matrix.target }}/
+        retention-days: 90
+
+    - name: Create issue on crash
+      if: steps.check_crashes.outputs.crashes_found == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          const artifactsDir = `fuzz/artifacts/${{ matrix.target }}`;
+          const crashes = fs.readdirSync(artifactsDir);
+
+          let body = `## Fuzz Test Crash Detected\n\n`;
+          body += `**Target:** \`${{ matrix.target }}\`\n`;
+          body += `**Run:** #${{ github.run_number }}\n`;
+          body += `**Crashes found:** ${crashes.length}\n\n`;
+          body += `### Crash Files\n\n`;
+          crashes.forEach(crash => {
+            body += `- \`${crash}\`\n`;
+          });
+          body += `\n### Artifacts\n\n`;
+          body += `Download crash artifacts from the [workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n`;
+
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `Fuzz crash in ${{ matrix.target }}`,
+            body: body,
+            labels: ['bug', 'fuzz-testing', 'needs-triage']
+          });
+
+    - name: Fail on crashes
+      if: steps.check_crashes.outputs.crashes_found == 'true'
+      run: exit 1
+
+  summary:
+    name: Fuzz Summary
+    runs-on: ubuntu-latest
+    needs: fuzz
+    if: always()
+
+    steps:
+    - name: Summary
+      run: |
+        echo "## Fuzz Testing Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "All fuzz targets completed." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Duration: ${{ github.event.inputs.duration || '300' }}s per target" >> $GITHUB_STEP_SUMMARY

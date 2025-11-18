@@ -1,12 +1,18 @@
 [package]
 name = "typf-unicode"
 version.workspace = true
-edition.workspace = true
 authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
-typf-core = { path = "../../backends/typf-core" }
-icu_segmenter.workspace = true
-icu_properties.workspace = true
-unicode-bidi.workspace = true
+typf-core = { path = "../typf-core" }
+icu_segmenter = "1.5"
+icu_properties = "1.5"
+unicode-bidi = "0.3"
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+proptest = "1.4"

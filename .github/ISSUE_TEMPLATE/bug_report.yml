@@ -1,0 +1,137 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us resolve the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug
+      placeholder: When I try to..., it fails with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Create a file...
+        2. Run command...
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code Sample
+      description: Minimal code sample that demonstrates the bug
+      render: rust
+      placeholder: |
+        use typf::*;
+
+        fn main() {
+            // Your code here
+        }
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected?
+      options:
+        - Core (pipeline, traits)
+        - Shaping (HarfBuzz, None, etc.)
+        - Rendering (Orge, Skia, etc.)
+        - Export (PNG, SVG, JSON, etc.)
+        - Unicode (normalization, bidi, etc.)
+        - Font loading (fontdb)
+        - Python bindings
+        - CLI
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: TYPF Version
+      description: Output of `cargo tree | grep typf` or Python `import typf; print(typf.__version__)`
+      placeholder: "2.0.0-dev"
+    validations:
+      required: true
+
+  - type: input
+    id: rust-version
+    attributes:
+      label: Rust Version (if applicable)
+      description: Output of `rustc --version`
+      placeholder: "rustc 1.70.0"
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS Version
+      placeholder: "macOS 14.0, Ubuntu 22.04, Windows 11, etc."
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Messages / Logs
+      description: Any error messages, stack traces, or relevant logs
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or information that might be helpful
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have provided all requested information
+          required: true
+        - label: I have included a minimal reproducible example
+          required: false

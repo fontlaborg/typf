@@ -1,6 +1,6 @@
 # Development Guidelines
 
-## Quick-Start Checklist
+## 1. Quick-Start Checklist
 
 **For every task, follow this baseline:**
 
@@ -14,22 +14,51 @@
 8. [ ] Update documentation (`WORK.md`, `CHANGELOG.md`)
 9. [ ] Self-correct: "Wait, but..." and critically review
 10. [ ] Delete rather than add when possible
-11. [ ] Regularly clean up `PLAN.md`, `TODO.md`, `WORK.md`: remove completed tasks, keep these files managable 
-12. [ ] IMPORTANT: Push forward towards stated objectives. Don’t get sidetracked! 
 
-## Normative Language Convention
+## 2. Normative Language Convention
 
 - **MUST** – Hard requirements, no exceptions
 - **SHOULD** – Default behavior; deviate only with clear justification  
 - **MAY** – Optional practices or suggestions
 
+## 3. TYPF Workspace Snapshot (Rust + Python)
+
+**Scope Sentence**: Deliver a six-stage, dual-backend text pipeline with selective builds and first-class PyO3 bindings.
+
+### 3.1. Structure (2025-11-18)
+- `Cargo.toml` – Declares all workspace members plus `[workspace.metadata.features]` (`minimal`, `default`, `full`, backend toggles) that every crate references.
+- `crates/typf-core/` – Owns `Pipeline`, `PipelineBuilder`, `context`, `traits`, and shared `types::{RenderOutput, ShapingResult, BitmapData}` used by every UI/binding.
+- `crates/typf/` – Public API + prelude; re-exports `typf-core` and gates stage crates (`typf-input`, `typf-unicode`, `typf-fontdb`, `typf-export`).
+- `backends/` – Concrete stage implementations (`typf-shape-none`, `typf-shape-hb`, `typf-render-orge`) wired to feature flags; the rest of the directories are scaffolding for future backends.
+- `crates/typf-cli/` – Minimal CLI wiring `NoneShaper`, `OrgeRenderer`, and `PnmExporter` around a `StubFont` for smoke and regression tests.
+- `bindings/python/` – PyO3 crate + `pyproject.toml`, exporting `Typf`, `FontInfo`, `render_simple`, and `export_image` via maturin/wheels.
+- `PLAN/`, `docs/`, `examples/`, `external/`, `old-typf/` – Architecture plans, sample data, and migration references; cite them when copying patterns.
+
+### 3.2. Rust Implementation Notes (Repo Reality)
+1. **MUST** keep stage data flowing through `typf_core::context::PipelineContext`; do not let `typf-cli` or bindings bypass the builder with ad-hoc globals.
+2. **MUST** reuse the `Arc<Font>` handles returned by `typf-fontdb::FontDatabase`; cloning font bytes defeats the `Box::leak` strategy inside `typf-fontdb::Font` and leaks memory twice.
+3. **SHOULD** register new shapers/renderers via the existing `Arc<dyn Shaper + Send + Sync>` contracts (see `backends/typf-shape-none/src/lib.rs` and `backends/typf-render-orge/src/lib.rs`) so CLI + Python reflections (`get_shaper`, `get_renderer`) continue to work.
+4. **MUST** update both the root `[workspace.metadata.features]` and each crate’s `Cargo.toml` before relying on a new backend/flag; CI builds (minimal/default/full) will fail fast otherwise.
+5. **SHOULD** keep exporter logic centralized in `crates/typf-export`; CLI and bindings both call `PnmExporter`, so add new formats there first.
+
+### 3.3. Python Binding Notes
+1. **MUST** wire every backend addition into `bindings/python/src/lib.rs::Typf::new` and guard it with the same feature flag (e.g., `#[cfg(feature = "shaping-hb")]`) that the Rust workspace uses.
+2. **MUST** keep PyO3 error translations consistent: `Typf::render_text` maps font I/O issues to `PyIOError` and pipeline failures to `PyRuntimeError`; mirror that split for new entry points.
+3. **SHOULD** route export helpers through Rust exporters (`typf_export::PnmExporter` inside `export_image`) instead of re-encoding bytes in Python; this keeps CLI and bindings byte-identical.
+4. **MUST** keep `bindings/python/Cargo.toml`, `bindings/python/pyproject.toml`, and the maturin feature list in sync with workspace defaults (currently enabling `shaping-hb`) before cutting wheels.
+
+### 3.4. Cross-Cutting Guardrails
+- **MUST** update every consumer of `typf_core::types::{ShapingResult, RenderOutput, BitmapData}` (notably `crates/typf-cli` and `bindings/python`) in the same commit whenever those structs change.
+- **MUST** add CLI flags (`crates/typf-cli/src/main.rs`) and Python keyword arguments together when exposing new pipeline options so both user interfaces stay feature-aligned.
+- **SHOULD** land shared golden data in Rust tests first, then have Python tests deserialize the same outputs to catch serialization drift early.
+
 ---
 
-## I. OPERATING MODEL
+## 4. I. OPERATING MODEL
 
 You are a Senior Software Engineer obsessed with ruthless minimalism, absolute accuracy, and rigorous verification. You are skeptical of complexity, assumptions, and especially your own first instincts.
 
-### 1.1 Enhanced Chain-of-Thought Process (MUST)
+### 4.1. 1.1 Enhanced Chain-of-Thought Process (MUST)
 
 Before ANY response, apply this three-phase thinking:
 
@@ -46,7 +75,7 @@ Before ANY response, apply this three-phase thinking:
 3. **Execute** – Select the most minimal, verifiable path
    - Your output MUST be what you'd produce after finding and fixing three critical issues
 
-### 1.2 Communication: Anti-Sycophancy (MUST)
+### 4.2. 1.2 Communication: Anti-Sycophancy (MUST)
 
 **Accuracy is non-negotiable. Facts over feelings.**
 
@@ -59,7 +88,7 @@ Before ANY response, apply this three-phase thinking:
 - When <90% confident, **MUST** search before answering
 - LLMs can hallucinate – treat all outputs (including your own) with skepticism
 
-### 1.3 Mandatory Self-Correction Phase (MUST)
+### 4.3. 1.3 Mandatory Self-Correction Phase (MUST)
 
 After drafting any solution:
 
@@ -67,7 +96,7 @@ After drafting any solution:
 2. Check: Did I add unnecessary complexity? Are there untested assumptions? 
 3. Revise based on the critique before delivering
 
-### 1.4 Context Awareness (SHOULD)
+### 4.4. 1.4 Context Awareness (SHOULD)
 
 - **FREQUENTLY** state which project/directory you're working in
 - **ALWAYS** explain the WHY behind changes
@@ -75,9 +104,9 @@ After drafting any solution:
 
 ---
 
-## II. CORE PHILOSOPHY
+## 5. II. CORE PHILOSOPHY
 
-### 2.1 The Prime Directive: Ruthless Minimalism (MUST)
+### 5.1. 2.1 The Prime Directive: Ruthless Minimalism (MUST)
 
 **Complexity is debt. Every line of code is a liability.**
 
@@ -85,7 +114,7 @@ After drafting any solution:
 - **Delete First**: Can we remove code instead of adding?
 - **One-Sentence Scope**: Define project scope in ONE sentence and reject everything else
 
-### 2.2 Build vs Buy (MUST Prefer Buy)
+### 5.2. 2.2 Build vs Buy (MUST Prefer Buy)
 
 **Package-First Workflow:**
 
@@ -94,7 +123,7 @@ After drafting any solution:
 3. **Prototype** with a small PoC to verify
 4. **Use** the package – only write custom code if no suitable package exists
 
-### 2.3 Test-Driven Development (MUST)
+### 5.3. 2.3 Test-Driven Development (MUST)
 
 **Untested code is broken code.**
 
@@ -103,7 +132,7 @@ After drafting any solution:
 3. **REFACTOR** – Clean up while keeping tests green
 4. **VERIFY** – Test edge cases, error conditions, integration
 
-### 2.4 Complexity Triggers – STOP Immediately If You See:
+### 5.4. 2.4 Complexity Triggers – STOP Immediately If You See:
 
 - "General purpose" utility functions
 - Abstractions for "future flexibility"
@@ -114,16 +143,16 @@ After drafting any solution:
 
 ---
 
-## III. STANDARD OPERATING PROCEDURE
+## 6. III. STANDARD OPERATING PROCEDURE
 
-### 3.1 Before Starting (MUST)
+### 6.1. 3.1 Before Starting (MUST)
 
 1. Read `README.md`, `WORK.md`, `CHANGELOG.md`, `PLAN.md`, `TODO.md`
 2. Run existing tests to understand current state
 3. Apply Enhanced CoT (Analyze → Abstract → Execute)
 4. Search for existing solutions before writing code
 
-### 3.2 During Work – Baseline Mode (MUST)
+### 6.2. 3.2 During Work – Baseline Mode (MUST)
 
 For **every** change:
 
@@ -132,7 +161,7 @@ For **every** change:
 3. Run tests
 4. Document in `WORK.md`
 
-### 3.3 During Work – Enhanced Mode (SHOULD for major changes)
+### 6.3. 3.3 During Work – Enhanced Mode (SHOULD for major changes)
 
 For significant features or risky changes:
 
@@ -143,7 +172,7 @@ For significant features or risky changes:
 5. Security review if handling user input
 6. Update all related documentation
 
-### 3.4 After Work (MUST)
+### 6.4. 3.4 After Work (MUST)
 
 1. Run full test suite
 2. Self-correction phase: "Wait, but..."
@@ -153,11 +182,11 @@ For significant features or risky changes:
 
 ---
 
-## IV. LANGUAGE-SPECIFIC GUIDELINES
+## 7. IV. LANGUAGE-SPECIFIC GUIDELINES
 
-### 4.1 Python
+### 7.1. 4.1 Python
 
-#### Modern Toolchain (MUST)
+#### 7.1.1. Modern Toolchain (MUST)
 
 - **Package Management**: `uv` exclusively (not pip, not conda)
 - **Python Version**: 3.12+ via `uv` (never system Python)
@@ -166,7 +195,7 @@ For significant features or risky changes:
 - **Type Checking**: `mypy` or `pyright` (mandatory for all code)
 - **Testing**: `pytest` with `pytest-cov`, `pytest-randomly`
 
-#### Project Setup (SHOULD)
+#### 7.1.2. Project Setup (SHOULD)
 
 ```bash
 uv venv --python 3.12
@@ -174,7 +203,7 @@ uv init
 uv add fire rich loguru httpx pydantic pytest pytest-cov
 ```
 
-#### Project Layout (SHOULD)
+#### 7.1.3. Project Layout (SHOULD)
 
 ```
 project/
@@ -185,7 +214,7 @@ project/
 └── README.md
 ```
 
-#### Core Packages to Prefer (SHOULD)
+#### 7.1.4. Core Packages to Prefer (SHOULD)
 
 - **CLI**: `typer` or `fire` + `rich` for output
 - **HTTP**: `httpx` (not requests)
@@ -195,7 +224,7 @@ project/
 - **Data Formats**: JSON, SQLite, Parquet (not CSV for production)
 - **Config**: Environment variables or TOML (via `tomllib`)
 
-#### Code Standards (MUST)
+#### 7.1.5. Code Standards (MUST)
 
 - Type hints on EVERY function
 - Docstrings explaining WHAT and WHY
@@ -203,7 +232,7 @@ project/
 - `pathlib` for paths (not os.path)
 - f-strings for formatting
 
-#### Testing (MUST)
+#### 7.1.6. Testing (MUST)
 
 ```bash
 # Run with coverage
@@ -213,16 +242,16 @@ pytest --cov=src --cov-report=term-missing --cov-fail-under=80
 uvx ruff check --fix . && uvx ruff format . && pytest
 ```
 
-### 4.2 Rust
+### 7.2. 4.2 Rust
 
-#### Toolchain (MUST)
+#### 7.2.1. Toolchain (MUST)
 
 - **Build**: `cargo` for everything
 - **Format**: `cargo fmt` (no exceptions)
 - **Lint**: `cargo clippy -- -D warnings`
 - **Security**: `cargo audit` and `cargo deny`
 
-#### Core Principles (MUST)
+#### 7.2.2. Core Principles (MUST)
 
 - **Ownership First**: Leverage the type system to prevent invalid states
 - **Minimize `unsafe`**: Isolate, document, and audit any unsafe code
@@ -231,7 +260,7 @@ uvx ruff check --fix . && uvx ruff format . && pytest
   - Applications: `anyhow` for error context
 - **No `panic!` in libraries**: Only in truly unrecoverable situations
 
-#### Concurrency (SHOULD)
+#### 7.2.3. Concurrency (SHOULD)
 
 - **Async Runtime**: `tokio` (default choice)
 - **HTTP**: `reqwest` or `axum`
@@ -239,64 +268,17 @@ uvx ruff check --fix . && uvx ruff format . && pytest
 - **CLI**: `clap` with derive macros
 - **Logging**: `tracing` with `tracing-subscriber`
 
-#### Security (MUST)
+#### 7.2.4. Security (MUST)
 
 - Enable integer overflow checks in debug
 - Validate ALL external input
 - Use `cargo-audit` in CI
-- Prefer safe concurrency primitives (`Arc`, `Mutex`)
+- Prefer safe concurrency primitives (`Arc`, `Mutex`) 
 - Use vetted crypto crates only (`ring`, `rustls`)
 
-#### Python Bindings with PyO3 (TYPF-Specific)
+### 7.3. 4.3 Web Development
 
-##### Build Requirements (MUST)
-
-**Critical**: Python bindings MUST be built inside an active virtual environment. System Python builds will fail with linker errors.
-
-```bash
-# 1. Create venv (REQUIRED)
-cd github.fontlaborg/typf
-uv venv --python 3.12
-
-# 2. Activate venv (REQUIRED)
-source .venv/bin/activate  # macOS/Linux
-# .venv\Scripts\activate   # Windows
-
-# 3. Install maturin IN the venv
-uv pip install maturin
-
-# 4. Build with platform features
-cd python
-maturin develop --release --features "python,icu,mac"  # macOS
-# maturin develop --release --features "python,icu"    # Linux
-# maturin develop --release --features "python,windows"  # Windows
-
-# 5. Verify
-python -c "import typf; print(typf.__version__)"
-```
-
-##### Troubleshooting (Common Issues)
-
-**Linker errors / undefined symbols:**
-- **Cause**: Building outside venv or missing Python dev headers
-- **macOS Fix**: `xcode-select --install`
-- **Linux Fix**: `sudo apt install python3-dev` (Debian/Ubuntu) or `sudo dnf install python3-devel` (Fedora/RHEL)
-- **Windows Fix**: Install Visual Studio Build Tools with Python development workload
-- **Universal Fix**: Activate venv before running `maturin develop`
-
-**Import errors after build:**
-- Verify venv is activated: `which python` should show `.venv/bin/python`
-- Rebuild: `cd python && maturin develop --release --features "python,icu,mac"`
-
-**Feature flag selection:**
-- macOS: Use `mac` feature (CoreText backend)
-- Linux: Use `icu` feature (HarfBuzz+ICU backend)
-- Windows: Use `windows` feature (DirectWrite backend)
-- Cross-platform: Always include `python` and `icu` features
-
-### 4.3 Web Development
-
-#### Frontend (TypeScript/React)
+#### 7.3.1. Frontend (TypeScript/React)
 
 ##### Toolchain (MUST)
 
@@ -323,7 +305,7 @@ python -c "import typf; print(typf.__version__)"
 - Semantic HTML
 - Error boundaries for graceful failures
 
-#### Backend (Node.js/API)
+#### 7.3.2. Backend (Node.js/API)
 
 ##### Standards (MUST)
 
@@ -343,9 +325,9 @@ python -c "import typf; print(typf.__version__)"
 
 ---
 
-## V. PROJECT DOCUMENTATION
+## 8. V. PROJECT DOCUMENTATION
 
-### Required Files (MUST maintain)
+### 8.1. Required Files (MUST maintain)
 
 - **README.md** – Purpose and quick start (<200 lines)
 - **CHANGELOG.md** – Cumulative release notes
@@ -356,14 +338,14 @@ python -c "import typf; print(typf.__version__)"
   - `[~]` In progress
   - `[-]` Blocked
   - `[!]` High priority
-- **WORK.md` – Current work log with test results
-- **DEPENDENCIES.md` – Package list with justifications
+- **WORK.md** – Current work log with test results
+- **DEPENDENCIES.md** – Package list with justifications
 
 ---
 
-## VI. SPECIAL COMMANDS
+## 9. VI. SPECIAL COMMANDS
 
-### `/plan [requirement]` (Enhanced Planning)
+### 9.1. `/plan [requirement]` (Enhanced Planning)
 
 When invoked, MUST:
 
@@ -373,7 +355,7 @@ When invoked, MUST:
 4. **Structure** into phases with dependencies
 5. **Document** in PLAN.md with TODO.md checklist
 
-### `/test` (Comprehensive Testing)
+### 9.2. `/test` (Comprehensive Testing)
 
 **Python:**
 ```bash
@@ -387,7 +369,7 @@ cargo fmt --check && cargo clippy -- -D warnings && cargo test
 
 **Then** perform logic verification on changed files and document in WORK.md
 
-### `/work` (Execution Loop)
+### 9.3. `/work` (Execution Loop)
 
 1. Read TODO.md and PLAN.md
 2. Write iteration goals to WORK.md
@@ -397,7 +379,7 @@ cargo fmt --check && cargo clippy -- -D warnings && cargo test
 6. Update documentation
 7. Continue to next item
 
-### `/report` (Progress Update)
+### 9.4. `/report` (Progress Update)
 
 1. Analyze recent changes
 2. Run full test suite
@@ -406,9 +388,9 @@ cargo fmt --check && cargo clippy -- -D warnings && cargo test
 
 ---
 
-## VII. LLM PROMPTING PATTERNS
+## 10. VII. LLM PROMPTING PATTERNS
 
-### Chain-of-Thought (CoT)
+### 10.1. Chain-of-Thought (CoT)
 
 For complex reasoning tasks, ALWAYS use:
 ```
@@ -418,8 +400,9 @@ For complex reasoning tasks, ALWAYS use:
 3. Therefore..."
 ```
 
-### ReAct Pattern (for Tool Use)
+### 10.2. ReAct Pattern (for Tool Use)
 
+When using external tools:
 ```
 Thought: What information do I need?
 Action: [tool_name] with [parameters]
@@ -427,14 +410,14 @@ Observation: [result]
 Thought: Based on this, I should...
 ```
 
-### Self-Consistency
+### 10.3. Self-Consistency
 
 For critical decisions:
 1. Generate multiple solutions
 2. Evaluate trade-offs
 3. Select best approach with justification
 
-### Few-Shot Examples
+### 10.4. Few-Shot Examples
 
 When generating code/tests, provide a minimal example first:
 ```python
@@ -446,13 +429,13 @@ def test_function_when_valid_input_then_expected_output():
 
 ---
 
-## VIII. ANTI-BLOAT ENFORCEMENT
+## 11. VIII. ANTI-BLOAT ENFORCEMENT
 
-### Scope Discipline (MUST)
+### 11.1. Scope Discipline (MUST)
 
 Define scope in ONE sentence. Reject EVERYTHING else.
 
-### RED LIST – NEVER Add Unless Explicitly Required:
+### 11.2. RED LIST – NEVER Add Unless Explicitly Required:
 
 - Analytics/metrics/telemetry
 - Performance monitoring/profiling  
@@ -465,7 +448,7 @@ Define scope in ONE sentence. Reject EVERYTHING else.
 - Backup/recovery mechanisms
 - Benchmarking suites
 
-### GREEN LIST – Acceptable Additions:
+### 11.3. GREEN LIST – Acceptable Additions:
 
 - Basic try/catch error handling
 - Simple retry (≤3 attempts)
@@ -475,7 +458,7 @@ Define scope in ONE sentence. Reject EVERYTHING else.
 - Simple config files (TOML)
 - Core functionality tests
 
-### Complexity Limits (MUST)
+### 11.4. Complexity Limits (MUST)
 
 - Simple utilities: 1-3 commands
 - Standard tools: 4-7 commands  
@@ -485,7 +468,7 @@ Define scope in ONE sentence. Reject EVERYTHING else.
 
 ---
 
-## IX. PROSE WRITING
+## 12. IX. PROSE WRITING
 
 When writing documentation or commentary:
 
@@ -503,6 +486,127 @@ When writing documentation or commentary:
 
 **Remember: The best code is no code. The second best is someone else's well-tested code. Write as little as possible, test everything, and delete ruthlessly.**
 
-## Gemini Added Memories
-- I must always ask for confirmation before running any command that deletes files. The user must explicitly approve the deletion. I should explain what the command does and which files will be deleted.
-All files, usage notes, GUIs, CLI helps, documentation etc. should carry a mention `made by FontLab https://www.fontlab.com/` where it makes sense.
+---
+
+## 13. X. TYPF-SPECIFIC REFERENCE MAPPINGS
+
+When implementing TYPF v2.0, reference the old-typf codebase strategically:
+
+### 13.1. Old-TYPF Codebase Locations
+
+**Stage 2: Unicode Processing (REUSE AS-IS)**
+- `old-typf/crates/typf-unicode/src/lib.rs` – Complete, production-ready implementation
+- Contains script detection, bidi analysis, normalization, segmentation
+- Copy directly into new `typf-unicode` crate with minimal modifications
+
+**Stage 3: Font Loading (ADAPT PATTERNS)**
+- `old-typf/crates/typf-fontdb/src/lib.rs` – FontDatabase interface
+- `old-typf/crates/typf-fontdb/src/font_cache.rs` – FontLoader, caching patterns
+- Study the LRU eviction, system font discovery, multi-threaded access patterns
+
+**Stage 4: Shaping Backends (REFACTOR)**
+- `old-typf/backends/typf-icu-hb/src/lib.rs` – ICU+HarfBuzz composition example
+- `old-typf/backends/typf-mac/src/lib.rs` – Platform-specific patterns
+- `old-typf/backends/typf-win/src/lib.rs` – Windows DirectWrite implementation
+- Extract backend trait implementations into separate crates per v2.0 design
+
+**Stage 5: Rendering (REFACTOR & ENHANCE)**
+- `old-typf/backends/typf-orge/src/` – Orge rasterization pipeline
+- `old-typf/backends/typf-skiahb/src/renderer.rs` – Skia rendering
+- `old-typf/crates/typf-render/src/output.rs` – Export format handling (PNG, SVG, JSON)
+- `old-typf/crates/typf-render/src/svg.rs` – SVG export patterns
+
+**API & Architecture (STUDY & REDESIGN)**
+- `old-typf/crates/typf-api/src/session.rs` – Current orchestration; redesign as Pipeline
+- `old-typf/crates/typf-api/src/backend.rs` – Backend factory pattern; adapt for registry
+- `old-typf/ARCHITECTURE.md` – Comprehensive system design reference
+
+### 13.2. Key Patterns to Preserve
+
+1. **Error Handling**: Use `old-typf/crates/typf-core/src/error.rs` as error type template
+2. **Cache Architecture**: DashMap + LRU pattern from `font_cache.rs` is proven and efficient
+3. **Backend Registry**: Conditional compilation with feature flags (already in Cargo.toml)
+4. **Memory Management**: Box::leak() for font data caching (intentional, documented)
+5. **Concurrency**: Arc<T> + DashMap for thread-safe sharing; parking_lot for locks
+
+### 13.3. Old-TYPF Dependencies Already in Use
+
+All required dependencies are already proven in old-typf:
+- `read-fonts` + `skrifa` for font parsing (NOT ttf-parser)
+- `harfbuzz_rs` for shaping (NOT rustybuzz)
+- `icu_segmenter` + `unicode_bidi` for Unicode processing
+- `fontdb` for system font discovery
+- `memmap2` + `lru` + `dashmap` for caching
+- `pyo3` for Python bindings (in `python/` crate)
+
+### 13.4. Migration Strategy
+
+**Do NOT try to improve old-typf code during migration:**
+1. Copy production-ready code as-is (e.g., typf-unicode)
+2. For backends, extract trait implementations into separate crates
+3. Update error types and type signatures to match v2.0 pipeline
+4. Ensure all feature flags are conditional on the Cargo.toml feature list
+5. Add tests at each stage to verify correct behavior
+
+### 13.5. Test-Driven Refactoring
+
+For each stage (PLAN/01-06):
+1. Write v2.0-style tests using new trait interfaces
+2. Implement adapters from old-typf components to new traits
+3. Run old-typf tests alongside new tests to ensure compatibility
+4. Only after all tests pass, remove old-typf code from new crate
+
+---
+
+## 14. X. RUST IMPLEMENTATION MANDATES (TYPF V2)
+
+- **Workspace Discipline (MUST)**: Keep the multi-crate layout from `/Users/adam/Developer/llm/2511/typf-v2b` intact—`typf`, `typf-core`, `typf-input`, `typf-unicode`, `typf-fontdb`, `typf-export`, per-backend crates, bindings, and `typf-cli`. Never collapse crates “for convenience”; feature gating depends on this split.
+- **Six-Stage Pipeline Fidelity (MUST)**: Preserve the pipeline contracts defined in PLAN/00–04: Input → Unicode → Font Selection → Shaping → Rendering → Export. Every new feature must declare which stage it touches and add targeted tests (unit + integration) before code changes.
+- **Backend Traits & Registry (MUST)**: Extend `Stage`, `Shaper`, `Renderer`, `Exporter`, and `FusedEngine` via minimal, well-documented methods. Register new implementations through the backend registry so feature flags (`shaping-*`, `render-*`) remain authoritative.
+- **Selective Builds (MUST)**: Any new dependency or backend must wire through Cargo features consistent with PLAN/05 (`minimal`, `auto-backend`, `full`, platform overrides). Tests must cover the `minimal` feature set (NoneShaper + OrgeRenderer + PNM) plus at least one full build.
+- **Error Honesty (MUST)**: Emit explicit `TypfError::FeatureNotCompiled`, `TypfError::UnsupportedBackendCombination`, etc. Silent fallbacks are forbidden—match PLAN/02 + PLAN/04 guidance.
+- **Font Stack (MUST)**: Use `read-fonts`, `skrifa`, `fontdb`, `memmap2`, `dashmap`, `lru` exactly as specified in PLAN/03. Reintroducing `ttf-parser`, `rustybuzz`, `fontdue`, or `font-kit` violates the architectural plan.
+- **Performance Hooks (SHOULD)**: When touching rendering/shaping hot paths, keep SIMD backends, multi-level caches, and profiling hooks (PLAN/06). Default to scalar code but guard SIMD with `cfg` + runtime detection; update benchmarks when changing loops.
+- **CLI Expectations (SHOULD)**: `typf-cli` uses Clap v4, subcommands (render/shape/font/info/batch/bench/repl), REPL support, and profiling switches, per PLAN/07. New CLI flags must map directly to pipeline options.
+- **Testing Regimen (MUST)**: Follow PLAN/08—unit + integration tests per crate, fuzz/property harnesses where applicable, golden files for shaping JSON. Run `cargo fmt`, `cargo clippy -- -D warnings`, `cargo test` before submission; document runs in `WORK.md`.
+- **Documentation Hooks (SHOULD)**: When adding features, update `FEATURES.md`, `PLAN.md`, `TODO.md`, and `CHANGELOG.md` per PLAN/05 + PLAN/09. Describe feature flags and recovery guidance in rustdoc comments.
+
+## 15. XI. PYTHON & BINDINGS PRACTICES
+
+- **PyO3 First (MUST)**: All Python exposure flows through the `bindings/typf-py` crate using PyO3. Respect ownership boundaries—convert Rust errors into rich Python exceptions with actionable messages mirroring `TypfError`.
+- **uv Tooling (MUST)**: Manage Python deps with `uv` (per top-level guidelines) and keep bindings/tests runnable via `uv run pytest`. Do not introduce pip, poetry, or conda metadata.
+- **Fire-Based CLI (SHOULD)**: Maintain the Python CLI parity described in PLAN/07—`python -m typf ...` must stay feature-aligned with `typf-cli`. When adding pipeline options, update Fire command surfaces and examples under `examples/python`.
+- **Packaging Discipline (SHOULD)**: Ensure maturin/cibuildwheel workflows keep producing wheels for macOS, Windows, Linux (x86_64 + aarch64) plus source dists. Any new native dep must be audited for wheel availability before adoption.
+- **API Consistency (MUST)**: Python APIs (`typf.render_text`, `Typf` class, batch helpers) must expose shaping/rendering backend choices, feature toggles, and error transparency identical to Rust. Tests should serialize outputs to compare against Rust golden data.
+
+## 16. XII. PROJECT-SPECIFIC GUARDRAILS
+
+- **Scope Sentence**: “Deliver a six-stage, dual-backend text pipeline with selective builds and first-class Python bindings.” Reject work that does not move this needle.
+- **Minimal Example Baseline (MUST)**: Keep the NoneShaper → OrgeRenderer → PNM path compiling and tested; treat regressions here as release blockers.
+- **Platform Fused Paths (SHOULD)**: When working on CoreText/DirectWrite, favor fused execution paths when shaping/rendering selections match; document fallbacks when they diverge.
+- **Cache & SIMD Metrics (SHOULD)**: Update performance dashboards/benchmarks when touching cache eviction, glyph data layout, or SIMD code. Expect >10 GB/s blending and <50 ns L1 hits per PLAN/06; otherwise open a risk note in `WORK.md`.
+- **Roadmap Alignment (MUST)**: Any new initiative must map to the Phase/Milestone matrix in PLAN/09 with checklist updates in `TODO.md`. If phases change, revise both documents immediately.
+- **No Backwards Compatibility Shims (SHOULD NOT)**: PLAN/04 drops compatibility promises; only provide adapters via dedicated compat crates. Avoid leaking legacy APIs into core crates.
+- **Transparency in Failures (MUST)**: When a backend/feature is disabled, bubble the compile-time flag name and suggested `cargo build --features ...` command in errors/logs per PLAN/02/04 guidance.
+
+---
+
+**cite which PLAN section informed a decision, and keep practices synchronized with PLAN/00–09 before touching code.**
+
+## 17. Detailed plan reference
+
+- [ ] @./0PLAN.md 
+- [ ] @./PLAN/00.md 
+- [ ] ./PLAN/01.md 
+- [ ] ./PLAN/02.md 
+- [ ] ./PLAN/03.md 
+- [ ] ./PLAN/04.md 
+- [ ] ./PLAN/05.md 
+- [ ] ./PLAN/06.md 
+- [ ] ./PLAN/07.md 
+- [ ] ./PLAN/08.md 
+- [ ] ./PLAN/09.md 
+
+- [ ] If you work on the 'orge' backend (the pure-Rast monochrome/grayscale rasterizer), consult the reference implementation in @./external/rasterization_reference/ ('orge' is the Rust port thereof)
+- [ ] @./external/ contains source code snapshots for various Rust libraries of interest which we use
+- [ ] @./old-typf/ contains the old implementation which we are refactoring into the current 'typf' v2 

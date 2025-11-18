@@ -1,0 +1,24 @@
+[package]
+name = "typf-shape-ct"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "CoreText shaping backend for TYPF"
+
+[dependencies]
+typf-core = { workspace = true }
+log = { workspace = true }
+parking_lot = { workspace = true }
+lru = { workspace = true }
+
+# macOS-specific dependencies
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.9"
+core-text = "20.1"
+core-graphics = "0.23"
+objc2 = "0.5"
+objc2-foundation = { version = "0.2", features = ["NSString", "NSAttributedString", "NSDictionary"] }
+
+[dev-dependencies]
+env_logger = "0.11"

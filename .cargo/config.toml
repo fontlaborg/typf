@@ -1,0 +1,15 @@
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"
+
+[target.wasm32-wasi]
+runner = "wasmtime"
+
+[build]
+# Optimize WASM builds for size
+rustflags = ["-C", "opt-level=z"]
+
+[profile.wasm]
+inherits = "release"
+opt-level = "z"     # Optimize for size
+lto = true          # Link-time optimization
+strip = true        # Strip symbols

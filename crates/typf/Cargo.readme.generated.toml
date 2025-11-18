@@ -1,0 +1,99 @@
+[package]
+name = "typf"
+version = "2.0.0-dev"
+authors = ["TYPF Contributors"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+typf-core = { workspace = true }
+typf-input = { workspace = true, optional = true }
+typf-unicode = { workspace = true, optional = true }
+typf-fontdb = { workspace = true, optional = true }
+typf-export = { workspace = true, optional = true }
+
+# Shaping backends
+typf-shape-none = { workspace = true, optional = true }
+typf-shape-hb = { workspace = true, optional = true }
+
+# Rendering backends
+typf-render-orge = { workspace = true, optional = true }
+
+# External dependencies
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[features]
+default = ["minimal", "unicode", "fontdb", "export-pnm"]
+
+# Minimal configuration (no external dependencies)
+minimal = ["shaping-none", "render-orge"]
+
+# Component features
+unicode = ["dep:typf-unicode"]
+fontdb = ["dep:typf-fontdb"]
+input = ["dep:typf-input"]
+
+# Export formats
+export-pnm = ["dep:typf-export"]
+export-png = []  # Future: requires image crate
+export-svg = []  # Future: requires svg crate
+export-pdf = []  # Future: requires pdf writer
+
+# Shaping backends
+shaping-none = ["dep:typf-shape-none"]
+shaping-hb = ["dep:typf-shape-hb"]
+shaping-icu-hb = ["shaping-hb"]  # Future: ["dep:typf-shape-icu-hb"]
+shaping-mac = []  # Future: ["dep:typf-shape-mac"]
+shaping-win = []  # Future: ["dep:typf-shape-win"]
+
+# Rendering backends
+render-orge = ["dep:typf-render-orge"]
+render-skia = []  # Future: ["dep:typf-render-skia"]
+render-zeno = []  # Future: ["dep:typf-render-zeno"]
+render-mac = []   # Future: ["dep:typf-render-mac"]
+render-win = []   # Future: ["dep:typf-render-win"]
+
+# Advanced features
+simd = []     # Enable SIMD optimizations
+parallel = [] # Enable parallel processing
+auto-backend = [] # Auto-select best backend for platform
+
+# Full build with all features
+full = [
+    "unicode", "fontdb", "input",
+    "export-pnm",
+    "shaping-none", "shaping-hb",
+    "render-orge",
+]
+
+[dev-dependencies]
+typf-shape-none = { workspace = true }
+typf-render-orge = { workspace = true }
+typf-export = { workspace = true }
+criterion = "0.5"
+
+[[bench]]
+name = "pipeline_bench"
+harness = false
+path = "../../benches/pipeline_bench.rs"
+
+[[example]]
+name = "basic"
+path = "../../examples/basic.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "pipeline"
+path = "../../examples/pipeline.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "formats"
+path = "../../examples/formats.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "harfbuzz"
+path = "../../examples/harfbuzz.rs"
+required-features = ["fontdb", "shaping-hb"]

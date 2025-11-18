@@ -1,9 +1,0 @@
-[package]
-name = "typf-pure"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-
-[dependencies]
-typf-core = { path = "../typf-core" }
