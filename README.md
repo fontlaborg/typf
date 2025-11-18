@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions)
 [![Fuzz Testing](https://img.shields.io/badge/fuzz-3%20targets-purple.svg)](#fuzz-testing)
-[![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-110%20passing-brightgreen.svg)](#testing)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE-APACHE)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 [![Memory Safe](https://img.shields.io/badge/memory-profiled-blue.svg)](docs/MEMORY.md)

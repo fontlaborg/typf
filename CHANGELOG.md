@@ -42,12 +42,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI**: REPL mode scaffold with interactive command interface (--features repl)
 - **CI**: GitHub Actions workflow for automated fuzz testing (daily + manual trigger)
 - **Hooks**: Pre-commit hook template for automated code quality checks (.github/hooks/)
+- **Backend**: CoreText shaper backend for macOS (backends/typf-shape-ct, 417 lines)
+  - Native macOS text shaping via CoreText framework
+  - Font caching (LRU, 100 fonts) and shape caching (LRU, 1000 results)
+  - Font loading from raw bytes via CGDataProvider
+  - OpenType feature support (liga, kern) via CFAttributedString
+  - Glyph extraction from CTLine/CTRun with positions and advances
+  - FFI declaration for CTRunGetAdvances
+  - 3 unit tests (creation, script support, cache clearing)
+- **Dependencies**: Workspace-level parking_lot (0.12) and lru (0.12)
 
 ### Changed
-- **README**: Updated test count to 107 (was 95)
+- **README**: Updated test count to 110 (was 107)
 - **README**: Updated to reflect current state (all export formats, Python bindings complete)
 - **README**: Added links to BENCHMARKS.md, SECURITY.md, and RELEASE.md
 - **README**: Corrected performance metrics (12.5 GB/s SIMD, ~5µs/100 chars shaping)
+- **Workspace**: Added backends/typf-shape-ct to workspace members
 - **README**: Updated backend status (ICU-HB complete, PNG/SVG/JSON complete)
 - **CONTRIBUTING.md**: Added pre-commit hook installation instructions
 - **.gitignore**: Added entries for fuzz artifacts and profiling data
