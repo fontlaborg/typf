@@ -84,8 +84,62 @@ pub fn render_grayscale(
     )
 }
 
-/// Downsample monochrome bitmap to grayscale.
-fn downsample_to_grayscale(
+/// Downsample monochrome bitmap to grayscale using optimized vectorizable code.
+#[cfg(target_feature = "simd128")]
+fn downsample_to_grayscale_simd(
+    mono: &[u8],
+    mono_width: usize,
+    _mono_height: usize,
+    out_width: usize,
+    out_height: usize,
+    level: GrayscaleLevel,
+) -> Vec<u8> {
+    let factor = level.factor();
+    let max_coverage = level.samples_per_pixel() as u32;
+    let normalization_factor = 255.0 / max_coverage as f32;
+
+    let mut output = vec![0u8; out_width * out_height];
+
+    for out_y in 0..out_height {
+        let src_y_base = out_y * factor;
+        let out_row_start = out_y * out_width;
+
+        for out_x in 0..out_width {
+            let src_x_base = out_x * factor;
+            let mut coverage = 0u32;
+
+            // Sum coverage in factor x factor block
+            // This loop structure allows LLVM to auto-vectorize
+            for dy in 0..factor {
+                let src_row_start = (src_y_base + dy) * mono_width;
+                let row_start = src_row_start + src_x_base;
+
+                if row_start + factor <= mono.len() {
+                    // Fast path: entire row is in bounds, LLVM can vectorize this
+                    for i in 0..factor {
+                        coverage += mono[row_start + i] as u32;
+                    }
+                } else {
+                    // Slow path: bounds checking required
+                    for i in 0..factor {
+                        let x = src_x_base + i;
+                        if x < mono_width {
+                            coverage += mono[src_row_start + x] as u32;
+                        }
+                    }
+                }
+            }
+
+            // Convert to 0-255 alpha
+            let alpha = (coverage as f32 * normalization_factor).round() as u8;
+            output[out_row_start + out_x] = alpha;
+        }
+    }
+    output
+}
+
+/// Downsample monochrome bitmap to grayscale (scalar fallback).
+fn downsample_to_grayscale_scalar(
     mono: &[u8],
     mono_width: usize,
     mono_height: usize,
@@ -124,6 +178,28 @@ fn downsample_to_grayscale(
     }
 
     output
+}
+
+/// Downsample monochrome bitmap to grayscale.
+///
+/// Automatically selects SIMD or scalar implementation based on CPU features.
+#[inline]
+fn downsample_to_grayscale(
+    mono: &[u8],
+    mono_width: usize,
+    mono_height: usize,
+    out_width: usize,
+    out_height: usize,
+    level: GrayscaleLevel,
+) -> Vec<u8> {
+    #[cfg(target_feature = "simd128")]
+    {
+        downsample_to_grayscale_simd(mono, mono_width, mono_height, out_width, out_height, level)
+    }
+    #[cfg(not(target_feature = "simd128"))]
+    {
+        downsample_to_grayscale_scalar(mono, mono_width, mono_height, out_width, out_height, level)
+    }
 }
 
 /// Render grayscale with outline built directly at oversampled resolution.

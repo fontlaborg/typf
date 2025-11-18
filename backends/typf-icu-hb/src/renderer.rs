@@ -113,6 +113,7 @@ impl Default for OrgeRenderer {
     }
 }
 
+#[cfg(feature = "orge")]
 impl OrgeRenderer {
     pub fn new() -> Self {
         Self
@@ -168,6 +169,7 @@ impl GlyphRenderer for OrgeRenderer {
                     }
                 }
             });
+
 
             Some(RenderedGlyph {
                 bitmap,
@@ -230,18 +232,19 @@ impl GlyphRenderer for OrgeRenderer {
 }
 
 /// Create the appropriate renderer based on enabled features
+/// TEMP FIX: Prefer TinySkia over Orge until OrgeRenderer bug is fixed
 pub fn create_renderer() -> Box<dyn GlyphRenderer> {
-    #[cfg(feature = "orge")]
+    #[cfg(feature = "tiny-skia-renderer")]
     {
-        Box::new(OrgeRenderer::new())
+        Box::new(TinySkiaRenderer::new())
     }
-    #[cfg(not(feature = "orge"))]
+    #[cfg(not(feature = "tiny-skia-renderer"))]
     {
-        #[cfg(feature = "tiny-skia-renderer")]
+        #[cfg(feature = "orge")]
         {
-            Box::new(TinySkiaRenderer::new())
+            Box::new(OrgeRenderer::new())
         }
-        #[cfg(not(feature = "tiny-skia-renderer"))]
+        #[cfg(not(feature = "orge"))]
         {
             compile_error!(
                 "At least one renderer feature must be enabled: orge or tiny-skia-renderer"

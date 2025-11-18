@@ -479,6 +479,12 @@ impl TextRenderer {
         if let Some(result) = Self::try_directwrite_backend() {
             return result;
         }
+        // TEMP: Prefer skiahb over orgehb until OrgeHB rendering bug is fixed
+        // Prefer skiahb (HarfBuzz + TinySkia) - proven to work correctly
+        if let Some(result) = Self::try_skiahb_backend() {
+            return result;
+        }
+        // Fallback to orgehb (HarfBuzz + Orge rasterizer) - currently has rendering bug
         if let Some(result) = Self::try_harfbuzz_backend() {
             return result;
         }
@@ -522,6 +528,16 @@ impl TextRenderer {
 
     #[cfg(not(feature = "icu"))]
     fn try_harfbuzz_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        None
+    }
+
+    #[cfg(feature = "skiahb")]
+    fn try_skiahb_backend() -> Option<PyResult<Box<dyn Backend>>> {
+        Some(Ok(Box::new(SkiaHbBackend::new())))
+    }
+
+    #[cfg(not(feature = "skiahb"))]
+    fn try_skiahb_backend() -> Option<PyResult<Box<dyn Backend>>> {
         None
     }
 

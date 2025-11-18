@@ -14,6 +14,8 @@
 8. [ ] Update documentation (`WORK.md`, `CHANGELOG.md`)
 9. [ ] Self-correct: "Wait, but..." and critically review
 10. [ ] Delete rather than add when possible
+11. [ ] Regularly clean up `PLAN.md`, `TODO.md`, `WORK.md`: remove completed tasks, keep these files managable 
+12. [ ] IMPORTANT: Push forward towards stated objectives. Don’t get sidetracked! 
 
 ## Normative Language Convention
 

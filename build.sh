@@ -14,12 +14,15 @@ cargo install --path typf-cli
 echo ""
 echo "Building Python bindings with maturin..."
 cd python
-uv run maturin develop --release --features "python,icu,mac,orge"
+uv run maturin develop --release --features "python,icu,mac,orge,skiahb"
 cd ..
 
 echo ""
 echo "Installing Python package system-wide..."
-uv pip install --system --upgrade .
+# uv pip install --system --upgrade .
+uv venv --python 3.12 --clear
+source .venv/bin/activate
+uv pip install --upgrade .
 
 echo ""
 echo "✅ Build and installation complete!"

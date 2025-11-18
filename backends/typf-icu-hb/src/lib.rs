@@ -125,12 +125,16 @@ struct HbFontEntry {
 }
 
 impl HbFontEntry {
-    fn new(data: Arc<FontDataEntry>, size: f32, variations: &HashMap<String, f32>) -> Result<Self> {
+    fn new(data: Arc<FontDataEntry>, _size: f32, variations: &HashMap<String, f32>) -> Result<Self> {
         let hb_face = HbFace::new(data.bytes.clone(), data.face_index);
+
+        // Get upem before moving hb_face into hb_font
+        let upem = hb_face.upem() as i32;
         let mut hb_font = HbFont::new(hb_face);
 
-        let scale = (size * 64.0).max(1.0) as i32;
-        hb_font.set_scale(scale, scale);
+        // Set HarfBuzz scale to upem (font units), not pixel size
+        // Positions from HarfBuzz will be in font units and scaled later
+        hb_font.set_scale(upem, upem);
 
         // Apply variable font variations if any
         if !variations.is_empty() {
@@ -398,17 +402,20 @@ impl HarfBuzzBackend {
         font_ref: &FontRef<'static>,
         glyph: &Glyph,
         size: f32,
-        scale: f32,
+        _scale: f32,  // Unused: scale is embedded in size parameter for skrifa
         variations: &HashMap<String, f32>,
         antialias: bool,
     ) -> Option<RenderedGlyph> {
         // Get BezPath outline from skrifa
+        // skrifa's Size parameter is ppem (pixels per em), scale is additional scaling
         let gid = u16::try_from(glyph.id).ok()?;
+        let _ = size; // Unused parameter - see comment below about correct scaling
+
         let path = match glyph_bez_path_with_variations(
             font_ref,
             GlyphId::from(gid),
-            size,
-            scale,
+            size,   // ppem size (pixels per em)
+            1.0,    // No additional scaling
             Some(variations),
         ) {
             Some(p) => p,
@@ -416,6 +423,7 @@ impl HarfBuzzBackend {
         };
 
         let bounds = path.bounding_box();
+
         if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
             return Some(blank_rendered_glyph());
         }
@@ -557,6 +565,12 @@ impl TypfCoreBackend for HarfBuzzBackend {
         let mut x_pos = 0.0;
         let scale = font.size / hb_font.face().upem() as f32;
 
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/typf-orgehb-debug.log") {
+            writeln!(f, "[OrgeHB] shape() - font.size={}, upem={}, scale={}",
+                     font.size, hb_font.face().upem(), scale).ok();
+        }
+
         let positions = output.get_glyph_positions();
         let infos = output.get_glyph_infos();
 
@@ -584,7 +598,6 @@ impl TypfCoreBackend for HarfBuzzBackend {
     }
 
     fn render(&self, shaped: &ShapingResult, options: &RenderOptions) -> Result<RenderOutput> {
-        // Diagnostics removed for simplicity
         // Check if we have glyphs to render
         if shaped.glyphs.is_empty() {
             return Ok(RenderOutput::Bitmap(Bitmap {
@@ -626,6 +639,12 @@ impl TypfCoreBackend for HarfBuzzBackend {
 
         // Calculate scale factor (use cached metrics from TtfFaceEntry)
         let scale = font.size / face_entry.units_per_em as f32;
+
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/typf-orgehb-debug.log") {
+            writeln!(f, "[OrgeHB] render() - font.size={}, upem={}, scale={}, bbox={}x{}",
+                     font.size, face_entry.units_per_em, scale, shaped.bbox.width, shaped.bbox.height).ok();
+        }
 
         // Calculate baseline position
         // The bbox.y is typically negative (representing ascent above baseline).
@@ -767,7 +786,7 @@ impl DynBackend for HarfBuzzBackend {
     fn render_shaped_text(&self, shaped_text: &ShapingResult, options: RenderOptions) -> Option<Bitmap> {
         match self.render(shaped_text, &options) {
             Ok(RenderOutput::Bitmap(bitmap)) => Some(bitmap),
-            _ => None, // Handle other RenderOutput variants or errors as needed
+            _ => None,
         }
     }
 

@@ -289,6 +289,8 @@ impl ScanConverter {
         self.active_edges.remove_inactive(y);
 
         // Sort by X coordinate
+        // Note: After step_all() at the end of previous scanline, edges may be nearly sorted,
+        // but Rust's sort is adaptive (Tim sort) and handles nearly-sorted data efficiently.
         self.active_edges.sort_by_x();
 
         // Fill spans based on fill rule
@@ -349,16 +351,25 @@ impl ScanConverter {
 
     /// Fill a horizontal span of pixels.
     fn fill_span(&self, x1: i32, x2: i32, y: i32, bitmap: &mut [u8]) {
-        if y < 0 || y >= self.height as i32 {
+        // Early return for invalid spans
+        if y < 0 || y >= self.height as i32 || x1 >= x2 {
             return;
         }
 
         let x_start = x1.max(0).min(self.width as i32) as usize;
         let x_end = x2.max(0).min(self.width as i32) as usize;
 
+        if x_start >= x_end {
+            return;
+        }
+
         let row_offset = y as usize * self.width;
-        for x in x_start..x_end {
-            bitmap[row_offset + x] = 1; // Black
+        let span_start = row_offset + x_start;
+        let span_end = row_offset + x_end;
+
+        // Use slice::fill() which the compiler optimizes to memset
+        if let Some(span) = bitmap.get_mut(span_start..span_end) {
+            span.fill(1);
         }
     }
 }

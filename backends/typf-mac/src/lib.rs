@@ -501,7 +501,10 @@ impl TypfCoreBackend for CoreTextBackend {
             .max((ct_font.ascent() + ct_font.descent()) as f32)
             .max(1.0);
         let width = (content_width + padding * 2.0).ceil() as usize;
-        let height = (content_height + padding * 2.0).ceil() as usize;
+        // Use generous vertical space to accommodate baseline positioning with room for ascenders/descenders
+        // With 0.75 baseline ratio, we need height * 0.75 >= ascent for full ascender visibility
+        // Use 2x content_height to ensure adequate space for all glyph features
+        let height = ((content_height * 2.0) + padding * 2.0).ceil() as usize;
 
         // Create CGContext for rendering
         let bytes_per_row = width * 4; // RGBA
@@ -548,9 +551,11 @@ impl TypfCoreBackend for CoreTextBackend {
         );
 
         // Calculate baseline position
-        // CoreGraphics uses bottom-left origin. We want text positioned from the top,
-        // so calculate baseline from the bottom: height - (padding + descent)
-        let baseline_y = (height as f64) - (padding as f64 + ct_font.descent());
+        // CoreGraphics uses bottom-left origin with Y increasing upward.
+        // Use a fixed ratio to position baseline, giving generous space for ascenders.
+        // This matches the proven approach from simple-coretext reference implementation.
+        const BASELINE_RATIO: f64 = 0.75; // baseline at 75% from top
+        let baseline_y = (height as f64) * (1.0 - BASELINE_RATIO);
 
         let glyph_ids: Vec<CGGlyph> = shaped
             .glyphs
@@ -562,7 +567,11 @@ impl TypfCoreBackend for CoreTextBackend {
             .iter()
             .map(|glyph| CGPoint {
                 x: glyph.x as f64,
-                y: glyph.y as f64,
+                // CoreText's draw_glyphs expects glyph positions relative to the current text position.
+                // Since we've already translated the context to the baseline, all glyphs should be
+                // positioned on the baseline (Y=0). The shaped glyph Y values from HarfBuzz are
+                // layout-level offsets that don't apply to CoreText's direct glyph drawing.
+                y: 0.0,
             })
             .collect();
 

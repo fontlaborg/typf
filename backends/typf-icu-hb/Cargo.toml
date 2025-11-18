@@ -7,7 +7,7 @@ license.workspace = true
 description = "ICU+HarfBuzz backend for typf text rendering"
 
 [features]
-default = ["orge"]
+default = ["tiny-skia-renderer"]  # TEMP FIX: Use TinySkia until OrgeRenderer bug is fixed (Issue #OrgeHB-rendering)
 orge = ["typf-orge"]
 tiny-skia-renderer = []
 zeno-traits = ["typf-zeno"]

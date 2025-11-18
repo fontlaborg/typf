@@ -40,13 +40,17 @@ use parking_lot::RwLock;
 use skrifa::FontRef;
 
 use typf_core::{
-    types::{Direction, BoundingBox, SegmentOptions, TextRun, RenderOutput},
+    types::{Direction, BoundingBox, SegmentOptions, TextRun, RenderOutput, Glyph},
     traits::Backend as TypfCoreBackend,
     Bitmap, Font, FontCache, FontCacheConfig, RenderOptions, Result as TypfResult, TypfError,
     DynBackend, BackendFeatures, FontMetrics,
 };
 use typf_fontdb::{FontDatabase, FontHandle};
 use typf_core::types::ShapingResult;
+use skrifa::instance::{Size, Location};
+use skrifa::MetadataProvider;
+use read_fonts::TableProvider;
+use skrifa::GlyphId;
 
 
 /// Fill rule for scan conversion.
@@ -225,21 +229,44 @@ impl DynBackend for OrgeBackend {
         "Orge"
     }
 
-    fn shape_text(&self, _text: &str, _font: &Font) -> ShapingResult {
-        // Orge is a rasterizer, not a shaper. This needs to be done by a separate shaper.
-        // For now, return an empty shaping result.
-        ShapingResult {
-            text: _text.to_string(),
-            glyphs: Vec::new(),
-            advance: 0.0,
-            bbox: BoundingBox {
-                x: 0.0,
-                y: 0.0,
-                width: 0.0,
-                height: 0.0,
+    fn shape_text(&self, text: &str, font: &Font) -> ShapingResult {
+        // Use the Backend trait implementation
+        // First segment the text
+        let empty_bbox = BoundingBox { x: 0.0, y: 0.0, width: 0.0, height: 0.0 };
+        let runs = match TypfCoreBackend::segment(self, text, &SegmentOptions::default()) {
+            Ok(runs) => runs,
+            Err(_) => return ShapingResult {
+                text: text.to_string(),
+                glyphs: Vec::new(),
+                advance: 0.0,
+                bbox: empty_bbox,
+                font: None,
+                direction: Direction::LeftToRight,
             },
-            font: None,
-            direction: Direction::LeftToRight,
+        };
+
+        // Shape each run and combine (for now, just use the first run)
+        if let Some(run) = runs.first() {
+            match TypfCoreBackend::shape(self, run, font) {
+                Ok(result) => result,
+                Err(_) => ShapingResult {
+                    text: text.to_string(),
+                    glyphs: Vec::new(),
+                    advance: 0.0,
+                    bbox: empty_bbox,
+                    font: None,
+                    direction: Direction::LeftToRight,
+                },
+            }
+        } else {
+            ShapingResult {
+                text: text.to_string(),
+                glyphs: Vec::new(),
+                advance: 0.0,
+                bbox: empty_bbox,
+                font: None,
+                direction: Direction::LeftToRight,
+            }
         }
     }
 
@@ -252,10 +279,14 @@ impl DynBackend for OrgeBackend {
 
     fn render_shaped_text(
         &self,
-        _shaped_text: &ShapingResult,
-        _options: RenderOptions,
+        shaped_text: &ShapingResult,
+        options: RenderOptions,
     ) -> Option<Bitmap> {
-        None
+        // Use the Backend trait implementation
+        match TypfCoreBackend::render(self, shaped_text, &options) {
+            Ok(RenderOutput::Bitmap(bitmap)) => Some(bitmap),
+            _ => None,
+        }
     }
 
     fn font_metrics(&self, font: &Font) -> FontMetrics {
@@ -304,29 +335,161 @@ impl TypfCoreBackend for OrgeBackend {
         }])
     }
 
-    fn shape(&self, run: &TextRun, _font: &Font) -> TypfResult<ShapingResult> {
-        // Orge is a rasterizer, not a shaper
-        // Return minimal shaping result - actual shaping should be done by HarfBuzz
-        // TODO: Delegate to HarfBuzz backend or implement basic character-to-glyph mapping
+    fn shape(&self, run: &TextRun, font: &Font) -> TypfResult<ShapingResult> {
+        // Basic character-to-glyph mapping (no ligatures/kerning/complex shaping)
+        // For complex text, use HarfBuzz backend instead
+
+        let face_entry = self.get_or_create_ttf_face(font)?;
+        let font_ref = &face_entry.font_ref;
+
+        let charmap = font_ref.charmap();
+        let size = Size::new(font.size);
+        let hhea = font_ref.hhea()
+            .map_err(|e| TypfError::other(format!("Failed to read hhea table: {}", e)))?;
+        let upem = f32::from(face_entry.units_per_em);
+        let scale = font.size / upem;
+
+        let mut glyphs = Vec::new();
+        let mut x_position = 0.0;
+        let mut cluster_idx = 0u32;
+
+        // Get glyph metrics provider (for variable fonts, use default location)
+        let location = Location::default();
+        let glyph_metrics = font_ref.glyph_metrics(size, &location);
+
+        for ch in run.text.chars() {
+            // Map character to glyph ID
+            let glyph_id = charmap.map(ch).unwrap_or(GlyphId::NOTDEF);
+
+            // Get advance width for this glyph
+            let advance = glyph_metrics.advance_width(glyph_id).unwrap_or(0.0) * scale;
+
+            glyphs.push(Glyph {
+                id: glyph_id.to_u32(),
+                cluster: cluster_idx,
+                x: x_position,
+                y: 0.0,
+                advance,
+            });
+
+            x_position += advance;
+            cluster_idx += ch.len_utf8() as u32;
+        }
+
+        // Calculate bounding box (simplified - use hhea metrics scaled)
+        let ascender = f32::from(hhea.ascender().to_i16()) * scale;
+        let descender = f32::from(hhea.descender().to_i16()) * scale;
+
         Ok(ShapingResult {
             text: run.text.clone(),
-            glyphs: Vec::new(),
-            advance: 0.0,
+            glyphs,
+            advance: x_position,
             bbox: BoundingBox {
                 x: 0.0,
-                y: 0.0,
-                width: 0.0,
-                height: 0.0,
+                y: descender,
+                width: x_position,
+                height: ascender - descender,
             },
-            font: Some(_font.clone()),
+            font: Some(font.clone()),
             direction: run.direction,
         })
     }
 
-    fn render(&self, _shaped: &ShapingResult, _options: &RenderOptions) -> TypfResult<RenderOutput> {
-        // TODO: Implement full text rendering using GlyphRasterizer
-        // For now, return empty bitmap to allow compilation
-        Err(TypfError::render("Orge backend text rendering not yet implemented. Use for glyph-level rendering only."))
+    fn render(&self, shaped: &ShapingResult, _options: &RenderOptions) -> TypfResult<RenderOutput> {
+        // Render shaped text by compositing individual glyphs
+
+        if shaped.glyphs.is_empty() {
+            // Return empty bitmap for empty text
+            return Ok(RenderOutput::Bitmap(Bitmap {
+                width: 1,
+                height: 1,
+                data: vec![0, 0, 0, 0],
+            }));
+        }
+
+        let font = shaped.font.as_ref().ok_or_else(|| {
+            TypfError::render("No font specified in ShapingResult")
+        })?;
+
+        // Get font data
+        let face_entry = self.get_or_create_ttf_face(font)?;
+        let font_bytes = face_entry.data.as_static_slice();
+        let font_ref = FontRef::new(font_bytes)
+            .map_err(|e| TypfError::other(format!("Failed to create FontRef: {}", e)))?;
+
+        // Calculate canvas dimensions from bounding box
+        let canvas_width = shaped.bbox.width.ceil() as u32;
+        let canvas_height = shaped.bbox.height.ceil() as u32;
+
+        if canvas_width == 0 || canvas_height == 0 {
+            return Ok(RenderOutput::Bitmap(Bitmap {
+                width: 1,
+                height: 1,
+                data: vec![0, 0, 0, 0],
+            }));
+        }
+
+        // Create grayscale canvas
+        let mut canvas = vec![0u8; (canvas_width * canvas_height) as usize];
+
+        // Create glyph rasterizer
+        let rasterizer = GlyphRasterizer::new();
+
+        // Render and composite each glyph
+        for glyph in &shaped.glyphs {
+            // Skip glyphs with no advance (like combining marks, for now)
+            if glyph.advance == 0.0 {
+                continue;
+            }
+
+            // Render glyph
+            let glyph_image = rasterizer.render_glyph(
+                &font_ref,
+                glyph.id,
+                font.size,
+                &[],  // No variable font location
+                canvas_width,
+                canvas_height,
+            ).map_err(|e| TypfError::render(format!("Glyph rendering failed: {}", e)))?;
+
+            // Composite glyph onto canvas at position (glyph.x, glyph.y)
+            // For now, simple alpha blending
+            let x_offset = glyph.x.round() as i32;
+            let y_offset = (shaped.bbox.height - glyph.y).round() as i32;
+
+            for y in 0..glyph_image.height() {
+                for x in 0..glyph_image.width() {
+                    let canvas_x = x_offset + x as i32;
+                    let canvas_y = y_offset + y as i32;
+
+                    if canvas_x >= 0 && canvas_x < canvas_width as i32
+                        && canvas_y >= 0 && canvas_y < canvas_height as i32
+                    {
+                        let canvas_idx = canvas_y as usize * canvas_width as usize + canvas_x as usize;
+                        let glyph_idx = y as usize * glyph_image.width() as usize + x as usize;
+
+                        let glyph_alpha = glyph_image.pixels()[glyph_idx];
+                        // Simple max blending (or use proper alpha compositing)
+                        canvas[canvas_idx] = canvas[canvas_idx].max(glyph_alpha);
+                    }
+                }
+            }
+        }
+
+        // Convert grayscale to RGBA
+        let mut rgba_data = Vec::with_capacity((canvas_width * canvas_height * 4) as usize);
+        for &gray_value in &canvas {
+            rgba_data.push(gray_value);  // R
+            rgba_data.push(gray_value);  // G
+            rgba_data.push(gray_value);  // B
+            rgba_data.push(255);         // A (fully opaque)
+        }
+
+        Ok(RenderOutput::Bitmap(Bitmap {
+            width: canvas_width,
+            height: canvas_height,
+            data: rgba_data,
+        }))
     }
 
     fn name(&self) -> &str {
