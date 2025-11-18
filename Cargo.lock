@@ -1728,6 +1728,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "typf-render-cg"
+version = "2.0.0-dev"
+dependencies = [
+ "core-foundation",
+ "core-graphics 0.23.2",
+ "core-text 20.1.0",
+ "env_logger",
+ "log",
+ "typf-core",
+]
+
+[[package]]
 name = "typf-render-orge"
 version = "2.0.0-dev"
 dependencies = [
