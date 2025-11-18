@@ -58,6 +58,7 @@ render-win = []   # Future: ["dep:typf-render-win"]
 simd = []     # Enable SIMD optimizations
 parallel = [] # Enable parallel processing
 auto-backend = [] # Auto-select best backend for platform
+wasm = []
 
 # Full build with all features
 full = [
