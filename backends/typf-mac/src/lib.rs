@@ -567,11 +567,7 @@ impl TypfCoreBackend for CoreTextBackend {
             .iter()
             .map(|glyph| CGPoint {
                 x: glyph.x as f64,
-                // CoreText's draw_glyphs expects glyph positions relative to the current text position.
-                // Since we've already translated the context to the baseline, all glyphs should be
-                // positioned on the baseline (Y=0). The shaped glyph Y values from HarfBuzz are
-                // layout-level offsets that don't apply to CoreText's direct glyph drawing.
-                y: 0.0,
+                y: glyph.y as f64,
             })
             .collect();
 

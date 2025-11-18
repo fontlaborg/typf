@@ -563,7 +563,8 @@ impl TypfCoreBackend for HarfBuzzBackend {
         // Extract glyph information
         let mut glyphs = Vec::new();
         let mut x_pos = 0.0;
-        let scale = font.size / hb_font.face().upem() as f32;
+        let dpi_scale = 2.0; // Correct for HiDPI displays
+        let scale = (font.size * dpi_scale) / hb_font.face().upem() as f32;
 
         use std::io::Write;
         if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/typf-orgehb-debug.log") {
@@ -638,7 +639,8 @@ impl TypfCoreBackend for HarfBuzzBackend {
         }
 
         // Calculate scale factor (use cached metrics from TtfFaceEntry)
-        let scale = font.size / face_entry.units_per_em as f32;
+        let dpi_scale = 2.0; // Correct for HiDPI displays
+        let scale = (font.size * dpi_scale) / face_entry.units_per_em as f32;
 
         use std::io::Write;
         if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/typf-orgehb-debug.log") {
@@ -652,7 +654,7 @@ impl TypfCoreBackend for HarfBuzzBackend {
         let baseline_y = padding + (-shaped.bbox.y).max(0.0);
 
         let font_key = face_entry.font_key();
-        let glyph_size = quantize_size(font.size);
+        let glyph_size = quantize_size(font.size * dpi_scale);
         let mut scratch_rgba = Vec::new();
         let base_r = (u16::from(text_r) * u16::from(text_a) + 127) / 255;
         let base_g = (u16::from(text_g) * u16::from(text_a) + 127) / 255;
@@ -670,10 +672,11 @@ impl TypfCoreBackend for HarfBuzzBackend {
             let cached = if let Some(entry) = self.cache.get_glyph(&glyph_key) {
                 entry
             } else {
+                let dpi_scale = 2.0;
                 match self.rasterize_glyph(
                     &face_entry.font_ref,
                     glyph,
-                    font.size,
+                    font.size * dpi_scale,
                     scale,
                     &validated_variations,
                     options.antialias != typf_core::types::AntialiasMode::None,

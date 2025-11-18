@@ -10,35 +10,19 @@ Usage:
 Made by FontLab https://www.fontlab.com/
 """
 
-import fire
 import subprocess
 import sys
 from pathlib import Path
 
+import fire
 
-def find_merriweather_font():
-    """Find Merriweather font file path."""
+
+def find_standard_font():
+    """Find Kalnia font file path."""
     # Try local testdata first
-    local_font = Path(__file__).parent / "testdata" / "fonts" / "Merriweather[opsz,wdth,wght].ttf"
+    local_font = Path(__file__).parent / "testdata" / "fonts" / "Kalnia[wdth,wght].ttf"
     if local_font.exists():
         return local_font
-
-    # Try common locations
-    try:
-        result = subprocess.run(
-            ["mdfind", "kMDItemDisplayName == 'Merriweather*.ttf'"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        fonts = [p for p in result.stdout.strip().split('\n') if p and '.ttf' in p.lower()]
-        if fonts:
-            return Path(fonts[0])
-    except:
-        pass
-
-    # Fallback to Arial
-    return Path("/System/Library/Fonts/Supplemental/Arial.ttf")
 
 
 class Toy:
@@ -51,21 +35,24 @@ class Toy:
 
         try:
             import typf
+
             sys.path.insert(0, str(Path(__file__).parent))
             import simple_font_rendering_py as simple
             from PIL import Image
         except ImportError as e:
             print(f"Error: Missing dependencies: {e}")
-            print("Install: pip install pillow pyobjc-framework-CoreText uharfbuzz freetype-py")
+            print(
+                "Install: pip install pillow pyobjc-framework-CoreText uharfbuzz freetype-py"
+            )
             return 1
 
         # Sample text and settings
         sample_text = "The quick brown fox jumps over the lazy dog."
-        font_family = "Merriweather"
+        font_family = "Kalnia"
         font_size = 64.0
 
-        # Find Merriweather font file
-        font_path = find_merriweather_font()
+        # Find Kalnia font file
+        font_path = find_standard_font()
         print(f"Using font: {font_path.name}")
         print(f"Font path: {font_path}\n")
 
@@ -85,7 +72,7 @@ class Toy:
             try:
                 print(f"  typf-{backend_name}... ", end="", flush=True)
                 renderer = typf.TextRenderer(backend=backend_name)
-                font = typf.Font(font_family, font_size)
+                font = typf.Font.from_path(str(font_path), font_size)
                 result = renderer.render(sample_text, font, format="png")
 
                 if result:
@@ -99,7 +86,7 @@ class Toy:
             except Exception as e:
                 print(f"✗ {str(e)[:50]}")
 
-        # Simple backends (using same Merriweather font)
+        # Simple backends (using same Kalnia font)
         for backend_name in simple_backends:
             try:
                 print(f"  {backend_name}... ", end="", flush=True)
@@ -136,15 +123,16 @@ class Toy:
         print("Made by FontLab https://www.fontlab.com/\n")
 
         try:
-            import typf
             import time
+
+            import typf
         except ImportError:
             print("Error: typf Python bindings not installed.")
             return 1
 
         # Sample text and settings
         sample_text = "The quick brown fox jumps over the lazy dog."
-        font_family = "Merriweather"
+        font_path = find_standard_font()
         font_size = 64.0
         iterations = 100  # Number of iterations for timing
 
@@ -157,7 +145,7 @@ class Toy:
         for backend_name in available_backends:
             try:
                 renderer = typf.TextRenderer(backend=backend_name)
-                font = typf.Font(font_family, font_size)
+                font = typf.Font.from_path(str(font_path), font_size)
 
                 # Warmup
                 for _ in range(5):
@@ -171,16 +159,16 @@ class Toy:
 
                 avg_ms = (elapsed / iterations) * 1000
                 results.append({
-                    'backend': backend_name,
-                    'avg_ms': avg_ms,
-                    'ops_per_sec': iterations / elapsed
+                    "backend": backend_name,
+                    "avg_ms": avg_ms,
+                    "ops_per_sec": iterations / elapsed,
                 })
             except Exception as e:
                 results.append({
-                    'backend': backend_name,
-                    'avg_ms': None,
-                    'ops_per_sec': None,
-                    'error': str(e)
+                    "backend": backend_name,
+                    "avg_ms": None,
+                    "ops_per_sec": None,
+                    "error": str(e),
                 })
 
         # Print comparison table
@@ -189,9 +177,11 @@ class Toy:
         print(f"{'Backend':<15} {'Avg Time (ms)':<20} {'Ops/sec':<15} {'Status':<20}")
         print("-" * 80)
 
-        for result in sorted(results, key=lambda x: x['avg_ms'] if x['avg_ms'] else float('inf')):
-            backend = result['backend']
-            if result['avg_ms'] is not None:
+        for result in sorted(
+            results, key=lambda x: x["avg_ms"] if x["avg_ms"] else float("inf")
+        ):
+            backend = result["backend"]
+            if result["avg_ms"] is not None:
                 avg_ms = f"{result['avg_ms']:.3f}"
                 ops_sec = f"{result['ops_per_sec']:.1f}"
                 status = "✓ OK"
@@ -206,13 +196,13 @@ class Toy:
         print()
 
         # Print relative performance
-        valid_results = [r for r in results if r['avg_ms'] is not None]
+        valid_results = [r for r in results if r["avg_ms"] is not None]
         if len(valid_results) > 1:
-            fastest = min(valid_results, key=lambda x: x['avg_ms'])
+            fastest = min(valid_results, key=lambda x: x["avg_ms"])
             print(f"Relative Performance (vs {fastest['backend']}):")
             print("-" * 60)
-            for result in sorted(valid_results, key=lambda x: x['avg_ms']):
-                ratio = result['avg_ms'] / fastest['avg_ms']
+            for result in sorted(valid_results, key=lambda x: x["avg_ms"]):
+                ratio = result["avg_ms"] / fastest["avg_ms"]
                 bar = "█" * int(ratio * 20)
                 print(f"{result['backend']:<15} {ratio:>5.2f}x  {bar}")
             print()
@@ -239,6 +229,7 @@ class Toy:
 
         try:
             import typf
+
             sys.path.insert(0, str(Path(__file__).parent))
             import simple_font_rendering_py as simple
             from PIL import Image
@@ -246,19 +237,21 @@ class Toy:
             print(f"Error: Missing dependencies: {e}")
             if "simple_font_rendering_py" in str(e):
                 print("Note: simple_font_rendering_py requires:")
-                print("  pip install pillow pyobjc-framework-CoreText uharfbuzz freetype-py")
+                print(
+                    "  pip install pillow pyobjc-framework-CoreText uharfbuzz freetype-py"
+                )
             else:
                 print("Error: typf Python bindings not installed.")
             # Continue with TYPF backends only
             simple = None
 
-        # Sample text and settings - using distinctive Merriweather variable font
+        # Sample text and settings - using distinctive Kalnia variable font
         sample_text = "The quick brown fox jumps over the lazy dog."
-        font_family = "Merriweather"
+        font_family = "Kalnia"
         font_size = 64.0  # Larger size for better visibility
 
         # Find font file for simple backends
-        font_path = find_merriweather_font()
+        font_path = find_standard_font()
         print(f"Using font: {font_path.name}")
         print(f"Font path: {font_path}\n")
 
@@ -277,7 +270,9 @@ class Toy:
         else:
             typf_backends = all_typf_backends
 
-        all_backends = [f"typf-{b}" for b in typf_backends] + (simple_backends if not backend else [])
+        all_backends = [f"typf-{b}" for b in typf_backends] + (
+            simple_backends if not backend else []
+        )
         print(f"Rendering with: {', '.join(all_backends)}\n")
 
         # Render with TYPF backends
@@ -285,14 +280,14 @@ class Toy:
             try:
                 print(f"{backend_name:15s} ", end="", flush=True)
                 renderer = typf.TextRenderer(backend=backend_name)
-                font = typf.Font(font_family, font_size)
+                font = typf.Font.from_path(str(font_path), font_size)
 
                 # Render to PNG
                 result = renderer.render(sample_text, font, format="png")
 
                 if result:
                     filename = f"render-{backend_name}.png"
-                    if hasattr(result, 'save'):
+                    if hasattr(result, "save"):
                         # It's a Bitmap object with save method
                         result.save(filename)
                         print(f"✓ Saved {filename}")
@@ -325,7 +320,7 @@ class Toy:
 
                     # Convert numpy array to PNG
                     img = Image.fromarray(result)
-                    filename = f"render-{backend_name}.png"
+                    filename = f"render-{backend_name}_simple.png"
                     img.save(filename)
                     print(f"✓ Saved {filename}")
 

@@ -30,3 +30,6 @@ echo ""
 echo "Installed components:"
 echo "  - typf-cli (Rust CLI tool)"
 echo "  - typf (Python package with native bindings)"
+
+python toy.py render
+python toy.py bench
