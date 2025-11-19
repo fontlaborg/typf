@@ -39,7 +39,7 @@ version = "2.0.0-dev"
 authors = ["TYPF Contributors"]
 edition = "2021"
 rust-version = "1.75"
-license = "MIT OR Apache-2.0"
+license = "EVALUATION LICENSE"
 repository = "https://github.com/typf/typf"
 
 [workspace.dependencies]

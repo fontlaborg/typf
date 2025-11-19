@@ -1,0 +1,42 @@
+EVALUATION LICENSE
+
+Version 1.0
+
+This Evaluation License Agreement ("Agreement") is a legal agreement between you (either an individual or a single entity) and The Project Authors ("Licensor") regarding the use of the accompanying source code and documentation ("Software").
+
+BY DOWNLOADING, ACCESSING, OR USING THE SOFTWARE, YOU AGREE TO BE BOUND BY THE TERMS OF THIS AGREEMENT.
+
+1. GRANT OF LICENSE
+
+Subject to the terms and conditions of this Agreement, Licensor hereby grants you a limited, non-exclusive, non-transferable, revocable license to:
+
+a) Download and possess a copy of the Software source code.
+b) Compile and execute the Software solely for the purpose of internal evaluation, testing, and review.
+c) Modify the Software solely for the purpose of debugging or facilitating the internal evaluation process.
+
+2. RESTRICTIONS
+
+The rights granted in Section 1 are subject to the following restrictions. You may NOT:
+
+a) Production Use: Use the Software in a live production environment, for commercial purposes, or to support any business operations.
+b) Integration: Incorporate, link, embed, or bundle the Software (in whole or in part) into any other project, application, library, or product, whether open-source or proprietary.
+c) Redistribution: Distribute, sublicense, rent, lease, or lend the Software or any derivative works based on the Software to any third party.
+d) Public Display: Publicly display or perform the Software or its source code without prior written consent from the Licensor.
+
+3. SEPARATE LICENSE REQUIREMENT
+
+If you wish to use the Software for any purpose other than internal evaluation (including, but not limited to, integration into a project, commercial distribution, or production deployment), you must obtain a separate commercial or usage license from The Project Authors.
+
+Please contact The Project Authors to inquire about licensing options for production or development use.
+
+4. INTELLECTUAL PROPERTY
+
+The Software is licensed, not sold. The Project Authors retain all right, title, and interest in and to the Software, including all intellectual property rights therein. Any modifications made by you to the Software during the evaluation period shall remain subject to the underlying ownership of The Project Authors.
+
+5. DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+6. TERMINATION
+
+This Agreement is effective until terminated. Your rights under this Agreement will terminate automatically without notice from the Licensor if you fail to comply with any term(s) of this Agreement. Upon termination, you must cease all use of the Software and destroy all copies, full or partial, of the Software.

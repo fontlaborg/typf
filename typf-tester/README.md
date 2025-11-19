@@ -604,7 +604,7 @@ Example GitHub Actions workflow:
 
 ## License
 
-Same as TYPF: MIT OR Apache-2.0
+Apache-2.0
 
 ## Support
 

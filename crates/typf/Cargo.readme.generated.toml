@@ -3,7 +3,7 @@ name = "typf"
 version = "2.0.0-dev"
 authors = ["TYPF Contributors"]
 edition = "2021"
-license = "MIT OR Apache-2.0"
+license = "EVALUATION LICENSE"
 
 [dependencies]
 typf-core = { workspace = true }
