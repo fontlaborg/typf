@@ -1,5 +1,7 @@
 //! Python bindings for TYPF text rendering pipeline
 
+#![allow(clippy::useless_conversion)]
+
 use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
@@ -11,6 +13,8 @@ use typf_core::{
 };
 use typf_export::PnmExporter;
 use typf_fontdb::Font;
+
+// Note: Skia and Zeno renderers not yet available in workspace
 
 /// Python-facing TYPF pipeline
 #[pyclass]
@@ -29,18 +33,37 @@ impl Typf {
             "none" => Arc::new(typf_shape_none::NoneShaper::new()),
             #[cfg(feature = "shaping-hb")]
             "harfbuzz" | "hb" => Arc::new(typf_shape_hb::HarfBuzzShaper::new()),
-            _ => return Err(PyValueError::new_err(format!("Unknown shaper: {}", shaper))),
+            #[cfg(feature = "shaping-ct")]
+            "coretext" | "ct" | "mac" => Arc::new(typf_shape_ct::CoreTextShaper::new()),
+            #[cfg(feature = "shaping-icu-hb")]
+            "icu-hb" | "icu-harfbuzz" => Arc::new(typf_shape_icu_hb::IcuHarfBuzzShaper::new()),
+            _ => return Err(PyValueError::new_err(format!(
+                "Unknown shaper: {}. Available: none, harfbuzz, coretext, icu-hb",
+                shaper
+            ))),
         };
 
         let renderer: Arc<dyn Renderer + Send + Sync> = match renderer {
+            #[cfg(feature = "render-json")]
+            "json" => Arc::new(typf_render_json::JsonRenderer::new()),
             "orge" => Arc::new(typf_render_orge::OrgeRenderer::new()),
-            _ => return Err(PyValueError::new_err(format!("Unknown renderer: {}", renderer))),
+            #[cfg(feature = "render-cg")]
+            "coregraphics" | "cg" | "mac" => Arc::new(typf_render_cg::CoreGraphicsRenderer::new()),
+            #[cfg(feature = "render-skia")]
+            "skia" => Arc::new(typf_render_skia::SkiaRenderer::new()),
+            #[cfg(feature = "render-zeno")]
+            "zeno" => Arc::new(typf_render_zeno::ZenoRenderer::new()),
+            _ => return Err(PyValueError::new_err(format!(
+                "Unknown renderer: {}. Available: json, orge, coregraphics, skia, zeno",
+                renderer
+            ))),
         };
 
         Ok(Self { shaper, renderer })
     }
 
     /// Render text to an image
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10))]
     fn render_text(
         &self,
@@ -89,7 +112,7 @@ impl Typf {
             .render(&shaped, font_arc, &render_params)
             .map_err(|e| PyRuntimeError::new_err(format!("Rendering failed: {:?}", e)))?;
 
-        // Convert to Python bytes
+        // Convert to Python object based on output type
         match rendered {
             RenderOutput::Bitmap(bitmap) => {
                 let result = PyDict::new_bound(py);
@@ -99,7 +122,13 @@ impl Typf {
                 result.set_item("data", PyBytes::new_bound(py, &bitmap.data))?;
                 Ok(result.into())
             },
-            _ => Err(PyValueError::new_err("Unexpected render output format")),
+            RenderOutput::Json(json_str) => {
+                // Return JSON string directly
+                Ok(json_str.into_py(py))
+            },
+            RenderOutput::Vector(_) => {
+                Err(PyValueError::new_err("Vector output not yet supported in Python bindings"))
+            },
         }
     }
 
@@ -111,6 +140,85 @@ impl Typf {
     /// Get renderer name
     fn get_renderer(&self) -> String {
         self.renderer.name().to_string()
+    }
+
+    /// Shape text without rendering (for benchmarking and JSON export)
+    #[pyo3(signature = (text, font_path, size=16.0))]
+    fn shape_text(
+        &self,
+        py: Python,
+        text: &str,
+        font_path: &str,
+        size: f32,
+    ) -> PyResult<PyObject> {
+        // Load font
+        let font = Font::from_file(font_path)
+            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
+        let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
+
+        // Set up shaping parameters
+        let shaping_params = ShapingParams {
+            size,
+            direction: Direction::LeftToRight,
+            ..Default::default()
+        };
+
+        // Shape the text
+        let shaped = self
+            .shaper
+            .shape(text, font_arc.clone(), &shaping_params)
+            .map_err(|e| PyRuntimeError::new_err(format!("Shaping failed: {:?}", e)))?;
+
+        // Return basic shaping info as dict
+        let result = PyDict::new_bound(py);
+        result.set_item("glyph_count", shaped.glyphs.len())?;
+        result.set_item("width", shaped.advance_width)?;
+        Ok(result.into())
+    }
+
+    /// Render text to SVG vector format
+    #[cfg(feature = "export-svg")]
+    #[pyo3(signature = (text, font_path, size=16.0, color=None, padding=10))]
+    fn render_to_svg(
+        &self,
+        text: &str,
+        font_path: &str,
+        size: f32,
+        color: Option<(u8, u8, u8, u8)>,
+        padding: u32,
+    ) -> PyResult<String> {
+        // Load font
+        let font = Font::from_file(font_path)
+            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
+        let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
+
+        // Set up shaping parameters
+        let shaping_params = ShapingParams {
+            size,
+            direction: Direction::LeftToRight,
+            ..Default::default()
+        };
+
+        // Shape the text
+        let shaped = self
+            .shaper
+            .shape(text, font_arc.clone(), &shaping_params)
+            .map_err(|e| PyRuntimeError::new_err(format!("Shaping failed: {:?}", e)))?;
+
+        // Set up color
+        let foreground = color
+            .map(|(r, g, b, a)| Color::rgba(r, g, b, a))
+            .unwrap_or(Color::rgba(0, 0, 0, 255));
+
+        // Export to SVG using the proper SVG exporter
+        let svg_exporter = typf_export_svg::SvgExporter::new()
+            .with_padding(padding as f32);
+
+        let svg_string = svg_exporter
+            .export(&shaped, font_arc, foreground)
+            .map_err(|e| PyRuntimeError::new_err(format!("SVG export failed: {:?}", e)))?;
+
+        Ok(svg_string)
     }
 }
 

@@ -131,9 +131,11 @@ impl SvgExporter {
             .get(glyph_id)
             .ok_or_else(|| ExportError::EncodingFailed(format!("Glyph {} not found", glyph_id.to_u32())))?;
 
+        // Extract at units_per_em size, then apply scale in the path builder
+        // This avoids double-scaling issues
         let mut path_builder = SvgPathBuilder::new(scale);
 
-        let size = skrifa::instance::Size::new(100.0); // Use 100 upem for consistent scaling
+        let size = skrifa::instance::Size::new(font.units_per_em() as f32);
         let location = skrifa::instance::LocationRef::default();
         let settings = skrifa::outline::DrawSettings::unhinted(size, location);
 

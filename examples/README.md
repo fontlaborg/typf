@@ -165,11 +165,154 @@ sudo dnf install harfbuzz-devel
 - Inkscape
 - Adobe Illustrator
 
+### 5. **variable_fonts** - Variable font support
+Demonstrates working with variable fonts and font variations.
+
+```bash
+cargo run --example variable_fonts --features shaping-hb
+```
+
+**Features shown:**
+- Variable font (TrueType Collection) support
+- Font variation settings (weight, width, optical size)
+- Font instance selection
+
+**Note:** Requires a variable font file.
+
+---
+
+### 6. **svg_export_example** - True vector SVG export
+Demonstrates genuine vector graphics export (not bitmap-in-SVG).
+
+```bash
+cargo run --example svg_export_example --features shaping-hb,export-svg
+```
+
+**Features shown:**
+- Vector path extraction from glyph outlines
+- True SVG `<path>` element generation
+- Scalable output (infinite zoom)
+- ~30x smaller files than bitmap-in-SVG
+
+**Output:** `output.svg` - True vector graphics
+
+---
+
+### 7. **all_formats** - Comprehensive format demonstration
+Shows all export formats including PNG and SVG.
+
+```bash
+cargo run --example all_formats --features full
+```
+
+**Features shown:**
+- PNG export (with alpha channel)
+- SVG vector export
+- PNM formats (PPM, PGM, PBM)
+- JSON shaping output (HarfBuzz-compatible)
+
+**Output:** Multiple formats (`.png`, `.svg`, `.ppm`, `.json`)
+
+---
+
+### 8. **backend_comparison** - Compare backends
+Compare different shaping and rendering backends.
+
+```bash
+cargo run --example backend_comparison --features shaping-hb
+```
+
+**Features shown:**
+- Multiple backend configurations
+- Performance comparison
+- Quality comparison
+
+---
+
+### 9. **long_text_handling** - Handle long text 🆕
+Strategies for text exceeding bitmap width limits (~10,000 pixels).
+
+```bash
+cargo run --example long_text_handling --features shaping-hb,export-svg
+```
+
+**Features shown:**
+- Width estimation and limit checking
+- SVG export for unlimited width
+- Word-based line wrapping implementation
+- Adaptive font sizing calculator
+- Chunked rendering approach
+
+**Topics covered:**
+1. Detecting when text is too long for bitmap rendering
+2. Using SVG export as an alternative (no width limits)
+3. Implementing simple line wrapping
+4. Adaptive font sizing to fit target width
+5. Chunked rendering for very long documents
+
+**See also:**
+- `bindings/python/examples/long_text_handling.py` - Python equivalent
+- `docs/PERFORMANCE.md` - Performance optimization guide
+- `README.md` - Known Limitations section
+
+---
+
+## Python Examples
+
+Python examples are located in `bindings/python/examples/`:
+
+- **`long_text_handling.py`**: Handling long text with Python bindings
+
+To run Python examples:
+
+```bash
+cd bindings/python
+python examples/long_text_handling.py
+```
+
+**Prerequisites**:
+1. Build Python bindings: `maturin develop --release --features shaping-hb,export-svg`
+2. Install Python dependencies: `pip install fire pillow`
+
+---
+
+## Benchmarking & Testing
+
+For comprehensive benchmarking and testing:
+
+```bash
+cd typf-tester
+
+# Test all backends
+python typfme.py render --backend=harfbuzz --format=png
+
+# Benchmark performance
+python typfme.py bench --iterations=100
+
+# Benchmark shaping only
+python typfme.py bench-shaping --iterations=1000
+
+# Benchmark rendering only
+python typfme.py bench-rendering --iterations=100
+
+# Test text length scaling
+python typfme.py bench-scaling --iterations=50
+```
+
+**Outputs:**
+- `output/benchmark_report.json` - Detailed JSON results
+- `output/benchmark_summary.md` - Compact Markdown table
+
+**See**: `typf-tester/README.md` for full testing documentation
+
+---
+
 ## Next Steps
 
 After exploring these examples, check out:
 
 - **Architecture docs**: `PLAN/00.md` - Full system design
+- **Performance guide**: `docs/PERFORMANCE.md` - Optimization strategies
 - **API docs**: Run `cargo doc --open`
 - **Tests**: Run `cargo test --workspace` to see more usage patterns
 

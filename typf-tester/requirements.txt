@@ -1,0 +1,8 @@
+# TYPF Tester Python Dependencies
+# Made by FontLab https://www.fontlab.com/
+
+# CLI framework
+fire>=0.6.0
+
+# Optional: Image verification (PNG)
+Pillow>=10.0.0

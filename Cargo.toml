@@ -13,18 +13,18 @@ members = [
     "backends/typf-shape-none",
     "backends/typf-shape-hb",
     "backends/typf-shape-ct",
-    # "backends/typf-shape-icu-hb",
-    # "backends/typf-shape-mac",
-    # "backends/typf-shape-win",
+    "backends/typf-shape-icu-hb",
+    # "backends/typf-shape-mac",     # Same as ct
+    # "backends/typf-shape-win",     # Windows DirectWrite (needs Windows)
 
     # Rendering backends
-    # "backends/typf-render-json",
+    "backends/typf-render-json",
     "backends/typf-render-orge",
     "backends/typf-render-cg",
     "backends/typf-render-skia",
     "backends/typf-render-zeno",
-    # "backends/typf-render-mac",
-    # "backends/typf-render-win",
+    # "backends/typf-render-mac",    # Same as cg
+    # "backends/typf-render-win",    # Windows Direct2D (needs Windows)
 
     # CLI
     "crates/typf-cli",
@@ -51,12 +51,18 @@ typf-unicode = { path = "crates/typf-unicode" }
 typf-fontdb = { path = "crates/typf-fontdb" }
 typf-export = { path = "crates/typf-export" }
 
-# Backends
+# Shaping backends
 typf-shape-none = { path = "backends/typf-shape-none" }
 typf-shape-hb = { path = "backends/typf-shape-hb" }
 typf-shape-ct = { path = "backends/typf-shape-ct" }
+typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb" }
+
+# Rendering backends
+typf-render-json = { path = "backends/typf-render-json" }
 typf-render-orge = { path = "backends/typf-render-orge" }
 typf-render-cg = { path = "backends/typf-render-cg" }
+typf-render-skia = { path = "backends/typf-render-skia" }
+typf-render-zeno = { path = "backends/typf-render-zeno" }
 
 # External dependencies
 read-fonts = "0.20"
@@ -72,11 +78,17 @@ harfbuzz_rs = "2.0"
 # Caching and concurrency
 parking_lot = "0.12"
 lru = "0.12"
-
-# Optional dependencies (to be added as needed)
-# icu = "1.5"
-# tiny-skia = "0.11"
 rayon = "1.10"
+
+# Rendering dependencies
+tiny-skia = "0.11"
+kurbo = "0.11"
+zeno = "0.3"
+
+# ICU dependencies (for icu-hb shaping)
+icu = "1.5"
+icu_segmenter = "1.5"
+icu_properties = "1.5"
 
 [profile.release]
 opt-level = 3

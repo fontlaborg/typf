@@ -7,7 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **CRITICAL: ICU-HarfBuzz Scaling Bug**: Fixed 1000x undersized text output (2025-11-19, Round 25)
+  - Root cause: Incorrect scaling formula in `backends/typf-shape-icu-hb/src/lib.rs:124`
+  - Bug: `scale = (params.size / font.units_per_em() * 64.0)` divided by upem (typically 1000)
+  - Result: Text rendered at 1/1000th correct width (710px → 41px output)
+  - Fix: Changed to `scale = (params.size * 64.0)` to match HarfBuzz behavior
+  - Verification: ICU-HB and HarfBuzz now produce identical JSON output (669.9px advance)
+  - Impact: ICU-HB backend now production-ready with full Unicode normalization + HarfBuzz shaping
+- **CRITICAL: SVG Tiny Glyph Bug**: Fixed microscopic glyphs in all SVG exports (2025-11-19, Round 25)
+  - Root cause: Double-scaling in `crates/typf-export-svg/src/lib.rs:136`
+  - Bug: Extracted glyphs at 100 ppem, then scaled by font size (100/1000 × 0.032 = 312x too small)
+  - Result: SVG paths in 0-4 range instead of 0-35 for 32pt font (glyphs invisible)
+  - Fix: Extract at `units_per_em` size instead of hardcoded 100
+  - Verification: SVG coordinates now properly sized (M0.96 vs M0.10, 10x larger)
+  - Impact: SVG exports now viable across all backends (CoreGraphics, Skia, Zeno, Orge)
+- **CRITICAL: Orge Renderer Double-Scaling Bug**: Fixed glyph rendering producing blank/white output (2025-11-19)
+  - Root cause: Double-scaling in `typf-render-orge/src/rasterizer.rs`
+  - Skrifa's `DrawSettings` with `Size::new()` already scales font units→pixels
+  - `TransformPen` was incorrectly scaling again by `(size/upem) * oversample`
+  - Result: Glyphs rendered at ~5% of correct size (e.g., 48px → 2.4px)
+  - Fix: Changed `oversample_scale = scale * oversample` to `oversample_scale = oversample`
+  - Impact: All Orge renderer outputs (PNG, PPM, PGM) now render correctly
+  - Verification: PNG file sizes increased 4-8x, pixel values now 0-255 (was 254-255)
+  - All 187 workspace tests passing with zero regressions
+
 ### Added
+- **Comprehensive Testing Tool `typfme.py`**: Full backend testing and benchmarking (2025-11-19)
+  - New `/typf-tester/` directory with 682-line Python CLI tool
+  - Ported from `old-typf/toy.py` with major enhancements
+  - Fire CLI with 4 commands: `info`, `render`, `compare`, `bench`
+  - Tests all backend combinations (none/harfbuzz shaping × orge rendering)
+  - 6 diverse sample texts: simple/complex Latin, Arabic, mixed, numbers, punctuation
+  - Dual output formats: PNG and SVG
+  - Comprehensive benchmarking with JSON reports
+  - Performance analysis by text complexity
+  - 3 test fonts included (NotoSans, NotoArabic, Kalnia variable font)
+  - Complete README.md with usage examples and troubleshooting
+  - Sample results: 1.14ms avg for HarfBuzz+Orge at 48px
 - **SVG Vector Export**: Complete SVG generation from shaped text (2025-11-19)
   - New `crates/typf-export-svg/` package with `SvgExporter`
   - Direct glyph outline extraction to SVG path commands (M, L, Q, C, Z)

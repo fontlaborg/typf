@@ -14,7 +14,9 @@ path = "src/main.rs"
 [dependencies]
 typf = { workspace = true }
 typf-core = { workspace = true }
+typf-fontdb = { workspace = true }
 typf-shape-none = { workspace = true }
+typf-shape-hb = { workspace = true, optional = true }
 typf-render-orge = { workspace = true }
 typf-export = { workspace = true }
 typf-export-svg = { path = "../typf-export-svg" }
@@ -27,4 +29,5 @@ colored = { version = "2.1", optional = true }
 
 [features]
 default = []
+shaping-hb = ["dep:typf-shape-hb"]
 repl = ["dep:rustyline", "dep:colored"]

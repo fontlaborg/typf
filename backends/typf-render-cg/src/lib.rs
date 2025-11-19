@@ -174,11 +174,17 @@ impl Renderer for CoreGraphicsRenderer {
             context.set_should_smooth_fonts(false);
         }
 
-        // Fill background if specified
+        // Fill background (default to transparent if not specified)
         if let Some(bg_color) = &params.background {
             let (r, g, b, a) = Self::color_to_rgb(bg_color);
             context.set_rgb_fill_color(r, g, b, a);
             context.fill_rect(CGRect::new(
+                &CGPoint::new(0.0, 0.0),
+                &CGSize::new(width as f64, height as f64),
+            ));
+        } else {
+            // Clear to transparent (RGBA all zeros)
+            context.clear_rect(CGRect::new(
                 &CGPoint::new(0.0, 0.0),
                 &CGSize::new(width as f64, height as f64),
             ));
@@ -205,14 +211,41 @@ impl Renderer for CoreGraphicsRenderer {
             .map(|g| g.id.min(u16::MAX as u32) as CGGlyph)
             .collect();
 
+        log::debug!(
+            "CoreGraphicsRenderer: Rendering {} glyphs, font_size={}, baseline_y={}",
+            glyph_ids.len(),
+            shaped.advance_height,
+            baseline_y
+        );
+        if !glyph_ids.is_empty() {
+            log::debug!(
+                "CoreGraphicsRenderer: First glyph: id={}, x={}, y={}",
+                glyph_ids[0],
+                shaped.glyphs[0].x,
+                shaped.glyphs[0].y
+            );
+        }
+
+        // Calculate glyph positions
+        // After translate(0, height) + scale(1, -1): Y=0 is at BOTTOM, Y increases upward
+        // baseline_y is measured from top (75% * height), so in flipped coords it's at: height - baseline_y
         let glyph_positions: Vec<CGPoint> = shaped
             .glyphs
             .iter()
             .map(|g| CGPoint {
                 x: (g.x + params.padding as f32) as f64,
-                y: (baseline_y + g.y) as f64,
+                // In flipped coords: baseline is at (height - baseline_y), then add glyph offset
+                y: (height as f32 - baseline_y + g.y) as f64,
             })
             .collect();
+
+        if !glyph_positions.is_empty() {
+            log::debug!(
+                "CoreGraphicsRenderer: First glyph position: x={}, y={}",
+                glyph_positions[0].x,
+                glyph_positions[0].y
+            );
+        }
 
         // Render glyphs
         context.save();

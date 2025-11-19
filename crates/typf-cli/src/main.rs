@@ -17,8 +17,12 @@ use typf_core::{
 };
 use typf_export::PnmExporter;
 use typf_export_svg::SvgExporter;
+use typf_fontdb::Font;
 use typf_render_orge::OrgeRenderer;
 use typf_shape_none::NoneShaper;
+
+#[cfg(feature = "shaping-hb")]
+use typf_shape_hb::HarfBuzzShaper;
 
 /// Simple command-line arguments
 #[derive(Debug)]
@@ -27,9 +31,15 @@ struct Args {
     text: String,
     /// Output file path
     output: PathBuf,
+    /// Font file path
+    font: Option<PathBuf>,
+    /// Shaping backend
+    shaper: String,
+    /// Rendering backend
+    renderer: String,
     /// Font size in points
     size: f32,
-    /// Output format (ppm, pgm, pbm)
+    /// Output format (ppm, pgm, pbm, svg)
     format: String,
 }
 
@@ -41,6 +51,9 @@ impl Args {
             eprintln!("Usage: {} <text|--repl|--batch> [options]", args[0]);
             eprintln!();
             eprintln!("Single Mode Options:");
+            eprintln!("  --font <file>         Font file path (required for real fonts)");
+            eprintln!("  --shaper <backend>    Shaping backend: none, harfbuzz (default: none)");
+            eprintln!("  --renderer <backend>  Rendering backend: orge (default: orge)");
             eprintln!("  --output <file>       Output file (default: output.ppm)");
             eprintln!("  --size <size>         Font size in points (default: 16)");
             eprintln!("  --format <fmt>        Output format: ppm, pgm, pbm, svg (default: ppm)");
@@ -55,14 +68,17 @@ impl Args {
             eprintln!("  --repl, -i            Start interactive REPL mode");
             eprintln!();
             eprintln!("Examples:");
-            eprintln!("  {} \"Hello World\" --output hello.ppm --size 24", args[0]);
+            eprintln!("  {} \"Hello\" --font font.ttf --output hello.png", args[0]);
+            eprintln!("  {} \"Hello\" --font font.ttf --shaper harfbuzz --format svg -o out.svg", args[0]);
             eprintln!("  {} --batch-input lines.txt --batch-output out/ --size 20", args[0]);
-            eprintln!("  cat lines.txt | {} --batch-output rendered/", args[0]);
             eprintln!("  {} --repl", args[0]);
             std::process::exit(1);
         }
 
         let text = args[1].clone();
+        let mut font: Option<PathBuf> = None;
+        let mut shaper = "none".to_string();
+        let mut renderer = "orge".to_string();
         let mut output = PathBuf::from("output.ppm");
         let mut size = 16.0;
         let mut format = "ppm".to_string();
@@ -70,6 +86,30 @@ impl Args {
         let mut i = 2;
         while i < args.len() {
             match args[i].as_str() {
+                "--font" => {
+                    if i + 1 < args.len() {
+                        font = Some(PathBuf::from(&args[i + 1]));
+                        i += 2;
+                    } else {
+                        return Err(TypfError::Other("--font requires an argument".into()));
+                    }
+                },
+                "--shaper" => {
+                    if i + 1 < args.len() {
+                        shaper = args[i + 1].clone();
+                        i += 2;
+                    } else {
+                        return Err(TypfError::Other("--shaper requires an argument".into()));
+                    }
+                },
+                "--renderer" => {
+                    if i + 1 < args.len() {
+                        renderer = args[i + 1].clone();
+                        i += 2;
+                    } else {
+                        return Err(TypfError::Other("--renderer requires an argument".into()));
+                    }
+                },
                 "--output" | "-o" => {
                     if i + 1 < args.len() {
                         output = PathBuf::from(&args[i + 1]);
@@ -108,6 +148,9 @@ impl Args {
         Ok(Args {
             text,
             output,
+            font,
+            shaper,
+            renderer,
             size,
             format,
         })
@@ -195,8 +238,14 @@ fn main() -> Result<()> {
     println!("TYPF CLI v2.0");
     println!("Rendering \"{}\" at {}pt", args.text, args.size);
 
-    // Create a stub font
-    let font = Arc::new(StubFont::new());
+    // Load font (real or stub)
+    let font: Arc<dyn FontRef> = if let Some(font_path) = &args.font {
+        println!("Loading font from {}", font_path.display());
+        Arc::new(Font::from_file(font_path)?)
+    } else {
+        println!("Using stub font (no real font file provided)");
+        Arc::new(StubFont::new())
+    };
 
     // Create shaping parameters
     let shaping_params = ShapingParams {

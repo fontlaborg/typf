@@ -80,7 +80,7 @@ impl WasmRenderer {
 
             // Shape the text
             let shaping_params = ShapingParams {
-                font_size,
+                size: font_size,
                 ..Default::default()
             };
 

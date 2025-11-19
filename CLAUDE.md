@@ -2,6 +2,14 @@
 
 ## 1. Quick-Start Checklist
 
+- We’ve created ./typf-tester/typfme.py that uses a test font and into @./typf-tester/ folder it’s supposed to output a renderings using ALL shaping and render backends, as both PNG and SVG. 
+- Make sure that 'typfme.py' supports ALL shaping and render backends. Make sure the Python bindings support ALL shaping and render background. Make sure that the Rust CLI supports ALL shaping and render backends.
+- The typefme.py tool should also perform benchmarking of all backend combos across many sample texts and font sizes and produce a nice JSON report and an extremely compact Markdown table into the @./typf-tester/ folder.  
+- Use the 'typfme.py' tool and inspect the outputs to debug and improve the shaping and rendering of all backgrounds. Work in a continuous feedback loop. 
+- You must actually RUN ./build.sh (which at the end runs ./typfme.py) to verify that the changes you make are working
+- Inspect the JSONs, PNGs and SVGs in @./typf-tester/output/ folder to debug & improve. Look at bitmaps AND vectors and JSON data, not just one of them. 
+- A common problem with shaping and rendering may be size (scale) mismatch, or that the rendering may be upside down (coordinate system mismatch).
+
 **For every task, follow this baseline:**
 
 1. [ ] Read `README.md`, `PLAN.md`, `TODO.md`, `WORK.md` to understand context

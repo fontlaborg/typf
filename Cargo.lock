@@ -277,6 +277,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "console_error_panic_hook"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
+dependencies = [
+ "cfg-if",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1762,6 +1772,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 name = "typf"
 version = "2.0.0-dev"
 dependencies = [
+ "console_error_panic_hook",
  "criterion",
  "log",
  "thiserror",
@@ -1769,10 +1780,17 @@ dependencies = [
  "typf-export",
  "typf-fontdb",
  "typf-input",
+ "typf-render-cg",
+ "typf-render-json",
  "typf-render-orge",
+ "typf-render-skia",
+ "typf-render-zeno",
+ "typf-shape-ct",
  "typf-shape-hb",
+ "typf-shape-icu-hb",
  "typf-shape-none",
  "typf-unicode",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1789,7 +1807,9 @@ dependencies = [
  "typf-core",
  "typf-export",
  "typf-export-svg",
+ "typf-fontdb",
  "typf-render-orge",
+ "typf-shape-hb",
  "typf-shape-none",
 ]
 
@@ -1847,9 +1867,16 @@ dependencies = [
  "typf",
  "typf-core",
  "typf-export",
+ "typf-export-svg",
  "typf-fontdb",
+ "typf-render-cg",
+ "typf-render-json",
  "typf-render-orge",
+ "typf-render-skia",
+ "typf-render-zeno",
+ "typf-shape-ct",
  "typf-shape-hb",
+ "typf-shape-icu-hb",
  "typf-shape-none",
 ]
 
@@ -1862,6 +1889,18 @@ dependencies = [
  "core-text 20.1.0",
  "env_logger",
  "log",
+ "typf-core",
+]
+
+[[package]]
+name = "typf-render-json"
+version = "2.0.0-dev"
+dependencies = [
+ "env_logger",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
  "typf-core",
 ]
 
@@ -1927,6 +1966,20 @@ dependencies = [
  "read-fonts 0.20.0",
  "thiserror",
  "typf-core",
+]
+
+[[package]]
+name = "typf-shape-icu-hb"
+version = "2.0.0-dev"
+dependencies = [
+ "env_logger",
+ "harfbuzz_rs",
+ "log",
+ "lru",
+ "parking_lot",
+ "thiserror",
+ "typf-core",
+ "unicode-normalization",
 ]
 
 [[package]]

@@ -53,11 +53,34 @@ pub use typf_export as export;
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
+// Shaping backends
 #[cfg(feature = "shaping-none")]
 pub use typf_shape_none as shape_none;
 
+#[cfg(feature = "shaping-hb")]
+pub use typf_shape_hb as shape_hb;
+
+#[cfg(feature = "shaping-ct")]
+pub use typf_shape_ct as shape_ct;
+
+#[cfg(feature = "shaping-icu-hb")]
+pub use typf_shape_icu_hb as shape_icu_hb;
+
+// Rendering backends
+#[cfg(feature = "render-json")]
+pub use typf_render_json as render_json;
+
 #[cfg(feature = "render-orge")]
 pub use typf_render_orge as render_orge;
+
+#[cfg(feature = "render-cg")]
+pub use typf_render_cg as render_cg;
+
+#[cfg(feature = "render-skia")]
+pub use typf_render_skia as render_skia;
+
+#[cfg(feature = "render-zeno")]
+pub use typf_render_zeno as render_zeno;
 
 /// Common imports for typical usage
 pub mod prelude {

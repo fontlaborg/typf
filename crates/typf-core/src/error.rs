@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, TypfError>;
+pub type Result<T, E = TypfError> = std::result::Result<T, E>;
 
 /// Main error type for TYPF
 #[derive(Debug, Error)]
@@ -79,7 +79,7 @@ pub enum ShapingError {
 /// Rendering errors
 #[derive(Debug, Error)]
 pub enum RenderError {
-    #[error("Invalid dimensions: {width}x{height}")]
+    #[error("Invalid bitmap dimensions: {width}x{height} (max ~10,000 pixels per dimension). For long texts, use smaller font sizes, implement line wrapping, or use SVG export instead of bitmap rendering.")]
     InvalidDimensions { width: u32, height: u32 },
 
     #[error("Out of memory")]

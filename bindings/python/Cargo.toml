@@ -18,11 +18,24 @@ typf-core = { workspace = true }
 typf-fontdb = { workspace = true }
 typf-shape-none = { workspace = true }
 typf-shape-hb = { workspace = true, optional = true }
+typf-shape-ct = { workspace = true, optional = true }
+typf-shape-icu-hb = { workspace = true, optional = true }
+typf-render-json = { workspace = true, optional = true }
 typf-render-orge = { workspace = true }
+typf-render-cg = { workspace = true, optional = true }
+typf-render-skia = { workspace = true, optional = true }
+typf-render-zeno = { workspace = true, optional = true }
 typf-export = { workspace = true }
+typf-export-svg = { path = "../../crates/typf-export-svg", optional = true }
 
 [features]
-default = ["shaping-hb", "export-png", "export-svg"]
+default = ["shaping-hb", "export-png", "export-svg", "render-json", "render-cg", "render-skia", "render-zeno", "shaping-ct", "shaping-icu-hb"]
 shaping-hb = ["typf-shape-hb", "typf/shaping-hb"]
+shaping-ct = ["typf-shape-ct", "typf/shaping-ct"]
+shaping-icu-hb = ["typf-shape-icu-hb", "typf/shaping-icu-hb"]
+render-json = ["typf-render-json", "typf/render-json"]
+render-cg = ["typf-render-cg", "typf/render-cg"]
+render-skia = ["typf-render-skia", "typf/render-skia"]
+render-zeno = ["typf-render-zeno", "typf/render-zeno"]
 export-png = ["typf/export-png"]
-export-svg = ["typf/export-svg"]
+export-svg = ["typf/export-svg", "typf-export-svg"]

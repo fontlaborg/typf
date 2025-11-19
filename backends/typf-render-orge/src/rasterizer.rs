@@ -8,7 +8,7 @@ use crate::grayscale::GrayscaleLevel;
 use crate::scan_converter::ScanConverter;
 use crate::{DropoutMode, FillRule};
 
-use read_fonts::{FontRef as ReadFontsRef, TableProvider};
+use read_fonts::FontRef as ReadFontsRef;
 use skrifa::instance::Size;
 use skrifa::outline::DrawSettings;
 use skrifa::prelude::LocationRef;
@@ -83,11 +83,7 @@ impl<'a> GlyphRasterizer<'a> {
         fill_rule: FillRule,
         dropout_mode: DropoutMode,
     ) -> Result<GlyphBitmap, String> {
-        // Get font metrics
-        let upem = self.font.head().map_err(|e| format!("Failed to read head table: {}", e))?.units_per_em();
-
-        // Calculate scaling factor from font units to pixels
-        let scale = self.size / upem as f32;
+        // Note: Scaling is handled by DrawSettings, which uses self.size directly
 
         // Get glyph outlines
         let skrifa_gid = SkrifaGlyphId::from(glyph_id as u16);
@@ -193,8 +189,10 @@ impl<'a> GlyphRasterizer<'a> {
         scan_converter.set_fill_rule(fill_rule);
         scan_converter.set_dropout_mode(dropout_mode);
 
-        // Calculate transform: font units → oversampled pixel coordinates
-        let oversample_scale = scale * self.oversample as f32;
+        // Calculate transform: pixel coordinates → oversampled pixel coordinates
+        // Note: skrifa's DrawSettings already handles font units → pixels scaling,
+        // so we only need to apply oversampling here
+        let oversample_scale = self.oversample as f32;
         let x_offset = -x_min as f32 * self.oversample as f32;
         let y_offset = -y_min as f32 * self.oversample as f32;
 
