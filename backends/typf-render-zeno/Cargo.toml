@@ -1,0 +1,20 @@
+[package]
+name = "typf-render-zeno"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Zeno rendering backend for TYPF"
+
+[dependencies]
+typf-core = { workspace = true }
+zeno = "0.3"
+skrifa = "0.39"
+read-fonts = "0.36"
+thiserror.workspace = true
+log.workspace = true
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"

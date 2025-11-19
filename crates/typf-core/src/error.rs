@@ -90,6 +90,21 @@ pub enum RenderError {
 
     #[error("Backend error: {0}")]
     BackendError(String),
+
+    #[error("Invalid font")]
+    InvalidFont,
+
+    #[error("Glyph not found: {0}")]
+    GlyphNotFound(u32),
+
+    #[error("Outline extraction failed")]
+    OutlineExtractionFailed,
+
+    #[error("Path building failed")]
+    PathBuildingFailed,
+
+    #[error("Pixmap creation failed")]
+    PixmapCreationFailed,
 }
 
 /// Export errors

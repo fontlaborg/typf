@@ -1,6 +1,7 @@
 //! TYPF CLI - Command-line interface for the TYPF text rendering pipeline
 
 mod batch;
+mod jsonl;
 mod repl;
 
 use std::fs::File;
@@ -15,6 +16,7 @@ use typf_core::{
     Color, RenderParams, ShapingParams,
 };
 use typf_export::PnmExporter;
+use typf_export_svg::SvgExporter;
 use typf_render_orge::OrgeRenderer;
 use typf_shape_none::NoneShaper;
 
@@ -41,7 +43,7 @@ impl Args {
             eprintln!("Single Mode Options:");
             eprintln!("  --output <file>       Output file (default: output.ppm)");
             eprintln!("  --size <size>         Font size in points (default: 16)");
-            eprintln!("  --format <fmt>        Output format: ppm, pgm, pbm (default: ppm)");
+            eprintln!("  --format <fmt>        Output format: ppm, pgm, pbm, svg (default: ppm)");
             eprintln!();
             eprintln!("Batch Mode Options:");
             eprintln!("  --batch-input <file>  Input file with one text per line (default: stdin)");
@@ -89,8 +91,8 @@ impl Args {
                 "--format" | "-f" => {
                     if i + 1 < args.len() {
                         format = args[i + 1].clone();
-                        if !["ppm", "pgm", "pbm"].contains(&format.as_str()) {
-                            return Err(TypfError::Other("Format must be ppm, pgm, or pbm".into()));
+                        if !["ppm", "pgm", "pbm", "svg"].contains(&format.as_str()) {
+                            return Err(TypfError::Other("Format must be ppm, pgm, pbm, or svg".into()));
                         }
                         i += 2;
                     } else {
@@ -159,7 +161,17 @@ fn main() -> Result<()> {
         return repl::run_repl().map_err(|e| TypfError::Other(e.to_string()));
     }
 
-    // Batch mode
+    // JSONL batch mode (full JSON job spec)
+    if cli_args.len() >= 2 && cli_args[1] == "batch" {
+        return jsonl::run_batch().map_err(|e| TypfError::Other(e.to_string()));
+    }
+
+    // JSONL stream mode (line-by-line)
+    if cli_args.len() >= 2 && cli_args[1] == "stream" {
+        return jsonl::run_stream().map_err(|e| TypfError::Other(e.to_string()));
+    }
+
+    // Simple batch mode (text lines → files)
     if cli_args.iter().any(|arg| arg == "--batch" || arg.starts_with("--batch-")) {
         let config = batch::BatchConfig::parse(&cli_args[1..])?;
         let font = Arc::new(StubFont::new());
@@ -207,19 +219,48 @@ fn main() -> Result<()> {
 
     // Create backends
     let shaper = Arc::new(NoneShaper::new());
-    let renderer = Arc::new(OrgeRenderer::new());
-
-    // Create exporter based on format
-    let exporter = match args.format.as_str() {
-        "ppm" => Arc::new(PnmExporter::ppm()),
-        "pgm" => Arc::new(PnmExporter::pgm()),
-        "pbm" => Arc::new(PnmExporter::new(typf_export::PnmFormat::Pbm)),
-        _ => unreachable!(),
-    };
 
     // Shape the text
     println!("Shaping text...");
     let shaped = shaper.shape(&args.text, font.clone(), &shaping_params)?;
+
+    // Handle SVG export separately (works directly from ShapingResult)
+    if args.format == "svg" {
+        println!("Exporting to SVG...");
+
+        // SVG export requires real font data for outline extraction
+        if font.data().is_empty() {
+            eprintln!("ERROR: SVG export requires a real font file.");
+            eprintln!("The current CLI uses a stub font for demonstration.");
+            eprintln!();
+            eprintln!("SVG export is fully implemented in the library.");
+            eprintln!("To use it, either:");
+            eprintln!("  1. Use the Python bindings with a real font file");
+            eprintln!("  2. Use the Rust library directly");
+            eprintln!("  3. Wait for font file loading in the CLI");
+            return Err(TypfError::Other("SVG export requires real font data".into()));
+        }
+
+        let svg_exporter = SvgExporter::new();
+        let svg_data = svg_exporter.export(&shaped, font, render_params.foreground)?;
+
+        let mut file = File::create(&args.output)?;
+        file.write_all(svg_data.as_bytes())?;
+
+        println!("✓ Successfully exported to {}", args.output.display());
+        println!("  Format: SVG (vector)");
+        println!("  Glyphs: {}", shaped.glyphs.len());
+        return Ok(());
+    }
+
+    // For bitmap formats, create renderer and exporter
+    let renderer = Arc::new(OrgeRenderer::new());
+    let exporter = match args.format.as_str() {
+        "ppm" => Arc::new(PnmExporter::ppm()),
+        "pgm" => Arc::new(PnmExporter::pgm()),
+        "pbm" => Arc::new(PnmExporter::new(typf_export::PnmFormat::Pbm)),
+        _ => return Err(TypfError::Other(format!("Unknown format: {}", args.format))),
+    };
 
     // Render to bitmap
     println!("Rendering bitmap...");

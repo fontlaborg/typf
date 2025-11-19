@@ -1,0 +1,18 @@
+[package]
+name = "typf-export-svg"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SVG export support for TYPF"
+
+[dependencies]
+typf-core = { workspace = true }
+skrifa = "0.39"
+read-fonts = "0.36"
+thiserror.workspace = true
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"

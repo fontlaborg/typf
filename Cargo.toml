@@ -7,6 +7,7 @@ members = [
     "crates/typf-unicode",
     "crates/typf-fontdb",
     "crates/typf-export",
+    "crates/typf-export-svg",
 
     # Shaping backends
     "backends/typf-shape-none",
@@ -20,8 +21,8 @@ members = [
     # "backends/typf-render-json",
     "backends/typf-render-orge",
     "backends/typf-render-cg",
-    # "backends/typf-render-skia",
-    # "backends/typf-render-zeno",
+    "backends/typf-render-skia",
+    "backends/typf-render-zeno",
     # "backends/typf-render-mac",
     # "backends/typf-render-win",
 

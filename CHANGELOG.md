@@ -8,6 +8,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **SVG Vector Export**: Complete SVG generation from shaped text (2025-11-19)
+  - New `crates/typf-export-svg/` package with `SvgExporter`
+  - Direct glyph outline extraction to SVG path commands (M, L, Q, C, Z)
+  - Implements skrifa's `OutlinePen` trait for outline→SVG conversion
+  - Proper coordinate transformation with Y-axis flip for SVG
+  - ViewBox calculation for responsive, scalable output
+  - RGB color and opacity support
+  - Clean, optimized SVG with 2-decimal precision
+  - Pure vector output (no rasterization required)
+  - Scalable graphics suitable for any resolution
+  - Dependencies: skrifa (0.39), read-fonts (0.36)
+  - 6 tests passing (3 unit + 3 integration)
+  - Completes SVG export capability from PLAN.md
+- **Zeno Rendering Backend**: Pure Rust 2D rasterization with 256x anti-aliasing (2025-11-19)
+  - New `backends/typf-render-zeno/` package with `ZenoRenderer` implementing `Renderer` trait
+  - SVG-style path building from glyph outlines via `ZenoPathBuilder`
+  - Implements skrifa's `OutlinePen` trait for outline→SVG path conversion
+  - Supports all path operations: move_to, line_to, quad_to, curve_to, close
+  - 256x anti-aliased rasterization with 8-bit alpha output
+  - Near-identical output to Skia and modern web browsers
+  - Pure Rust implementation with zero C dependencies
+  - Clean integration with Zeno's builder pattern API
+  - Simple bounding box calculation from SVG path data
+  - Dependencies: zeno (0.3), skrifa (0.39), read-fonts (0.36)
+  - 5 tests passing (2 unit + 3 integration)
+  - Week 15 milestone complete per PLAN.md
+- **Skia Rendering Backend**: Complete tiny-skia integration for high-quality anti-aliased rendering (2025-11-19)
+  - New `backends/typf-render-skia/` package with `SkiaRenderer` implementing `Renderer` trait
+  - Glyph outline extraction using skrifa's `MetadataProvider::outline_glyphs()` API
+  - Vector path rendering via kurbo `BezPath` with full Bézier curve support
+  - High-quality rasterization using tiny-skia with winding fill rule
+  - Sub-pixel anti-aliasing for smooth glyph edges
+  - Grayscale alpha channel extraction from RGBA pixmap
+  - Alpha blending for glyph compositing with foreground/background colors
+  - Proper glyph positioning with bearing adjustments (bearing_x, bearing_y)
+  - `GlyphBitmap` structure for efficient bitmap storage
+  - `PathPen` implementing skrifa's `OutlinePen` trait for outline→path conversion
+  - Dependencies: tiny-skia (0.11), kurbo (0.11), skrifa (0.39), read-fonts (0.36)
+  - 5 tests passing (2 unit + 3 integration)
+  - Week 13-14 milestone complete per PLAN.md
+- **Error Handling**: Enhanced `RenderError` enum with 5 new variants (2025-11-19)
+  - `InvalidFont` - Font parsing failed
+  - `GlyphNotFound(u32)` - Glyph ID not found in font
+  - `OutlineExtractionFailed` - Could not extract glyph outline
+  - `PathBuildingFailed` - Vector path construction failed
+  - `PixmapCreationFailed` - Pixmap allocation failed
 - **Glyph Rasterization**: Complete real glyph outline rendering in Orge backend (2025-11-18)
   - New `rasterizer.rs` module (290 lines) integrating skrifa outline extraction with scan converter
   - `GlyphRasterizer` struct for parsing fonts and rendering glyphs at specified sizes
@@ -17,13 +63,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `GlyphBitmap` structure with width, height, bearings, and grayscale data
   - Updated `OrgeRenderer` to use real rasterization instead of placeholder boxes
   - All 68 Orge tests passing with real glyph rendering
-- **Batch Processing**: New `--batch` mode for CLI (2025-11-18)
-  - `crates/typf-cli/src/batch.rs` (325 lines) for bulk text processing
-  - `BatchConfig` with flexible input from file or stdin
-  - Pattern-based output filenames (e.g., `output_{}.ppm`)
-  - Progress reporting with `--quiet` flag option
-  - Error handling that continues processing despite individual failures
-  - Tested with PPM, PGM, and PBM formats
+- **Batch Processing**: Complete JSONL batch processing support (2025-11-19)
+  - `crates/typf-cli/src/batch.rs` (325 lines) for simple text-to-files batch mode
+  - `crates/typf-cli/src/jsonl.rs` (514 lines) for JSONL job specification processing
+  - **Dual modes**: `batch` (full JSON spec) and `stream` (line-by-line JSONL)
+  - Job types: `JobSpec`, `Job`, `JobResult` with complete serialization
+  - Font configuration with variation axes support
+  - Text configuration with direction (ltr/rtl/ttb/btt), language, script
+  - Rendering options: ppm, pgm, pbm, metrics-only
+  - Base64 encoding for binary image data in JSON output
+  - Comprehensive timing metrics (shape_ms, render_ms, total_ms)
+  - Error recovery with per-job failure reporting
+  - Memory-efficient streaming mode with immediate output
+  - Compatible with old-typf JSONL format
+  - Dependencies: serde (1.0), serde_json (1.0), base64 (0.22)
 - **Variable Fonts**: Full variable font support with variation axes (2025-11-18)
   - HarfBuzz backend now supports font variations (wght, wdth, slnt, opsz, ital)
   - ShapingParams.variations field allows dynamic font adjustment

@@ -1,0 +1,38 @@
+{
+  "version": "2.0",
+  "jobs": [
+    {
+      "id": "batch_job1",
+      "font": {
+        "path": "external/diffenator3/diffenator3-web/www/AND-Regular.ttf",
+        "size": 48.0
+      },
+      "text": {
+        "content": "Batch Test 1"
+      },
+      "rendering": {
+        "format": "ppm",
+        "encoding": "base64",
+        "width": 800,
+        "height": 600
+      }
+    },
+    {
+      "id": "batch_job2",
+      "font": {
+        "path": "external/diffenator3/diffenator3-web/www/AND-Regular.ttf",
+        "size": 24.0
+      },
+      "text": {
+        "content": "Batch Test 2",
+        "direction": "ltr"
+      },
+      "rendering": {
+        "format": "metrics",
+        "encoding": "base64",
+        "width": 600,
+        "height": 400
+      }
+    }
+  ]
+}

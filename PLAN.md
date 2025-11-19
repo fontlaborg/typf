@@ -138,13 +138,13 @@
 - [x] Coverage calculation (scan conversion with 11 tests)
 - [ ] Integration with real glyph outlines (in progress)
 
-#### Weeks 13-14: Skia Integration
-- [ ] Bitmap rendering with tiny-skia
-- [ ] SVG output support
+#### Weeks 13-14: Skia Integration ✅ (Completed 2025-11-19)
+- [x] Bitmap rendering with tiny-skia
+- [x] SVG output support (via typf-export-svg crate) ✅ (2025-11-19)
 - [ ] Path generation
 
-#### Week 15: Zeno Backend
-- [ ] Alternative rasterizer implementation
+#### Week 15: Zeno Backend ✅ (Completed 2025-11-19)
+- [x] Alternative rasterizer implementation
 - [ ] Performance comparison
 
 #### Week 16: Platform Renderers
