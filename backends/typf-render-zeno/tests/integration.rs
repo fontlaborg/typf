@@ -58,9 +58,7 @@ fn test_empty_rendering() {
     };
 
     // Create stub font with empty data (will fail but we're testing error handling)
-    let font = Arc::new(StubFont {
-        data: vec![],
-    }) as Arc<dyn FontRef>;
+    let font = Arc::new(StubFont { data: vec![] }) as Arc<dyn FontRef>;
 
     let params = RenderParams::default();
 

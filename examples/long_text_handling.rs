@@ -71,8 +71,12 @@ fn main() {
 
     for (i, line) in lines.iter().enumerate() {
         if i < 3 {
-            println!("  Line {}: {} chars - \"{}...\"",
-                     i + 1, line.len(), &line[..line.len().min(50)]);
+            println!(
+                "  Line {}: {} chars - \"{}...\"",
+                i + 1,
+                line.len(),
+                &line[..line.len().min(50)]
+            );
         }
     }
     if lines.len() > 3 {
@@ -89,8 +93,10 @@ fn main() {
 
     println!("For target width of {}px:", target_width);
     println!("Recommended font size: {:.1}px", adaptive_size);
-    println!("This would fit {} characters\n",
-             (target_width as f32 / (adaptive_size * 0.55)) as usize);
+    println!(
+        "This would fit {} characters\n",
+        (target_width as f32 / (adaptive_size * 0.55)) as usize
+    );
 
     // Strategy 5: Chunked rendering
     println!("Strategy 5: Chunked Rendering");
@@ -146,7 +152,7 @@ fn calculate_adaptive_font_size(char_count: usize, target_width: u32) -> f32 {
     // Assuming ~0.55 character width ratio
     let char_width_ratio = 0.55;
     let max_font_size = 72.0; // Don't go above this
-    let min_font_size = 8.0;  // Don't go below this
+    let min_font_size = 8.0; // Don't go below this
 
     let calculated_size = (target_width as f32) / (char_count as f32 * char_width_ratio);
     calculated_size.clamp(min_font_size, max_font_size)

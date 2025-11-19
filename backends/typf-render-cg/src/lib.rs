@@ -139,11 +139,7 @@ impl Renderer for CoreGraphicsRenderer {
         // Calculate dimensions
         let (width, height) = Self::calculate_dimensions(shaped, params);
 
-        log::debug!(
-            "CoreGraphicsRenderer: Canvas size {}x{}",
-            width,
-            height
-        );
+        log::debug!("CoreGraphicsRenderer: Canvas size {}x{}", width, height);
 
         // Create bitmap buffer (RGBA, premultiplied alpha)
         let bytes_per_row = width as usize * 4;

@@ -57,31 +57,17 @@ pub fn render_grayscale(
     let factor = level.factor();
     let _samples_per_pixel = level.samples_per_pixel();
 
-    // Render at oversampled resolution
-    let oversample_width = width * factor;
-    let oversample_height = height * factor;
+    // The scan converter is already at the correct resolution (oversampled)
+    // We just need to render it and downsample
+    // Note: The scan converter passed in should already be at the oversampled resolution
+    let mono_width = width * factor;
+    let mono_height = height * factor;
 
-    // Create oversampled scan converter
-    let mut oversample_sc = ScanConverter::new(oversample_width, oversample_height);
-    oversample_sc.set_fill_rule(sc.fill_rule());
-    oversample_sc.set_dropout_mode(sc.dropout_mode());
-
-    // Copy outline from original scan converter by re-rendering
-    // This is a simplified approach - in production, we'd store the outline
-    // For now, we'll just use the monochrome rendering and downsample
-
-    let mut mono_bitmap = vec![0u8; oversample_width * oversample_height];
+    let mut mono_bitmap = vec![0u8; mono_width * mono_height];
     sc.render_mono(&mut mono_bitmap);
 
     // Downsample to grayscale
-    downsample_to_grayscale(
-        &mono_bitmap,
-        oversample_width,
-        oversample_height,
-        width,
-        height,
-        level,
-    )
+    downsample_to_grayscale(&mono_bitmap, mono_width, mono_height, width, height, level)
 }
 
 /// Downsample monochrome bitmap to grayscale using optimized vectorizable code.
@@ -227,14 +213,7 @@ pub fn render_grayscale_direct(
     sc.render_mono(&mut mono_bitmap);
 
     // Downsample to grayscale
-    downsample_to_grayscale(
-        &mono_bitmap,
-        oversample_width,
-        oversample_height,
-        width,
-        height,
-        level,
-    )
+    downsample_to_grayscale(&mono_bitmap, oversample_width, oversample_height, width, height, level)
 }
 
 #[cfg(test)]
@@ -307,11 +286,7 @@ mod tests {
         assert_eq!(gray.len(), 100);
 
         // Center should be filled (alpha ~255)
-        assert!(
-            gray[5 * 10 + 5] > 200,
-            "Center alpha = {}",
-            gray[5 * 10 + 5]
-        );
+        assert!(gray[5 * 10 + 5] > 200, "Center alpha = {}", gray[5 * 10 + 5]);
 
         // Corners should be empty (alpha ~0)
         assert!(gray[0] < 50, "Corner alpha = {}", gray[0]);

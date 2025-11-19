@@ -57,15 +57,17 @@ impl BatchConfig {
                     } else {
                         return Err(TypfError::Other("--batch-input requires a file path".into()));
                     }
-                }
+                },
                 "--batch-output" | "-B" => {
                     if i + 1 < args.len() {
                         config.output_dir = PathBuf::from(&args[i + 1]);
                         i += 2;
                     } else {
-                        return Err(TypfError::Other("--batch-output requires a directory path".into()));
+                        return Err(TypfError::Other(
+                            "--batch-output requires a directory path".into(),
+                        ));
                     }
-                }
+                },
                 "--batch-pattern" => {
                     if i + 1 < args.len() {
                         config.output_pattern = args[i + 1].clone();
@@ -78,7 +80,7 @@ impl BatchConfig {
                     } else {
                         return Err(TypfError::Other("--batch-pattern requires a pattern".into()));
                     }
-                }
+                },
                 "--size" | "-s" => {
                     if i + 1 < args.len() {
                         config.size = args[i + 1]
@@ -88,7 +90,7 @@ impl BatchConfig {
                     } else {
                         return Err(TypfError::Other("--size requires a value".into()));
                     }
-                }
+                },
                 "--format" | "-f" => {
                     if i + 1 < args.len() {
                         config.format = args[i + 1].clone();
@@ -99,21 +101,22 @@ impl BatchConfig {
                     } else {
                         return Err(TypfError::Other("--format requires a value".into()));
                     }
-                }
+                },
                 "--quiet" | "-q" => {
                     config.verbose = false;
                     i += 1;
-                }
+                },
                 _ => {
                     i += 1;
-                }
+                },
             }
         }
 
         // Create output directory if it doesn't exist
         if !config.output_dir.exists() {
-            std::fs::create_dir_all(&config.output_dir)
-                .map_err(|e| TypfError::Other(format!("Failed to create output directory: {}", e)))?;
+            std::fs::create_dir_all(&config.output_dir).map_err(|e| {
+                TypfError::Other(format!("Failed to create output directory: {}", e))
+            })?;
         }
 
         Ok(config)
@@ -141,7 +144,7 @@ where
                 TypfError::Other(format!("Failed to open input file {}: {}", path.display(), e))
             })?;
             Box::new(BufReader::new(file))
-        }
+        },
         None => Box::new(BufReader::new(std::io::stdin())),
     };
 
@@ -162,6 +165,13 @@ where
         antialias: true,
     };
 
+    let components = PipelineComponents {
+        shaper,
+        renderer,
+        exporter,
+        font,
+    };
+
     let mut count = 0;
     let mut errors = 0;
 
@@ -174,7 +184,7 @@ where
                 }
                 errors += 1;
                 continue;
-            }
+            },
         };
 
         // Skip empty lines
@@ -183,7 +193,9 @@ where
         }
 
         // Generate output filename
-        let output_filename = config.output_pattern.replace("{}", &(count + 1).to_string());
+        let output_filename = config
+            .output_pattern
+            .replace("{}", &(count + 1).to_string());
         let output_path = config.output_dir.join(output_filename);
 
         if config.verbose {
@@ -191,28 +203,20 @@ where
         }
 
         // Process this line
-        match process_single_line(
-            &line,
-            &output_path,
-            &shaping_params,
-            &render_params,
-            shaper.clone(),
-            renderer.clone(),
-            exporter.clone(),
-            font.clone(),
-        ) {
+        match process_single_line(&line, &output_path, &shaping_params, &render_params, &components)
+        {
             Ok(_) => {
                 count += 1;
                 if config.verbose {
                     println!("  -> Saved to {}", output_path.display());
                 }
-            }
+            },
             Err(e) => {
                 errors += 1;
                 if config.verbose {
                     eprintln!("  -> Error: {}", e);
                 }
-            }
+            },
         }
     }
 
@@ -227,16 +231,21 @@ where
     Ok(count)
 }
 
+/// Pipeline components bundle
+struct PipelineComponents<S, R, E, F> {
+    shaper: Arc<S>,
+    renderer: Arc<R>,
+    exporter: Arc<E>,
+    font: Arc<F>,
+}
+
 /// Process a single line of text
 fn process_single_line<S, R, E, F>(
     text: &str,
     output_path: &Path,
     shaping_params: &ShapingParams,
     render_params: &RenderParams,
-    shaper: Arc<S>,
-    renderer: Arc<R>,
-    exporter: Arc<E>,
-    font: Arc<F>,
+    components: &PipelineComponents<S, R, E, F>,
 ) -> Result<()>
 where
     S: Shaper + 'static,
@@ -245,13 +254,17 @@ where
     F: FontRef + 'static,
 {
     // Shape the text
-    let shaped = shaper.shape(text, font.clone(), shaping_params)?;
+    let shaped = components
+        .shaper
+        .shape(text, components.font.clone(), shaping_params)?;
 
     // Render to bitmap
-    let rendered = renderer.render(&shaped, font, render_params)?;
+    let rendered = components
+        .renderer
+        .render(&shaped, components.font.clone(), render_params)?;
 
     // Export to file
-    let exported = exporter.export(&rendered)?;
+    let exported = components.exporter.export(&rendered)?;
 
     // Write to file
     let mut file = File::create(output_path)
@@ -285,10 +298,7 @@ mod tests {
 
     #[test]
     fn test_batch_pattern_validation() {
-        let args = vec![
-            "--batch-pattern".to_string(),
-            "no_placeholder".to_string(),
-        ];
+        let args = vec!["--batch-pattern".to_string(), "no_placeholder".to_string()];
 
         let result = BatchConfig::parse(&args);
         assert!(result.is_err());

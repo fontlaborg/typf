@@ -1,5 +1,18 @@
 # TYPF v2.0 - TODO List
 
+## ✅ ROUND 79 COMPLETED: Baseline Alignment Fixes (2025-11-19)
+
+**Issues Fixed**:
+- ✅ Orge: Fixed vertical shift (baseline from 0.80 to 0.75)
+- ✅ Skia: Fixed vertical shift (baseline from 0.80 to 0.75)
+- ✅ Zeno: Fixed vertical shift (baseline from 0.80 to 0.75)
+
+**Results**:
+- All renderers now match CoreGraphics baseline positioning
+- Text no longer cropped at bottom
+- Proper spacing maintained at top
+- 100% backend success rate maintained
+
 ## ✅ ROUND 78 COMPLETED: Critical Renderer Regression Fixes (2025-11-19)
 
 **Issues Reported (Build #251119-1400)**:

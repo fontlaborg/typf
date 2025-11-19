@@ -16,12 +16,12 @@ use typf_core::{
 /// HarfBuzz-compatible glyph information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HbGlyphInfo {
-    pub g: u32,     // glyph ID
-    pub cl: usize,  // cluster
-    pub ax: i32,    // x advance (in font units)
-    pub ay: i32,    // y advance (in font units)
-    pub dx: i32,    // x offset (in font units)
-    pub dy: i32,    // y offset (in font units)
+    pub g: u32,    // glyph ID
+    pub cl: usize, // cluster
+    pub ax: i32,   // x advance (in font units)
+    pub ay: i32,   // y advance (in font units)
+    pub dx: i32,   // x offset (in font units)
+    pub dy: i32,   // y offset (in font units)
 }
 
 /// JSON output format
@@ -102,16 +102,17 @@ impl Renderer for JsonRenderer {
         let output = JsonOutput {
             glyphs,
             direction: format!("{:?}", shaped.direction),
-            script: None,     // TODO: Extract from params
-            language: None,   // TODO: Extract from params
+            script: None,   // TODO: Extract from params
+            language: None, // TODO: Extract from params
             advance: shaped.advance_width,
         };
 
         // Serialize to JSON
-        let json = serde_json::to_string_pretty(&output)
-            .map_err(|e| typf_core::error::TypfError::RenderingFailed(
-                typf_core::error::RenderError::BackendError(e.to_string())
-            ))?;
+        let json = serde_json::to_string_pretty(&output).map_err(|e| {
+            typf_core::error::TypfError::RenderingFailed(
+                typf_core::error::RenderError::BackendError(e.to_string()),
+            )
+        })?;
 
         // Return as JSON output
         Ok(RenderOutput::Json(json))

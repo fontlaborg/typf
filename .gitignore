@@ -24,7 +24,6 @@ examples/output/
 *.otf
 *.pdb
 *.pgm
-*.png
 *.pot
 *.py,cover
 *.py[cod]

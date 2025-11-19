@@ -188,19 +188,30 @@ impl CoreTextShaper {
     }
 
     /// Extract glyphs from CTLine
-    fn extract_glyphs_from_line(&self, line: &CTLine) -> Result<Vec<PositionedGlyph>> {
+    fn extract_glyphs_from_line(
+        &self,
+        line: &CTLine,
+        font: &Arc<dyn FontRef>,
+    ) -> Result<Vec<PositionedGlyph>> {
         let runs = line.glyph_runs();
         let mut glyphs = Vec::new();
 
+        // Get the font's glyph count for validation
+        let max_glyph_id = font.glyph_count().unwrap_or(u32::MAX);
+
         for run in runs.iter() {
-            Self::collect_run_glyphs(&run, &mut glyphs);
+            Self::collect_run_glyphs(&run, &mut glyphs, max_glyph_id);
         }
 
         Ok(glyphs)
     }
 
     /// Collect glyphs from a single CTRun
-    fn collect_run_glyphs(run: &CTRun, glyphs: &mut Vec<PositionedGlyph>) -> f32 {
+    fn collect_run_glyphs(
+        run: &CTRun,
+        glyphs: &mut Vec<PositionedGlyph>,
+        max_glyph_id: u32,
+    ) -> f32 {
         let glyph_count = run.glyph_count();
         if glyph_count == 0 {
             return 0.0;
@@ -221,7 +232,7 @@ impl CoreTextShaper {
         let mut advance_sum = 0.0f32;
 
         for idx in 0..(glyph_count as usize) {
-            let glyph_id = glyph_ids.get(idx).unwrap_or(&0);
+            let raw_glyph_id = *glyph_ids.get(idx).unwrap_or(&0) as u32;
             let position = positions.get(idx).unwrap_or(&CGPoint { x: 0.0, y: 0.0 });
             let cluster = string_indices.get(idx).unwrap_or(&0);
             let advance_size = advances.get(idx).unwrap_or(&CGSize {
@@ -231,8 +242,20 @@ impl CoreTextShaper {
 
             let advance = advance_size.width as f32;
 
+            // Validate glyph ID and use notdef (0) for invalid glyphs
+            let glyph_id = if raw_glyph_id < max_glyph_id {
+                raw_glyph_id
+            } else {
+                log::debug!(
+                    "CoreTextShaper: Invalid glyph ID {} (max {}), using notdef",
+                    raw_glyph_id,
+                    max_glyph_id
+                );
+                0 // Use notdef glyph for invalid IDs
+            };
+
             glyphs.push(PositionedGlyph {
-                id: *glyph_id as u32,
+                id: glyph_id,
                 x: position.x as f32,
                 y: position.y as f32,
                 advance,
@@ -316,7 +339,7 @@ impl Shaper for CoreTextShaper {
         let line = CTLine::new_with_attributed_string(attr_string.as_concrete_TypeRef());
 
         // Extract glyphs
-        let glyphs = self.extract_glyphs_from_line(&line)?;
+        let glyphs = self.extract_glyphs_from_line(&line, &font)?;
 
         // Calculate metrics
         let advance_width = if let Some(last) = glyphs.last() {

@@ -3,16 +3,16 @@
 //! This backend provides comprehensive Unicode preprocessing with ICU followed by HarfBuzz shaping.
 //! It's the recommended choice for applications requiring full Unicode support.
 
-use std::sync::Arc;
-use std::str::FromStr;
 use harfbuzz_rs::{Direction as HbDirection, Face, Feature, Font as HbFont, Tag, UnicodeBuffer};
-use unicode_normalization::UnicodeNormalization;
+use std::str::FromStr;
+use std::sync::Arc;
 use typf_core::{
     error::Result,
     traits::{FontRef, Shaper, Stage},
     types::{Direction, PositionedGlyph, ShapingResult},
     ShapingParams,
 };
+use unicode_normalization::UnicodeNormalization;
 
 pub mod cache;
 pub use cache::ShapingCache;

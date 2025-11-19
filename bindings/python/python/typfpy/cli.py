@@ -11,11 +11,14 @@ from typing import Optional
 try:
     import fire
 except ImportError:
-    print("Error: 'fire' package not installed. Install with: pip install fire", file=sys.stderr)
+    print(
+        "Error: 'fire' package not installed. Install with: pip install fire",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 try:
-    from typf import Typf, render_simple, export_image, __version__
+    from typfpy import Typf, __version__, export_image, render_simple
 except ImportError:
     print("Error: TYPF extension not built. Run: maturin develop", file=sys.stderr)
     sys.exit(1)
@@ -163,7 +166,9 @@ class TypfCLI:
 
             # For now, just render and note that JSON shaping output
             # would require additional API exposure
-            print("Note: Full JSON shaping output requires extended API", file=sys.stderr)
+            print(
+                "Note: Full JSON shaping output requires extended API", file=sys.stderr
+            )
             print(f"Shaper: {shaper}, Features: {feature_dict}", file=sys.stderr)
 
             if font:

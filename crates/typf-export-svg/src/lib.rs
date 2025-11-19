@@ -12,9 +12,9 @@
 //!
 //! Made by FontLab - https://www.fontlab.com/
 
+use skrifa::MetadataProvider;
 use std::fmt::Write as FmtWrite;
 use std::sync::Arc;
-use skrifa::MetadataProvider;
 use typf_core::{
     error::{ExportError, Result},
     traits::FontRef,
@@ -65,11 +65,8 @@ impl SvgExporter {
         let mut svg = String::new();
 
         // SVG header
-        writeln!(
-            &mut svg,
-            r#"<?xml version="1.0" encoding="UTF-8"?>"#
-        )
-        .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
+        writeln!(&mut svg, r#"<?xml version="1.0" encoding="UTF-8"?>"#)
+            .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
 
         writeln!(
             &mut svg,
@@ -112,14 +109,18 @@ impl SvgExporter {
         }
 
         // SVG footer
-        writeln!(&mut svg, "</svg>")
-            .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
+        writeln!(&mut svg, "</svg>").map_err(|e| ExportError::WriteFailed(e.to_string()))?;
 
         Ok(svg)
     }
 
     /// Extract glyph outline as SVG path string
-    fn extract_glyph_path(&self, font: &Arc<dyn FontRef>, glyph_id: u32, scale: f32) -> Result<String> {
+    fn extract_glyph_path(
+        &self,
+        font: &Arc<dyn FontRef>,
+        glyph_id: u32,
+        scale: f32,
+    ) -> Result<String> {
         let font_data = font.data();
         let font_ref = skrifa::FontRef::new(font_data)
             .map_err(|_| ExportError::EncodingFailed("Invalid font".to_string()))?;
@@ -127,9 +128,9 @@ impl SvgExporter {
         let outlines = font_ref.outline_glyphs();
         let glyph_id = skrifa::GlyphId::from(glyph_id as u16);
 
-        let glyph = outlines
-            .get(glyph_id)
-            .ok_or_else(|| ExportError::EncodingFailed(format!("Glyph {} not found", glyph_id.to_u32())))?;
+        let glyph = outlines.get(glyph_id).ok_or_else(|| {
+            ExportError::EncodingFailed(format!("Glyph {} not found", glyph_id.to_u32()))
+        })?;
 
         // Extract at units_per_em size, then apply scale in the path builder
         // This avoids double-scaling issues

@@ -96,6 +96,14 @@ pub trait FontRef: Send + Sync {
     ///
     /// The advance width determines the horizontal spacing between glyphs.
     fn advance_width(&self, glyph_id: GlyphId) -> f32;
+
+    /// Get the total number of glyphs in the font
+    ///
+    /// This is useful for validating glyph IDs returned by shapers.
+    /// Returns None if the glyph count cannot be determined.
+    fn glyph_count(&self) -> Option<u32> {
+        None // Default implementation returns None
+    }
 }
 
 /// Text shaping backend

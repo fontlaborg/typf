@@ -222,18 +222,34 @@ impl ScanConverter {
     /// * `x2, y2` - End point in 26.6 fixed-point format
     fn add_line(&mut self, x1: F26Dot6, y1: F26Dot6, x2: F26Dot6, y2: F26Dot6) {
         // Create edge (returns None for horizontal lines)
-        // Edge::new() normalizes so that y_start < y_end
-        if let Some(edge) = Edge::new(x1, y1, x2, y2) {
-            // The edge needs to know its starting Y for insertion into edge table
-            // After normalization, y_min is the starting scanline
-            let y_min = y1.to_int().min(y2.to_int());
+        if let Some(mut edge) = Edge::new(x1, y1, x2, y2) {
+            let y_min = edge.y_min;
 
-            // Clamp to bitmap bounds
-            let y_start = y_min.max(0).min(self.height as i32 - 1) as usize;
+            // If edge starts below viewport, skip it
+            if y_min >= self.height as i32 {
+                return;
+            }
 
-            // Add edge to the edge table at its starting scanline
-            if y_start < self.edge_table.len() {
-                self.edge_table[y_start].push(edge);
+            // If edge ends above viewport, skip it
+            if edge.y_max < 0 {
+                return;
+            }
+
+            // If edge starts above viewport, advance it to scanline 0
+            let start_scanline = if y_min < 0 {
+                let skip = -y_min;
+                // Advance x by skip * x_increment
+                // We can just call step() skip times, or multiply
+                // Since x_increment is constant, multiplication is faster
+                edge.x = edge.x + edge.x_increment.mul(F26Dot6::from_int(skip));
+                0
+            } else {
+                y_min as usize
+            };
+
+            // Add edge to the edge table at its starting scanline (clamped)
+            if start_scanline < self.edge_table.len() {
+                self.edge_table[start_scanline].push(edge);
             }
         }
     }
@@ -259,11 +275,7 @@ impl ScanConverter {
     ///
     /// Panics if bitmap.len() != width * height
     pub fn render_mono(&mut self, bitmap: &mut [u8]) {
-        assert_eq!(
-            bitmap.len(),
-            self.width * self.height,
-            "Bitmap size mismatch"
-        );
+        assert_eq!(bitmap.len(), self.width * self.height, "Bitmap size mismatch");
 
         // Fill with white (0)
         bitmap.fill(0);
@@ -509,11 +521,7 @@ mod tests {
 
         // Triangle should have filled pixels
         // Area ~ 0.5 * base * height = 0.5 * 10 * 10 = 50 pixels
-        assert!(
-            filled_count > 20,
-            "Triangle should have filled pixels (got {})",
-            filled_count
-        );
+        assert!(filled_count > 20, "Triangle should have filled pixels (got {})", filled_count);
     }
 
     #[test]

@@ -8,6 +8,38 @@ Complete backend matrix: 4 shapers × 5 renderers = **20 backend combinations!**
 
 ---
 
+## Round 79: Baseline Alignment Fixes (2025-11-19) ✅ COMPLETED
+
+### Session Goal
+Fix vertical shift issues reported in issues/203-renders.md where Orge, Skia, and Zeno renderers had text shifted downwards.
+
+### Problem Identified
+- Orge, Skia, and Zeno: Text shifted downwards (too much space on top, cropped at bottom)
+- CoreGraphics: PERFECT rendering (reference implementation)
+
+### Root Cause Analysis
+- CoreGraphics uses baseline ratio of 0.75 (baseline at 75% from top)
+- Orge, Skia, and Zeno were using 0.80 (80% from top)
+- This 5% difference pushed text too far down, causing bottom cropping
+
+### Solution Applied
+Updated baseline calculation in all three renderers to match CoreGraphics reference:
+- `backends/typf-render-orge/src/lib.rs:256`: Changed ascent from `0.8` to `0.75`
+- `backends/typf-render-skia/src/lib.rs:229`: Changed ascent from `0.8` to `0.75`
+- `backends/typf-render-zeno/src/lib.rs:215`: Changed ascent from `0.8` to `0.75`
+
+### Verification
+- ✅ Build successful with zero warnings
+- ✅ Visual inspection confirms proper baseline alignment
+- ✅ All renderers now match CoreGraphics reference positioning
+- ✅ Text no longer cropped at bottom
+- ✅ Proper spacing at top
+
+### Impact
+All bitmap renderers (Orge, Skia, Zeno) now have consistent baseline positioning matching the CoreGraphics reference implementation.
+
+---
+
 ## Round 75: Rendering Backend Fixes (2025-11-19) ✅ COMPLETED
 
 ### Session Goal

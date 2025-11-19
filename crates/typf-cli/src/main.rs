@@ -21,9 +21,6 @@ use typf_fontdb::Font;
 use typf_render_orge::OrgeRenderer;
 use typf_shape_none::NoneShaper;
 
-#[cfg(feature = "shaping-hb")]
-use typf_shape_hb::HarfBuzzShaper;
-
 /// Simple command-line arguments
 #[derive(Debug)]
 struct Args {
@@ -69,7 +66,10 @@ impl Args {
             eprintln!();
             eprintln!("Examples:");
             eprintln!("  {} \"Hello\" --font font.ttf --output hello.png", args[0]);
-            eprintln!("  {} \"Hello\" --font font.ttf --shaper harfbuzz --format svg -o out.svg", args[0]);
+            eprintln!(
+                "  {} \"Hello\" --font font.ttf --shaper harfbuzz --format svg -o out.svg",
+                args[0]
+            );
             eprintln!("  {} --batch-input lines.txt --batch-output out/ --size 20", args[0]);
             eprintln!("  {} --repl", args[0]);
             std::process::exit(1);
@@ -132,7 +132,9 @@ impl Args {
                     if i + 1 < args.len() {
                         format = args[i + 1].clone();
                         if !["ppm", "pgm", "pbm", "svg"].contains(&format.as_str()) {
-                            return Err(TypfError::Other("Format must be ppm, pgm, pbm, or svg".into()));
+                            return Err(TypfError::Other(
+                                "Format must be ppm, pgm, pbm, or svg".into(),
+                            ));
                         }
                         i += 2;
                     } else {
@@ -215,7 +217,10 @@ fn main() -> Result<()> {
     }
 
     // Simple batch mode (text lines → files)
-    if cli_args.iter().any(|arg| arg == "--batch" || arg.starts_with("--batch-")) {
+    if cli_args
+        .iter()
+        .any(|arg| arg == "--batch" || arg.starts_with("--batch-"))
+    {
         let config = batch::BatchConfig::parse(&cli_args[1..])?;
         let font = Arc::new(StubFont::new());
         let shaper = Arc::new(NoneShaper::new());

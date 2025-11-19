@@ -235,11 +235,7 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
         writeln!(&mut out)?;
     }
 
-    eprintln!(
-        "Completed {} jobs in {:.2}s",
-        spec.jobs.len(),
-        start.elapsed().as_secs_f64()
-    );
+    eprintln!("Completed {} jobs in {:.2}s", spec.jobs.len(), start.elapsed().as_secs_f64());
 
     Ok(())
 }
@@ -265,7 +261,7 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
                 writeln!(&mut out)?;
                 out.flush()?;
                 continue;
-            }
+            },
         };
 
         // Process job
@@ -302,7 +298,7 @@ fn process_job(job: &Job) -> JobResult {
         Ok(data) => data,
         Err(e) => {
             return JobResult::error(&job.id, format!("Failed to load font: {}", e));
-        }
+        },
     };
 
     // Create simple font wrapper
@@ -349,7 +345,12 @@ fn process_job(job: &Job) -> JobResult {
         language: job.text.language.clone(),
         script: job.text.script.clone(),
         features: Vec::new(), // TODO: parse job.text.features
-        variations: job.font.variations.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+        variations: job
+            .font
+            .variations
+            .iter()
+            .map(|(k, v)| (k.clone(), *v))
+            .collect(),
         letter_spacing: 0.0,
     };
 
@@ -361,7 +362,7 @@ fn process_job(job: &Job) -> JobResult {
         Ok(shaped) => shaped,
         Err(e) => {
             return JobResult::error(&job.id, format!("Shaping failed: {}", e));
-        }
+        },
     };
 
     let shape_ms = shape_start.elapsed().as_secs_f64() * 1000.0;
@@ -405,7 +406,7 @@ fn process_job(job: &Job) -> JobResult {
         Ok(rendered) => rendered,
         Err(e) => {
             return JobResult::error(&job.id, format!("Rendering failed: {}", e));
-        }
+        },
     };
 
     let render_ms = render_start.elapsed().as_secs_f64() * 1000.0;
@@ -416,15 +417,18 @@ fn process_job(job: &Job) -> JobResult {
         "pgm" => Arc::new(PnmExporter::pgm()),
         "pbm" => Arc::new(PnmExporter::new(typf_export::PnmFormat::Pbm)),
         _ => {
-            return JobResult::error(&job.id, format!("Unsupported format: {}", job.rendering.format));
-        }
+            return JobResult::error(
+                &job.id,
+                format!("Unsupported format: {}", job.rendering.format),
+            );
+        },
     };
 
     let exported = match exporter.export(&rendered) {
         Ok(data) => data,
         Err(e) => {
             return JobResult::error(&job.id, format!("Export failed: {}", e));
-        }
+        },
     };
 
     // Get dimensions from rendered output
@@ -510,4 +514,3 @@ mod tests {
         assert_eq!(spec.jobs.len(), 1);
     }
 }
-

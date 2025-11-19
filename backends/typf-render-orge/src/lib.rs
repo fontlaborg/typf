@@ -77,39 +77,6 @@ impl OrgeRenderer {
         parallel::ParallelRenderer::new()
     }
 
-    /// Rasterize a glyph using the Orge scan converter
-    ///
-    /// # Arguments
-    ///
-    /// * `font_data` - Raw font bytes
-    /// * `glyph_id` - Glyph ID to render
-    /// * `size` - Font size in pixels
-    ///
-    /// # Returns
-    ///
-    /// Grayscale bitmap data, or None if glyph cannot be rendered
-    fn render_glyph(&self, font_data: &[u8], glyph_id: u32, size: f32) -> Option<rasterizer::GlyphBitmap> {
-        use rasterizer::GlyphRasterizer;
-
-        // Create rasterizer for this font and size
-        let rasterizer = match GlyphRasterizer::new(font_data, size) {
-            Ok(r) => r,
-            Err(e) => {
-                log::warn!("Failed to create rasterizer: {}", e);
-                return None;
-            }
-        };
-
-        // Render glyph with non-zero winding rule (standard for fonts)
-        match rasterizer.render_glyph(glyph_id, FillRule::NonZeroWinding, DropoutMode::None) {
-            Ok(bitmap) => Some(bitmap),
-            Err(e) => {
-                log::warn!("Failed to render glyph {}: {}", glyph_id, e);
-                None
-            }
-        }
-    }
-
     /// Composite a grayscale glyph onto an RGBA canvas
     /// Uses SIMD optimizations when available for high-performance blending
     fn composite_glyph(
@@ -247,13 +214,16 @@ impl Renderer for OrgeRenderer {
             (shaped.advance_width + padding * 2.0).ceil() as u32
         };
         let width = min_width.max(1); // Always at least 1 pixel wide
-                                      // For empty text, use a minimum height based on font size
-        let min_height = if shaped.glyphs.is_empty() {
+
+        // Calculate height using font metrics approximation (matching CoreGraphics)
+        // Ascent is approximately 80% of advance_height, descent is 20%
+        // Total height = ascent + descent = advance_height
+        let font_height = if shaped.glyphs.is_empty() {
             16.0 // Default minimum height for empty text
         } else {
-            shaped.advance_height
+            shaped.advance_height * 1.2 // Add extra space for descenders and diacritics
         };
-        let height = (min_height + padding * 2.0).ceil() as u32;
+        let height = (font_height + padding * 2.0).ceil() as u32;
 
         // Validate dimensions
         if width == 0 || height == 0 {
@@ -280,11 +250,11 @@ impl Renderer for OrgeRenderer {
         // Use advance_height as the font size
         let glyph_size = shaped.advance_height;
 
-        // Calculate baseline position to match CoreGraphics
-        // CoreGraphics uses bottom-origin with baseline at 25% from top (75% from bottom)
-        // In top-origin coordinates, we want baseline at 75% from top
-        const BASELINE_RATIO: f32 = 0.75;
-        let baseline_y = height as f32 * BASELINE_RATIO;
+        // Calculate baseline position using proper font metrics approximation
+        // Use 0.75 ratio to match CoreGraphics reference implementation
+        // In top-origin coordinates, baseline should be at padding + ascent
+        let ascent = shaped.advance_height * 0.75;
+        let baseline_y = padding + ascent;
 
         // Create rasterizer once for all glyphs (lazy: only if we have glyphs to render)
         // This avoids parsing font for empty text or stub fonts in tests
@@ -295,7 +265,7 @@ impl Renderer for OrgeRenderer {
                     log::warn!("Failed to create rasterizer: {}", e);
                     // For compatibility with tests using stub fonts, continue without rasterizer
                     None
-                }
+                },
             }
         } else {
             None
@@ -310,28 +280,22 @@ impl Renderer for OrgeRenderer {
             };
 
             // Render glyph using shared rasterizer
-            let glyph_bitmap = match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
-                Ok(bitmap) => bitmap,
-                Err(e) => {
-                    log::warn!("Failed to render glyph {}: {}", glyph.id, e);
-                    continue;
-                }
-            };
+            let glyph_bitmap =
+                match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
+                    Ok(bitmap) => bitmap,
+                    Err(e) => {
+                        log::warn!("Failed to render glyph {}: {}", glyph.id, e);
+                        continue;
+                    },
+                };
 
-            // Position glyph on canvas (match Skia implementation)
+            // Position glyph on canvas
             // X: glyph.x + padding (bearing adjustment happens in composite_glyph)
-            // Y: baseline_y + glyph.y + padding
+            // Y: baseline_y + glyph.y (baseline_y already includes padding)
             let x = (glyph.x + padding) as i32;
-            let y = (baseline_y + glyph.y + padding) as i32;
+            let y = (baseline_y + glyph.y) as i32;
 
-            self.composite_glyph(
-                &mut canvas,
-                width,
-                &glyph_bitmap,
-                x,
-                y,
-                params.foreground,
-            );
+            self.composite_glyph(&mut canvas, width, &glyph_bitmap, x, y, params.foreground);
         }
 
         Ok(RenderOutput::Bitmap(BitmapData {

@@ -23,9 +23,9 @@ import fire
 
 # Try importing typf - fail gracefully with installation instructions
 try:
-    import typf
+    import typfpy as typf
 except ImportError:
-    print("Error: typf Python bindings not installed.")
+    print("Error: typfpy Python bindings not installed.")
     print("\nTo install:")
     print("  cd bindings/python")
     print("  maturin develop --release --features shaping-hb,export-png,export-svg")
@@ -121,7 +121,8 @@ class TypfTester:
         self.fonts = {
             "kalnia": self.fonts_dir / "Kalnia[wdth,wght].ttf",
             "notoarabic": self.fonts_dir / "NotoNaskhArabic-Regular.ttf",
-            "notosans": self.fonts_dir / "NotoSans-Regular.ttf",  # Broad Unicode coverage
+            "notosans": self.fonts_dir
+            / "NotoSans-Regular.ttf",  # Broad Unicode coverage
         }
 
         # Verify fonts exist
@@ -431,13 +432,15 @@ class TypfTester:
                         if output is not None:
                             if isinstance(output, str):
                                 # JSON renderer returns string
-                                output_size = len(output.encode('utf-8'))
+                                output_size = len(output.encode("utf-8"))
                             elif isinstance(output, bytes):
                                 output_size = len(output)
-                            elif hasattr(output, '__len__'):
+                            elif hasattr(output, "__len__"):
                                 # Bitmap data - estimate size
                                 try:
-                                    output_bytes = typf.export_image(output, format="png")
+                                    output_bytes = typf.export_image(
+                                        output, format="png"
+                                    )
                                     output_size = len(output_bytes)
                                 except:
                                     pass
@@ -565,7 +568,9 @@ class TypfTester:
                         baseline_time = baseline_times[key]
                         current_time = r.avg_time_ms
                         if baseline_time > 0:
-                            slowdown_pct = ((current_time - baseline_time) / baseline_time) * 100
+                            slowdown_pct = (
+                                (current_time - baseline_time) / baseline_time
+                            ) * 100
                             if slowdown_pct > 10:  # >10% slower
                                 regressions.append({
                                     "backend": r.config.description,
@@ -611,10 +616,14 @@ class TypfTester:
             print("!" * 80)
             for reg in regressions[:10]:  # Show top 10
                 print(f"  {reg['backend']:40} {reg['text']:10} {reg['size']}px")
-                print(f"    Baseline: {reg['baseline_ms']:.3f}ms → Current: {reg['current_ms']:.3f}ms")
+                print(
+                    f"    Baseline: {reg['baseline_ms']:.3f}ms → Current: {reg['current_ms']:.3f}ms"
+                )
                 print(f"    Slowdown: {reg['slowdown_pct']:+.1f}%")
             if len(regressions) > 10:
-                print(f"  ... and {len(regressions) - 10} more (see benchmark_report.json)")
+                print(
+                    f"  ... and {len(regressions) - 10} more (see benchmark_report.json)"
+                )
             print("!" * 80)
 
         # Generate compact Markdown summary table
@@ -630,8 +639,12 @@ class TypfTester:
         # Add regression warnings to markdown
         if regressions:
             md_lines.append("## ⚠️ Performance Regressions Detected\n")
-            md_lines.append(f"**{len(regressions)} backend(s)** are >10% slower than baseline:\n")
-            md_lines.append("| Backend | Text | Size | Baseline | Current | Slowdown |\n")
+            md_lines.append(
+                f"**{len(regressions)} backend(s)** are >10% slower than baseline:\n"
+            )
+            md_lines.append(
+                "| Backend | Text | Size | Baseline | Current | Slowdown |\n"
+            )
             md_lines.append("|---------|------|------|----------|---------|----------|")
             for reg in regressions[:10]:
                 md_lines.append(
@@ -640,34 +653,31 @@ class TypfTester:
                     f"{reg['slowdown_pct']:+.1f}% |"
                 )
             if len(regressions) > 10:
-                md_lines.append(f"\n*...and {len(regressions) - 10} more (see benchmark_report.json)*\n")
+                md_lines.append(
+                    f"\n*...and {len(regressions) - 10} more (see benchmark_report.json)*\n"
+                )
             md_lines.append("")
 
-        # Backend performance table
-        md_lines.append("## Backend Performance\n")
-        md_lines.append("| Backend | Avg Time (ms) | Ops/sec | Success |\n")
-        md_lines.append("|---------|---------------|---------|---------|")
+        # Detailed performance table (Ops/sec only)
+        md_lines.append("## Detailed Performance (Ops/sec)\n")
+        md_lines.append("| Backend | Text | Size | Ops/sec |\n")
+        md_lines.append("|:---|:---|:---:|---:|")
 
-        for backend_desc, backend_results in sorted(by_backend.items()):
-            successful = [r for r in backend_results if r.success]
-            if successful:
-                avg_time = sum(r.avg_time_ms for r in successful) / len(successful)
-                avg_ops = sum(r.ops_per_sec for r in successful) / len(successful)
-                success_rate = len(successful) / len(backend_results) * 100
-                md_lines.append(
-                    f"| {backend_desc} | {avg_time:.3f} | {avg_ops:.0f} | {success_rate:.0f}% |"
-                )
+        # Sort results for consistent output: Backend -> Text -> Size
+        sorted_results = sorted(
+            results,
+            key=lambda r: (r.config.description, r.text, r.font_size)
+        )
 
-        # Text complexity table
-        md_lines.append("\n## Performance by Text Type\n")
-        md_lines.append("| Text | Avg Time (ms) | Ops/sec |\n")
-        md_lines.append("|------|---------------|---------|")
+        for r in sorted_results:
+            if r.success:
+                ops_str = f"{r.ops_per_sec:,.1f}"
+            else:
+                ops_str = "FAILED"
 
-        for text_name in sorted(by_text.keys()):
-            text_results = by_text[text_name]
-            avg_time = sum(r.avg_time_ms for r in text_results) / len(text_results)
-            avg_ops = sum(r.ops_per_sec for r in text_results) / len(text_results)
-            md_lines.append(f"| {text_name} | {avg_time:.3f} | {avg_ops:.0f} |")
+            md_lines.append(
+                f"| {r.config.description} | {r.text} | {r.font_size:.0f}px | {ops_str} |"
+            )
 
         md_lines.append("\n---\n*Made by FontLab - https://www.fontlab.com/*\n")
 

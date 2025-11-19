@@ -48,7 +48,8 @@ impl<'a> GlyphRasterizer<'a> {
     ///
     /// New `GlyphRasterizer` or error if font parsing fails
     pub fn new(font_data: &'a [u8], size: f32) -> Result<Self, String> {
-        let font = ReadFontsRef::new(font_data).map_err(|e| format!("Failed to parse font: {}", e))?;
+        let font =
+            ReadFontsRef::new(font_data).map_err(|e| format!("Failed to parse font: {}", e))?;
 
         Ok(Self {
             font,
@@ -178,10 +179,7 @@ impl<'a> GlyphRasterizer<'a> {
 
         // Prevent excessive memory allocation
         if width > 4096 || height > 4096 {
-            return Err(format!(
-                "Glyph bitmap too large: {}x{} (max 4096x4096)",
-                width, height
-            ));
+            return Err(format!("Glyph bitmap too large: {}x{} (max 4096x4096)", width, height));
         }
 
         // Create scan converter with oversampled dimensions
@@ -209,13 +207,15 @@ impl<'a> GlyphRasterizer<'a> {
             fn move_to(&mut self, x: f32, y: f32) {
                 let tx = x * self.scale + self.x_offset;
                 let ty = -y * self.scale + self.y_offset; // Flip Y: font coords are bottom-up, bitmap is top-down
-                self.inner.move_to(F26Dot6::from_float(tx), F26Dot6::from_float(ty));
+                self.inner
+                    .move_to(F26Dot6::from_float(tx), F26Dot6::from_float(ty));
             }
 
             fn line_to(&mut self, x: f32, y: f32) {
                 let tx = x * self.scale + self.x_offset;
                 let ty = -y * self.scale + self.y_offset; // Flip Y
-                self.inner.line_to(F26Dot6::from_float(tx), F26Dot6::from_float(ty));
+                self.inner
+                    .line_to(F26Dot6::from_float(tx), F26Dot6::from_float(ty));
             }
 
             fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {

@@ -59,9 +59,13 @@ fn main() {
 
         match shaper.shape("Hello", font.clone(), &params) {
             Ok(result) => {
-                println!("  Weight {}: {} glyphs, width: {:.2}px",
-                    weight, result.glyphs.len(), result.advance_width);
-            }
+                println!(
+                    "  Weight {}: {} glyphs, width: {:.2}px",
+                    weight,
+                    result.glyphs.len(),
+                    result.advance_width
+                );
+            },
             Err(e) => println!("  Error at weight {}: {}", weight, e),
         }
     }
@@ -83,9 +87,13 @@ fn main() {
 
         match shaper.shape("Variable", font.clone(), &params) {
             Ok(result) => {
-                println!("  Width {}%: {} glyphs, width: {:.2}px",
-                    width, result.glyphs.len(), result.advance_width);
-            }
+                println!(
+                    "  Width {}%: {} glyphs, width: {:.2}px",
+                    width,
+                    result.glyphs.len(),
+                    result.advance_width
+                );
+            },
             Err(e) => println!("  Error at width {}: {}", width, e),
         }
     }
@@ -100,22 +108,24 @@ fn main() {
         language: None,
         script: None,
         features: vec![],
-        variations: vec![
-            ("wght".to_string(), 700.0),
-            ("wdth".to_string(), 125.0),
-        ],
+        variations: vec![("wght".to_string(), 700.0), ("wdth".to_string(), 125.0)],
         letter_spacing: 0.0,
     };
 
     match shaper.shape("Bold Extended", font.clone(), &params) {
         Ok(result) => {
-            println!("  Bold Extended: {} glyphs, width: {:.2}px",
-                result.glyphs.len(), result.advance_width);
+            println!(
+                "  Bold Extended: {} glyphs, width: {:.2}px",
+                result.glyphs.len(),
+                result.advance_width
+            );
             for (i, glyph) in result.glyphs.iter().enumerate() {
-                println!("    Glyph {}: id={}, x={:.2}, advance={:.2}",
-                    i, glyph.id, glyph.x, glyph.advance);
+                println!(
+                    "    Glyph {}: id={}, x={:.2}, advance={:.2}",
+                    i, glyph.id, glyph.x, glyph.advance
+                );
             }
-        }
+        },
         Err(e) => println!("  Error: {}", e),
     }
 
@@ -136,9 +146,13 @@ fn main() {
 
         match shaper.shape("Optical", font.clone(), &params) {
             Ok(result) => {
-                println!("  Size {}pt: {} glyphs, width: {:.2}px",
-                    opsz, result.glyphs.len(), result.advance_width);
-            }
+                println!(
+                    "  Size {}pt: {} glyphs, width: {:.2}px",
+                    opsz,
+                    result.glyphs.len(),
+                    result.advance_width
+                );
+            },
             Err(e) => println!("  Error at size {}: {}", opsz, e),
         }
     }
@@ -160,9 +174,13 @@ fn main() {
 
         match shaper.shape("Italic", font.clone(), &params) {
             Ok(result) => {
-                println!("  Slant {}°: {} glyphs, width: {:.2}px",
-                    slant, result.glyphs.len(), result.advance_width);
-            }
+                println!(
+                    "  Slant {}°: {} glyphs, width: {:.2}px",
+                    slant,
+                    result.glyphs.len(),
+                    result.advance_width
+                );
+            },
             Err(e) => println!("  Error at slant {}: {}", slant, e),
         }
     }

@@ -52,9 +52,7 @@ fn test_export_empty_glyphs() {
         direction: Direction::LeftToRight,
     };
 
-    let font = Arc::new(StubFont {
-        data: vec![],
-    }) as Arc<dyn FontRef>;
+    let font = Arc::new(StubFont { data: vec![] }) as Arc<dyn FontRef>;
 
     let foreground = Color::black();
 
@@ -76,9 +74,7 @@ fn test_svg_output_structure() {
         direction: Direction::LeftToRight,
     };
 
-    let font = Arc::new(StubFont {
-        data: vec![],
-    }) as Arc<dyn FontRef>;
+    let font = Arc::new(StubFont { data: vec![] }) as Arc<dyn FontRef>;
 
     let foreground = Color::rgba(255, 0, 0, 255);
 

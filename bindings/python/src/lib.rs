@@ -37,10 +37,12 @@ impl Typf {
             "coretext" | "ct" | "mac" => Arc::new(typf_shape_ct::CoreTextShaper::new()),
             #[cfg(feature = "shaping-icu-hb")]
             "icu-hb" | "icu-harfbuzz" => Arc::new(typf_shape_icu_hb::IcuHarfBuzzShaper::new()),
-            _ => return Err(PyValueError::new_err(format!(
-                "Unknown shaper: {}. Available: none, harfbuzz, coretext, icu-hb",
-                shaper
-            ))),
+            _ => {
+                return Err(PyValueError::new_err(format!(
+                    "Unknown shaper: {}. Available: none, harfbuzz, coretext, icu-hb",
+                    shaper
+                )))
+            },
         };
 
         let renderer: Arc<dyn Renderer + Send + Sync> = match renderer {
@@ -53,10 +55,12 @@ impl Typf {
             "skia" => Arc::new(typf_render_skia::SkiaRenderer::new()),
             #[cfg(feature = "render-zeno")]
             "zeno" => Arc::new(typf_render_zeno::ZenoRenderer::new()),
-            _ => return Err(PyValueError::new_err(format!(
-                "Unknown renderer: {}. Available: json, orge, coregraphics, skia, zeno",
-                renderer
-            ))),
+            _ => {
+                return Err(PyValueError::new_err(format!(
+                    "Unknown renderer: {}. Available: json, orge, coregraphics, skia, zeno",
+                    renderer
+                )))
+            },
         };
 
         Ok(Self { shaper, renderer })
@@ -144,13 +148,7 @@ impl Typf {
 
     /// Shape text without rendering (for benchmarking and JSON export)
     #[pyo3(signature = (text, font_path, size=16.0))]
-    fn shape_text(
-        &self,
-        py: Python,
-        text: &str,
-        font_path: &str,
-        size: f32,
-    ) -> PyResult<PyObject> {
+    fn shape_text(&self, py: Python, text: &str, font_path: &str, size: f32) -> PyResult<PyObject> {
         // Load font
         let font = Font::from_file(font_path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
@@ -211,8 +209,7 @@ impl Typf {
             .unwrap_or(Color::rgba(0, 0, 0, 255));
 
         // Export to SVG using the proper SVG exporter
-        let svg_exporter = typf_export_svg::SvgExporter::new()
-            .with_padding(padding as f32);
+        let svg_exporter = typf_export_svg::SvgExporter::new().with_padding(padding as f32);
 
         let svg_string = svg_exporter
             .export(&shaped, font_arc, foreground)

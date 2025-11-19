@@ -3,7 +3,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "typf"
+name = "typfpy"
 version = "2.0.0.dev0"
 description = "High-performance text rendering pipeline"
 authors = [{name = "FontLab", email = "dev@fontlab.com"}]
@@ -39,8 +39,8 @@ dev = [
 ]
 
 [project.scripts]
-typf = "typf.cli:main"
+typfpy = "typfpy.cli:main"
 
 [tool.maturin]
-module-name = "typf"
+module-name = "typfpy.typf"
 features = ["pyo3/extension-module", "shaping-hb"]

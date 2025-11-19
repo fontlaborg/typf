@@ -1,6 +1,6 @@
 //! Unicode processing module for TYPF v2.0
 
-use icu_properties::{maps, Script};
+use icu_properties::props::Script;
 use icu_segmenter::{GraphemeClusterSegmenter, LineSegmenter, WordSegmenter};
 use unicode_bidi::BidiInfo;
 use unicode_normalization::UnicodeNormalization;
@@ -65,13 +65,14 @@ impl UnicodeProcessor {
 
     /// Detect scripts in text
     fn detect_scripts(&self, text: &str) -> Result<Vec<(Script, usize, usize)>> {
-        let script_data = maps::script();
+        use icu_properties::script::ScriptWithExtensions;
+        let script_data = ScriptWithExtensions::new();
         let mut scripts = Vec::new();
         let mut current_script = Script::Common;
         let mut start = 0;
 
         for (i, ch) in text.char_indices() {
-            let script = script_data.get(ch);
+            let script = script_data.get_script_val(ch);
 
             if script != current_script && script != Script::Common && script != Script::Inherited {
                 if i > start {
@@ -155,7 +156,8 @@ impl UnicodeProcessor {
 
     /// Segment text into words
     pub fn segment_words(&self, text: &str) -> Result<Vec<String>> {
-        let segmenter = WordSegmenter::new_auto();
+        use icu_segmenter::options::WordBreakInvariantOptions;
+        let segmenter = WordSegmenter::new_auto(WordBreakInvariantOptions::default());
         let mut words = Vec::new();
         let mut last = 0;
 
@@ -174,7 +176,8 @@ impl UnicodeProcessor {
 
     /// Segment text into lines (find line break opportunities)
     pub fn segment_lines(&self, text: &str) -> Result<Vec<usize>> {
-        let segmenter = LineSegmenter::new_auto();
+        use icu_segmenter::options::LineBreakOptions;
+        let segmenter = LineSegmenter::new_auto(LineBreakOptions::default());
         let breaks: Vec<usize> = segmenter.segment_str(text).collect();
         Ok(breaks)
     }

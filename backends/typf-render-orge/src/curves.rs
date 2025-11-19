@@ -209,30 +209,8 @@ pub fn subdivide_cubic<F>(
     let m0123_y = F26Dot6::from_raw((m012_y.raw() + m123_y.raw()) / 2);
 
     // Recursively subdivide both halves
-    subdivide_cubic(
-        x0,
-        y0,
-        m01_x,
-        m01_y,
-        m012_x,
-        m012_y,
-        m0123_x,
-        m0123_y,
-        output,
-        depth + 1,
-    );
-    subdivide_cubic(
-        m0123_x,
-        m0123_y,
-        m123_x,
-        m123_y,
-        m23_x,
-        m23_y,
-        x3,
-        y3,
-        output,
-        depth + 1,
-    );
+    subdivide_cubic(x0, y0, m01_x, m01_y, m012_x, m012_y, m0123_x, m0123_y, output, depth + 1);
+    subdivide_cubic(m0123_x, m0123_y, m123_x, m123_y, m23_x, m23_y, x3, y3, output, depth + 1);
 }
 
 #[cfg(test)]

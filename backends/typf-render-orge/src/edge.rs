@@ -24,12 +24,15 @@ pub struct Edge {
 
     /// Maximum Y coordinate (inclusive) where this edge is active.
     pub y_max: i32,
+
+    /// Minimum Y coordinate (inclusive) where this edge is active.
+    pub y_min: i32,
 }
 
 impl Edge {
     /// Create a new edge from two points.
     ///
-    /// Returns `None` if the edge is horizontal (y1 == y2).
+    /// Returns `None` if the edge is horizontal (y1 == y2) or doesn't cross any scanlines.
     ///
     /// # Arguments
     ///
@@ -38,41 +41,48 @@ impl Edge {
     ///
     /// # Returns
     ///
-    /// `Some(Edge)` if y1 != y2, `None` if horizontal
+    /// `Some(Edge)` if valid, `None` otherwise
     pub fn new(x1: F26Dot6, y1: F26Dot6, x2: F26Dot6, y2: F26Dot6) -> Option<Self> {
-        let dy = y2.to_int() - y1.to_int();
+        let dy = y2 - y1;
 
-        if dy == 0 {
-            // Horizontal edge - skip it
+        if dy == F26Dot6::ZERO {
             return None;
         }
 
-        // Ensure y1 < y2 (swap if needed) and set winding direction
-        // In bitmap coordinates (Y increases downward):
-        //   dy > 0 (y2 > y1) means edge goes DOWN → +1 (positive winding)
-        //   dy < 0 (y2 < y1) means edge goes UP → -1 (negative winding)
-        let (x_start, y_start, x_end, y_end, direction) = if dy > 0 {
-            (x1, y1, x2, y2, 1i8)  // Edge goes down in bitmap → positive winding
+        // Sort by Y so we always scan down
+        let (x_start, y_start, x_end, y_end, direction) = if dy > F26Dot6::ZERO {
+            (x1, y1, x2, y2, 1i8)
         } else {
-            (x2, y2, x1, y1, -1i8)   // Edge goes up in bitmap → negative winding
+            (x2, y2, x1, y1, -1i8)
         };
 
-        let dy_abs = (y_end.to_int() - y_start.to_int()).abs();
+        let dy_abs = y_end - y_start;
         let dx = x_end - x_start;
 
-        // Calculate x_increment = dx / dy
-        // dx is already in F26Dot6 format, so we just divide by dy (integer)
-        let x_increment = if dy_abs > 0 {
-            F26Dot6::from_raw((dx.raw() as i64 / dy_abs as i64) as i32)
-        } else {
-            F26Dot6::ZERO
-        };
+        // Calculate slope = dx / dy
+        let x_increment = dx.div(dy_abs);
+
+        // Calculate scanline range
+        // We use ceil() for start to ensure we are inside the edge
+        // We use ceil() - 1 for end to exclude the end point (half-open interval)
+        let y_min = y_start.ceil().to_int();
+        let y_max = y_end.ceil().to_int() - 1;
+
+        if y_min > y_max {
+            return None;
+        }
+
+        // Calculate X at the first scanline
+        // x = x_start + (y_min - y_start) * slope
+        let delta_y = F26Dot6::from_int(y_min) - y_start;
+        let x = x_start + delta_y.mul(x_increment);
 
         Some(Edge {
-            x: x_start,
+            x,
             x_increment,
             direction,
-            y_max: y_end.to_int(),
+            y_max,
+            y_min,
         })
     }
 
@@ -207,7 +217,8 @@ mod tests {
         assert_eq!(e.x, F26Dot6::from_int(10));
         assert_eq!(e.x_increment, F26Dot6::ZERO);
         assert_eq!(e.direction, 1);
-        assert_eq!(e.y_max, 15);
+        assert_eq!(e.y_min, 5);
+        assert_eq!(e.y_max, 14); // 15 is excluded
     }
 
     #[test]
@@ -234,8 +245,9 @@ mod tests {
 
         assert_eq!(e.x, F26Dot6::from_int(0));
         assert_eq!(e.direction, 1);
-        assert_eq!(e.y_max, 10);
-        // Slope = 10/10 = 1.0 in 26.6 = 64
+        assert_eq!(e.y_min, 0);
+        assert_eq!(e.y_max, 9); // 10 is excluded
+                                // Slope = 10/10 = 1.0 in 26.6 = 64
         assert_eq!(e.x_increment.raw(), 64);
     }
 
@@ -251,7 +263,8 @@ mod tests {
 
         // Should be swapped so y1 < y2
         assert_eq!(e.x, F26Dot6::from_int(10));
-        assert_eq!(e.y_max, 15);
+        assert_eq!(e.y_min, 5);
+        assert_eq!(e.y_max, 14); // 15 is excluded
         assert_eq!(e.direction, -1);
     }
 
@@ -284,8 +297,8 @@ mod tests {
 
         assert!(e.is_active(5));
         assert!(e.is_active(10));
-        assert!(e.is_active(15));
-        assert!(!e.is_active(16));
+        assert!(e.is_active(14));
+        assert!(!e.is_active(15));
     }
 
     #[test]

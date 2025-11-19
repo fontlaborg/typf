@@ -5,12 +5,12 @@ Python bindings for the TYPF text shaping and rendering library.
 """
 
 # Import the compiled Rust extension
-from typf import (
-    Typf,
+from .typf import (
     FontInfo,
-    render_simple,
-    export_image,
+    Typf,
     __version__,
+    export_image,
+    render_simple,
 )
 
 __all__ = [

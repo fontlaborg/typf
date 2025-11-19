@@ -26,9 +26,9 @@
 //!
 //! Made by FontLab - https://www.fontlab.com/
 
-use std::sync::Arc;
 use kurbo::Shape;
 use skrifa::MetadataProvider;
+use std::sync::Arc;
 use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},
@@ -101,7 +101,11 @@ impl ZenoRenderer {
         let bbox = kurbo_path.bounding_box();
 
         // Check for invalid bounds
-        if bbox.x0.is_infinite() || bbox.y0.is_infinite() || bbox.x1.is_infinite() || bbox.y1.is_infinite() {
+        if bbox.x0.is_infinite()
+            || bbox.y0.is_infinite()
+            || bbox.x1.is_infinite()
+            || bbox.y1.is_infinite()
+        {
             // Empty glyph (e.g., space)
             return Ok(GlyphBitmap {
                 width: 0,
@@ -141,11 +145,8 @@ impl ZenoRenderer {
             }
         }
 
-        // Invert coverage values: Zeno renders white-on-black (255 = background)
-        // We need black-on-white (255 = foreground) for alpha blending
-        for pixel in &mut mask {
-            *pixel = 255 - *pixel;
-        }
+        // Note: Zeno already renders correctly with 0 = background, 255 = foreground
+        // No inversion needed - the coverage values are ready for alpha blending
 
         Ok(GlyphBitmap {
             width,
@@ -177,12 +178,15 @@ impl Renderer for ZenoRenderer {
         // Calculate canvas dimensions
         let padding = params.padding as f32;
         let width = (shaped.advance_width + padding * 2.0).ceil() as u32;
-        let min_height = if shaped.glyphs.is_empty() {
-            16.0
+
+        // Calculate height using font metrics approximation (matching CoreGraphics)
+        // Ascent is approximately 80% of advance_height, descent is 20%
+        let font_height = if shaped.glyphs.is_empty() {
+            16.0 // Default minimum height for empty text
         } else {
-            shaped.advance_height
+            shaped.advance_height * 1.2 // Add extra space for descenders and diacritics
         };
-        let height = (min_height + padding * 2.0).ceil() as u32;
+        let height = (font_height + padding * 2.0).ceil() as u32;
 
         // Validate dimensions
         if width == 0 || height == 0 {
@@ -209,18 +213,18 @@ impl Renderer for ZenoRenderer {
         // Use advance_height as the font size (same as Orge/Skia renderers)
         let glyph_size = shaped.advance_height;
 
-        // Calculate baseline position to match CoreGraphics
-        // CoreGraphics uses bottom-origin with baseline at 25% from top (75% from bottom)
-        // In top-origin coordinates, we want baseline at 75% from top
-        const BASELINE_RATIO: f32 = 0.75;
-        let baseline_y = height as f32 * BASELINE_RATIO;
+        // Calculate baseline position using proper font metrics approximation
+        // Use 0.75 ratio to match CoreGraphics reference implementation
+        // In top-origin coordinates, baseline should be at padding + ascent
+        let ascent = shaped.advance_height * 0.75;
+        let baseline_y = padding + ascent;
 
         // Render each glyph
         for glyph in &shaped.glyphs {
             if let Ok(bitmap) = self.render_glyph(&font, glyph.id, glyph_size) {
-                // Calculate position (match Skia/Orge implementation)
+                // Calculate position
                 let x = (padding + glyph.x) as i32 + bitmap.bearing_x;
-                let y = (baseline_y + glyph.y + padding) as i32 - bitmap.bearing_y;
+                let y = (baseline_y + glyph.y) as i32 - bitmap.bearing_y; // baseline_y already includes padding
 
                 // Composite glyph onto canvas
                 for gy in 0..bitmap.height {
@@ -253,7 +257,8 @@ impl Renderer for ZenoRenderer {
                         canvas[canvas_idx + 2] = ((params.foreground.b as u32 * alpha
                             + canvas[canvas_idx + 2] as u32 * inv_alpha)
                             / 255) as u8;
-                        canvas[canvas_idx + 3] = ((alpha + canvas[canvas_idx + 3] as u32 * inv_alpha / 255)
+                        canvas[canvas_idx + 3] = ((alpha
+                            + canvas[canvas_idx + 3] as u32 * inv_alpha / 255)
                             .min(255)) as u8;
                     }
                 }
@@ -326,7 +331,8 @@ impl skrifa::outline::OutlinePen for ZenoPathBuilder {
         let y = y * self.scale;
         self.commands
             .push(format!("Q {:.2},{:.2} {:.2},{:.2}", cx, cy, x, y));
-        self.kurbo_path.quad_to((cx as f64, cy as f64), (x as f64, y as f64));
+        self.kurbo_path
+            .quad_to((cx as f64, cy as f64), (x as f64, y as f64));
     }
 
     fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
@@ -336,11 +342,13 @@ impl skrifa::outline::OutlinePen for ZenoPathBuilder {
         let cy1 = cy1 * self.scale;
         let x = x * self.scale;
         let y = y * self.scale;
-        self.commands.push(format!(
-            "C {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}",
-            cx0, cy0, cx1, cy1, x, y
-        ));
-        self.kurbo_path.curve_to((cx0 as f64, cy0 as f64), (cx1 as f64, cy1 as f64), (x as f64, y as f64));
+        self.commands
+            .push(format!("C {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}", cx0, cy0, cx1, cy1, x, y));
+        self.kurbo_path.curve_to(
+            (cx0 as f64, cy0 as f64),
+            (cx1 as f64, cy1 as f64),
+            (x as f64, y as f64),
+        );
     }
 
     fn close(&mut self) {
@@ -419,12 +427,7 @@ fn calculate_bounds(path: &str, _scale: f32) -> (f32, f32, f32, f32) {
 
     // Add some padding to account for curves
     let padding = 2.0;
-    (
-        min_x - padding,
-        min_y - padding,
-        max_x + padding,
-        max_y + padding,
-    )
+    (min_x - padding, min_y - padding, max_x + padding, max_y + padding)
 }
 
 #[cfg(test)]

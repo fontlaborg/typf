@@ -1,0 +1,59 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "typfpy"
+version = "2.0.0.dev0"
+description = "High-performance text rendering pipeline"
+authors = [{name = "FontLab", email = "dev@fontlab.com"}]
+license = {text = "MIT OR Apache-2.0"}
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Text Processing :: Fonts",
+]
+
+dependencies = [
+    "fire>=0.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+    "pillow>=10.0",
+    "numpy>=1.20",
+]
+
+[project.scripts]
+typfpy = "typfpy.cli:main"
+
+[tool.maturin]
+module-name = "typfpy.typf"
+features = [
+    "pyo3/extension-module",
+    "shaping-hb",
+    "shaping-ct",
+    "shaping-icu-hb",
+    "render-json",
+    "render-cg",
+    "render-skia",
+    "render-zeno",
+    "export-png",
+    "export-svg"
+]
+manifest-path = "bindings/python/Cargo.toml"
+python-source = "bindings/python/python"

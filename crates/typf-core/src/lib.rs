@@ -198,7 +198,7 @@ pub mod types {
         pub text: String,
         pub start: usize,
         pub end: usize,
-        pub script: icu_properties::Script,
+        pub script: icu_properties::props::Script,
         pub language: String,
         pub direction: Direction,
     }

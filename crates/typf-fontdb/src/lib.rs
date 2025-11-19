@@ -75,6 +75,13 @@ impl Font {
             })
             .unwrap_or(500.0)
     }
+
+    /// Get the total number of glyphs in the font
+    pub fn glyph_count(&self) -> Option<u32> {
+        self.font_ref
+            .as_ref()
+            .and_then(|font| font.maxp().ok().map(|maxp| maxp.num_glyphs() as u32))
+    }
 }
 
 impl TypfFontRef for Font {
@@ -92,6 +99,10 @@ impl TypfFontRef for Font {
 
     fn advance_width(&self, glyph_id: u32) -> f32 {
         self.advance_width(glyph_id)
+    }
+
+    fn glyph_count(&self) -> Option<u32> {
+        self.glyph_count()
     }
 }
 

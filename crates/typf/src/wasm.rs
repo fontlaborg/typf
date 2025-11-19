@@ -2,8 +2,6 @@
 //!
 //! Provides JavaScript-friendly API for using TYPF in web browsers.
 
-#![cfg(feature = "wasm")]
-
 use crate::prelude::*;
 use wasm_bindgen::prelude::*;
 

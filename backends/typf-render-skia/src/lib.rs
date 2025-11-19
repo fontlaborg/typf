@@ -11,9 +11,9 @@
 //!
 //! Made by FontLab - https://www.fontlab.com/
 
-use std::sync::Arc;
 use kurbo::Shape;
 use skrifa::MetadataProvider;
+use std::sync::Arc;
 use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},
@@ -78,14 +78,19 @@ impl SkiaRenderer {
         let bbox = path.bounding_box();
 
         // Check for invalid bounding box
-        if bbox.x0.is_infinite() || bbox.y0.is_infinite() || bbox.x1.is_infinite() || bbox.y1.is_infinite() {
+        if bbox.x0.is_infinite()
+            || bbox.y0.is_infinite()
+            || bbox.x1.is_infinite()
+            || bbox.y1.is_infinite()
+        {
             return Err(RenderError::PathBuildingFailed.into());
         }
         if bbox.width() == 0.0 || bbox.height() == 0.0 {
             return Err(RenderError::InvalidDimensions {
                 width: bbox.width() as u32,
-                height: bbox.height() as u32
-            }.into());
+                height: bbox.height() as u32,
+            }
+            .into());
         }
 
         let width = (bbox.width().ceil() as u32).max(1);
@@ -110,7 +115,7 @@ impl SkiaRenderer {
                 PathEl::LineTo(p) => builder.line_to(p.x as f32, p.y as f32),
                 PathEl::QuadTo(ctrl, end) => {
                     builder.quad_to(ctrl.x as f32, ctrl.y as f32, end.x as f32, end.y as f32)
-                }
+                },
                 PathEl::CurveTo(c1, c2, end) => builder.cubic_to(
                     c1.x as f32,
                     c1.y as f32,
@@ -137,16 +142,10 @@ impl SkiaRenderer {
         // Transform to fit in pixmap:
         // 1. Flip Y axis (font coords are y-up, bitmap is y-down)
         // 2. Translate to fit bbox
-        let transform = Transform::from_scale(1.0, -1.0)
-            .post_translate(-bbox.x0 as f32, bbox.y1 as f32);
+        let transform =
+            Transform::from_scale(1.0, -1.0).post_translate(-bbox.x0 as f32, bbox.y1 as f32);
 
-        pixmap.fill_path(
-            &skia_path,
-            &paint,
-            FillRule::Winding,
-            transform,
-            None,
-        );
+        pixmap.fill_path(&skia_path, &paint, FillRule::Winding, transform, None);
 
         // Extract alpha channel (tiny-skia uses RGBA, we want grayscale alpha)
         let data = pixmap.data();
@@ -188,12 +187,15 @@ impl Renderer for SkiaRenderer {
         // Calculate canvas dimensions
         let padding = params.padding as f32;
         let width = (shaped.advance_width + padding * 2.0).ceil() as u32;
-        let min_height = if shaped.glyphs.is_empty() {
-            16.0
+
+        // Calculate height using font metrics approximation (matching CoreGraphics)
+        // Ascent is approximately 80% of advance_height, descent is 20%
+        let font_height = if shaped.glyphs.is_empty() {
+            16.0 // Default minimum height for empty text
         } else {
-            shaped.advance_height
+            shaped.advance_height * 1.2 // Add extra space for descenders and diacritics
         };
-        let height = (min_height + padding * 2.0).ceil() as u32;
+        let height = (font_height + padding * 2.0).ceil() as u32;
 
         // Validate dimensions
         if width == 0 || height == 0 {
@@ -220,58 +222,60 @@ impl Renderer for SkiaRenderer {
         // Use advance_height as the font size (same as Orge renderer)
         let glyph_size = shaped.advance_height;
 
-        // Calculate baseline position to match CoreGraphics
-        // CoreGraphics uses bottom-origin with baseline at 25% from top (75% from bottom)
-        // In top-origin coordinates, we want baseline at 75% from top
-        const BASELINE_RATIO: f32 = 0.75;
-        let baseline_y = height as f32 * BASELINE_RATIO;
+        // Calculate baseline position using proper font metrics approximation
+        // Use 0.75 ratio to match CoreGraphics reference implementation
+        // In top-origin coordinates, baseline should be at padding + ascent
+        let ascent = shaped.advance_height * 0.75;
+        let baseline_y = padding + ascent;
 
         // Render each glyph
         for glyph in shaped.glyphs.iter() {
             match self.render_glyph(&font, glyph.id, glyph_size) {
                 Ok(bitmap) => {
-                    // Position glyph on canvas (match Orge implementation)
+                    // Position glyph on canvas
                     // X: glyph.x + padding + bearing_x
-                    // Y: baseline_y + glyph.y + padding - bearing_y
+                    // Y: baseline_y + glyph.y - bearing_y (baseline_y already includes padding)
                     //    (subtract bearing_y to position glyph correctly relative to baseline)
                     let x = (glyph.x + padding) as i32 + bitmap.bearing_x;
-                    let y = (baseline_y + glyph.y + padding) as i32 - bitmap.bearing_y;
+                    let y = (baseline_y + glyph.y) as i32 - bitmap.bearing_y;
 
                     // Composite glyph onto canvas
-                for gy in 0..bitmap.height {
-                    for gx in 0..bitmap.width {
-                        let canvas_x = x + gx as i32;
-                        let canvas_y = y + gy as i32;
+                    for gy in 0..bitmap.height {
+                        for gx in 0..bitmap.width {
+                            let canvas_x = x + gx as i32;
+                            let canvas_y = y + gy as i32;
 
-                        if canvas_x >= 0
-                            && canvas_x < width as i32
-                            && canvas_y >= 0
-                            && canvas_y < height as i32
-                        {
-                            let canvas_idx = ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
-                            let glyph_idx = (gy * bitmap.width + gx) as usize;
-                            let alpha = bitmap.data[glyph_idx];
+                            if canvas_x >= 0
+                                && canvas_x < width as i32
+                                && canvas_y >= 0
+                                && canvas_y < height as i32
+                            {
+                                let canvas_idx =
+                                    ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
+                                let glyph_idx = (gy * bitmap.width + gx) as usize;
+                                let alpha = bitmap.data[glyph_idx];
 
-                            // Alpha blending (glyph alpha over background)
-                            let fg = &params.foreground;
-                            canvas[canvas_idx] = ((canvas[canvas_idx] as u16 * (255 - alpha) as u16
-                                + fg.r as u16 * alpha as u16)
-                                / 255) as u8;
-                            canvas[canvas_idx + 1] = ((canvas[canvas_idx + 1] as u16
-                                * (255 - alpha) as u16
-                                + fg.g as u16 * alpha as u16)
-                                / 255) as u8;
-                            canvas[canvas_idx + 2] = ((canvas[canvas_idx + 2] as u16
-                                * (255 - alpha) as u16
-                                + fg.b as u16 * alpha as u16)
-                                / 255) as u8;
+                                // Alpha blending (glyph alpha over background)
+                                let fg = &params.foreground;
+                                canvas[canvas_idx] =
+                                    ((canvas[canvas_idx] as u16 * (255 - alpha) as u16
+                                        + fg.r as u16 * alpha as u16)
+                                        / 255) as u8;
+                                canvas[canvas_idx + 1] =
+                                    ((canvas[canvas_idx + 1] as u16 * (255 - alpha) as u16
+                                        + fg.g as u16 * alpha as u16)
+                                        / 255) as u8;
+                                canvas[canvas_idx + 2] =
+                                    ((canvas[canvas_idx + 2] as u16 * (255 - alpha) as u16
+                                        + fg.b as u16 * alpha as u16)
+                                        / 255) as u8;
+                            }
                         }
                     }
-                }
-                }
+                },
                 Err(e) => {
                     log::warn!("Skia: Failed to render glyph {}: {:?}", glyph.id, e);
-                }
+                },
             }
         }
 
