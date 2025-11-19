@@ -448,7 +448,7 @@ mod proptests {
     use super::*;
     use proptest::prelude::*;
 
-    /// Property: NFC normalization is idempotent (normalizing twice == normalizing once)
+    // Property: NFC normalization is idempotent (normalizing twice == normalizing once)
     proptest! {
         #[test]
         fn prop_nfc_idempotent(s in "\\PC*") {
@@ -477,7 +477,7 @@ mod proptests {
         }
     }
 
-    /// Property: Normalization always produces valid Unicode
+    // Property: Normalization always produces valid Unicode
     proptest! {
         #[test]
         fn prop_nfc_produces_valid_unicode(s in "\\PC*") {
@@ -498,7 +498,7 @@ mod proptests {
         }
     }
 
-    /// Property: Empty string stays empty after processing
+    // Property: Empty string stays empty after processing
     proptest! {
         #[test]
         fn prop_empty_stays_empty(_options in any::<bool>().prop_flat_map(|normalize| {
@@ -515,7 +515,7 @@ mod proptests {
         }
     }
 
-    /// Property: Single ASCII character processing is consistent
+    // Property: Single ASCII character processing is consistent
     proptest! {
         #[test]
         fn prop_ascii_unchanged(s in "[a-z]") {
@@ -534,7 +534,7 @@ mod proptests {
         }
     }
 
-    /// Property: Bidi processing never loses characters
+    // Property: Bidi processing never loses characters
     proptest! {
         #[test]
         fn prop_bidi_preserves_length(s in "[a-zA-Z א-ת]{1,50}") {
@@ -554,7 +554,7 @@ mod proptests {
         }
     }
 
-    /// Property: Script detection always assigns a script
+    // Property: Script detection always assigns a script
     proptest! {
         #[test]
         fn prop_script_detection_always_succeeds(s in "\\PC{1,100}") {
@@ -576,7 +576,7 @@ mod proptests {
         }
     }
 
-    /// Property: Processing is deterministic (same input -> same output)
+    // Property: Processing is deterministic (same input -> same output)
     proptest! {
         #[test]
         fn prop_processing_deterministic(s in "\\PC{1,50}") {

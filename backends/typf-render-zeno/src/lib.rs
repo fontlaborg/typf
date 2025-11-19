@@ -485,7 +485,7 @@ mod tests {
         // Test quadratic curves: Q has control point + endpoint
         // Format: "Q cx,cy x,y" - we only check endpoint
         let path = "M 0.0,0.0 Q 5.0,10.0 10.0,0.0";
-        let (min_x, min_y, max_x, max_y) = calculate_bounds(path, 1.0);
+        let (min_x, _min_y, max_x, _max_y) = calculate_bounds(path, 1.0);
 
         assert!(min_x.is_finite());
         assert!(max_x.is_finite());
@@ -502,7 +502,7 @@ mod tests {
         // Test cubic curves: C has 2 control points + endpoint
         // Format: "C cx1,cy1 cx2,cy2 x,y" - we only check endpoint
         let path = "M 0.0,0.0 C 5.0,10.0 15.0,10.0 20.0,0.0";
-        let (min_x, min_y, max_x, max_y) = calculate_bounds(path, 1.0);
+        let (min_x, _min_y, max_x, _max_y) = calculate_bounds(path, 1.0);
 
         assert!(min_x.is_finite());
         assert!(max_x.is_finite());

@@ -381,6 +381,7 @@ mod tests {
     use super::*;
 
     // Mock font for testing
+    #[allow(dead_code)]
     struct MockFont {
         data: Vec<u8>,
     }
