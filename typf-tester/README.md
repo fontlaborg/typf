@@ -115,7 +115,29 @@ Benchmark Results:
 - Operations per second
 - Success rate
 - Performance by text complexity
+- **Automatic regression detection** - flags backends >10% slower than previous run
 - Detailed JSON report saved to `output/benchmark_report.json`
+- Markdown summary with regression warnings in `output/benchmark_summary.md`
+
+### Performance Regression Detection
+
+The benchmark tool automatically detects performance regressions:
+
+- Compares each run against the previous baseline
+- Flags any backend combination that's >10% slower
+- Displays top 10 regressions in console output
+- Includes full regression table in Markdown summary
+- JSON report contains `regressions` array with detailed metrics
+
+Example regression warning:
+```
+⚠️  PERFORMANCE REGRESSIONS DETECTED (>10% slowdown)
+  coretext + skia    mixd    32px
+    Baseline: 0.571ms → Current: 1.674ms
+    Slowdown: +193.3%
+```
+
+This helps catch accidental performance degradations during development.
 
 ## Sample Texts
 
@@ -266,6 +288,227 @@ For detailed performance analysis and optimization strategies, see:
 - `../docs/PERFORMANCE.md` - Comprehensive optimization guide
 - `output/benchmark_summary.md` - Latest benchmark results
 - `output/benchmark_report.json` - Detailed performance data
+
+## Analysis Tools
+
+Three additional analysis scripts provide automated quality and performance analysis:
+
+### `compare_performance.py` - Performance Comparison
+
+Analyzes benchmark JSON data and creates performance comparison reports.
+
+```bash
+python typf-tester/compare_performance.py
+```
+
+**Features:**
+- Groups benchmark data by renderer
+- Generates ASCII comparison table showing avg time and ops/sec
+- Creates visual bar chart for relative performance
+- Identifies fastest/slowest renderers automatically
+
+**Example Output:**
+```
+RENDERER PERFORMANCE COMPARISON
+========================================
+Renderer        Avg Time    Ops/sec
+----------------------------------------
+json            0.051ms     19603/s     ████████████████████
+coregraphics    0.712ms      1404/s     ███
+zeno            1.139ms      1318/s     ██
+orge            1.738ms      1432/s     █
+skia            1.615ms      1251/s     █
+
+🏆 Fastest: JSON renderer (19,603 ops/sec)
+📊 Best bitmap: CoreGraphics (1,404 ops/sec)
+```
+
+### `compare_quality.py` - Visual Quality Analysis
+
+Analyzes PNG outputs to compare rendering quality across backends.
+
+```bash
+python typf-tester/compare_quality.py
+```
+
+**Metrics Analyzed:**
+- **Coverage**: Percentage of non-white pixels (ink density)
+- **Anti-aliasing**: Number of unique gray levels (0-255)
+- **Smoothness**: Ratio of gray pixels to black pixels
+- **File Size**: PNG compression efficiency
+
+**Example Output:**
+```
+QUALITY INSIGHTS
+========================================
+🏆 Best Anti-Aliasing: CoreGraphics
+   → 254.0 unique gray levels
+   → 81.80% smoothness score
+
+🎨 Smoothest Rendering: Orge
+   → 98.21% smoothness score
+
+💾 Most Efficient Compression: Orge
+   → 4.27 KB average file size
+
+📊 Cross-Shaper Consistency:
+   CoreGraphics    ✓ Consistent (Δ 0.094% coverage)
+   Orge            ⚠ Variance detected (Δ 0.371%)
+```
+
+**Requirements:** `pip install pillow`
+
+### `bench_svg.py` - SVG vs PNG Performance
+
+Compares SVG vector export vs PNG bitmap rendering performance.
+
+```bash
+python typf-tester/bench_svg.py
+```
+
+**Features:**
+- 500 iterations per test for statistical significance
+- Tests all renderers (CoreGraphics, Orge, Skia, Zeno)
+- Compares speed and file size trade-offs
+- Automated performance insights
+
+**Key Finding**: **SVG is 23.3x faster than PNG on average!**
+
+**Example Output:**
+```
+PERFORMANCE COMPARISON: SVG vs PNG
+========================================================================
+Renderer      PNG (ms)  SVG (ms)  Speedup     PNG Size  SVG Size  Ratio
+------------------------------------------------------------------------
+coregraphics  4.444     0.198     SVG 22.4x   9.76 KB   16.49 KB  1.69x
+orge          4.680     0.199     SVG 23.5x   4.29 KB   16.49 KB  3.85x
+skia          4.987     0.202     SVG 24.7x   5.12 KB   16.49 KB  3.22x
+zeno          4.692     0.208     SVG 22.6x   8.95 KB   16.49 KB  1.84x
+
+SUMMARY
+========================================
+📈 Average Performance:
+   PNG: 4.701ms/op
+   SVG: 0.202ms/op
+   → SVG is 23.30x faster
+
+💾 Average File Size:
+   PNG: 7.03 KB
+   SVG: 16.49 KB
+   → SVG is 2.35x larger
+```
+
+**Use Cases:**
+- **For Speed**: Use SVG for previews, interactive rendering
+- **For Quality**: Use PNG for final output, print
+- **For Scalability**: Use SVG for responsive designs
+
+### `visual_diff.py` - Renderer Visual Comparison & Pixel Analysis
+
+Creates side-by-side comparisons of PNG outputs from different renderers and performs quantitative pixel-level analysis.
+
+#### Visual Comparison Mode
+
+```bash
+# Compare all renderers for a specific combination
+python typf-tester/visual_diff.py --shaper harfbuzz --text latn
+
+# Create comparisons for all shaper/text combinations
+python typf-tester/visual_diff.py --all
+```
+
+**Features:**
+- 2-column grid layout showing all renderers side-by-side
+- Labels with renderer name and image dimensions
+- Automatic border and spacing
+- Output: `diff-{shaper}-{text}.png` files
+
+**Example Output:**
+```
+diff-harfbuzz-latn.png:
+┌─────────────────────────────────────────┐
+│ Comparison: harfbuzz shaper, latn text  │
+├──────────────────┬──────────────────────┤
+│ coregraphics     │ orge                 │
+│ (710×88)         │ (710×88)             │
+├──────────────────┼──────────────────────┤
+│ skia             │ zeno                 │
+│ (710×88)         │ (710×88)             │
+└──────────────────┴──────────────────────┘
+```
+
+#### Pixel-Level Analysis Mode
+
+```bash
+# Analyze specific combination with metrics and heatmaps
+python typf-tester/visual_diff.py --analyze --shaper harfbuzz --text latn
+
+# Analyze all combinations and generate full report
+python typf-tester/visual_diff.py --analyze
+```
+
+**Features:**
+- **MSE (Mean Squared Error)** - Average squared pixel difference (lower = more similar)
+- **PSNR (Peak Signal-to-Noise Ratio)** - Quality metric in dB (higher = better, ∞ = identical)
+- **Max Diff** - Maximum pixel difference (0-255 range)
+- **Difference Heatmaps** - Visual representation of pixel differences (red = high difference)
+- **JSON Report** - Machine-readable analysis at `output/pixel_diff_analysis.json`
+
+**Example Output:**
+```
+🔬 Analyzing pixel differences for harfbuzz + latn
+   coregraphics vs orge: MSE=3324.73, PSNR=12.91 dB, MaxDiff=255.0
+   coregraphics vs skia: MSE=3148.94, PSNR=13.15 dB, MaxDiff=255.0
+   orge vs skia: MSE=2062.38, PSNR=14.99 dB, MaxDiff=255.0
+   ✅ Saved heatmap: heatmap-harfbuzz-coregraphics-vs-orge-latn.png
+   ✅ Saved heatmap: heatmap-harfbuzz-orge-vs-skia-latn.png
+```
+
+**Interpreting Metrics:**
+- **PSNR > 30 dB**: Excellent similarity (minor differences)
+- **PSNR 20-30 dB**: Good similarity (visible differences)
+- **PSNR 10-20 dB**: Moderate similarity (significant differences)
+- **PSNR < 10 dB**: Poor similarity (major differences)
+
+**Use Cases:**
+- Quantify rendering differences between backends
+- Track quality regressions across versions
+- Identify which renderer pairs are most/least similar
+- Debug antialiasing and rasterization issues
+- Verify backend implementation consistency
+- Documentation and presentations
+
+**Requirements:** `pip install pillow numpy`
+
+### `unified_report.py` - Comprehensive Analysis Report
+
+Combines performance benchmarks, pixel-level quality analysis, and visual comparisons into a single unified report.
+
+```bash
+# Generate combined markdown + JSON reports
+python typf-tester/unified_report.py
+```
+
+**Outputs:**
+- `output/unified_analysis.md` - Human-readable markdown report
+- `output/unified_analysis.json` - Machine-readable data for further processing
+
+**Report Sections:**
+1. **Performance Benchmarks** - Fastest configurations, ops/sec, timing data
+2. **Visual Quality Analysis** - PSNR similarity matrix, most/least similar pairs
+3. **Image Quality Metrics** - Coverage, anti-aliasing levels, file sizes by renderer
+4. **Recommendations** - Best choices for performance, consistency, and quality
+
+**Use Cases:**
+- Get overview of all backend performance and quality trade-offs
+- Compare multiple metrics in single document
+- Track changes across development iterations
+- Generate documentation for users
+- Make informed backend selection decisions
+
+**Requirements:** `pip install pillow numpy`
+
+---
 
 ## Troubleshooting
 

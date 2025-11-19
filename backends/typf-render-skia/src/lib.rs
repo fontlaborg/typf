@@ -58,10 +58,11 @@ impl SkiaRenderer {
 
         // Build path from glyph outline
         let mut path = BezPath::new();
-        let scale = font_size / font.units_per_em() as f32;
+        // Note: skrifa's DrawSettings with Size already handles scaling from font units to pixels
+        // So we don't need manual scaling in PathPen
         let mut pen = PathPen {
             path: &mut path,
-            scale,
+            scale: 1.0, // No manual scaling - skrifa handles it
         };
 
         // Use unhinted drawing
@@ -75,8 +76,31 @@ impl SkiaRenderer {
 
         // Calculate bounding box
         let bbox = path.bounding_box();
+
+        // Check for invalid bounding box
+        if bbox.x0.is_infinite() || bbox.y0.is_infinite() || bbox.x1.is_infinite() || bbox.y1.is_infinite() {
+            return Err(RenderError::PathBuildingFailed.into());
+        }
+        if bbox.width() == 0.0 || bbox.height() == 0.0 {
+            return Err(RenderError::InvalidDimensions {
+                width: bbox.width() as u32,
+                height: bbox.height() as u32
+            }.into());
+        }
+
         let width = (bbox.width().ceil() as u32).max(1);
         let height = (bbox.height().ceil() as u32).max(1);
+
+        log::debug!(
+            "Skia: glyph_id={}, bbox=({}, {}, {}, {}), size={}x{}",
+            glyph_id,
+            bbox.x0,
+            bbox.y0,
+            bbox.x1,
+            bbox.y1,
+            width,
+            height
+        );
 
         // Convert kurbo BezPath to tiny-skia Path
         let mut builder = PathBuilder::new();
@@ -104,17 +128,23 @@ impl SkiaRenderer {
         // Create pixmap
         let mut pixmap = Pixmap::new(width, height).ok_or(RenderError::PixmapCreationFailed)?;
 
-        // Fill path with anti-aliasing
+        // Fill path with anti-aliasing (match old implementation exactly)
         let paint = Paint {
             anti_alias: true,
             ..Default::default()
         };
 
+        // Transform to fit in pixmap:
+        // 1. Flip Y axis (font coords are y-up, bitmap is y-down)
+        // 2. Translate to fit bbox
+        let transform = Transform::from_scale(1.0, -1.0)
+            .post_translate(-bbox.x0 as f32, bbox.y1 as f32);
+
         pixmap.fill_path(
             &skia_path,
             &paint,
             FillRule::Winding,
-            Transform::from_translate(-bbox.x0 as f32, -bbox.y0 as f32),
+            transform,
             None,
         );
 
@@ -125,12 +155,15 @@ impl SkiaRenderer {
             alpha[i] = data[i * 4 + 3]; // Extract alpha channel
         }
 
+        // Return bearing information from bbox
+        // left bearing: x_min
+        // top bearing: y_max (maximum Y coordinate in font coords, positive upward from baseline)
         Ok(GlyphBitmap {
             width,
             height,
             data: alpha,
-            bearing_x: bbox.x0 as i32,
-            bearing_y: -bbox.y1 as i32,
+            bearing_x: bbox.x0.floor() as i32,
+            bearing_y: bbox.y1.ceil() as i32,
         })
     }
 }
@@ -187,14 +220,24 @@ impl Renderer for SkiaRenderer {
         // Use advance_height as the font size (same as Orge renderer)
         let glyph_size = shaped.advance_height;
 
-        // Render each glyph
-        for glyph in &shaped.glyphs {
-            if let Ok(bitmap) = self.render_glyph(&font, glyph.id, glyph_size) {
-                // Calculate position
-                let x = (padding + glyph.x) as i32 + bitmap.bearing_x;
-                let y = ((height as f32 * 0.8) + glyph.y) as i32 - bitmap.bearing_y;
+        // Calculate baseline position to match CoreGraphics
+        // CoreGraphics uses bottom-origin with baseline at 25% from top (75% from bottom)
+        // In top-origin coordinates, we want baseline at 75% from top
+        const BASELINE_RATIO: f32 = 0.75;
+        let baseline_y = height as f32 * BASELINE_RATIO;
 
-                // Composite glyph onto canvas
+        // Render each glyph
+        for glyph in shaped.glyphs.iter() {
+            match self.render_glyph(&font, glyph.id, glyph_size) {
+                Ok(bitmap) => {
+                    // Position glyph on canvas (match Orge implementation)
+                    // X: glyph.x + padding + bearing_x
+                    // Y: baseline_y + glyph.y + padding - bearing_y
+                    //    (subtract bearing_y to position glyph correctly relative to baseline)
+                    let x = (glyph.x + padding) as i32 + bitmap.bearing_x;
+                    let y = (baseline_y + glyph.y + padding) as i32 - bitmap.bearing_y;
+
+                    // Composite glyph onto canvas
                 for gy in 0..bitmap.height {
                     for gx in 0..bitmap.width {
                         let canvas_x = x + gx as i32;
@@ -225,6 +268,10 @@ impl Renderer for SkiaRenderer {
                         }
                     }
                 }
+                }
+                Err(e) => {
+                    log::warn!("Skia: Failed to render glyph {}: {:?}", glyph.id, e);
+                }
             }
         }
 
@@ -234,6 +281,10 @@ impl Renderer for SkiaRenderer {
             format: BitmapFormat::Rgba8,
             data: canvas,
         }))
+    }
+
+    fn supports_format(&self, format: &str) -> bool {
+        matches!(format, "bitmap" | "rgba")
     }
 }
 
@@ -298,5 +349,15 @@ mod tests {
         let renderer = SkiaRenderer::default();
         assert_eq!(renderer.name(), "skia");
         assert_eq!(renderer.max_size, 8192);
+    }
+
+    #[test]
+    fn test_supports_format() {
+        let renderer = SkiaRenderer::new();
+        assert!(renderer.supports_format("bitmap"));
+        assert!(renderer.supports_format("rgba"));
+        assert!(!renderer.supports_format("svg"));
+        assert!(!renderer.supports_format("pdf"));
+        assert!(!renderer.supports_format("unknown"));
     }
 }

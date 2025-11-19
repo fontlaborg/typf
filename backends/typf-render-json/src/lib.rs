@@ -69,6 +69,11 @@ impl Renderer for JsonRenderer {
         "JSON"
     }
 
+    fn supports_format(&self, format: &str) -> bool {
+        // JSON renderer only produces JSON output, not bitmaps or vectors
+        matches!(format.to_lowercase().as_str(), "json")
+    }
+
     fn render(
         &self,
         shaped: &ShapingResult,
@@ -136,8 +141,9 @@ mod tests {
 
     #[test]
     fn test_json_renderer() {
+        use typf_core::traits::Renderer;
         let renderer = JsonRenderer::new();
-        assert_eq!(renderer.name(), "JSON");
+        assert_eq!(Renderer::name(&renderer), "JSON");
 
         let shaped = ShapingResult {
             glyphs: vec![
@@ -189,5 +195,21 @@ mod tests {
 
         let result = renderer.render(&shaped, font, &params);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_supports_format() {
+        let renderer = JsonRenderer::new();
+
+        // JSON renderer only supports JSON output
+        assert!(renderer.supports_format("json"));
+        assert!(renderer.supports_format("JSON"));
+
+        // It doesn't support bitmap or vector formats
+        assert!(!renderer.supports_format("bitmap"));
+        assert!(!renderer.supports_format("rgba"));
+        assert!(!renderer.supports_format("svg"));
+        assert!(!renderer.supports_format("png"));
+        assert!(!renderer.supports_format("unknown"));
     }
 }

@@ -64,6 +64,7 @@ class BenchResult:
     ops_per_sec: float
     success: bool
     error: Optional[str] = None
+    output_size_bytes: Optional[int] = None  # Size of rendered output
 
 
 class TypfTester:
@@ -78,7 +79,8 @@ class TypfTester:
         # Sample texts for testing (various scripts and complexities)
         self.sample_texts = {
             "latn": "AVAST Wallflower Efficiency",  # Kerning & ligatures
-            # "mixd": "Hello, مرحبا, 你好!",  # Mixed scripts
+            "arab": "مرحبا بك في العالم",  # Arabic RTL text
+            "mixd": "Hello, مرحبا, 你好!",  # Mixed scripts
         }
 
         # Longer texts for scaling tests
@@ -119,6 +121,7 @@ class TypfTester:
         self.fonts = {
             "kalnia": self.fonts_dir / "Kalnia[wdth,wght].ttf",
             "notoarabic": self.fonts_dir / "NotoNaskhArabic-Regular.ttf",
+            "notosans": self.fonts_dir / "NotoSans-Regular.ttf",  # Broad Unicode coverage
         }
 
         # Verify fonts exist
@@ -287,10 +290,14 @@ class TypfTester:
 
             # Render each sample text
             for text_name, text in self.sample_texts.items():
-                # Choose appropriate font
-                if "arabic" in text_name.lower():
+                # Choose appropriate font based on script
+                if text_name == "arab":
                     font_path = self.fonts["notoarabic"]
                     font_name = "NotoArabic"
+                elif text_name == "mixd":
+                    # Mixed scripts need broad Unicode coverage (includes CJK)
+                    font_path = self.fonts["notosans"]
+                    font_name = "NotoSans"
                 else:
                     font_path = self.fonts["kalnia"]
                     font_name = "Kalnia"
@@ -387,9 +394,12 @@ class TypfTester:
             print("-" * 80)
 
             for text_name, text in self.sample_texts.items():
-                # Choose appropriate font
-                if "arabic" in text_name.lower():
+                # Choose appropriate font based on script
+                if text_name == "arab":
                     font_path = self.fonts["notoarabic"]
+                elif text_name == "mixd":
+                    # Mixed scripts need broad Unicode coverage (includes CJK)
+                    font_path = self.fonts["notosans"]
                 else:
                     font_path = self.fonts["kalnia"]
 
@@ -408,12 +418,29 @@ class TypfTester:
 
                         # Benchmark
                         start = time.perf_counter()
+                        output = None
                         for _ in range(iterations):
-                            _ = engine.render_text(text, str(font_path), size=size)
+                            output = engine.render_text(text, str(font_path), size=size)
                         elapsed = time.perf_counter() - start
 
                         avg_ms = (elapsed / iterations) * 1000
                         ops_per_sec = iterations / elapsed
+
+                        # Measure output size from last iteration
+                        output_size = None
+                        if output is not None:
+                            if isinstance(output, str):
+                                # JSON renderer returns string
+                                output_size = len(output.encode('utf-8'))
+                            elif isinstance(output, bytes):
+                                output_size = len(output)
+                            elif hasattr(output, '__len__'):
+                                # Bitmap data - estimate size
+                                try:
+                                    output_bytes = typf.export_image(output, format="png")
+                                    output_size = len(output_bytes)
+                                except:
+                                    pass
 
                         result = BenchResult(
                             config=config,
@@ -424,6 +451,7 @@ class TypfTester:
                             avg_time_ms=avg_ms,
                             ops_per_sec=ops_per_sec,
                             success=True,
+                            output_size_bytes=output_size,
                         )
                         all_results.append(result)
 
@@ -509,13 +537,54 @@ class TypfTester:
             avg_ops = sum(r.ops_per_sec for r in text_results) / len(text_results)
             print(f"{text_name:<20} {avg_time:>8.3f}            {avg_ops:>10.1f}")
 
-        # Save detailed JSON report
+        # Load previous benchmark for regression detection
+        # Use benchmark_baseline.json if it exists, otherwise compare to last report
         report_path = self.output_dir / "benchmark_report.json"
+        baseline_path = self.output_dir / "benchmark_baseline.json"
+        if not baseline_path.exists():
+            baseline_path = report_path
+
+        baseline_data = None
+        regressions = []
+
+        if baseline_path.exists():
+            try:
+                baseline_data = json.loads(baseline_path.read_text())
+                # Build lookup dict: (shaper, renderer, text, size) -> avg_time_ms
+                baseline_times = {}
+                for b in baseline_data.get("backends", []):
+                    key = (b["shaper"], b["renderer"], b["text"], b["font_size"])
+                    baseline_times[key] = b["avg_time_ms"]
+
+                # Check for regressions (>10% slowdown)
+                for r in results:
+                    if not r.success:
+                        continue
+                    key = (r.config.shaper, r.config.renderer, r.text, r.font_size)
+                    if key in baseline_times:
+                        baseline_time = baseline_times[key]
+                        current_time = r.avg_time_ms
+                        if baseline_time > 0:
+                            slowdown_pct = ((current_time - baseline_time) / baseline_time) * 100
+                            if slowdown_pct > 10:  # >10% slower
+                                regressions.append({
+                                    "backend": r.config.description,
+                                    "text": r.text,
+                                    "size": r.font_size,
+                                    "baseline_ms": baseline_time,
+                                    "current_ms": current_time,
+                                    "slowdown_pct": slowdown_pct,
+                                })
+            except (json.JSONDecodeError, KeyError):
+                pass  # No valid baseline, skip regression detection
+
+        # Save detailed JSON report
         report_data = {
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "iterations": iterations,
             "total_tests": len(results),
             "successful_tests": len([r for r in results if r.success]),
+            "regressions": regressions,
             "backends": [
                 {
                     "shaper": r.config.shaper,
@@ -525,6 +594,7 @@ class TypfTester:
                     "font_size": r.font_size,
                     "avg_time_ms": r.avg_time_ms,
                     "ops_per_sec": r.ops_per_sec,
+                    "output_size_bytes": r.output_size_bytes,
                     "success": r.success,
                     "error": r.error,
                 }
@@ -533,6 +603,19 @@ class TypfTester:
         }
 
         report_path.write_text(json.dumps(report_data, indent=2))
+
+        # Print regression warnings
+        if regressions:
+            print("\n" + "!" * 80)
+            print("⚠️  PERFORMANCE REGRESSIONS DETECTED (>10% slowdown)")
+            print("!" * 80)
+            for reg in regressions[:10]:  # Show top 10
+                print(f"  {reg['backend']:40} {reg['text']:10} {reg['size']}px")
+                print(f"    Baseline: {reg['baseline_ms']:.3f}ms → Current: {reg['current_ms']:.3f}ms")
+                print(f"    Slowdown: {reg['slowdown_pct']:+.1f}%")
+            if len(regressions) > 10:
+                print(f"  ... and {len(regressions) - 10} more (see benchmark_report.json)")
+            print("!" * 80)
 
         # Generate compact Markdown summary table
         md_path = self.output_dir / "benchmark_summary.md"
@@ -543,6 +626,22 @@ class TypfTester:
         md_lines.append(
             f"**Success Rate**: {len([r for r in results if r.success])}/{len(results)}\n"
         )
+
+        # Add regression warnings to markdown
+        if regressions:
+            md_lines.append("## ⚠️ Performance Regressions Detected\n")
+            md_lines.append(f"**{len(regressions)} backend(s)** are >10% slower than baseline:\n")
+            md_lines.append("| Backend | Text | Size | Baseline | Current | Slowdown |\n")
+            md_lines.append("|---------|------|------|----------|---------|----------|")
+            for reg in regressions[:10]:
+                md_lines.append(
+                    f"| {reg['backend']} | {reg['text']} | {reg['size']}px | "
+                    f"{reg['baseline_ms']:.3f}ms | {reg['current_ms']:.3f}ms | "
+                    f"{reg['slowdown_pct']:+.1f}% |"
+                )
+            if len(regressions) > 10:
+                md_lines.append(f"\n*...and {len(regressions) - 10} more (see benchmark_report.json)*\n")
+            md_lines.append("")
 
         # Backend performance table
         md_lines.append("## Backend Performance\n")
@@ -622,9 +721,12 @@ class TypfTester:
             print("-" * 80)
 
             for text_name, text in self.sample_texts.items():
-                # Choose appropriate font
-                if "arabic" in text_name.lower():
+                # Choose appropriate font based on script
+                if text_name == "arab":
                     font_path = self.fonts["notoarabic"]
+                elif text_name == "mixd":
+                    # Mixed scripts need broad Unicode coverage (includes CJK)
+                    font_path = self.fonts["notosans"]
                 else:
                     font_path = self.fonts["kalnia"]
 
@@ -799,9 +901,12 @@ class TypfTester:
             print("-" * 80)
 
             for text_name, text in self.sample_texts.items():
-                # Choose appropriate font
-                if "arabic" in text_name.lower():
+                # Choose appropriate font based on script
+                if text_name == "arab":
                     font_path = self.fonts["notoarabic"]
+                elif text_name == "mixd":
+                    # Mixed scripts need broad Unicode coverage (includes CJK)
+                    font_path = self.fonts["notosans"]
                 else:
                     font_path = self.fonts["kalnia"]
 

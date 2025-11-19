@@ -194,7 +194,8 @@ impl<'a> GlyphRasterizer<'a> {
         // so we only need to apply oversampling here
         let oversample_scale = self.oversample as f32;
         let x_offset = -x_min as f32 * self.oversample as f32;
-        let y_offset = -y_min as f32 * self.oversample as f32;
+        // With Y-flip: after negating Y coords, we need to offset by y_max (not y_min)
+        let y_offset = y_max as f32 * self.oversample as f32;
 
         // Create a pen that transforms coordinates and feeds to ScanConverter
         struct TransformPen<'p> {
@@ -207,21 +208,21 @@ impl<'a> GlyphRasterizer<'a> {
         impl<'p> skrifa::outline::OutlinePen for TransformPen<'p> {
             fn move_to(&mut self, x: f32, y: f32) {
                 let tx = x * self.scale + self.x_offset;
-                let ty = y * self.scale + self.y_offset;
+                let ty = -y * self.scale + self.y_offset; // Flip Y: font coords are bottom-up, bitmap is top-down
                 self.inner.move_to(F26Dot6::from_float(tx), F26Dot6::from_float(ty));
             }
 
             fn line_to(&mut self, x: f32, y: f32) {
                 let tx = x * self.scale + self.x_offset;
-                let ty = y * self.scale + self.y_offset;
+                let ty = -y * self.scale + self.y_offset; // Flip Y
                 self.inner.line_to(F26Dot6::from_float(tx), F26Dot6::from_float(ty));
             }
 
             fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
                 let tx1 = x1 * self.scale + self.x_offset;
-                let ty1 = y1 * self.scale + self.y_offset;
+                let ty1 = -y1 * self.scale + self.y_offset; // Flip Y
                 let tx = x * self.scale + self.x_offset;
-                let ty = y * self.scale + self.y_offset;
+                let ty = -y * self.scale + self.y_offset; // Flip Y
                 self.inner.quadratic_to(
                     F26Dot6::from_float(tx1),
                     F26Dot6::from_float(ty1),
@@ -232,11 +233,11 @@ impl<'a> GlyphRasterizer<'a> {
 
             fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
                 let tx1 = x1 * self.scale + self.x_offset;
-                let ty1 = y1 * self.scale + self.y_offset;
+                let ty1 = -y1 * self.scale + self.y_offset; // Flip Y
                 let tx2 = x2 * self.scale + self.x_offset;
-                let ty2 = y2 * self.scale + self.y_offset;
+                let ty2 = -y2 * self.scale + self.y_offset; // Flip Y
                 let tx = x * self.scale + self.x_offset;
-                let ty = y * self.scale + self.y_offset;
+                let ty = -y * self.scale + self.y_offset; // Flip Y
                 self.inner.cubic_to(
                     F26Dot6::from_float(tx1),
                     F26Dot6::from_float(ty1),

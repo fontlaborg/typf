@@ -51,8 +51,8 @@ impl WasmRenderer {
         &self,
         text: &str,
         font_size: f32,
-        width: Option<u32>,
-        height: Option<u32>,
+        _width: Option<u32>,
+        _height: Option<u32>,
     ) -> Result<Vec<u8>, JsValue> {
         #[cfg(not(all(feature = "shaping-none", feature = "render-orge")))]
         return Err(JsValue::from_str("Rendering not available in this build"));
@@ -60,7 +60,9 @@ impl WasmRenderer {
         #[cfg(all(feature = "shaping-none", feature = "render-orge"))]
         {
             // Create mock font for now
-            struct MockFont;
+            struct MockFont {
+                font_size: f32,
+            }
             impl FontRef for MockFont {
                 fn data(&self) -> &[u8] {
                     &[]
@@ -72,11 +74,11 @@ impl WasmRenderer {
                     Some(ch as u32)
                 }
                 fn advance_width(&self, _glyph_id: u32) -> f32 {
-                    font_size * 0.6
+                    self.font_size * 0.6
                 }
             }
 
-            let font = std::sync::Arc::new(MockFont);
+            let font = std::sync::Arc::new(MockFont { font_size });
 
             // Shape the text
             let shaping_params = ShapingParams {

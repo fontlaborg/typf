@@ -47,11 +47,14 @@ impl Edge {
             return None;
         }
 
-        // Ensure y1 < y2 (swap if needed)
+        // Ensure y1 < y2 (swap if needed) and set winding direction
+        // In bitmap coordinates (Y increases downward):
+        //   dy > 0 (y2 > y1) means edge goes DOWN → +1 (positive winding)
+        //   dy < 0 (y2 < y1) means edge goes UP → -1 (negative winding)
         let (x_start, y_start, x_end, y_end, direction) = if dy > 0 {
-            (x1, y1, x2, y2, 1i8)
+            (x1, y1, x2, y2, 1i8)  // Edge goes down in bitmap → positive winding
         } else {
-            (x2, y2, x1, y1, -1i8)
+            (x2, y2, x1, y1, -1i8)   // Edge goes up in bitmap → negative winding
         };
 
         let dy_abs = (y_end.to_int() - y_start.to_int()).abs();

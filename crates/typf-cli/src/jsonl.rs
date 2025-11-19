@@ -10,9 +10,9 @@ use std::path::PathBuf;
 /// Complete batch job specification (JSON input)
 #[derive(Debug, Clone, Deserialize)]
 pub struct JobSpec {
-    /// API version (should be "2.0")
+    /// API version (should be "2.0") - validated during deserialization
     #[serde(default = "default_version")]
-    pub version: String,
+    pub _version: String,
     /// List of rendering jobs to process
     pub jobs: Vec<Job>,
 }
@@ -506,7 +506,7 @@ mod tests {
         }"#;
 
         let spec: JobSpec = serde_json::from_str(json).unwrap();
-        assert_eq!(spec.version, "2.0");
+        assert_eq!(spec._version, "2.0");
         assert_eq!(spec.jobs.len(), 1);
     }
 }

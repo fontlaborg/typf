@@ -33,10 +33,10 @@ struct Args {
     output: PathBuf,
     /// Font file path
     font: Option<PathBuf>,
-    /// Shaping backend
-    shaper: String,
-    /// Rendering backend
-    renderer: String,
+    /// Shaping backend (future use - currently hardcoded to None)
+    _shaper: String,
+    /// Rendering backend (future use - currently hardcoded to Orge)
+    _renderer: String,
     /// Font size in points
     size: f32,
     /// Output format (ppm, pgm, pbm, svg)
@@ -77,8 +77,8 @@ impl Args {
 
         let text = args[1].clone();
         let mut font: Option<PathBuf> = None;
-        let mut shaper = "none".to_string();
-        let mut renderer = "orge".to_string();
+        let mut _shaper = "none".to_string();
+        let mut _renderer = "orge".to_string();
         let mut output = PathBuf::from("output.ppm");
         let mut size = 16.0;
         let mut format = "ppm".to_string();
@@ -96,7 +96,7 @@ impl Args {
                 },
                 "--shaper" => {
                     if i + 1 < args.len() {
-                        shaper = args[i + 1].clone();
+                        _shaper = args[i + 1].clone();
                         i += 2;
                     } else {
                         return Err(TypfError::Other("--shaper requires an argument".into()));
@@ -104,7 +104,7 @@ impl Args {
                 },
                 "--renderer" => {
                     if i + 1 < args.len() {
-                        renderer = args[i + 1].clone();
+                        _renderer = args[i + 1].clone();
                         i += 2;
                     } else {
                         return Err(TypfError::Other("--renderer requires an argument".into()));
@@ -149,8 +149,8 @@ impl Args {
             text,
             output,
             font,
-            shaper,
-            renderer,
+            _shaper,
+            _renderer,
             size,
             format,
         })

@@ -19,7 +19,6 @@ use core_graphics::{
     data_provider::CGDataProvider,
     font::{CGFont, CGGlyph},
     geometry::{CGPoint, CGRect, CGSize},
-    sys::CGContextRef,
 };
 
 /// Wrapper for font data to pass to CGDataProvider
@@ -63,7 +62,7 @@ impl CoreGraphicsRenderer {
     }
 
     /// Calculate dimensions for the rendered bitmap
-    fn calculate_dimensions(shaped: &ShapingResult, params: &RenderParams) -> (u32, u32, f32) {
+    fn calculate_dimensions(shaped: &ShapingResult, params: &RenderParams) -> (u32, u32) {
         // Calculate content dimensions from glyphs
         let mut min_x = f32::MAX;
         let mut max_x = f32::MIN;
@@ -93,10 +92,7 @@ impl CoreGraphicsRenderer {
         let width = (content_width + padding * 2.0).ceil() as u32;
         let height = (content_height + padding * 2.0).ceil() as u32;
 
-        // Calculate baseline offset (75% from top, matching old implementation)
-        let baseline_y = height as f32 * 0.75;
-
-        (width, height, baseline_y)
+        (width, height)
     }
 
     /// Convert Color to RGB components
@@ -141,13 +137,12 @@ impl Renderer for CoreGraphicsRenderer {
         }
 
         // Calculate dimensions
-        let (width, height, baseline_y) = Self::calculate_dimensions(shaped, params);
+        let (width, height) = Self::calculate_dimensions(shaped, params);
 
         log::debug!(
-            "CoreGraphicsRenderer: Canvas size {}x{}, baseline_y={}",
+            "CoreGraphicsRenderer: Canvas size {}x{}",
             width,
-            height,
-            baseline_y
+            height
         );
 
         // Create bitmap buffer (RGBA, premultiplied alpha)
@@ -194,15 +189,9 @@ impl Renderer for CoreGraphicsRenderer {
         let (r, g, b, a) = Self::color_to_rgb(&params.foreground);
         context.set_rgb_fill_color(r, g, b, a);
 
-        // Create CGFont
+        // Create CGFont and CTFont
         let cg_font = Self::create_cg_font(font.data())?;
-
-        // Set font and size
-        context.set_font(&cg_font);
-        context.set_font_size(shaped.advance_height as f64);
-
-        // Set text drawing mode to fill
-        context.set_text_drawing_mode(CGTextDrawingMode::CGTextFill);
+        let ct_font = core_text::font::new_from_CGFont(&cg_font, shaped.advance_height as f64);
 
         // Prepare glyph data
         let glyph_ids: Vec<CGGlyph> = shaped
@@ -212,10 +201,9 @@ impl Renderer for CoreGraphicsRenderer {
             .collect();
 
         log::debug!(
-            "CoreGraphicsRenderer: Rendering {} glyphs, font_size={}, baseline_y={}",
+            "CoreGraphicsRenderer: Rendering {} glyphs, font_size={}",
             glyph_ids.len(),
-            shaped.advance_height,
-            baseline_y
+            shaped.advance_height
         );
         if !glyph_ids.is_empty() {
             log::debug!(
@@ -226,47 +214,35 @@ impl Renderer for CoreGraphicsRenderer {
             );
         }
 
-        // Calculate glyph positions
-        // After translate(0, height) + scale(1, -1): Y=0 is at BOTTOM, Y increases upward
-        // baseline_y is measured from top (75% * height), so in flipped coords it's at: height - baseline_y
+        // Calculate glyph positions relative to origin (after translate)
+        // CoreGraphics uses bottom-left origin. Calculate baseline position.
+        // Use 0.75 ratio: baseline at 75% from top = 25% from bottom
+        const BASELINE_RATIO: f64 = 0.75;
+        let baseline_y = (height as f64) * (1.0 - BASELINE_RATIO);
+
         let glyph_positions: Vec<CGPoint> = shaped
             .glyphs
             .iter()
             .map(|g| CGPoint {
-                x: (g.x + params.padding as f32) as f64,
-                // In flipped coords: baseline is at (height - baseline_y), then add glyph offset
-                y: (height as f32 - baseline_y + g.y) as f64,
+                x: g.x as f64,
+                y: g.y as f64,
             })
             .collect();
 
         if !glyph_positions.is_empty() {
             log::debug!(
-                "CoreGraphicsRenderer: First glyph position: x={}, y={}",
+                "CoreGraphicsRenderer: First glyph position: x={}, y={}, baseline_y={}",
                 glyph_positions[0].x,
-                glyph_positions[0].y
+                glyph_positions[0].y,
+                baseline_y
             );
         }
 
-        // Render glyphs
+        // Render glyphs using CTFont
         context.save();
-
-        // CoreGraphics uses bottom-left origin, so we need to flip the coordinate system
-        context.translate(0.0, height as f64);
-        context.scale(1.0, -1.0);
-
-        // Draw glyphs using CGContext
-        if !glyph_ids.is_empty() {
-            let context_ref: CGContextRef = &context as *const _ as *mut _;
-            unsafe {
-                CGContextShowGlyphsAtPositions(
-                    context_ref,
-                    glyph_ids.as_ptr(),
-                    glyph_positions.as_ptr(),
-                    glyph_ids.len(),
-                );
-            }
-        }
-
+        context.translate(params.padding as f64, baseline_y);
+        context.set_text_drawing_mode(CGTextDrawingMode::CGTextFill);
+        ct_font.draw_glyphs(&glyph_ids, &glyph_positions, context.clone());
         context.restore();
 
         // Return bitmap data
@@ -281,17 +257,6 @@ impl Renderer for CoreGraphicsRenderer {
     fn supports_format(&self, format: &str) -> bool {
         matches!(format, "bitmap" | "rgba")
     }
-}
-
-// FFI declaration for CGContextShowGlyphsAtPositions
-#[link(name = "CoreGraphics", kind = "framework")]
-extern "C" {
-    fn CGContextShowGlyphsAtPositions(
-        c: CGContextRef,
-        glyphs: *const CGGlyph,
-        positions: *const CGPoint,
-        count: usize,
-    );
 }
 
 #[cfg(test)]

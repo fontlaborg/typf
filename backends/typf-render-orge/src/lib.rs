@@ -277,26 +277,61 @@ impl Renderer for OrgeRenderer {
             }
         }
 
+        // Use advance_height as the font size
+        let glyph_size = shaped.advance_height;
+
+        // Calculate baseline position to match CoreGraphics
+        // CoreGraphics uses bottom-origin with baseline at 25% from top (75% from bottom)
+        // In top-origin coordinates, we want baseline at 75% from top
+        const BASELINE_RATIO: f32 = 0.75;
+        let baseline_y = height as f32 * BASELINE_RATIO;
+
+        // Create rasterizer once for all glyphs (lazy: only if we have glyphs to render)
+        // This avoids parsing font for empty text or stub fonts in tests
+        let rasterizer = if !shaped.glyphs.is_empty() {
+            match rasterizer::GlyphRasterizer::new(font_data, glyph_size) {
+                Ok(r) => Some(r),
+                Err(e) => {
+                    log::warn!("Failed to create rasterizer: {}", e);
+                    // For compatibility with tests using stub fonts, continue without rasterizer
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         // Render each glyph
         for glyph in &shaped.glyphs {
-            let glyph_size = shaped.advance_height;
+            // Skip if we don't have a valid rasterizer
+            let Some(ref rast) = rasterizer else {
+                log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
+                continue;
+            };
 
-            // Render glyph using real font data
-            if let Some(glyph_bitmap) = self.render_glyph(font_data, glyph.id, glyph_size) {
-                let x = (glyph.x + padding) as i32;
-                let y = padding as i32;
+            // Render glyph using shared rasterizer
+            let glyph_bitmap = match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
+                Ok(bitmap) => bitmap,
+                Err(e) => {
+                    log::warn!("Failed to render glyph {}: {}", glyph.id, e);
+                    continue;
+                }
+            };
 
-                self.composite_glyph(
-                    &mut canvas,
-                    width,
-                    &glyph_bitmap,
-                    x,
-                    y,
-                    params.foreground,
-                );
-            } else {
-                log::warn!("Failed to render glyph {}", glyph.id);
-            }
+            // Position glyph on canvas (match Skia implementation)
+            // X: glyph.x + padding (bearing adjustment happens in composite_glyph)
+            // Y: baseline_y + glyph.y + padding
+            let x = (glyph.x + padding) as i32;
+            let y = (baseline_y + glyph.y + padding) as i32;
+
+            self.composite_glyph(
+                &mut canvas,
+                width,
+                &glyph_bitmap,
+                x,
+                y,
+                params.foreground,
+            );
         }
 
         Ok(RenderOutput::Bitmap(BitmapData {

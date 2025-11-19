@@ -216,6 +216,6 @@ mod tests {
     #[test]
     fn test_icu_harfbuzz_shaper_empty() {
         let shaper = IcuHarfBuzzShaper::new();
-        assert_eq!(shaper.name(), "ICU-HarfBuzz");
+        assert_eq!(Stage::name(&shaper), "ICU-HarfBuzz");
     }
 }
