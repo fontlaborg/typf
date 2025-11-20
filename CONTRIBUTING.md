@@ -1,47 +1,31 @@
 # Contributing to TYPF
 
-Thank you for your interest in contributing to TYPF! This document provides guidelines and instructions for contributing.
-
-## Table of Contents
-
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Testing](#testing)
-- [Code Style](#code-style)
-- [Commit Guidelines](#commit-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Project Structure](#project-structure)
+How to contribute code, documentation, and improvements to TYPF.
 
 ## Code of Conduct
 
-We are committed to providing a welcoming and inclusive environment. Please be respectful and constructive in all interactions.
+Be respectful. Be constructive.
 
 ## Getting Started
 
 ### Prerequisites
 
 - Rust 1.70+ (install via [rustup](https://rustup.rs/))
-- For HarfBuzz support:
+- HarfBuzz support:
   - **macOS**: `brew install harfbuzz`
   - **Linux**: `sudo apt-get install libharfbuzz-dev`
-  - **Windows**: HarfBuzz binaries included via `harfbuzz-sys`
+  - **Windows**: Included via `harfbuzz-sys`
 
-### Clone and Build
+### Setup
 
 ```bash
 git clone https://github.com/fontlaborg/typf.git
 cd typf
 cargo build --workspace
-```
-
-### Run Tests
-
-```bash
 cargo test --workspace
 ```
 
-### Run Examples
+### Examples
 
 ```bash
 cargo run --example basic
@@ -51,22 +35,18 @@ cargo run --example harfbuzz --features shaping-hb
 
 ## Development Workflow
 
-### 1. Read the Documentation
+### 1. Read Documentation
 
-Before making changes, familiarize yourself with:
+- `README.md` - What TYPF does
+- `ARCHITECTURE.md` - How it works
+- `PLAN.md` - What we're building
+- `PLAN/00.md` - Technical details
 
-- `README.md` - Project overview
-- `ARCHITECTURE.md` - System design
-- `PLAN.md` - Implementation roadmap
-- `PLAN/00.md` - Comprehensive architecture docs
+### 2. Check Issues
 
-### 2. Check Existing Issues
+Browse [existing issues](https://github.com/fontlaborg/typf/issues), comment on what you want to work on.
 
-- Browse [existing issues](https://github.com/fontlaborg/typf/issues)
-- Comment if you want to work on something
-- Ask questions if anything is unclear
-
-### 3. Create a Branch
+### 3. Create Branch
 
 ```bash
 git checkout -b feature/your-feature-name
@@ -74,80 +54,58 @@ git checkout -b feature/your-feature-name
 git checkout -b fix/bug-description
 ```
 
-### 4. Make Your Changes
+### 4. Make Changes
 
-Follow the code style guidelines (see below) and write tests for new functionality.
+Follow the style guidelines. Write tests for your code.
 
-### 5. Test Your Changes
+### 5. Test Changes
 
 ```bash
-# Run all tests
 cargo test --workspace
-
-# Run specific test
 cargo test --package typf-core test_name
-
-# Run with all features
 cargo test --workspace --all-features
-
-# Check formatting
 cargo fmt --all -- --check
-
-# Run clippy
 cargo clippy --workspace --all-features -- -D warnings
 ```
 
-### 5.5. Set Up Pre-Commit Hooks (Optional but Recommended)
-
-Install the pre-commit hook to automatically check your code before committing:
+### 6. Pre-Commit Hooks (Optional)
 
 ```bash
-# Install the pre-commit hook
 cp .github/hooks/pre-commit.sample .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
 
-The pre-commit hook will automatically:
-- Check code formatting with `cargo fmt`
-- Run `cargo clippy` with warnings as errors
-- Run all tests
-- Warn about debugging statements (`dbg!`, `println!`, `eprintln!`)
+Automatically checks formatting, warnings, tests, and debug statements.
 
-To bypass the hook temporarily (not recommended):
+To bypass (not recommended):
 ```bash
 git commit --no-verify
 ```
 
-### 6. Commit Your Changes
+### 7. Commit & Submit
 
-Follow the commit guidelines (see below).
-
-### 7. Submit a Pull Request
-
-Push your branch and create a pull request on GitHub.
+Follow the commit format below. Push your branch. Open a pull request.
 
 ## Testing
 
-### Test Categories
+### Test Types
 
-1. **Unit Tests**: Test individual functions and modules
+1. **Unit Tests**: Individual functions/modules
    ```bash
    cargo test --package typf-core
    ```
 
-2. **Integration Tests**: Test complete workflows
+2. **Integration Tests**: Complete workflows
    ```bash
    cargo test --test integration_test
    ```
 
-3. **Example Tests**: Verify examples compile and run
+3. **Example Tests**: Verify examples compile/run
    ```bash
    cargo test --examples
    ```
 
 ### Writing Tests
-
-Place tests in the same file as the code being tested:
 
 ```rust
 #[cfg(test)]
@@ -156,13 +114,8 @@ mod tests {
 
     #[test]
     fn test_feature_name() {
-        // Arrange
         let input = create_test_data();
-        
-        // Act
         let result = function_to_test(input);
-        
-        // Assert
         assert_eq!(result, expected_value);
     }
 }
@@ -170,18 +123,16 @@ mod tests {
 
 ### Test Guidelines
 
-- ✅ Test edge cases (empty input, None, negative numbers, etc.)
-- ✅ Use descriptive test names: `test_when_condition_then_outcome`
-- ✅ Keep tests focused on one thing
-- ✅ Use test fixtures for complex setups
-- ❌ Don't test implementation details
-- ❌ Don't duplicate tests unnecessarily
+- ✅ Test edge cases (empty, None, negative values)
+- ✅ Name tests clearly: `test_when_condition_then_outcome`
+- ✅ Keep each test focused on one thing
+- ✅ Use fixtures for complex setup
+- ❌ Don't test how code works internally
+- ❌ Don't write the same test twice
 
 ## Code Style
 
 ### Formatting
-
-We use `rustfmt` with default settings:
 
 ```bash
 cargo fmt --all
@@ -189,13 +140,11 @@ cargo fmt --all
 
 ### Linting
 
-We use `clippy` with `-D warnings` (all warnings are errors):
-
 ```bash
 cargo clippy --workspace --all-features -- -D warnings
 ```
 
-### Naming Conventions
+### Naming
 
 - **Crates**: `typf-feature-name` (kebab-case)
 - **Modules**: `module_name` (snake_case)
@@ -205,32 +154,25 @@ cargo clippy --workspace --all-features -- -D warnings
 
 ### Documentation
 
-- Add rustdoc comments to all public items
-- Include examples in documentation
-- Document panics and errors
+Add rustdoc comments to public items. Include examples. Document panics and errors.
 
 ```rust
 /// Renders text using the specified font.
 ///
 /// # Arguments
-///
 /// * `text` - The text to render
 /// * `font` - Font reference
 /// * `params` - Rendering parameters
 ///
 /// # Returns
-///
 /// Returns a `RenderOutput` containing the rendered bitmap.
 ///
 /// # Errors
-///
 /// Returns `RenderError::InvalidDimensions` if the output size is invalid.
 ///
 /// # Examples
-///
 /// ```
 /// use typf_core::*;
-///
 /// let rendered = render_text("Hello", font, &params)?;
 /// ```
 pub fn render_text(text: &str, font: Arc<dyn FontRef>, params: &RenderParams) -> Result<RenderOutput> {
@@ -238,18 +180,14 @@ pub fn render_text(text: &str, font: Arc<dyn FontRef>, params: &RenderParams) ->
 }
 ```
 
-### Code Organization
+### Organization
 
-- Keep functions small (<20 lines ideally)
-- Keep files focused (<200 lines ideally)
-- Limit indentation depth (max 3 levels)
-- Extract complex logic into helper functions
+- Functions: <20 lines
+- Files: <200 lines
+- Indentation: max 3 levels
+- Extract complex logic into helpers
 
 ### Error Handling
-
-- Use `Result<T, E>` for fallible operations
-- Use `thiserror` for error types
-- Provide helpful error messages
 
 ```rust
 use thiserror::Error;
@@ -258,30 +196,29 @@ use thiserror::Error;
 pub enum RenderError {
     #[error("Invalid dimensions: {width}x{height}")]
     InvalidDimensions { width: u32, height: u32 },
-    
     #[error("Rendering failed: {0}")]
     RenderFailed(String),
 }
 ```
 
-### Performance Considerations
+### Performance
 
-- Profile before optimizing
-- Use benchmarks to validate improvements
-- Document performance-critical code
-- Avoid premature optimization
+- Profile first, then optimize
+- Use benchmarks to prove your improvements
+- Mark performance-critical code clearly
+- Don't optimize code that isn't slow
 
 ## Commit Guidelines
 
-### Commit Message Format
+### Format
 
 ```
-type(scope): short description
+type(scope): what you changed
 
-Longer description if needed.
+Why you changed it.
 
-- Detail 1
-- Detail 2
+- Specific change 1
+- Specific change 2
 ```
 
 ### Types
@@ -289,10 +226,10 @@ Longer description if needed.
 - **feat**: New feature
 - **fix**: Bug fix
 - **docs**: Documentation changes
-- **style**: Code style changes (formatting, etc.)
+- **style**: Code style changes
 - **refactor**: Code restructuring
 - **perf**: Performance improvements
-- **test**: Adding or updating tests
+- **test**: Adding/updating tests
 - **chore**: Maintenance tasks
 
 ### Examples
@@ -300,19 +237,17 @@ Longer description if needed.
 ```
 feat(export): add PNG export support
 
-Implements PNG export using the image crate with support for
-RGBA, RGB, Gray8, and Gray1 color spaces.
+Added PNG export using the image crate. Supports RGBA, RGB, Gray8, and Gray1.
 
-- Added PngExporter struct
-- Implemented color space conversion
-- Added 4 comprehensive tests
+- Created PngExporter struct
+- Added color space conversion
+- Wrote 4 tests
 ```
 
 ```
-fix(shaping): correct glyph ID mapping for TTC fonts
+fix(shaping): fix glyph ID mapping for TTC fonts
 
-Fixed an issue where glyph IDs were incorrectly mapped when
-using TrueType Collection (TTC) fonts.
+Glyph IDs were wrong for TrueType Collection fonts.
 
 Fixes #123
 ```
@@ -322,17 +257,17 @@ Fixes #123
 ### Before Submitting
 
 1. ✅ All tests pass
-2. ✅ Code is formatted (`cargo fmt`)
-3. ✅ No clippy warnings (`cargo clippy`)
-4. ✅ Documentation is updated
-5. ✅ CHANGELOG.md is updated (for user-facing changes)
+2. ✅ Code formatted (`cargo fmt`)
+3. ✅ No clippy warnings
+4. ✅ Documentation updated
+5. ✅ CHANGELOG.md updated (if users will notice the change)
 
-### PR Description Template
+### PR Template
 
 ```markdown
 ## Description
 
-Brief description of the changes.
+Brief description of changes.
 
 ## Type of Change
 
@@ -343,7 +278,7 @@ Brief description of the changes.
 
 ## Testing
 
-How the changes were tested.
+How changes were tested.
 
 ## Checklist
 
@@ -356,18 +291,18 @@ How the changes were tested.
 
 ### Review Process
 
-1. Automated checks must pass (CI/CD)
-2. At least one maintainer approval required
-3. Address review feedback
-4. Squash commits if requested
-5. Maintainer will merge when ready
+1. CI checks must pass
+2. A maintainer must approve
+3. Fix the feedback you get
+4. Squash commits if asked
+5. Maintainer merges
 
 ## Project Structure
 
 ```
 typf/
 ├── crates/
-│   ├── typf/           # Main library crate
+│   ├── typf/           # Main library
 │   ├── typf-core/      # Core traits and types
 │   ├── typf-input/     # Input parsing
 │   ├── typf-unicode/   # Unicode processing
@@ -387,7 +322,7 @@ typf/
 
 ### Adding a New Crate
 
-1. Create crate in appropriate directory (`crates/` or `backends/`)
+1. Create crate in `crates/` or `backends/`
 2. Add to workspace in root `Cargo.toml`
 3. Add feature flag if optional
 4. Update `ARCHITECTURE.md`
@@ -396,20 +331,20 @@ typf/
 ### Adding a New Backend
 
 1. Create crate in `backends/typf-{stage}-{name}/`
-2. Implement the appropriate trait (`Shaper`, `Renderer`, etc.)
+2. Implement appropriate trait (`Shaper`, `Renderer`, etc.)
 3. Add feature flag: `{stage}-{name}`
 4. Update backend registry
 5. Add comprehensive tests
 6. Document in `PLAN/02.md`
 
-## Areas Needing Contributions
+## Contribution Areas
 
 ### High Priority
 
 - **Platform Backends**: CoreText (macOS), DirectWrite (Windows)
-- **Orge Renderer**: Anti-aliasing implementation
+- **Orge Renderer**: Add anti-aliasing
 - **Documentation**: API docs, user guides
-- **Testing**: More test coverage, property-based tests
+- **Testing**: More coverage, property-based tests
 
 ### Medium Priority
 
@@ -422,18 +357,14 @@ typf/
 
 - **Additional Exporters**: PDF, WebP
 - **CLI Enhancements**: REPL mode, rich output
-- **Benchmarks**: More comprehensive benchmark suite
+- **Benchmarks**: Comprehensive benchmark suite
 
 ## Getting Help
 
-- **Questions**: Open a [GitHub Discussion](https://github.com/fontlaborg/typf/discussions)
-- **Bugs**: Open an [Issue](https://github.com/fontlaborg/typf/issues)
-- **Chat**: Join our Discord server (link in README)
+- **Questions**: [GitHub Discussions](https://github.com/fontlaborg/typf/discussions)
+- **Bugs**: [Open an issue](https://github.com/fontlaborg/typf/issues)
+- **Chat**: Discord (link in README)
 
 ## License
 
-By contributing to TYPF, you agree that your contributions will be licensed under both the MIT License and Apache License 2.0.
-
----
-
-Thank you for contributing to TYPF! 🎨✨
+Your contributions are licensed under MIT and Apache 2.0.

@@ -2,88 +2,82 @@
 
 ## Supported Versions
 
-We provide security updates for the following versions of TYPF:
-
 | Version | Supported          | Notes |
 | ------- | ------------------ | ----- |
-| 2.0.x   | :white_check_mark: | Current major version, full support |
-| 1.x.x   | :x:                | End of life, no security updates |
+| 2.0.x   | :white_check_mark: | Current version, full support |
+| 1.x.x   | :x:                | End of life, no updates |
 
-Security fixes are backported to the current minor version only. We recommend always running the latest stable release.
+Security fixes go to current minor version only. Run the latest stable release.
 
 ## Reporting a Vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+Don't report security issues in public GitHub issues.
 
-### Preferred Reporting Method
+Email **security@fontlab.com** with:
 
-Email security-related issues to: **security@fontlab.com**
+1. Vulnerability type (buffer overflow, code injection, DoS)
+2. Affected component (shaping backend, renderer, font loader)
+3. Steps to reproduce
+4. Proof of concept code (if available)
+5. Potential impact
+6. Suggested fix (if you have one)
 
-Include the following information:
+### Timeline
 
-1. **Type of vulnerability** (e.g., buffer overflow, code injection, denial of service)
-2. **Affected component** (e.g., shaping backend, renderer, font loader)
-3. **Steps to reproduce** the vulnerability
-4. **Proof of concept** code (if available)
-5. **Potential impact** of the vulnerability
-6. **Suggested fix** (if you have one)
+- **Acknowledgment**: 48 hours
+- **Initial assessment**: 1 week
+- **Status updates**: Weekly until resolved
+- **Fix timeline**: Critical: 2 weeks, High: 4 weeks
 
-### What to Expect
+### Disclosure
 
-- **Acknowledgment**: Within 48 hours
-- **Initial assessment**: Within 1 week
-- **Status updates**: Every week until resolved
-- **Fix timeline**: Critical issues within 2 weeks, high severity within 4 weeks
+We coordinate disclosure:
 
-### Disclosure Policy
+1. Acknowledge within 48 hours
+2. Investigate and assess within 1 week
+3. Work on fix with updates
+4. Coordinate disclosure timing with you
+5. Credit you (unless you prefer anonymity)
 
-We follow **coordinated disclosure**:
+Allow 90 days to fix before public disclosure.
 
-1. We will acknowledge your report within 48 hours
-2. We will investigate and provide an assessment within 1 week
-3. We will work on a fix and keep you updated
-4. We will coordinate disclosure timing with you
-5. We will credit you in the security advisory (unless you prefer to remain anonymous)
-
-**Please allow us 90 days** to fix the issue before public disclosure.
-
-## Security Considerations
+## Security Risks
 
 ### 1. Font File Parsing
 
-**Risk**: Malformed font files can cause crashes, hangs, or memory corruption.
+Malformed font files can cause crashes, hangs, or memory corruption.
 
-**Mitigations**:
-- All font parsing uses battle-tested libraries (`read-fonts`, `skrifa`)
+**How we protect**:
+- Font parsing uses tested libraries (`read-fonts`, `skrifa`)
 - Bounds checking on all array accesses
 - Fuzzing with `cargo-fuzz` on font loading paths
 - Memory-safe Rust prevents buffer overflows
 
-**User recommendations**:
+**What you should do**:
 - Only load fonts from trusted sources
 - Validate font files before loading in production
 - Use sandboxing when processing user-uploaded fonts
 
 ### 2. Text Input Handling
 
-**Risk**: Malicious text input can cause denial of service or exploit Unicode edge cases.
+Malicious text input can cause denial of service or exploit Unicode edge cases.
 
-**Mitigations**:
+**How we protect**:
 - Unicode normalization (NFC) before processing
 - Input length limits enforced
 - Timeout protection for complex script shaping
 - Stack overflow protection via tail recursion elimination
 
-**User recommendations**:
+**What you should do**:
 - Sanitize user input before rendering
 - Implement rate limiting for text rendering endpoints
 - Set maximum text length for user-provided content
 
 ### 3. Memory Safety
 
-**Risk**: Memory corruption, use-after-free, data races.
+Risk: Memory corruption, use-after-free, data races.
 
-**Mitigations**:
+**How we protect**:
 - Rust's ownership system prevents most memory safety issues
 - All `unsafe` code is documented and audited
 - Thread-safe data structures (`Arc`, `DashMap`) for concurrency
@@ -100,9 +94,9 @@ rg "unsafe" --type rust --stats
 
 ### 4. Dependency Security
 
-**Risk**: Vulnerabilities in third-party dependencies.
+Risk: Vulnerabilities in third-party dependencies.
 
-**Mitigations**:
+**How we protect**:
 - `cargo-audit` runs in CI on every commit
 - `cargo-deny` checks for vulnerable, unmaintained, or banned dependencies
 - Minimal dependency tree (prefer std library)
@@ -122,9 +116,9 @@ cargo tree --depth 1
 
 ### 5. SIMD Safety
 
-**Risk**: Incorrect SIMD usage can cause UB or crashes on unsupported CPUs.
+Risk: Incorrect SIMD usage can cause UB or crashes on unsupported CPUs.
 
-**Mitigations**:
+**How we protect**:
 - Runtime CPU feature detection (no assumptions)
 - Scalar fallbacks for all SIMD code
 - Alignment guarantees for SIMD loads/stores
@@ -149,9 +143,9 @@ if is_x86_feature_detected!("avx2") {
 
 ### 6. Integer Overflow
 
-**Risk**: Integer overflows in size calculations can lead to buffer overruns.
+Risk: Integer overflows in size calculations can lead to buffer overruns.
 
-**Mitigations**:
+**How we protect**:
 - Debug builds have overflow checks enabled
 - Checked arithmetic in critical paths
 - Saturating operations where appropriate
@@ -166,15 +160,15 @@ let size = width.checked_mul(height)
 
 ### 7. Resource Exhaustion
 
-**Risk**: Malicious input can cause excessive memory or CPU usage.
+Risk: Malicious input can cause excessive memory or CPU usage.
 
-**Mitigations**:
+**How we protect**:
 - Cache size limits (configurable)
 - Timeouts for long-running operations
 - Memory pool bounds
 - LRU eviction prevents unbounded growth
 
-**User recommendations**:
+**What you should do**:
 ```rust
 use typf::CacheConfig;
 
@@ -190,9 +184,9 @@ let typf = Typf::with_config(config);
 
 ### 8. Platform-Specific APIs
 
-**Risk**: Platform APIs (CoreText, DirectWrite) may have security issues.
+Risk: Platform APIs (CoreText, DirectWrite) may have security issues.
 
-**Mitigations**:
+**How we protect**:
 - Minimal surface area (only use required APIs)
 - Error handling for all platform calls
 - No elevated privileges required
@@ -200,9 +194,9 @@ let typf = Typf::with_config(config);
 
 ### 9. FFI Safety (Python Bindings)
 
-**Risk**: Incorrect FFI can cause crashes or undefined behavior.
+Risk: Incorrect FFI can cause crashes or undefined behavior.
 
-**Mitigations**:
+**How we protect**:
 - PyO3 provides memory-safe FFI abstractions
 - All panics are caught at FFI boundary
 - GIL management prevents data races
@@ -223,29 +217,29 @@ fn render_text(text: &str) -> PyResult<Vec<u8>> {
 
 ### 10. WASM Security
 
-**Risk**: WASM builds may have different security characteristics.
+Risk: WASM builds may have different security characteristics.
 
-**Mitigations**:
+**How we protect**:
 - No file system access in WASM builds
 - No network access
 - Memory limits enforced by runtime
 - No `unsafe` in WASM-specific code
 
-## Known Security Limitations
+## Security Limitations
 
 1. **No sandboxing**: TYPF runs in the same process as the caller
-   - Recommendation: Use OS-level sandboxing for untrusted input
+   - Use OS-level sandboxing for untrusted input
 
-2. **No font signature verification**: We do not verify font authenticity
-   - Recommendation: Implement your own signature checking
+2. **No font signature verification**: We don't verify font authenticity
+   - Implement your own signature checking
 
 3. **Limited DoS protection**: Complex text can be slow
-   - Recommendation: Implement timeouts and rate limiting
+   - Implement timeouts and rate limiting
 
 4. **Cache poisoning**: Shared caches can be poisoned with malicious entries
-   - Recommendation: Use separate cache instances for untrusted input
+   - Use separate cache instances for untrusted input
 
-## Security Best Practices for Users
+## Security Best Practices
 
 ### 1. Validate Input
 
@@ -291,7 +285,7 @@ fn load_user_font(path: &Path) -> Result<Arc<Font>> {
 }
 ```
 
-### 3. Implement Rate Limiting
+### 3. Rate Limiting
 
 ```rust
 use std::time::{Duration, Instant};
@@ -324,7 +318,7 @@ impl RateLimiter {
 }
 ```
 
-### 4. Use Separate Cache Instances
+### 4. Separate Cache Instances
 
 ```rust
 // DON'T: Share cache between trusted and untrusted input
@@ -339,8 +333,6 @@ typf.clear_cache();
 ```
 
 ## Security Testing
-
-We use multiple approaches to ensure security:
 
 ### 1. Fuzzing
 
@@ -391,7 +383,7 @@ RUSTFLAGS="-Z sanitizer=address" cargo +nightly test
 RUSTFLAGS="-Z sanitizer=memory" cargo +nightly test
 ```
 
-## Security Checklist for Contributors
+## Security Checklist
 
 Before submitting security-sensitive code:
 
@@ -404,9 +396,9 @@ Before submitting security-sensitive code:
 - [ ] Documentation of security implications
 - [ ] No new dependencies without audit
 
-## Security-Related Configuration
+## Security Configuration
 
-### Recommended `Cargo.toml` settings:
+### Recommended `Cargo.toml`:
 
 ```toml
 [profile.release]
@@ -421,7 +413,7 @@ strip = true     # Remove symbols
 overflow-checks = true
 ```
 
-### Recommended runtime configuration:
+### Recommended runtime config:
 
 ```rust
 use typf::{Typf, CacheConfig, RenderConfig};
@@ -441,8 +433,6 @@ let typf = Typf::with_config(config);
 
 ## Incident Response
 
-In case of a security incident:
-
 1. **Assess severity** (Critical, High, Medium, Low)
 2. **Develop fix** (private branch, no public discussion)
 3. **Test thoroughly** (including regression tests)
@@ -460,14 +450,14 @@ In case of a security incident:
 
 ## Attribution
 
-We appreciate security researchers who help keep TYPF safe. We will acknowledge your contribution in:
+We credit security researchers who help keep TYPF safe in:
 
 - Security advisories
 - CHANGELOG.md
 - Release notes
 - Hall of Fame (if you prefer)
 
-Thank you for helping keep TYPF secure!
+Thanks for helping keep TYPF secure!
 
 ---
 

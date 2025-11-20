@@ -1,931 +1,563 @@
-# Chapter 20: CLI Interface
+# CLI Interface
 
-## Overview
+TYPF's command-line interface provides fast text rendering from the terminal.
 
-The TYPF Command Line Interface (CLI) provides fast, scriptable access to the text rendering engine's capabilities from the terminal. Built with Clap v4 and following modern CLI design principles, the interface offers both simple one-shot rendering and advanced batch processing. This chapter covers the complete CLI functionality, from basic usage to complex automation workflows, with practical examples for different use cases.
-
-## Architecture
-
-### CLI Structure
+## Basic Usage
 
 ```bash
-typf <COMMAND> [OPTIONS] <ARGS>
+# Simple text rendering
+typf render "Hello World" --font font.ttf --output hello.png
 
-Commands:
-  render     Render text to image file
-  shape      Shape text and output positioning data
-  font       Display font information
-  info       Show system and backend information
-  batch      Process multiple texts from file or stdin
-  bench      Benchmark rendering performance
-  repl       Interactive text rendering shell
-  export     Export text in various formats
-```
+# Use specific backends
+typf render "Text" --font font.ttf --shaper harfbuzz --renderer skia --output text.png
 
-### Core Components
-
-```rust
-// Main CLI structure
-#[derive(Parser)]
-#[command(name = "typf")]
-#[command(about = "TYPF Text Rendering CLI", long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-    
-    /// Global verbosity level
-    #[arg(short, long, action = clap::ArgAction::Count)]
-    verbose: u8,
-    
-    /// Configuration file path
-    #[arg(short, long)]
-    config: Option<PathBuf>,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    Render(RenderArgs),
-    Shape(ShapeArgs),
-    Font(FontArgs),
-    Info(InfoArgs),
-    Batch(BatchArgs),
-    Bench(BenchArgs),
-    Repl(ReplArgs),
-    Export(ExportArgs),
-}
+# Quick render with defaults
+typf quick "Hello CLI" --output hello.png
 ```
 
 ## Installation
 
-### Binary Installation
-
 ```bash
-# Install from cargo crates.io
+# Install from crates.io
 cargo install typf-cli
 
-# Install from GitHub (latest)
-cargo install --git https://github.com/fontlaborg/typf --branch main typf-cli
+# Build from source
+cargo install --path crates/typf-cli
 
-# Install with specific features
-cargo install typf-cli --features "shaping-hb render-skia"
+# Build with features
+cargo install --path crates/typf-cli --features "shaping-harfbuzz,render-skia"
 ```
 
-### Build from Source
+## Commands
+
+### render
+
+Main command for text rendering.
 
 ```bash
-# Clone repository
-git clone https://github.com/fontlaborg/typf.git
-cd typf
+typf render [OPTIONS] <TEXT> --font <FONT>
 
-# Install with minimal features
-cargo install --path crates/typf-cli --features "minimal"
+Arguments:
+  <TEXT>          Text to render
 
-# Install with full features
-cargo install --path crates/typf-cli --features "full"
-
-# Development build
-cargo build --release --features "full"
+Options:
+  -f, --font <FONT>           Font file path [required]
+  -o, --output <OUTPUT>       Output file path
+  -s, --size <SIZE>           Font size in pixels [default: 16]
+  -w, --width <WIDTH>         Image width [default: 800]
+  -h, --height <HEIGHT>       Image height [default: 600]
+      --shaper <SHAPER>       Text shaper backend
+      --renderer <RENDERER>   Rendering backend
+      --format <FORMAT>       Output format [png|svg|pdf|pnm|json]
+      --color <COLOR>         Text color (rgba)
+      --background <COLOR>    Background color (rgba)
+      --dpi <DPI>             Output resolution [default: 72]
+      --no-antialiasing       Disable edge smoothing
+      --hinting <HINTING>     Font hinting mode
+  -v, --verbose               Show detailed output
 ```
 
-### Shell Completions
-
-```bash
-# Generate completions for your shell
-typf --completion bash > typf-completion.bash
-typf --completion zsh > typf-completion.zsh
-typf --completion fish > typf-completion.fish
-
-# Install completions (bash example)
-source typf-completion.bash
-echo 'source typf-completion.bash' >> ~/.bashrc
-
-# Fish completion installation
-typf-completion.fish > ~/.config/fish/completions/typf.fish
-```
-
-## Basic Usage
-
-### Simple Text Rendering
+### Examples
 
 ```bash
 # Basic rendering
-typf render "Hello, World!" -o output.png
+typf render "Hello World" --font Roboto.ttf --output hello.png
 
-# Specify font and size
-typf render "Text with font" \
-  --font /path/to/font.ttf \
-  --font-size 24 \
-  --output styled.png
+# Large text for printing
+typf render "Print Title" --font serif.ttf --size 48 --dpi 300 --output title.png
 
-# Multiple formats
-typf render "Vector output" \
-  --font /path/to/font.otf \
-  --font-size 32 \
-  --output vector.svg \
-  --format svg
+# SVG export
+typf render "Vector Text" --font sans.ttf --format svg --output vector.svg
 
-# Custom dimensions
-typf render "Custom dimensions" \
-  --width 800 \
-  --height 200 \
-  --background white \
-  --color black \
-  --output custom.png
+# Custom colors
+typf render "Red Text" --font font.ttf --color "255,0,0,255" --background "240,240,240,255" --output red.png
+
+# Using backends
+typf render "Hi-Quality" --font font.ttf --shaper harfbuzz --renderer skia --output high.png
 ```
 
-### Font Information
+### quick
+
+Simplified rendering with sensible defaults.
 
 ```bash
-# Get font information
-typf font /path/to/font.ttf
-
-# Detailed font analysis
-typf font /path/to/font.otf --verbose
-
-# List supported characters
-typf font /path/to/font.ttf --list-characters
-
-# Check font capabilities
-typf font /path/to/font.ttf --check-features
-```
-
-### System Information
-
-```bash
-# Show available backends
-typf info --backends
-
-# Show system capabilities
-typf info --system
-
-# Show version and build info
-typf info --version
-typf info --build
-
-# Show configuration
-typf info --config
-```
-
-## Command Reference
-
-### Render Command
-
-```bash
-typf render [OPTIONS] <TEXT>
+typf quick [OPTIONS] <TEXT> --output <OUTPUT>
 
 Arguments:
-  <TEXT>                    Text to render
+  <TEXT>          Text to render
 
 Options:
-  -o, --output <FILE>       Output file path [required]
-  -f, --font <FILE>         Font file path
-  -s, --font-size <SIZE>    Font size in points [default: 16.0]
-      --format <FORMAT>     Output format: png, svg, pdf, pnm, json [default: png]
-      --width <PIXELS>      Image width in pixels
-      --height <PIXELS>     Image height in pixels
-      --color <COLOR>       Text color (hex or name) [default: black]
-      --background <COLOR>  Background color (hex or name) [default: transparent]
-      --shaper <BACKEND>    Shaping backend: none, harfbuzz, coretext, directwrite, icu-hb
-      --renderer <BACKEND>  Rendering backend: skia, orge, coregraphics, direct2d, zeno
-      --dpi <DPI>           Output resolution [default: 72]
-      --quality <QUALITY>   Compression quality (0-100) [default: 90]
-  -v, --verbose             Enable verbose output
-  -h, --help                Print help
+  -o, --output <OUTPUT>       Output file path [required]
+  -f, --font <FONT>           Font file (uses system fonts if omitted)
+      --size <SIZE>           Font size [default: 24]
+      --format <FORMAT>       Output format [default: png]
 ```
 
-#### Examples
+### Examples
 
 ```bash
-# Basic PNG rendering
-typf render "Hello, World!" -o hello.png
+# Quick PNG with system fonts
+typf quick "Hello" --output hello.png
 
-# High-quality PDF with custom font
-typf render "Professional text" \
-  --font /usr/share/fonts/noto/NotoSerif-Regular.ttf \
-  --font-size 18 \
-  --format pdf \
-  --dpi 300 \
-  --quality 95 \
-  --output professional.pdf
+# Quick SVG
+typf quick "SVG Text" --output text.svg --format svg
 
-# SVG with specific dimensions
-typf render "SVG Graphics" \
-  --font-size 24 \
-  --width 600 \
-  --height 150 \
-  --background "#f0f0f0" \
-  --color "#333333" \
-  --format svg \
-  --output graphics.svg
-
-# Platform-specific backends
-typf render "Platform rendering" \
-  --shaper coretext \
-  --renderer coregraphics \
-  --output macos_native.png
-
-# Unicode text with bidirectional support
-typf render "مرحبا بالعالم" \
-  --font /path/to/arabic-font.ttf \
-  --font-size 20 \
-  --shaper harfbuzz \
-  --output arabic.png
+# Custom font
+typf quick "Custom Font" --output custom.png --font myfont.ttf
 ```
 
-### Shape Command
+### batch
+
+Render multiple texts from a file or stdin.
 
 ```bash
-typf shape [OPTIONS] <TEXT>
-
-Arguments:
-  <TEXT>                    Text to shape
+typf batch [OPTIONS] --input <INPUT> --template <TEMPLATE>
 
 Options:
-  -f, --font <FILE>         Font file path
-  -s, --font-size <SIZE>    Font size in points [default: 16.0]
-  -o, --output <FILE>       Output JSON file
-      --format <FORMAT>     Output format: json, yaml, toml [default: json]
-      --include-metrics     Include detailed metrics
-      --include-positions   Include glyph positions
-      --script-analysis     Enable script detection
-  -v, --verbose             Enable verbose output
-  -h, --help                Print help
+  -i, --input <INPUT>         Input file path or "-" for stdin
+  -t, --template <TEMPLATE>   Output filename template
+  -f, --font <FONT>           Font file path
+      --format <FORMAT>       Output format
+      --config <CONFIG>       JSON config file
 ```
 
-#### Examples
+### Template Variables
+
+Use variables in output filenames:
 
 ```bash
-# Basic shaping
-typf shape "Shaping analysis" \
-  --font /path/to/font.ttf \
-  --font-size 24
+# Template with line number
+typf batch --input texts.txt --template "output_{line}.png"
 
-# Detailed shaping with metrics
-typf shape "Detailed analysis" \
-  --font /path/to/font.otf \
-  --include-metrics \
-  --include-positions \
-  --script-analysis \
-  --output detailed.json
+# Template with text hash
+typf batch --input texts.txt --template "output_{hash}.svg"
 
-# Format options
-typf shape "YAML format" \
-  --font /path/to/font.ttf \
-  --format yaml \
-  --output shaping.yaml
+# Template with timestamp
+typf batch --input texts.txt --template "output_{time}.png"
 ```
 
-### Batch Command
+### Input Formats
 
-```bash
-typf batch [OPTIONS] <INPUT>
-
-Arguments:
-  <INPUT>                   Input file or "-" for stdin
-
-Options:
-  -o, --output-dir <DIR>    Output directory [default: .]
-  -f, --font <FILE>         Font file path
-  -s, --font-size <SIZE>    Font size in points [default: 16.0]
-      --format <FORMAT>     Output format: png, svg, pdf [default: png]
-      --template <TEMPLATE> Output filename template
-      --parallel <JOBS>     Number of parallel jobs [default: 4]
-      --config <FILE>       Batch configuration file
-  -v, --verbose             Enable verbose output
-  -h, --help                Print help
+Plain text file:
+```
+Hello World
+Second Line  
+TYPF CLI
 ```
 
-#### Batch Input Formats
-
-**JSON Lines (JSONL)**
+JSON config:
 ```json
-{"text": "Sample 1", "font_size": 16, "output": "sample1.png"}
-{"text": "Sample 2", "font_size": 24, "output": "sample2.svg"}
-{"text": "Sample 3", "font_size": 32, "color": "red"}
+{
+  "font": "Roboto.ttf",
+  "size": 16,
+  "format": "png",
+  "texts": [
+    {"text": "Hello", "output": "hello.png"},
+    {"text": "World", "size": 24, "output": "world.png"}
+  ]
+}
 ```
 
-**CSV Format**
-```csv
-text,font_size,output,color
-"Sample 1",16,sample1.png,black
-"Sample 2",24,sample2.svg,blue
-"Sample 3",32,,red
-```
+### font
 
-**Plain Text (one line per output)**
-```
-First line of text
-Second line of text
-Third line of text
-```
-
-#### Examples
+Font information and testing.
 
 ```bash
-# Process JSONL file
-typf batch inputs.jsonl \
-  --output-dir renders/ \
-  --font /path/to/font.ttf \
-  --format png
+typf font [OPTIONS] <COMMAND>
 
-# Process CSV
-typf batch data.csv \
-  --output-dir batch_output/ \
-  --parallel 8
-
-# Process stdin
-echo -e "Line 1\nLine 2\nLine 3" | typf batch - \
-  --font /path/to/font.ttf \
-  --font-size 20 \
-  --output-dir stdin_renders/
-
-# Custom filename template
-typf batch inputs.jsonl \
-  --template "render_{index:04d}_{text_hash}.png" \
-  --output-dir template_output/
+Commands:
+  info     Show font information
+  list     List available fonts
+  test     Test font rendering
+  search   Search for fonts
 ```
 
-### Benchmark Command
+#### font info
 
 ```bash
-typf bench [OPTIONS]
+typf font info <FONT_PATH>
 
 Options:
-  -f, --font <FILE>         Font file path
-      --iterations <COUNT>  Number of iterations [default: 1000]
-      --text <TEXT>         Test text [default: "Benchmark test"]
-      --font-size <SIZE>    Font size in points [default: 16.0]
-      --backends <LIST>     Backends to test (comma-separated)
-      --output <FILE>       Output JSON results
-      --warmup <COUNT>      Warmup iterations [default: 100]
-  -v, --verbose             Enable verbose output
-  -h, --help                Print help
+  -v, --verbose    Show detailed glyph information
 ```
 
-#### Examples
+Output:
+```
+Font: Roboto-Regular.ttf
+Family: Roboto
+Style: Regular
+Units per EM: 2048
+Ascender: 1900
+Descender: -500
+Line Gap: 0
+Supported scripts: Latin, Cyrillic, Greek
+```
+
+#### font list
 
 ```bash
-# Basic benchmark
-typf bench \
-  --font /path/to/font.ttf \
-  --iterations 1000
+typf font list [OPTIONS]
 
-# Compare backends
-typf bench \
-  --backends "skia,orge,zeno" \
-  --iterations 500 \
-  --output benchmark_results.json
-
-# Detailed performance analysis
-typf bench \
-  --font /path/to/font.otf \
-  --iterations 2000 \
-  --warmup 200 \
-  --verbose \
-  --output detailed_benchmark.json
+Options:
+  -f, --family <FAMILY>    Filter by font family
+  -s, --style <STYLE>      Filter by style
+  --system                 Include system fonts
 ```
 
-### REPL Command
+#### font test
+
+```bash
+typf font test <FONT_PATH> --output <OUTPUT>
+
+Options:
+      --size <SIZE>         Test font size [default: 16]
+      --text <TEXT>         Test text [default: "Hello World"]
+      --sample              Generate comprehensive test
+```
+
+### shape
+
+Text shaping analysis and debugging.
+
+```bash
+typf shape [OPTIONS] <TEXT> --font <FONT>
+
+Options:
+  -f, --font <FONT>           Font file path
+  -s, --shaper <SHAPER>       Shaper backend
+      --direction <DIR>       Text direction [ltr|rtl|ttb]
+      --script <SCRIPT>       Unicode script
+      --language <LANG>       Language code
+  -o, --output <OUTPUT>       Save analysis to file
+      --format <FORMAT>       Output format [json|yaml]
+```
+
+### Examples
+
+```bash
+# Basic shaping analysis
+typf shape "Hello World" --font Roboto.ttf
+
+# Right-to-left text
+typf shape "مرحبا بالعالم" --font arabic.ttf --direction rtl
+
+# Save analysis
+typf shape "Analysis" --font font.ttf --output analysis.json
+```
+
+### benchmark
+
+Performance testing and benchmarks.
+
+```bash
+typf benchmark [OPTIONS]
+
+Options:
+  -f, --font <FONT>           Font file path
+  -t, --text <TEXT>           Test text
+      --iterations <N>        Number of iterations [default: 100]
+      --backends <BACKENDS>   Test specific backends
+      --output <OUTPUT>       Save results to file
+      --format <FORMAT>       Results format [json|csv|markdown]
+```
+
+### Examples
+
+```bash
+# Quick benchmark
+typf benchmark --font Roboto.ttf
+
+# Custom test
+typf benchmark --font font.ttf --text "Performance test" --iterations 1000
+
+# Test specific backends
+typf benchmark --backends "harfbuzz+orge,harfbuzz+skia" --output results.json
+```
+
+### repl
+
+Interactive REPL for testing.
 
 ```bash
 typf repl [OPTIONS]
 
 Options:
-  -f, --font <FILE>         Default font file path
-  -s, --font-size <SIZE>    Default font size [default: 16.0]
-      --history <FILE>      Command history file
-      --prompt <STRING>     Custom prompt [default: "typf> "]
-      --output-dir <DIR>    Default output directory [default: .]
-  -h, --help                Print help
+  -f, --font <FONT>           Default font
+      --size <SIZE>           Default font size
+      --output <DIR>          Default output directory
 ```
 
-#### REPL Session Example
+REPL Commands:
+```
+> render "Hello World" --font Roboto.ttf
+Rendered to output_001.png
 
-```bash
-$ typf repl --font /path/to/font.ttf
-typf> render "Hello REPL" -o repl_test.png
-✓ Rendered to repl_test.png (256x64)
+> shape "Unicode test 😊" --font emoji.ttf
+Text: Unicode test 😊
+Glyphs: 14 (includes emoji)
+Script: Mixed
 
-typf> render "Multi-line
-text" -o multiline.png --width 300 --height 100
-✓ Rendered to multiline.png (300x100)
+> help
+Available commands: render, shape, font, benchmark, quit
 
-typf> font /path/to/font.ttf
-Font: Open Sans
-Weight: Regular
-Style: Normal
-Glyphs: 895
-
-typf> bench --iterations 100
-Benchmark results:
-  Backend: skia
-  Iterations: 100
-  Total time: 0.234s
-  Avg time: 2.34ms
-  Renders/sec: 427
-
-typf> exit
-Session ended. 3 commands executed.
+> quit
 ```
 
-## Advanced Features
+## Configuration
 
-### Configuration Files
+### Config File
+
+Create `~/.config/typf/config.toml`:
 
 ```toml
-# typf.toml
-[general]
-default_font = "/usr/share/fonts/noto/NotoSans-Regular.ttf"
-default_font_size = 16.0
-default_output_dir = "./renders"
+[default]
+font = "~/fonts/Roboto-Regular.ttf"
+size = 16
+width = 800
+height = 600
+format = "png"
+shaper = "harfbuzz"
+renderer = "orge"
 
-[backends]
-default_shaper = "harfbuzz"
-default_renderer = "skia"
+[colors]
+text = "0,0,0,255"
+background = "255,255,255,0"
 
-[rendering]
-default_dpi = 72
-default_quality = 90
-default_background = "white"
-default_color = "black"
-
-[batch]
-default_parallel_jobs = 4
-default_template = "render_{index:04d}.png"
-
-[benchmarks]
-default_iterations = 1000
-default_warmup = 100
+[performance]
+cache_size = "100MB"
+parallel_jobs = 4
 ```
 
 ### Environment Variables
 
 ```bash
-# Set defaults
-export TYPF_FONT="/usr/share/fonts/noto/NotoSans-Regular.ttf"
-export TYPF_FONT_SIZE="16.0"
-export TYPF_OUTPUT_DIR="./renders"
-export TYPF_VERBOSITY="1"
-
-# Backend selection
-export TYPF_SHAPER="harfbuzz"
-export TYPF_RENDERER="skia"
-
-# Performance tuning
-export TYPF_PARALLEL_JOBS="8"
-export TYPF_CACHE_SIZE="1000"
+export TYPF_FONT=~/fonts/MyFont.ttf
+export TYPF_SIZE=24
+export TYPF_OUTPUT_DIR=./output
+export TYPF_CONFIG=~/my-typf-config.toml
 ```
 
-### Custom Templates
+### Command Precedence
+
+1. Command line flags (highest)
+2. Environment variables
+3. Config file
+4. Defaults (lowest)
+
+## Backend Selection
+
+### Available Backends
 
 ```bash
-# Filename template variables
-{index}          # Sequential index
-{text_hash}      # Hash of text content
-{timestamp}      # Unix timestamp
-{font_name}      # Font family name
-{font_size}      # Font size value
-{format}         # Output format
+# List available backends
+typf --list-backends
 
-# Examples
---template "img_{index:06d}.png"
---template "{text_hash}_{timestamp}.svg"
---template "{font_name}_{font_size}pt.png"
+Shapers:
+- none          No shaping (identity mapping)
+- harfbuzz      HarfBuzz text shaper
+- icu-harfbuzz ICU + HarfBuzz composition
+- coretext     macOS CoreText (macOS only)
+- directwrite  Windows DirectWrite (Windows only)
+
+Renderers:
+- orge          Pure Rust rasterizer
+- skia          Skia graphics library
+- coregraphics macOS CoreGraphics (macOS only)
+- directwrite  Windows DirectWrite (Windows only)
+- zeno          Vector graphics renderer
 ```
 
-## Automation and Scripting
-
-### Shell Scripts
+### Selecting Backends
 
 ```bash
-#!/bin/bash
-# generate_thumbnails.sh - Generate font thumbnails
+# Use specific shaper
+typf render "Text" --font font.ttf --shaper harfbuzz
 
-set -e
+# Use specific renderer
+typf render "Text" --font font.ttf --renderer skia
 
-FONT_DIR="/usr/share/fonts"
-OUTPUT_DIR="./thumbnails"
-FONT_SIZE=24
-TEXT="Sample Text"
+# Combine backends
+typf render "Text" --font font.ttf --shaper icu-harfbuzz --renderer zeno
 
-mkdir -p "$OUTPUT_DIR"
-
-# Process all TTF files
-find "$FONT_DIR" -name "*.ttf" -type f | while read font; do
-    font_name=$(basename "$font" .ttf)
-    output_file="$OUTPUT_DIR/${font_name}_thumb.png"
-    
-    echo "Generating thumbnail for $font_name..."
-    
-    typf render "$TEXT" \
-        --font "$font" \
-        --font-size "$FONT_SIZE" \
-        --width 300 \
-        --height 100 \
-        --output "$output_file" \
-        --verbose
-done
-
-echo "Thumbnail generation complete!"
+# Auto-select best available
+typf render "Text" --font font.ttf  # Uses defaults
 ```
 
-### Python Integration
+## Output Formats
 
-```python
-#!/usr/bin/env python3
-# batch_processor.py - Python script for batch processing
+### Format Support
 
-import subprocess
-import json
-import sys
-from pathlib import Path
+| Format | Extension | Type | Features |
+|--------|-----------|------|----------|
+| PNG | .png | Raster | Transparency, compression |
+| SVG | .svg | Vector | Scalable, web-friendly |
+| PDF | .pdf | Document | Print-optimized, fonts |
+| PNM | .pnm/.pbm/.pgm | Raster | Simple, uncompressed |
+| JSON | .json | Data | Debug information |
 
-def run_typf_command(args):
-    """Execute TYPF command and capture output."""
-    cmd = ['typf'] + args
-    
-    try:
-        result = subprocess.run(
-            cmd, 
-            capture_output=True, 
-            text=True, 
-            check=True
-        )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        print(f"TYPF command failed: {e}")
-        print(f"Error output: {e.stderr}")
-        sys.exit(1)
+### Format Options
 
-def process_jsonl(input_file, output_dir, font_path):
-    """Process JSONL file with TYPF."""
-    output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True)
-    
-    with open(input_file, 'r') as f:
-        for i, line in enumerate(f):
-            try:
-                data = json.loads(line)
-                text = data['text']
-                font_size = data.get('font_size', 16)
-                output_format = data.get('format', 'png')
-                output_file = output_dir / f"render_{i:04d}.{output_format}"
-                
-                # Build command
-                args = [
-                    'render',
-                    text,
-                    '--font', font_path,
-                    '--font-size', str(font_size),
-                    '--format', output_format,
-                    '--output', str(output_file)
-                ]
-                
-                # Add optional parameters
-                if 'width' in data:
-                    args.extend(['--width', str(data['width'])])
-                if 'height' in data:
-                    args.extend(['--height', str(data['height'])])
-                if 'color' in data:
-                    args.extend(['--color', data['color']])
-                
-                print(f"Processing: {text}")
-                run_typf_command(args)
-                
-            except json.JSONDecodeError as e:
-                print(f"Invalid JSON on line {i+1}: {e}")
-                continue
+```bash
+# PNG with quality
+typf render "Text" --font font.ttf --output image.png --png-quality 9
 
-def benchmark_backends(font_path, iterations=100):
-    """Benchmark all available backends."""
-    print("Running backend benchmarks...")
-    
-    # Get available backends
-    info_output = run_typf_command(['info', '--backends'])
-    print(f"Available backends: {info_output}")
-    
-    # Run benchmarks
-    result = run_typf_command([
-        'bench',
-        '--font', font_path,
-        '--iterations', str(iterations),
-        '--output', 'benchmark_results.json'
-    ])
-    
-    print(result)
+# SVG with embedded fonts
+typf render "Text" --font font.ttf --output vector.svg --svg-embed-fonts
 
-if __name__ == '__main__':
-    if len(sys.argv) < 4:
-        print("Usage: python batch_processor.py <input.jsonl> <output_dir> <font.ttf>")
-        sys.exit(1)
-    
-    input_file = sys.argv[1]
-    output_dir = sys.argv[2]
-    font_path = sys.argv[3]
-    
-    # Process batch
-    process_jsonl(input_file, output_dir, font_path)
-    
-    # Run benchmarks
-    benchmark_backends(font_path)
-    
-    print("Processing complete!")
+# PDF with metadata
+typf render "Report" --font font.ttf --output doc.pdf --pdf-title "Report" --pdf-author "Me"
 ```
 
-### Makefile Integration
+## Color Specification
 
-```makefile
-# Makefile for text rendering project
+### Color Formats
 
-FONT_DIR = /usr/share/fonts/noto
-OUTPUT_DIR = ./renders
-BATCH_FILE = inputs.jsonl
-DEFAULT_FONT = $(FONT_DIR)/NotoSans-Regular.ttf
+```bash
+# Hex colors
+typf render "Text" --font font.ttf --color "#FF0000"    --background "#FFFFFF"
 
-.PHONY: all batch clean benchmark info
+# RGB/RGBA tuples
+typf render "Text" --font font.ttf --color "255,0,0,255" --background "240,240,240,128"
 
-all: batch info
+# Named colors
+typf render "Text" --font font.ttf --color red --background white
 
-batch:
-	@echo "Processing batch file..."
-	typf batch $(BATCH_FILE) \
-		--output-dir $(OUTPUT_DIR) \
-		--font $(DEFAULT_FONT) \
-		--parallel 8
-
-benchmark:
-	@echo "Running benchmarks..."
-	typf bench \
-		--font $(DEFAULT_FONT) \
-		--iterations 1000 \
-		--output benchmark_results.json
-
-info:
-	@echo "System information:"
-	typf info --backends
-	typf info --system
-
-clean:
-	@echo "Cleaning output directory..."
-	rm -rf $(OUTPUT_DIR)/*.png
-	rm -rf $(OUTPUT_DIR)/*.svg
-	rm -f benchmark_results.json
-
-sample:
-	@echo "Generating sample renders..."
-	typf render "Sample Text" \
-		--font $(DEFAULT_FONT) \
-		--font-size 24 \
-		--output $(OUTPUT_DIR)/sample.png
-	
-	typf render "Vector Sample" \
-		--font $(DEFAULT_FONT) \
-		--font-size 32 \
-		--format svg \
-		--output $(OUTPUT_DIR)/sample_vector.svg
-
-help:
-	@echo "Available targets:"
-	@echo "  all       - Run batch processing and info"
-	@echo "  batch     - Process batch file"
-	@echo "  benchmark - Run performance benchmarks"
-	@echo "  info      - Show system information"
-	@echo "  clean     - Clean output files"
-	@echo "  sample    - Generate sample renders"
-	@echo "  help      - Show this help"
+# Transparent background
+typf render "Text" --font font.ttf --background transparent
 ```
 
-## Performance Optimization
+### Named Colors
+
+- `black`, `white`, `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`
+- `gray`, `grey`, `lightgray`, `darkgray`
+- `orange`, `purple`, `brown`, `pink`
+- `transparent`
+
+## Performance Options
 
 ### Parallel Processing
 
 ```bash
-# Optimize batch processing
-typf batch large_input.jsonl \
-  --parallel 16 \
-  --output-dir fast_renders/
+# Use multiple threads
+typf batch --input texts.txt --template "out_{line}.png" --jobs 8
 
-# System-specific optimization
-if [[ $(uname) == "Linux" ]]; then
-  # Use all CPU cores
-  CORES=$(nproc)
-  typf batch input.jsonl --parallel $CORES
-elif [[ $(uname) == "Darwin" ]]; then
-  # macOS optimization
-  CORES=$(sysctl -n hw.ncpu)
-  typf batch input.jsonl --parallel $CORES
-fi
+# Benchmark with parallel processing
+typf benchmark --iterations 1000 --parallel
 ```
 
 ### Caching
 
 ```bash
-# Enable font caching
-export TYPF_CACHE_ENABLED="true"
-export TYPF_CACHE_SIZE="10000"
-export TYPF_CACHE_DIR="$HOME/.typf/cache"
+# Enable caching (default)
+typf render "Cached text" --font font.ttf --cache
 
-# Warm up cache
-typf render "Cache warmup" --font /path/to/font.ttf -o /dev/null
+# Disable caching
+typf render "One-time text" --font font.ttf --no-cache
 
-# Process batch with cache
-typf batch cached_input.jsonl --font-caching
+# Clear cache
+typf cache clear
 ```
 
-### Memory Optimization
+### Memory Management
 
 ```bash
-# Process large files in chunks
-split -l 1000 large_input.jsonl chunk_
-for chunk in chunk_*; do
-  typf batch "$chunk" --output-dir "output_$(basename $chunk .txt)/"
-  rm "$chunk"  # Cleanup
-done
+# Limit memory usage
+typf render "Large text" --font font.ttf --memory-limit 1GB
+
+# Stream large files
+typf batch --input huge.txt --template "out_{line}.png" --stream
 ```
 
-## Error Handling and Troubleshooting
+## Error Handling
 
-### Common Issues
+### Exit Codes
+
+- `0` - Success
+- `1` - General error
+- `2` - Font loading error
+- `3` - Backend unavailable
+- `4` - Invalid configuration
+- `5` - I/O error
+
+### Error Messages
 
 ```bash
-# Font not found
-typf render "Test" --font /nonexistent/font.ttf
-# Error: Font not found: /nonexistent/font.ttf
-# Solution: Check font path and file permissions
+$ typf render "Test" --font nonexistent.ttf
+Error: Font loading failed: File not found: nonexistent.ttf
 
-# Unsupported format
-typf render "Test" --format webp -o output.webp
-# Error: Unsupported format: webp
-# Solution: Use supported format: png, svg, pdf, pnm, json
+$ typf render "Test" --font font.ttf --shaper nonexistent
+Error: Backend unavailable: Shaper 'nonexistent' not compiled
 
-# Memory issues with large batches
-typf batch huge_input.jsonl --parallel 32
-# Error: Out of memory
-# Solution: Reduce parallel jobs or process in smaller chunks
-
-# Backend not available
-typf render "Test" --shaper directwrite
-# Error: DirectWrite shaper not available on this platform
-# Solution: Use appropriate backend for your platform
+$ typf render "Test" --font font.ttf --output invalid.xyz
+Error: Invalid configuration: Unsupported output format: xyz
 ```
 
-### Debug Mode
+### Troubleshooting
 
 ```bash
-# Enable verbose logging
-typf render "Debug test" -o debug.png --verbose --verbose
+# Show debug information
+typf render "Debug" --font font.ttf --verbose
 
-# Debug font loading
-typf font /path/to/font.ttf --verbose
+# Test backends
+typf benchmark --test-backends
 
-# Debug backend selection
-typf info --backends --verbose
-
-# Debug batch processing
-typf batch input.jsonl --verbose --parallel 1
-```
-
-### Recovery Strategies
-
-```bash
-#!/bin/bash
-# fallback_render.sh - Render with fallback backends
-
-INPUT_TEXT="$1"
-OUTPUT_FILE="$2"
-
-# Try primary backend first
-if typf render "$INPUT_TEXT" \
-  --shaper harfbuzz \
-  --renderer skia \
-  --output "$OUTPUT_FILE" 2>/dev/null; then
-  echo "Success with primary backend"
-  exit 0
-fi
-
-# Fallback to minimal backend
-if typf render "$INPUT_TEXT" \
-  --shaper none \
-  --renderer orge \
-  --output "$OUTPUT_FILE" 2>/dev/null; then
-  echo "Success with fallback backend"
-  exit 0
-fi
-
-echo "All backends failed"
-exit 1
+# Check font support
+typf font info font.ttf --verbose
 ```
 
 ## Integration Examples
 
+### Shell Scripts
+
+```bash
+#!/bin/bash
+# Generate previews for all fonts
+
+for font in ~/fonts/*.ttf; do
+    basename=$(basename "$font" .ttf)
+    typf quick "$basename Sample" --font "$font" --output "previews/$basename.png"
+done
+```
+
+### Make Integration
+
+```makefile
+# Makefile for text assets
+
+TEXTS = $(wildcard texts/*.txt)
+IMAGES = $(TEXTS:texts/%.txt=output/%.png)
+
+output/%.png: texts/%.txt
+	typf render "$$(cat $<)" --font Roboto.ttf --output $@
+
+all: $(IMAGES)
+
+clean:
+	rm -f output/*.png
+```
+
 ### CI/CD Pipeline
 
 ```yaml
-# .github/workflows/text-rendering.yml
-name: Text Rendering Tests
-
-on: [push, pull_request]
-
-jobs:
-  render-tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        
-    steps:
-    - uses: actions/checkout@v3
+# GitHub Actions example
+- name: Render text assets
+  run: |
+    typf batch \
+      --input assets/texts.txt \
+      --template "generated/{line}.png" \
+      --config ci/typf-config.toml
     
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        
-    - name: Install TYPF CLI
-      run: cargo install --path crates/typf-cli --features "full"
-      
-    - name: Download test fonts
-      run: |
-        curl -L -o noto-fonts.zip https://fonts.google.com/download?family=Noto%20Sans
-        unzip noto-fonts.zip
-        
-    - name: Run rendering tests
-      run: |
-        # Basic rendering test
-        typf render "Hello, CI!" -o test.png --font NotoSans-Regular.ttf
-        
-        # Backend compatibility test
-        typf render "Backend test" -o backend_test.png --shaper none --renderer orge
-        
-        # Batch processing test
-        echo -e "Test 1\nTest 2\nTest 3" | typf batch - --font NotoSans-Regular.ttf \
-          --output-dir batch_output/
-          
-        # Benchmark test
-        typf bench --font NotoSans-Regular.ttf --iterations 100 \
-          --output benchmark.json
-          
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: rendering-results-${{ matrix.os }}
-        path: |
-          *.png
-          batch_output/
-          benchmark.json
+    typf benchmark \
+      --font Roboto.ttf \
+      --output performance.json
+
+- name: Upload artifacts
+  uses: actions/upload-artifact@v3
+  with:
+    name: text-assets
+    path: generated/
 ```
 
-### Docker Integration
+---
 
-```dockerfile
-# Dockerfile
-FROM rust:1.75-slim as builder
-
-WORKDIR /app
-COPY . .
-RUN cargo install --path crates/typf-cli --features "minimal"
-
-FROM debian:bullseye-slim
-
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libfontconfig1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy CLI binary
-COPY --from=builder /usr/local/cargo/bin/typf /usr/local/bin/typf
-
-# Add sample fonts
-RUN mkdir -p /usr/share/fonts
-COPY fonts/ /usr/share/fonts/
-
-# Create output directory
-RUN mkdir -p /output
-
-WORKDIR /workspace
-ENTRYPOINT ["typf"]
-CMD ["--help"]
-```
-
-```bash
-# Build and run Docker container
-docker build -t typf-cli .
-
-# Run rendering in container
-docker run -v $(pwd)/fonts:/usr/share/fonts \
-  -v $(pwd)/output:/output \
-  typf-cli render "Docker test" \
-  --font /usr/share/fonts/test.ttf \
-  --output /output/docker_test.png
-
-# Batch processing in container
-docker run -v $(pwd)/fonts:/usr/share/fonts \
-  -v $(pwd)/data:/data \
-  -v $(pwd)/output:/output \
-  typf-cli batch /data/input.jsonl \
-  --font /usr/share/fonts/test.ttf \
-  --output-dir /output/
-```
-
-The TYPF CLI provides a comprehensive, performant interface for text rendering automation, scripting, and integration into various workflows while maintaining the speed and flexibility of the underlying Rust engine.
+The CLI provides fast, scriptable text rendering from the command line. Use batch mode for bulk processing, benchmark for performance testing, and the REPL for interactive experimentation.

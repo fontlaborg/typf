@@ -1,100 +1,92 @@
-# TYPF v2.0 Documentation
+# TYPF Documentation
 
-## TLDR - Too Long Didn't Read
+Text looks wrong. TYPF fixes it.
 
-**TYPF v2.0** is a high-performance, modular text shaping and rendering library written in Rust with Python bindings. It features a **six-stage pipeline** (Input → Unicode → Font Selection → Shaping → Rendering → Export) with **multiple backends** for each stage, enabling cross-platform text processing with exceptional performance.
+## Quick Start
 
-**Key Features:**
-- 🚀 **Blazing Fast**: SIMD-accelerated rendering with >10 GB/s throughput
-- 🔧 **Modular Architecture**: Pluggable backends for shaping (HarfBuzz, CoreText, DirectWrite) and rendering (Skia, CoreGraphics, Orge)
-- 🐍 **First-class Python Support**: PyO3 bindings with seamless Rust integration
-- 📦 **Selective Builds**: Feature flags enable minimal builds (<500KB) or full-featured releases
-- 🌐 **Cross-Platform**: macOS, Windows, Linux, and WebAssembly support
-- 🎯 **Production Ready**: Comprehensive testing, fuzzing, and property-based validation
-
-**Quick Start:**
 ```bash
-# Install and build
+# Build everything
 ./build.sh
 
-# Use CLI
-typf-cli render --text "Hello 世界" --font path/to/font.ttf
+# Render text now
+typf-cli render --text "Hello 世界" --font font.ttf
 
-# Use Python
-python -m typf render --text "Hello 世界" --font path/to/font.ttf
+# Python version
+python -m typf render --text "Hello 世界" --font font.ttf
 ```
 
-**Performance:** ~50ns per glyph with SIMD acceleration, multi-level caching, and zero-copy font loading.
+## What This Is
+
+TYPF turns text into pixels. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.
+
+Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font loading.
 
 ---
 
-# Table of Contents
+# Documentation
 
-## Part I: Introduction (Chapters 1-4)
-- [01 - Introduction](01-introduction.md) - What is TYPF and why it exists
-- [02 - Quick Start](02-quick-start.md) - Get up and running in minutes
-- [03 - Architecture Overview](03-architecture-overview.md) - High-level system design
-- [04 - Installation](04-installation.md) - Detailed setup instructions
+## Getting Started
+- [01 - Introduction](01-introduction.md) - Why TYPF exists
+- [02 - Quick Start](02-quick-start.md) - Running in minutes
+- [03 - Architecture](03-architecture-overview.md) - How it works
+- [04 - Installation](04-installation.md) - Setup details
 
-## Part II: Core Concepts (Chapters 5-8)
-- [05 - The Six-Stage Pipeline](05-six-stage-pipeline.md) - Understanding the data flow
-- [06 - Backend Architecture](06-backend-architecture.md) - Shaping and rendering backends
-- [07 - Memory Management](07-memory-management.md) - Efficient font caching and zero-copy
-- [08 - Performance Fundamentals](08-performance-fundamentals.md) - SIMD, caching, and optimization
+## Core System
+- [05 - Pipeline](05-six-stage-pipeline.md) - The six stages explained
+- [06 - Backends](06-backend-architecture.md) - Mixing and matching components
+- [07 - Memory](07-memory-management.md) - Font caching without leaks
+- [08 - Performance](08-performance-fundamentals.md) - Speed basics
 
-## Part III: Shaping Backends (Chapters 9-12)
-- [09 - HarfBuzz Shaping](09-harfbuzz-shaping.md) - Cross-platform Unicode shaping
-- [10 - Platform Shapers](10-platform-shapers.md) - CoreText and DirectWrite integration
-- [11 - ICU-HarfBuzz Composition](11-icu-harfbuzz-composition.md) - Advanced text processing
-- [12 - None Shaper](12-none-shaper.md) - Pass-through for testing
+## Shaping Text
+- [09 - HarfBuzz](09-harfbuzz-shaping.md) - Cross-platform Unicode shaping
+- [10 - Platform Shapers](10-platform-shapers.md) - CoreText and DirectWrite
+- [11 - ICU+HarfBuzz](11-icu-harfbuzz-composition.md) - Complex text processing
+- [12 - None Shaper](12-none-shaper.md) - Testing and debugging
 
-## Part IV: Rendering Backends (Chapters 13-16)
-- [13 - Skia Rendering](13-skia-rendering.md) - Vector graphics rendering
-- [14 - Platform Renderers](14-platform-renderers.md) - CoreGraphics and Direct2D
-- [15 - Orge Rasterizer](15-orge-rasterizer.md) - Pure Rust rasterization
-- [16 - Zeno Renderer](16-zeno-renderer.md) - Experimental GPU rendering
+## Rendering Pixels
+- [13 - Skia](13-skia-renderer.md) - Hardware-accelerated rendering
+- [14 - Platform Renderers](15-platform-renderers.md) - CoreGraphics and Direct2D
+- [15 - Orge](14-orge-renderer.md) - Pure Rust foundation
+- [16 - Zeno](16-zeno-renderer.md) - Vector quality output
 
-## Part V: API Reference (Chapters 17-20)
-- [17 - Rust API](17-rust-api.md) - Core Rust library usage
-- [18 - Python Bindings](18-python-bindings.md) - PyO3 Python interface
-- [19 - CLI Reference](19-cli-reference.md) - Command-line tool documentation
-- [20 - Configuration Options](20-configuration-options.md) - Feature flags and settings
+## Using TYPF
+- [17 - Rust API](18-rust-api.md) - The core Rust library
+- [18 - Python API](19-python-api.md) - Python bindings
+- [19 - CLI](20-cli-interface.md) - Command-line tools
+- [20 - WebAssembly](21-webassembly-integration.md) - Browser rendering
 
-## Part VI: Advanced Topics (Chapters 21-24)
-- [21 - Font Handling](21-font-handling.md) - Font loading and selection
-- [22 - Export Formats](22-export-formats.md) - PNG, SVG, PNM, and JSON output
-- [23 - Testing and Validation](23-testing-and-validation.md) - Test strategies and quality assurance
-- [24 - Contributing Guidelines](24-contributing-guidelines.md) - How to contribute to TYPF
+## Production
+- [21 - Export Formats](17-export-formats.md) - PNG, SVG, PNM, JSON
+- [22 - Performance](22-performance-optimization.md) - Production tuning
+- [23 - Deployment](23-deployment-integration.md) - Production patterns
+- [24 - Troubleshooting](24-troubleshooting-best-practices.md) - Problem solving
 
 ---
 
-## Navigation
+## How to Read This
 
-This documentation is organized to take you from beginner to advanced usage:
+New to TYPF? Start with Getting Started.
 
-1. **Start with Part I** if you're new to TYPF
-2. **Move to Part II** to understand core concepts
-3. **Skip to Part III or IV** for specific backend information
-4. **Reference Part V** for API details
-5. **Explore Part VI** for advanced usage and contributions
+Understanding core concepts? Read Core System.
+
+Need specific backend info? Jump to Shaping or Rendering sections.
+
+Building applications? Check the Using TYPF section.
+
+Deploying to production? Read the Production section.
+
+Each chapter builds on previous ones, but you can jump to what you need.
+
+---
 
 ## Code Examples
 
-Throughout this documentation, you'll find:
+Every chapter includes working code examples. Rust and Python side by side. Copy, paste, run. No toy examples—real code you can use.
 
-- 🚀 **Performance benchmarks** showcasing TYPF's speed
-- 💻 **Code snippets** in Rust and Python
-- 📊 **Architecture diagrams** explaining data flow
-- 🔧 **Configuration examples** for different use cases
-- 🧪 **Test examples** demonstrating validation
+## Get Help
 
-## Getting Help
-
-- 📖 **Check this documentation** first
-- 🐛 **File issues** on GitHub for bugs
-- 💬 **Join discussions** for questions
-- 📧 **Contact maintainers** for support
+Stuck? Check the relevant chapter first. Each section has troubleshooting examples. File GitHub issues for bugs you find.
 
 ---
 
-**TYPF v2.0**: The future of high-performance text shaping and rendering.
+TYPF: Fast text rendering that works.

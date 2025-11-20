@@ -1,311 +1,264 @@
-# TYPF v2.0 Feature Matrix
+# TYPF v2.0 Features
 
-This document tracks the implementation status of all planned features against the comprehensive plan in [PLAN/](./PLAN/).
-
-**Last Updated**: 2025-11-19
+**Updated**: 2025-11-19
 **Version**: v2.0.0-dev
-**Status**: Production-Ready (Core Features Complete)
 
----
+## Core Architecture
 
-## ✅ Core Architecture (100% Complete)
+| Feature | Status |
+|---------|--------|
+| Six-stage pipeline | ✅ Done |
+| Modular backend system | ✅ Done |
+| Feature flag system | ✅ Done |
+| Error handling | ✅ Done |
+| Pipeline builder | ✅ Done |
+| Context management | ✅ Done |
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Six-stage pipeline | ✅ Complete | Input → Unicode → Font → Shaping → Rendering → Export |
-| Modular backend system | ✅ Complete | Swappable shapers and renderers |
-| Feature flag system | ✅ Complete | `minimal`, `default`, `full` configurations |
-| Error handling | ✅ Complete | `TypfError` with actionable messages |
-| Pipeline builder | ✅ Complete | Fluent API for configuration |
-| Context management | ✅ Complete | Thread-safe pipeline execution |
+See: [PLAN/01.md](./PLAN/01.md)
 
-**Reference**: [PLAN/01.md](./PLAN/01.md)
+## Shaping Backends
 
----
+### Shapers
 
-## ✅ Shaping Backends (100% Complete)
-
-### Implemented Shapers
-
-| Backend | Status | Features | Platform |
-|---------|--------|----------|----------|
-| **none** | ✅ Production | Basic LTR advancement | All |
-| **HarfBuzz** | ✅ Production | Full OpenType shaping, complex scripts | All |
-| **ICU-HarfBuzz** | ✅ Production | Unicode preprocessing + HarfBuzz | All |
-| **CoreText** | ✅ Production | Native macOS shaping | macOS only |
-
-### Shaping Features
-
-| Feature | Status | Backends |
+| Backend | Status | Platform |
 |---------|--------|----------|
-| Latin text | ✅ Complete | All |
-| Arabic (RTL) | ✅ Complete | HarfBuzz, ICU-HB, CoreText |
-| CJK scripts | ✅ Complete | HarfBuzz, ICU-HB, CoreText |
-| Mixed scripts | ✅ Complete | All (with appropriate fonts) |
-| OpenType features | ✅ Complete | HarfBuzz, ICU-HB, CoreText |
-| Ligatures | ✅ Complete | HarfBuzz, ICU-HB, CoreText |
-| Kerning | ✅ Complete | All |
-| Unicode normalization | ✅ Complete | ICU-HB |
-| Bidirectional text | ✅ Complete | ICU-HB |
-| Text segmentation | ✅ Complete | ICU-HB |
+| none | ✅ Working | All |
+| HarfBuzz | ✅ Working | All |
+| ICU-HarfBuzz | ✅ Working | All |
+| CoreText | ✅ Working | macOS |
 
-**Not Implemented**:
-- DirectWrite shaper (Windows) - Blocked (requires Windows platform)
+### Features
 
-**Reference**: [PLAN/02.md](./PLAN/02.md)
+| Feature | Status |
+|---------|--------|
+| Latin text | ✅ Done |
+| Arabic (RTL) | ✅ Done |
+| CJK scripts | ✅ Done |
+| Mixed scripts | ✅ Done |
+| OpenType features | ✅ Done |
+| Ligatures | ✅ Done |
+| Kerning | ✅ Done |
+| Unicode normalization | ✅ Done |
+| Bidirectional text | ✅ Done |
+| Text segmentation | ✅ Done |
 
----
+Missing: DirectWrite shaper (Windows)
 
-## ✅ Rendering Backends (100% Complete)
+See: [PLAN/02.md](./PLAN/02.md)
 
-### Implemented Renderers
+## Rendering Backends
 
-| Backend | Status | Output | Platform | Anti-aliasing |
-|---------|--------|--------|----------|---------------|
-| **JSON** | ✅ Production | Shaping data | All | N/A |
-| **Orge** | ✅ Production | Bitmap (grayscale) | All | 8-bit |
-| **CoreGraphics** | ✅ Production | Bitmap (RGBA) | macOS | 8-bit (best) |
-| **Skia** | ✅ Production | Bitmap (RGBA) | All | 8-bit |
-| **Zeno** | ✅ Production | Bitmap (RGBA) | All | 8-bit |
+### Renderers
 
-### Rendering Features
+| Backend | Status | Output | Platform |
+|---------|--------|--------|----------|
+| JSON | ✅ Working | Shaping data | All |
+| Orge | ✅ Working | Bitmap (grayscale) | All |
+| CoreGraphics | ✅ Working | Bitmap (RGBA) | macOS |
+| Skia | ✅ Working | Bitmap (RGBA) | All |
+| Zeno | ✅ Working | Bitmap (RGBA) | All |
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Bitmap rasterization | ✅ Complete | All renderers except JSON |
-| Anti-aliasing | ✅ Complete | 8-bit grayscale oversampling |
-| RGBA output | ✅ Complete | CoreGraphics, Skia, Zeno |
-| Grayscale output | ✅ Complete | Orge |
-| Glyph compositing | ✅ Complete | All bitmap renderers |
-| Coordinate transformation | ✅ Complete | Y-flip handling |
-| Bearing calculations | ✅ Complete | All renderers |
+### Features
 
-**Not Implemented**:
-- Direct2D renderer (Windows) - Blocked (requires Windows platform)
+| Feature | Status |
+|---------|--------|
+| Bitmap rasterization | ✅ Done |
+| Anti-aliasing | ✅ Done |
+| RGBA output | ✅ Done |
+| Grayscale output | ✅ Done |
+| Glyph compositing | ✅ Done |
+| Coordinate transformation | ✅ Done |
+| Bearing calculations | ✅ Done |
 
-**Reference**: [PLAN/02.md](./PLAN/02.md)
+Missing: Direct2D renderer (Windows)
 
----
+See: [PLAN/02.md](./PLAN/02.md)
 
-## ✅ Export Formats (100% Complete)
+## Export Formats
 
-| Format | Status | Backend(s) | Use Case |
-|--------|--------|------------|----------|
-| **JSON** | ✅ Complete | JSON renderer | Shaping data export, HarfBuzz-compatible |
-| **PNG** | ✅ Complete | All bitmap renderers | High-quality images |
-| **PPM** | ✅ Complete | All bitmap renderers | Uncompressed RGB |
-| **PGM** | ✅ Complete | Orge | Uncompressed grayscale |
-| **PBM** | ✅ Complete | All bitmap renderers | Monochrome |
-| **SVG** | ✅ Complete | All renderers | Vector graphics, resolution-independent |
+| Format | Status | Use Case |
+|--------|--------|----------|
+| JSON | ✅ Done | Shaping data export |
+| PNG | ✅ Done | High-quality images |
+| PPM | ✅ Done | Uncompressed RGB |
+| PGM | ✅ Done | Uncompressed grayscale |
+| PBM | ✅ Done | Monochrome |
+| SVG | ✅ Done | Vector graphics |
 
 ### Export Features
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Multiple formats from single render | ✅ Complete | Export flexibility |
-| Format validation | ✅ Complete | `supports_format()` prevents errors |
-| Color space conversion | ✅ Complete | RGB/RGBA/Grayscale |
-| Compression (PNG) | ✅ Complete | Via `image` crate |
-| SVG path generation | ✅ Complete | Clean, standards-compliant |
+| Feature | Status |
+|---------|--------|
+| Multiple formats from single render | ✅ Done |
+| Format validation | ✅ Done |
+| Color space conversion | ✅ Done |
+| Compression (PNG) | ✅ Done |
+| SVG path generation | ✅ Done |
 
-**Reference**: [PLAN/01.md](./PLAN/01.md)
+See: [PLAN/01.md](./PLAN/01.md)
 
----
+## Font Handling
 
-## ✅ Font Handling (100% Complete)
+| Feature | Status |
+|---------|--------|
+| TrueType fonts | ✅ Done |
+| OpenType fonts | ✅ Done |
+| TTC collections | ✅ Done |
+| Variable fonts | ✅ Done |
+| System font discovery | ✅ Done |
+| Font caching | ✅ Done |
+| Glyph outline extraction | ✅ Done |
+| Font metrics | ✅ Done |
 
-| Feature | Status | Implementation |
-|---------|--------|----------------|
-| TrueType fonts | ✅ Complete | `read-fonts` + `skrifa` |
-| OpenType fonts | ✅ Complete | `read-fonts` + `skrifa` |
-| TTC collections | ✅ Complete | Font index selection |
-| Variable fonts | ✅ Complete | Font variation settings |
-| System font discovery | ✅ Complete | `fontdb` integration |
-| Font caching | ✅ Complete | `Arc<Font>` + memory mapping |
-| Glyph outline extraction | ✅ Complete | `skrifa` DrawSettings |
-| Font metrics | ✅ Complete | units_per_em, ascent, descent |
+How it works: Zero-copy with `memmap2`, `Arc<Font>` for sharing, LRU eviction
 
-**Font Loading Strategy**:
-- Zero-copy with `memmap2`
-- `Arc<Font>` for thread-safe sharing
-- LRU eviction for memory management
+See: [PLAN/03.md](./PLAN/03.md)
 
-**Reference**: [PLAN/03.md](./PLAN/03.md)
+## Performance
 
----
+### Benchmarks
 
-## ✅ Performance (95% Complete)
+| Metric | Target | Actual |
+|--------|--------|--------|
+| Simple Latin shaping | <10µs/100 chars | ~6µs |
+| Complex Arabic shaping | <50µs/100 chars | ~20µs |
+| Glyph rasterization | <1µs/glyph | ~0.5µs |
+| RGBA blending | >10GB/s | >10GB/s |
+| L1 cache hit | <50ns | <50ns |
+| Binary size (minimal) | <500KB | ~500KB |
 
-### Achieved Targets (Nov 2025)
+### Backend Speed (ops/sec)
 
-| Metric | Target | Actual | Status |
-|--------|--------|--------|--------|
-| Simple Latin shaping | <10µs/100 chars | ~6µs | ✅ Exceeded |
-| Complex Arabic shaping | <50µs/100 chars | ~20µs | ✅ Exceeded |
-| Glyph rasterization | <1µs/glyph | ~0.5µs | ✅ Exceeded |
-| RGBA blending | >10GB/s | >10GB/s | ✅ Met |
-| L1 cache hit | <50ns | <50ns | ✅ Met |
-| Binary size (minimal) | <500KB | ~500KB | ✅ Met |
+- JSON Export: 15,506-22,661 (fastest)
+- CoreGraphics: 3,805-4,583 (best quality)
+- Zeno: 3,048-3,675 (balanced speed/quality)
+- Orge: 1,959-2,302 (pure Rust, SIMD)
+- Skia: 1,611-1,829 (high quality)
 
-### Benchmark Results (macOS Apple Silicon)
-
-**Backend Performance** (ops/sec):
-- **JSON Export**: 15,506-22,661 ops/sec (fastest)
-- **CoreGraphics**: 3,805-4,583 ops/sec (best quality)
-- **Zeno**: 3,048-3,675 ops/sec (best speed/quality ratio)
-- **Orge**: 1,959-2,302 ops/sec (pure Rust, SIMD)
-- **Skia**: 1,611-1,829 ops/sec (high quality)
-
-**Text Complexity Impact**:
-- Arabic (RTL): 6,807 ops/sec
-- Mixed scripts: 5,455 ops/sec
-- Latin (LTR): 6,162 ops/sec
-
-**Success Rate**: 100% across all 20 backend combinations
+Success Rate: 100% across all 20 backend combinations
 
 ### Performance Features
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| SIMD optimization | 🟡 Partial | AVX2/SSE4.1 (x86), NEON partial (ARM) |
-| Multi-level caching | ✅ Complete | L1/L2/L3 architecture ready |
-| Parallel rendering | ✅ Complete | Rayon integration |
-| Zero-copy operations | ✅ Complete | Memory-mapped fonts |
-| Hot-path optimization | ✅ Complete | Profiled and optimized |
+| Feature | Status |
+|---------|--------|
+| SIMD optimization | 🟡 Partial |
+| Multi-level caching | ✅ Done |
+| Parallel rendering | ✅ Done |
+| Zero-copy operations | ✅ Done |
+| Hot-path optimization | ✅ Done |
 
-**Incomplete**:
-- Full NEON optimization (ARM) - Partial implementation
+Missing: Full NEON optimization (ARM)
 
-**Reference**: [PLAN/06.md](./PLAN/06.md)
+See: [PLAN/06.md](./PLAN/06.md)
 
----
-
-## ✅ CLI & Bindings (90% Complete)
+## CLI & Bindings
 
 ### Rust CLI
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Basic rendering | ✅ Complete | `typf "text" --output file.png` |
-| Format selection | ✅ Complete | PNG, SVG, PPM, PGM, PBM, JSON |
-| Backend selection | ✅ Complete | `--shaper`, `--renderer` flags |
-| Font loading | ✅ Complete | `--font` flag |
-| Batch processing | ✅ Complete | JSONL input |
-| Streaming mode | ✅ Complete | Real-time processing |
-| REPL mode | 🟡 Scaffold | Structure ready, not connected |
-| Help system | ✅ Complete | Comprehensive help text |
+| Feature | Status |
+|---------|--------|
+| Basic rendering | ✅ Done |
+| Format selection | ✅ Done |
+| Backend selection | ✅ Done |
+| Font loading | ✅ Done |
+| Batch processing | ✅ Done |
+| Streaming mode | ✅ Done |
+| REPL mode | 🟡 Started |
+| Help system | ✅ Done |
 
 ### Python Bindings
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| PyO3 integration | ✅ Complete | Full Python bindings |
-| Simple API | ✅ Complete | `render_text()` function |
-| Advanced API | ✅ Complete | `Typf` class |
-| Fire CLI | ✅ Complete | `python -m typf` commands |
-| Type hints | ✅ Complete | Full type annotations |
-| Documentation | ✅ Complete | 300+ line README |
-| Examples | ✅ Complete | Simple + advanced |
-| Wheel building | 🔴 Deferred | Release phase |
+| Feature | Status |
+|---------|--------|
+| PyO3 integration | ✅ Done |
+| Simple API | ✅ Done |
+| Advanced API | ✅ Done |
+| Fire CLI | ✅ Done |
+| Type hints | ✅ Done |
+| Documentation | ✅ Done |
+| Examples | ✅ Done |
+| Wheel building | 🔴 Later |
 
-**Incomplete**:
-- REPL implementation (scaffold exists)
-- Python wheel distribution (deferred to release)
+Missing: REPL implementation, Python wheel distribution
 
-**Reference**: [PLAN/07.md](./PLAN/07.md)
+See: [PLAN/07.md](./PLAN/07.md)
 
----
+## Testing & QA
 
-## ✅ Testing & QA (95% Complete)
+| Category | Status |
+|----------|--------|
+| Unit tests | ✅ Done (206 tests) |
+| Integration tests | ✅ Done |
+| Property tests | ✅ Done |
+| Golden tests | ✅ Done |
+| Fuzz testing | ✅ Done (3 targets) |
+| Benchmark suite | ✅ Done |
+| Regression detection | ✅ Done |
+| Visual comparison | ✅ Done |
+| Code coverage | 🟡 Good (>80%) |
 
-| Category | Status | Details |
+### Test Tools
+
+| Tool | Purpose |
+|------|---------|
+| `typfme.py` | Main testing/benchmarking |
+| `visual_diff.py` | Renderer comparison |
+| `unified_report.py` | Metrics analysis |
+| `compare_performance.py` | Performance rankings |
+| `compare_quality.py` | Quality metrics |
+| `bench_svg.py` | SVG vs PNG benchmarks |
+
+See: [PLAN/08.md](./PLAN/08.md)
+
+## Documentation
+
+| Document | Status | Purpose |
 |----------|--------|---------|
-| Unit tests | ✅ Complete | 206 tests passing |
-| Integration tests | ✅ Complete | End-to-end pipeline tests |
-| Property tests | ✅ Complete | Proptest for Unicode |
-| Golden tests | ✅ Complete | HarfBuzz output snapshots |
-| Fuzz testing | ✅ Complete | 3 targets (unicode, harfbuzz, pipeline) |
-| Benchmark suite | ✅ Complete | Comprehensive performance tests |
-| Regression detection | ✅ Complete | Automated >10% slowdown alerts |
-| Visual comparison | ✅ Complete | Pixel-level diff analysis |
-| Code coverage | 🟡 Good | >80% estimated |
-
-### Test Infrastructure
-
-| Tool | Status | Purpose |
-|------|--------|---------|
-| `typfme.py` | ✅ Complete | Main testing/benchmarking tool |
-| `visual_diff.py` | ✅ Complete | Renderer comparison |
-| `unified_report.py` | ✅ Complete | Combined metrics analysis |
-| `compare_performance.py` | ✅ Complete | Performance rankings |
-| `compare_quality.py` | ✅ Complete | Quality metrics |
-| `bench_svg.py` | ✅ Complete | SVG vs PNG benchmarks |
-
-**Reference**: [PLAN/08.md](./PLAN/08.md)
-
----
-
-## ✅ Documentation (100% Complete)
-
-| Document | Status | Lines | Purpose |
-|----------|--------|-------|---------|
-| README.md | ✅ Complete | ~700 | Project overview, quickstart, guides |
-| ARCHITECTURE.md | ✅ Complete | ~400 | System design |
-| CONTRIBUTING.md | ✅ Complete | ~200 | Development guidelines |
-| CHANGELOG.md | ✅ Complete | ~300 | Release history |
-| PLAN.md | ✅ Complete | ~475 | Implementation roadmap |
-| TODO.md | ✅ Complete | ~95 | Task tracking |
-| WORK.md | ✅ Complete | ~395 | Session logs |
-| SECURITY.md | ✅ Complete | ~100 | Security policies |
-| BENCHMARKS.md | ✅ Complete | ~250 | Performance data |
-| docs/PERFORMANCE.md | ✅ Complete | ~300 | Optimization guide |
-| docs/BACKEND_COMPARISON.md | ✅ Complete | ~200 | Backend selection |
-| typf-tester/README.md | ✅ Complete | ~485 | Testing tools |
-| typf-tester/QUICKSTART.md | ✅ Complete | ~150 | 5-minute guide |
-| examples/README.md | ✅ Complete | ~200 | Code examples |
+| README.md | ✅ Done | Project overview |
+| ARCHITECTURE.md | ✅ Done | System design |
+| CONTRIBUTING.md | ✅ Done | Development guidelines |
+| CHANGELOG.md | ✅ Done | Release history |
+| PLAN.md | ✅ Done | Implementation roadmap |
+| TODO.md | ✅ Done | Task tracking |
+| WORK.md | ✅ Done | Session logs |
+| SECURITY.md | ✅ Done | Security policies |
+| BENCHMARKS.md | ✅ Done | Performance data |
 
 ### Documentation Features
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| API documentation | ✅ Complete | 100% rustdoc coverage |
-| Visual examples | ✅ Complete | Screenshots in README |
-| Troubleshooting | ✅ Complete | 120-line guide |
-| Performance data | ✅ Complete | Real benchmarks |
-| Backend selection | ✅ Complete | Decision tables |
-| Migration guide | 🔴 Deferred | v1.x → v2.0 (release phase) |
+| Feature | Status |
+|---------|--------|
+| API documentation | ✅ Done (100% rustdoc) |
+| Visual examples | ✅ Done |
+| Troubleshooting | ✅ Done |
+| Performance data | ✅ Done |
+| Backend selection | ✅ Done |
+| Migration guide | 🔴 Later |
 
-**Reference**: [PLAN/09.md](./PLAN/09.md)
+See: [PLAN/09.md](./PLAN/09.md)
 
----
+## Deferred Features
 
-## 🔴 Deferred Features
+### Platform-Specific
+- DirectWrite shaper (Windows) - Blocked
+- Direct2D renderer (Windows) - Blocked
 
-These features are planned but deferred to future releases:
-
-### Platform-Specific (Blocked)
-- DirectWrite shaper (Windows)
-- Direct2D renderer (Windows)
-- **Blocker**: Requires Windows platform for development/testing
-
-### Advanced Features (Post-Release)
+### Advanced Features
 - Color font support (COLR/CPAL, SVG-in-OpenType)
 - Rich output formatting (progress bars, colors)
-- REPL mode implementation (connect to pipeline)
-- Python wheel distribution (PyPI release)
+- REPL mode implementation
+- Python wheel distribution (PyPI)
 - C API bindings
 - JavaScript/WASM bindings (scaffold exists)
 
-### Performance Optimizations (Future)
+### Performance
 - Complete NEON optimization for ARM
 - GPU acceleration (experimental)
 - Distributed rendering
 
-**Reference**: [TODO.md](./TODO.md), [PLAN/09.md](./PLAN/09.md)
+See: [TODO.md](./TODO.md)
 
----
-
-## Summary Statistics
+## Summary
 
 ### Implementation Progress
 
@@ -321,53 +274,43 @@ These features are planned but deferred to future releases:
 | Testing & QA | 16/17 | 1/17 | 0/17 | 95% |
 | Documentation | 16/17 | 0/17 | 1/17 | 94% |
 
-### Overall Status
-
-**Production-Ready Features**: 81/88 (92%)
-**Partial Implementation**: 3/88 (3%)
-**Deferred to Future**: 4/88 (5%)
-
----
-
-## Feature Highlights
+**Total**: 81/88 features done (92%)
 
 ### What Works Today
 
-✅ **Full text rendering pipeline** with 20 backend combinations
-✅ **Multi-script support** (Latin, Arabic RTL, CJK, mixed scripts)
-✅ **Production-quality renderers** (CoreGraphics, Orge, Skia, Zeno)
-✅ **Comprehensive testing** (206 tests, fuzz testing, benchmarks)
-✅ **Python bindings** with Fire CLI
-✅ **Rust CLI** with batch processing
-✅ **Zero-copy font loading** with caching
-✅ **Performance optimization** (SIMD, parallel, caching)
-✅ **Extensive documentation** (14 docs, 100% API coverage)
+✅ Full text rendering pipeline (20 backend combinations)
+✅ Multi-script support (Latin, Arabic RTL, CJK, mixed)
+✅ Working renderers (CoreGraphics, Orge, Skia, Zeno)
+✅ Full testing (206 tests, fuzz, benchmarks)
+✅ Python bindings with Fire CLI
+✅ Rust CLI with batch processing
+✅ Zero-copy font loading with caching
+✅ Performance optimizations (SIMD, parallel, caching)
+✅ Complete documentation (14 docs, 100% API coverage)
 
 ### What's Missing
 
-🔴 **Windows platform backends** (DirectWrite, Direct2D)
-🟡 **Complete NEON optimization** (ARM SIMD)
-🟡 **REPL mode** (scaffold exists)
-🔴 **Color font support** (future release)
-🔴 **Python wheel distribution** (deferred to release)
+🔴 Windows platform backends (DirectWrite, Direct2D)
+🟡 Complete NEON optimization (ARM SIMD)
+🟡 REPL mode (scaffold exists)
+🔴 Color font support (future release)
+🔴 Python wheel distribution (deferred)
 
----
+## Next Releases
 
-## Next Release Targets
-
-### v2.1.0 (Planned)
-- Windows platform backends (DirectWrite + Direct2D)
+### v2.1.0
+- Windows platform backends
 - Complete NEON optimization
-- REPL mode implementation
-- Python wheel distribution (PyPI)
+- REPL mode
+- Python wheel distribution
 
-### v2.2.0 (Future)
+### v2.2.0
 - Color font support (COLR/CPAL)
 - C API bindings
 - Enhanced WASM support
 - Performance dashboard
 
-### v3.0.0 (Vision)
+### v3.0.0
 - GPU acceleration
 - Distributed rendering
 - Full Unicode 15.1 support

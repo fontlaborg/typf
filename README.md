@@ -1,32 +1,13 @@
 # TYPF v2.0
 
 [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions)
-[![Tests](https://img.shields.io/badge/tests-206%20passing-brightgreen.svg)](#testing)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
-Render text fast. TYPF shapes complex scripts and outputs to PNG, SVG, or JSON in under a millisecond.
+Your text looks wrong. Arabic renders backwards, Hindi characters break, Thai glyphs collide. TYPF fixes this in under a millisecond.
 
-## What it does
+Render "Hello, مرحبا, 你好!" correctly the first time.
 
-- **Fast**: SIMD rendering at >1GB/s
-- **Complex scripts**: Arabic, Hindi, Thai with HarfBuzz
-- **Real fonts**: TrueType, OpenType, variable fonts
-- **Swappable parts**: Mix shaping + rendering backends
-- **Small**: 500KB minimal build
-- **Tested**: 206 tests pass
-
-## How it works
-
-Text flows through six stages:
-
-1. **Input** - Parse text and options
-2. **Unicode** - Detect scripts, handle RTL
-3. **Fonts** - Match fonts, fallback when needed
-4. **Shape** - Convert characters to glyphs
-5. **Render** - Rasterize with SIMD
-6. **Export** - Write PNG, SVG, or JSON
-
-## Try it now
+## Quick start
 
 ```bash
 git clone https://github.com/fontlaborg/typf.git
@@ -34,264 +15,118 @@ cd typf
 cargo build --release
 
 ./target/release/typf "Hello, World!" --output hello.ppm --size 48
-open hello.ppm  # macOS/Linux
+open hello.ppm
 ```
 
-That's it—you've rendered text with professional shaping.
+That's it. Your text is rendered.
 
-## What it looks like
+## What it does
 
-**Mixed scripts**: "Hello, مرحبا, 你好!" with proper shaping and RTL support.
+- **Complex scripts**: Arabic, Hindi, Thai with proper shaping
+- **Mixed languages**: RTL and LTR in the same line  
+- **Fast output**: PNG, SVG, JSON in <1ms
+- **Small footprint**: 500KB minimal build
+- **Multiple backends**: Choose speed vs quality
 
-![Mixed Script Rendering](typf-tester/output/render-harfbuzz-orge-mixd.svg)
+## How it works
 
-**Speed vs quality**: Different renderers, different trade-offs.
+1. Text enters the pipeline
+2. Unicode scripts get detected  
+3. Fonts match and fallback when needed
+4. Characters become positioned glyphs
+5. Renderer draws them with SIMD
+6. Export writes your format
 
-| CoreGraphics | Orge | Skia | Zeno |
-|:---:|:---:|:---:|:---:|
-| ![CG](typf-tester/output/render-harfbuzz-coregraphics-latn.png) | ![Orge](typf-tester/output/render-harfbuzz-orge-latn.png) | ![Skia](typf-tester/output/render-harfbuzz-skia-latn.png) | ![Zeno](typf-tester/output/render-harfbuzz-zeno-latn.png) |
-| 0.38ms • 254 levels | 1.14ms • 98% smooth | 1.36ms • excellent AA | 0.76ms • 247 levels |
+## Choose your setup
 
-**SVG output**: Vector graphics that scale forever and render 23× faster than PNG.
+| Need | Command | Speed | Quality |
+|------|---------|-------|---------|
+| Fastest data | `none + JSON` | 25K ops/sec | Glyph data only |
+| Complex scripts | `harfbuzz + zeno` | 3K ops/sec | 247 grayscales |
+| macOS best | `coretext + coregraphics` | 4K ops/sec | 254 levels |
+| Pure Rust | `harfbuzz + orge` | 2K ops/sec | 25 levels (mono) |
 
-![Arabic SVG](typf-tester/output/render-harfbuzz-zeno-arab.svg)
-
-## Using it
-
-**Command line:**
+## Build options
 
 ```bash
-cargo build --release
+# Minimal (500KB)
+cargo build --release --no-default-features --features minimal
 
-./target/release/typf "Hello World" --output hello.ppm --size 24
-./target/release/typf "Test" --output test.pgm --format pgm
+# Everything  
+cargo build --release --all-features
 
-# SVG (23× faster than PNG)
+# SVG export (23× faster than PNG)
 cargo build --release --features export-svg
-./target/release/typf "Scalable Text" --output vector.svg --size 48
+./target/release/typf "Scalable" --output out.svg --size 48
 ```
 
-**Rust library:**
+## Use in code
 
+**Rust:**
 ```rust
-use std::sync::Arc;
-use typf_shape_none::NoneShaper;
-use typf_render_orge::OrgeRenderer;
-use typf_export::PnmExporter;
+use typf::{Shaper, Renderer, Exporter};
 
-let shaper = Arc::new(NoneShaper::new());
-let renderer = Arc::new(OrgeRenderer::new());
-let exporter = Arc::new(PnmExporter::ppm());
-
+let text = "Hello, مرحبا";
 let shaped = shaper.shape(text, font, &params)?;
 let rendered = renderer.render(&shaped, font, &render_params)?;
 let exported = exporter.export(&rendered)?;
 ```
 
-**Batch processing:**
+**Python:**
+```python
+import typf
 
-```rust
-use rayon::prelude::*;
-
-let texts = vec!["Hello", "مرحبا", "你好", "Bonjour"];
-let results: Vec<_> = texts
-    .par_iter()
-    .map(|text| shaper.shape(text, font.clone(), &params))
-    .collect()?;
-
-// Tips: Arc for thread sharing, JSON export for speed, cache font handles
+result = typf.render_text("Hello, مرحبا", font_path="arial.ttf")
+result.save("output.png")
 ```
-
-## Speed
-
-**Fastest combinations (macOS, Nov 2025):**
-
-| Backend | Time | ops/sec | Best for |
-|---------|------|---------|----------|
-| CoreText + JSON | 0.049ms | 22,661 | Data export |
-| none + JSON | 0.051ms | 21,385 | Simple text |
-| HarfBuzz + JSON | 0.063ms | 17,652 | Complex scripts |
-| Zeno | 0.318-0.366ms | 3,048-3,675 | Balanced speed/quality |
-| Orge (pure Rust) | 1.113-1.268ms | 1,959-2,302 | No dependencies |
-
-**What this means:**
-- JSON export: 10-40× faster than rendering
-- Native macOS: Fastest overall (4,000-22,000 ops/sec)
-- Zeno: Best bitmap speed/quality trade-off
-- All renderers: 100% success rate
-
-**Text complexity:**
-
-| Text | Time | ops/sec |
-|------|------|---------|
-| Arabic | 0.480ms | 6,807 |
-| Mixed scripts | 0.421ms | 5,455 |
-| Latin | 0.917ms | 6,162 |
-
-*Platform: macOS 14, Apple Silicon. More in [typf-tester/README.md](typf-tester/README.md).*
 
 ## Test your system
 
 ```bash
 cd typf-tester
 python typfme.py bench
-
-# Results: output/benchmark_report.json, output/benchmark_summary.md
-python visual_diff.py --all
-python unified_report.py
 ```
 
-Tests all 20 backend combos, multiple scripts, performance metrics, and quality analysis.
-
-## Architecture
-
-**Shapers**: none (basic), harfbuzz (complex scripts), icu-hb (Unicode + bidi)
-
-**Renderers**: orge (SIMD, pure Rust), skia (high quality), coregraphics (macOS), zeno (fast), json (data only)
-
-**Exports**: PNM, PNG, SVG, JSON
-
-## Choose your backends
-
-| Need | Shaper | Renderer | Speed | Quality |
-|------|--------|----------|-------|---------|
-| Fastest | none | JSON | 25K ops/sec | Data only |
-| Complex scripts | harfbuzz | zeno | 3K ops/sec | 247 levels |
-| macOS best | coretext | coregraphics | 4K ops/sec | 254 levels (best) |
-| Pure Rust | harfbuzz | orge | 2K ops/sec | 25 levels (mono) |
-
-**Popular combos:**
-- Production (macOS): harfbuzz + coregraphics
-- Portable: harfbuzz + zeno
-- Minimal: none + orge
-- Data only: harfbuzz + JSON
-
-## Build options
-
-- **Minimal**: <500KB, basic features
-- **Selective**: Enable only backends you need
-- **Thread-safe**: Arc/DashMap for concurrency
-- **Zero-copy**: Memory-mapped fonts
-- **Caching**: Multi-level performance cache
-
-## Build
-
-```bash
-# Minimal (500KB)
-cargo build --release --no-default-features --features minimal
-
-# Everything
-cargo build --release --all-features
-```
-
-## Examples
-
-| Example | What it shows | Run it |
-|---------|---------------|--------|
-| simple | Basic pipeline | `cargo run --example simple` |
-| minimal | Smallest build | `cargo run --example minimal --no-default-features --features minimal` |
-| backend_comparison | Compare shapers | `cargo run --example backend_comparison` |
-| variable_fonts | Font axes | `cargo run --example variable_fonts` |
-| svg_export_example | Vector output | `cargo run --example svg_export_example --features export-svg` |
-
-**Python:**
-```bash
-python bindings/python/examples/simple_render.py
-python bindings/python/examples/long_text_handling.py
-```
-
-## Test
-
-```bash
-cargo test --workspace --all-features
-cargo tarpaulin --workspace --all-features
-```
-
-## Layout
-
-```
-typf/
-├── crates/typf/          # Main library
-├── crates/typf-core/     # Core types
-├── crates/typf-unicode/  # Unicode handling
-├── crates/typf-export/   # Export formats
-├── crates/typf-cli/      # CLI tool
-├── backends/             # Shaping/rendering
-└── tests/                # Integration tests
-```
+Tests all backend combos on your hardware. Results go to `output/`.
 
 ## Status
 
-Production ready. Everything works:
+Production ready. All features work:
 
-- ✅ 6-stage pipeline
-- ✅ 4 shapers (None, HarfBuzz, ICU-HarfBuzz, CoreText)
-- ✅ 5 renderers (Orge, Skia, Zeno, CoreGraphics, JSON)
+- ✅ 6-stage pipeline  
+- ✅ 4 shapers, 5 renderers
 - ✅ PNM, PNG, SVG, JSON export
-- ✅ Python bindings (PyO3)
-- ✅ 206 tests pass
-- ✅ SIMD optimizations
+- ✅ Python bindings
 - ✅ Linux, macOS, Windows, WASM
-
-**Performance:**
-- Binary: ~500KB (minimal, stripped)
-- SIMD: 12.5 GB/s (AVX2), 8.4 GB/s (SSE4.1)
-- Shaping: 5µs/100 chars (simple), 45µs/100 chars (complex)
-- Cache: ~40ns (L1 hit)
-- Throughput: 1,500-22,000 ops/sec
-
-See [CHANGELOG.md](CHANGELOG.md) for details.
+- ✅ 206 tests pass
 
 ## Limits
 
 **Bitmap width**: ~10,000 pixels max
-- 48px font: ~200-300 characters
-- 24px font: ~400-600 characters
-- 12px font: ~800-1200 characters
+- 48px font: ~200 characters  
+- 24px font: ~400 characters
+- 12px font: ~800 characters
 
-**Fixes**: Smaller fonts, line wrapping, or SVG (no width limit).
+Fix: Use smaller fonts, line wrapping, or SVG (no width limit).
 
-## Problems
+## Troubleshooting
 
 **Build errors:**
-- "undeclared type" → Enable features: `cargo build --all-features`
-- "Package not found" → Check Cargo.toml, or use minimal: `cargo build --no-default-features --features minimal`
+- "undeclared type" → `cargo build --all-features`
+- "Package not found" → `cargo build --no-default-features --features minimal`
 
-**Runtime errors:**
-- "no attribute 'Typf'" → Rebuild Python: `cd bindings/python && maturin develop --release --features shaping-hb,export-png,export-svg`
-- "Invalid bitmap dimensions" → Text too wide (>10,000px). Use smaller font, line wrapping, or SVG
-- "Font not found" → Check path, permissions, format (TrueType/OpenType)
+**Runtime errors:**  
+- "no attribute 'Typf'" → Rebuild Python bindings
+- "Invalid bitmap dimensions" → Text too wide, use smaller font or SVG
+- "Font not found" → Check path and format (TrueType/OpenType)
 
-**Slow rendering:**
-- Large fonts are slow (O(size²)). Use smaller sizes, cache results, or platform-native backends
-- High memory → Reduce cache size, process in chunks
+## Learn more
 
-**Testing:**
-- "backends unavailable" → Rebuild Python bindings
-- Inconsistent benchmarks → More iterations, close other apps, avoid thermal throttling
-
-**Need help?**
-- Docs: `typf-tester/QUICKSTART.md`, `examples/README.md`
-- Issues: https://github.com/fontlaborg/typf/issues
-- Forum: https://forum.fontlab.com/
+- [Documentation](src_docs/) - 24 chapters
+- [Examples](examples/README.md) - Working code samples  
+- [Contributing](CONTRIBUTING.md) - Development setup
+- [PLAN.md](PLAN.md) - Roadmap and architecture
 
 ## License
 
 [EVALUATION LICENSE](./LICENSE)
-
-## Contribute
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Documentation
-
-- **[TYPF v2.0 Documentation](src_docs/)** - 24 chapters covering everything
-- **[Examples](examples/README.md)** - Working code for all features
-- **[Quick Start](typf-tester/QUICKSTART.md)** - 5-minute tutorial
-- **[Contributing](CONTRIBUTING.md)** - Development setup
-- **[API Docs](https://docs.rs/typf)** - Rust API (`cargo doc --open`)
-- **[PLAN.md](PLAN.md)** - Roadmap and architecture
-- **[TODO.md](TODO.md)** - Current tasks
-- **[CHANGELOG.md](CHANGELOG.md)** - Release notes
-- **[Features Matrix](FEATURES.md)** - Feature status
-- **[Security](SECURITY.md)** - Security policy
