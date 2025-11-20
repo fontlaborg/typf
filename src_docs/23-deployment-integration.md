@@ -1,6 +1,6 @@
 # Deployment & Integration
 
-Deploy TYPF in production environments and integrate with existing systems.
+Deploy TypF in production environments and integrate with existing systems.
 
 ## Production Deployment
 
@@ -197,9 +197,9 @@ from fastapi.responses import Response
 import base64
 import typf
 
-app = FastAPI(title="TYPF Render Service")
+app = FastAPI(title="TypF Render Service")
 
-# Initialize TYPF once
+# Initialize TypF once
 typf_instance = typf.Typf()
 typf_instance.load_font("Roboto-Regular.ttf")
 
@@ -735,4 +735,4 @@ impl AppConfig {
 
 ---
 
-Deploy TYPF as a scalable web service with proper monitoring, caching, and security. Use container orchestration for production scaling and implement comprehensive observability to maintain performance.
+Deploy TypF as a scalable web service with proper monitoring, caching, and security. Use container orchestration for production scaling and implement comprehensive observability to maintain performance.

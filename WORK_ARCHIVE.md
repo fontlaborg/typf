@@ -1,4 +1,4 @@
-# TYPF v2.0 Work Log Archive
+# TypF Work Log Archive
 
 This file contains archived work sessions from earlier development rounds (Rounds 1-35).
 

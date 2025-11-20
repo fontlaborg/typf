@@ -1,7 +1,7 @@
 [project]
-site_name = "TYPF v2.0 Documentation"
+site_name = "TypF"
 site_url = "https://fontlab.org/typf/"
-site_description = "TYPF v2.0: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings"
+site_description = "TypF: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings"
 # Build configuration - source and output directories
 docs_dir = "./src_docs"
 site_dir = "./docs"
@@ -12,7 +12,50 @@ edit_uri = "https://github.com/fontlaborg/typf/edit/main/src_docs/"
 # Copyright
 copyright = "Copyright &copy; 2025 Fontlab Ltd"
 
-# Theme configuration
+# Navigation - TYPF v2.0 Comprehensive Documentation
+nav = [
+  "index.md",
+  {"Getting Started" = [
+    "01-introduction.md",
+    "02-quick-start.md",
+    "03-architecture-overview.md",
+    "04-installation.md"
+  ]},
+  {"Core Concepts" = [
+    "05-six-stage-pipeline.md",
+    "06-backend-architecture.md",
+    "07-memory-management.md",
+    "08-performance-fundamentals.md"
+  ]},
+  {"Shaping Backends" = [
+    "09-harfbuzz-shaping.md",
+    "10-platform-shapers.md",
+    "11-icu-harfbuzz-composition.md",
+    "12-none-shaper.md"
+  ]},
+  {"Rendering Backends" = [
+    "13-skia-renderer.md",
+    "14-orge-renderer.md",
+    "15-platform-renderers.md",
+    "16-zeno-renderer.md"
+  ]},
+  {"Output & Export" = [
+    "17-export-formats.md"
+  ]},
+  {"API Reference" = [
+    "18-rust-api.md",
+    "19-python-api.md",
+    "20-cli-interface.md"
+  ]},
+  {"Advanced Topics" = [
+    "21-webassembly-integration.md",
+    "22-performance-optimization.md",
+    "23-deployment-integration.md",
+    "24-troubleshooting-best-practices.md"
+  ]}
+]
+
+# Theme configuration - NO TABS
 [project.theme]
 features = [
   "announce.dismiss",
@@ -22,13 +65,11 @@ features = [
   "content.code.copy",
   "content.code.select",
   "content.footnote.tooltips",
-  "content.tabs.link",
   "content.tooltips",
   "navigation.footer",
   "navigation.indexes",
   "navigation.path",
   "navigation.sections",
-  "navigation.tabs",
   "navigation.top",
   "search.highlight"
 ]
@@ -83,26 +124,26 @@ default = "default"
 
 # Markdown extensions configuration
 [project.markdown_extensions]
-abbr = {  }
-admonition = {  }
-attr_list = {  }
-def_list = {  }
-footnotes = {  }
-md_in_html = {  }
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
 
 [project.markdown_extensions.toc]
 permalink = true
 
 [project.markdown_extensions.pymdownx]
-caret = {  }
-details = {  }
-emoji = {  }
-inlinehilite = {  }
-keys = {  }
-mark = {  }
-smartsymbols = {  }
-snippets = {  }
-tilde = {  }
+caret = {}
+details = {}
+emoji = {}
+inlinehilite = {}
+keys = {}
+mark = {}
+smartsymbols = {}
+snippets = {}
+tilde = {}
 
 [project.markdown_extensions.pymdownx.arithmatex]
 generic = true
@@ -124,54 +165,10 @@ repo = "typf"
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [{ name = "mermaid", class = "mermaid" }]
 
-[project.markdown_extensions.pymdownx.tabbed]
-alternate_style = true
-combine_header_slug = true
-
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
 
-# Navigation - TYPF v2.0 Comprehensive Documentation
-[project.nav]
-"TYPF Documentation" = "index.md"
-"Getting Started" = [
-  { "01 Introduction" = "01-introduction.md" },
-  { "02 Quick Start" = "02-quick-start.md" },
-  { "03 Architecture Overview" = "03-architecture-overview.md" },
-  { "04 Installation" = "04-installation.md" }
-]
-"Core Concepts" = [
-  { "05 Six-Stage Pipeline" = "05-six-stage-pipeline.md" },
-  { "06 Backend Architecture" = "06-backend-architecture.md" },
-  { "07 Memory Management" = "07-memory-management.md" },
-  { "08 Performance Fundamentals" = "08-performance-fundamentals.md" }
-]
-"Shaping Backends" = [
-  { "09 HarfBuzz Shaping" = "09-harfbuzz-shaping.md" },
-  { "10 Platform Shapers" = "10-platform-shapers.md" },
-  { "11 ICU-HarfBuzz Composition" = "11-icu-harfbuzz-composition.md" },
-  { "12 None Shaper" = "12-none-shaper.md" }
-]
-"Rendering Backends" = [
-  { "13 Skia Renderer" = "13-skia-renderer.md" },
-  { "14 Orge Renderer" = "14-orge-renderer.md" },
-  { "15 Platform Renderers" = "15-platform-renderers.md" },
-  { "16 Zeno Renderer" = "16-zeno-renderer.md" }
-]
-"Output & Export" = [{ "17 Export Formats" = "17-export-formats.md" }]
-"API Reference" = [
-  { "18 Rust API" = "18-rust-api.md" },
-  { "19 Python API" = "19-python-api.md" },
-  { "20 CLI Interface" = "20-cli-interface.md" }
-]
-"Advanced Topics" = [
-  { "21 WebAssembly Integration" = "21-webassembly-integration.md" },
-  { "22 Performance Optimization" = "22-performance-optimization.md" },
-  { "23 Deployment and Integration" = "23-deployment-integration.md" },
-  { "24 Troubleshooting and Best Practices" = "24-troubleshooting-best-practices.md" }
-]
-
 # Plugins configuration (zensical equivalents)
 [project.plugins]
-search = {  }
-tags = {  }
+search = {}
+tags = {}

@@ -1,8 +1,8 @@
-# TYPF Backend Comparison Guide
+# TypF Backend Comparison Guide
 
 **Made by FontLab** - https://www.fontlab.com/
 
-Comprehensive comparison of all TYPF shaping and rendering backends with performance benchmarks, feature matrices, and selection guidance.
+Comprehensive comparison of all TypF shaping and rendering backends with performance benchmarks, feature matrices, and selection guidance.
 
 ---
 
@@ -305,7 +305,7 @@ let mut buffer = Buffer::new(&mut font_system, metrics);
 buffer.set_text(text, attrs, shaping);
 buffer.shape_until_scroll();
 
-// TYPF equivalent
+// TypF equivalent
 let result = typf.render_text(
     text,
     font_path,
@@ -321,7 +321,7 @@ let result = typf.render_text(
 let font = Font::try_from_bytes(font_data)?;
 let glyphs: Vec<_> = font.layout(text, scale, point).collect();
 
-// TYPF equivalent (more features)
+// TypF equivalent (more features)
 let shaped = shaper.shape(text, font, &params)?;
 let rendered = renderer.render(&shaped, font, &render_params)?;
 ```

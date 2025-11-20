@@ -1,9 +1,9 @@
-# TYPF v2.0
+# TypF
 
 [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
-Your text looks wrong. Arabic renders backwards, Hindi characters break, Thai glyphs collide. TYPF fixes this in under a millisecond.
+Your text looks wrong. Arabic renders backwards, Hindi characters break, Thai glyphs collide. TypF fixes this in under a millisecond.
 
 Render "Hello, مرحبا, 你好!" correctly the first time.
 

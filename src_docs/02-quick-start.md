@@ -9,7 +9,7 @@ tags:
 
 # Quick Start
 
-Get TYPF running in five minutes.
+Get TypF running in five minutes.
 
 ## Install
 

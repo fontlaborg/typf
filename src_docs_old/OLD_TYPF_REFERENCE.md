@@ -1,13 +1,13 @@
-# Old-TYPF v1.x Reference Guide for TYPF v2.0
+# Old-TypF v1.x Reference Guide for TypF
 
-This document maps TYPF v2.0's six-stage pipeline architecture to the existing old-typf codebase, enabling efficient refactoring and reuse of proven implementations.
+This document maps TypF's six-stage pipeline architecture to the existing old-typf codebase, enabling efficient refactoring and reuse of proven implementations.
 
 **Last Updated:** 2025-11-18
 **Status:** Complete reference mapping ready for Phase 1 implementation
 
 ## Quick Reference
 
-| Stage | Purpose | Old-TYPF Location | Reuse Strategy |
+| Stage | Purpose | Old-TypF Location | Reuse Strategy |
 |-------|---------|-------------------|-----------------|
 | 1. Input | Parsing & validation | `crates/typf-api/src/session.rs` | Adapt validation patterns |
 | 2. Unicode | Normalization, script detection | `crates/typf-unicode/src/lib.rs` | **REUSE AS-IS** ✓ |

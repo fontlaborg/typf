@@ -29,7 +29,7 @@
 - **SHOULD** – Default behavior; deviate only with clear justification  
 - **MAY** – Optional practices or suggestions
 
-## 3. TYPF Workspace Snapshot (Rust + Python)
+## 3. TypF Workspace Snapshot (Rust + Python)
 
 **Scope Sentence**: Deliver a six-stage, dual-backend text pipeline with selective builds and first-class PyO3 bindings.
 
@@ -498,9 +498,9 @@ When writing documentation or commentary:
 
 ## 13. X. TYPF-SPECIFIC REFERENCE MAPPINGS
 
-When implementing TYPF v2.0, reference the old-typf codebase strategically:
+When implementing TypF, reference the old-typf codebase strategically:
 
-### 13.1. Old-TYPF Codebase Locations
+### 13.1. Old-TypF Codebase Locations
 
 **Stage 2: Unicode Processing (REUSE AS-IS)**
 - `old-typf/crates/typf-unicode/src/lib.rs` – Complete, production-ready implementation
@@ -537,7 +537,7 @@ When implementing TYPF v2.0, reference the old-typf codebase strategically:
 4. **Memory Management**: Box::leak() for font data caching (intentional, documented)
 5. **Concurrency**: Arc<T> + DashMap for thread-safe sharing; parking_lot for locks
 
-### 13.3. Old-TYPF Dependencies Already in Use
+### 13.3. Old-TypF Dependencies Already in Use
 
 All required dependencies are already proven in old-typf:
 - `read-fonts` + `skrifa` for font parsing (NOT ttf-parser)
@@ -566,7 +566,7 @@ For each stage (PLAN/01-06):
 
 ---
 
-## 14. X. RUST IMPLEMENTATION MANDATES (TYPF V2)
+## 14. X. RUST IMPLEMENTATION MANDATES (TypF V2)
 
 - **Workspace Discipline (MUST)**: Keep the multi-crate layout from `/Users/adam/Developer/llm/2511/typf-v2b` intact—`typf`, `typf-core`, `typf-input`, `typf-unicode`, `typf-fontdb`, `typf-export`, per-backend crates, bindings, and `typf-cli`. Never collapse crates “for convenience”; feature gating depends on this split.
 - **Six-Stage Pipeline Fidelity (MUST)**: Preserve the pipeline contracts defined in PLAN/00–04: Input → Unicode → Font Selection → Shaping → Rendering → Export. Every new feature must declare which stage it touches and add targeted tests (unit + integration) before code changes.

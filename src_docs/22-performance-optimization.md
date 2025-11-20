@@ -1,6 +1,6 @@
 # Performance Optimization
 
-Make TYPF fast through strategic optimization techniques.
+Make TypF fast through strategic optimization techniques.
 
 ## Quick Wins
 

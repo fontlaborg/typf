@@ -1,4 +1,4 @@
-# TYPF Benchmark Summary
+# TypF Benchmark Summary
 
 **Date**: 2025-11-20 13:52:52  
 **Iterations**: 100  

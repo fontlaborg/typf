@@ -1,6 +1,6 @@
 # Export Formats
 
-TYPF exports rendered text to multiple formats for different use cases.
+TypF exports rendered text to multiple formats for different use cases.
 
 ## Available Formats
 

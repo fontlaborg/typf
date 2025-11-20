@@ -37,7 +37,7 @@ cargo run --example harfbuzz --features shaping-hb
 
 ### 1. Read Documentation
 
-- `README.md` - What TYPF does
+- `README.md` - What TypF does
 - `ARCHITECTURE.md` - How it works
 - `PLAN.md` - What we're building
 - `PLAN/00.md` - Technical details

@@ -1,8 +1,8 @@
-# TYPF Tester - Quick Start Guide
+# TypF Tester - Quick Start Guide
 
 **Made by FontLab** - https://www.fontlab.com/
 
-A comprehensive testing and benchmarking tool for TYPF v2.0 text shaping and rendering backends.
+A comprehensive testing and benchmarking tool for TypF text shaping and rendering backends.
 
 ## 5-Minute Quick Start
 
@@ -40,7 +40,7 @@ python typfme.py bench --iterations=50
 cat output/benchmark_summary.md
 ```
 
-That's it! You're now testing TYPF backends.
+That's it! You're now testing TypF backends.
 
 ---
 

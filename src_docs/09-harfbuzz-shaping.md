@@ -10,7 +10,7 @@ tags:
 
 # HarfBuzz Shaping
 
-HarfBuzz shapes text. TYPF uses it for complex scripts, bidirectional text, and OpenType features.
+HarfBuzz shapes text. TypF uses it for complex scripts, bidirectional text, and OpenType features.
 
 ## Why HarfBuzz?
 
@@ -206,4 +206,4 @@ pub enum HarfBuzzError {
 
 ---
 
-HarfBuzz gives TYPF reliable text shaping across all scripts and platforms. It handles the complex stuff so you don't have to.
+HarfBuzz gives TypF reliable text shaping across all scripts and platforms. It handles the complex stuff so you don't have to.

@@ -1,4 +1,4 @@
-# TYPF v2.0 TODO List
+# TypF TODO List
 
 ## Release Tasks (v2.0.0)
 

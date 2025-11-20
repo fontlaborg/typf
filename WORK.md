@@ -1,5 +1,5 @@
 
-# TYPF v2.0 Work Log
+# TypF Work Log
 
 **Project Status**: ✅ DONE - Ready to Ship (2025-11-20)
 
@@ -13,7 +13,7 @@
 
 ## Project Summary
 
-TYPF v2.0 is complete with:
+TypF is complete with:
 - ✅ 78 development rounds finished
 - ✅ All backend combinations work (4 shapers × 5 renderers = 20 combos)
 - ✅ 206 tests pass, no compiler warnings
@@ -42,7 +42,7 @@ TYPF v2.0 is complete with:
 
 ## Release Ready
 
-TYPF v2.0 is ready for release:
+TypF is ready for release:
 1. Version bump to v2.0.0
 2. Publish to crates.io
 3. Build Python wheels for PyPI

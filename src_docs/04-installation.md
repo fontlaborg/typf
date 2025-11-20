@@ -9,7 +9,7 @@ tags:
 
 # Installation
 
-Install TYPF and start rendering text.
+Install TypF and start rendering text.
 
 ## Quick Install
 
@@ -229,4 +229,4 @@ cargo build --release --features shaping-hb,render-skia
 
 ---
 
-TYPF is installed. Start rendering text.
+TypF is installed. Start rendering text.

@@ -1,6 +1,6 @@
-# TYPF Documentation
+# TypF Documentation
 
-Text looks wrong. TYPF fixes it.
+Text looks wrong. TypF fixes it.
 
 ## Quick Start
 
@@ -17,7 +17,7 @@ python -m typf render --text "Hello 世界" --font font.ttf
 
 ## What This Is
 
-TYPF turns text into pixels. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.
+TypF turns text into pixels. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.
 
 Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font loading.
 
@@ -26,7 +26,7 @@ Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font load
 # Documentation
 
 ## Getting Started
-- [01 - Introduction](01-introduction.md) - Why TYPF exists
+- [01 - Introduction](01-introduction.md) - Why TypF exists
 - [02 - Quick Start](02-quick-start.md) - Running in minutes
 - [03 - Architecture](03-architecture-overview.md) - How it works
 - [04 - Installation](04-installation.md) - Setup details
@@ -71,7 +71,7 @@ Understanding core concepts? Read Core System.
 
 Need specific backend info? Jump to Shaping or Rendering sections.
 
-Building applications? Check the Using TYPF section.
+Building applications? Check the Using TypF section.
 
 Deploying to production? Read the Production section.
 

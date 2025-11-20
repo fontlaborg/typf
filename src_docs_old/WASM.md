@@ -1,6 +1,6 @@
 # WebAssembly Support
 
-TYPF can be compiled to WebAssembly for use in web browsers.
+TypF can be compiled to WebAssembly for use in web browsers.
 
 ## Features
 

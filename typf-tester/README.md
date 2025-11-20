@@ -1,12 +1,12 @@
-# TYPF Tester
+# TypF Tester
 
-Comprehensive testing and benchmarking tool for TYPF v2.0 text rendering pipeline.
+Comprehensive testing and benchmarking tool for TypF text rendering pipeline.
 
 Made by FontLab https://www.fontlab.com/
 
 ## Overview
 
-`typfme.py` is a comprehensive CLI tool for testing, rendering, and benchmarking all TYPF backend combinations with multiple sample texts, font sizes, and output formats. It helps validate backend implementations, compare performance, and generate visual outputs for quality verification.
+`typfme.py` is a comprehensive CLI tool for testing, rendering, and benchmarking all TypF backend combinations with multiple sample texts, font sizes, and output formats. It helps validate backend implementations, compare performance, and generate visual outputs for quality verification.
 
 ## Features
 
@@ -21,7 +21,7 @@ Made by FontLab https://www.fontlab.com/
 
 ### Prerequisites
 
-1. Build TYPF Python bindings with required features:
+1. Build TypF Python bindings with required features:
 
 ```bash
 # From repository root
@@ -53,7 +53,7 @@ python typfme.py info
 ```
 
 Output:
-- TYPF version
+- TypF version
 - Available shaping/rendering backends
 - Test fonts with sizes
 - Sample text catalog
@@ -585,12 +585,12 @@ self.bench_sizes = [12.0, 16.0, 24.0, 32.0, 48.0, 64.0]
 Example GitHub Actions workflow:
 
 ```yaml
-- name: Build TYPF Python bindings
+- name: Build TypF Python bindings
   run: |
     cd bindings/python
     maturin develop --release --features shaping-hb,export-png,export-svg
 
-- name: Run TYPF benchmarks
+- name: Run TypF benchmarks
   run: |
     cd typf-tester
     python typfme.py bench --iterations=100

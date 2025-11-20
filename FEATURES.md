@@ -1,4 +1,4 @@
-# TYPF v2.0 Features
+# TypF Features
 
 **Updated**: 2025-11-19
 **Version**: v2.0.0-dev

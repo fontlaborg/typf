@@ -1,6 +1,6 @@
-# TYPF Performance Optimization Guide
+# TypF Performance Optimization Guide
 
-This guide provides actionable recommendations for optimizing TYPF performance based on comprehensive benchmarking analysis.
+This guide provides actionable recommendations for optimizing TypF performance based on comprehensive benchmarking analysis.
 
 **Related Documentation:**
 - **[Backend Comparison](BACKEND_COMPARISON.md)** - Choose the right backend for your use case
@@ -186,7 +186,7 @@ See `examples/long_text_handling.rs` for complete implementation.
 
 ### Using typfme.py (Python Testing Tool)
 
-TYPF includes a comprehensive benchmarking tool:
+TypF includes a comprehensive benchmarking tool:
 
 ```bash
 cd typf-tester
@@ -307,7 +307,7 @@ let result = engine.render("Hello")?;  // 28% faster
 
 ### macOS: Use CoreText + CoreGraphics
 
-When both shaping and rendering use native backends, TYPF can optimize with a single call:
+When both shaping and rendering use native backends, TypF can optimize with a single call:
 
 ```rust
 let engine = Typf::builder()

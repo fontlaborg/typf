@@ -1,6 +1,6 @@
-# TYPF v2.0 Documentation Index
+# TypF Documentation Index
 
-**Complete documentation sitemap for TYPF text shaping and rendering library**
+**Complete documentation sitemap for TypF text shaping and rendering library**
 
 Made by FontLab - https://www.fontlab.com/
 
@@ -73,7 +73,7 @@ Made by FontLab - https://www.fontlab.com/
 **Path**: Compare → Migrate → Verify
 
 1. [BACKEND_COMPARISON.md#migration-guide](BACKEND_COMPARISON.md#migration-guide) - From cosmic-text, rusttype
-2. [ARCHITECTURE.md](../ARCHITECTURE.md) - Understand TYPF architecture
+2. [ARCHITECTURE.md](../ARCHITECTURE.md) - Understand TypF architecture
 3. [examples/](../examples/README.md) - See equivalent code patterns
 
 ---
@@ -238,7 +238,7 @@ See [PERFORMANCE.md](PERFORMANCE.md) for complete performance analysis.
 ## 🗺️ Documentation Map (Visual)
 
 ```
-TYPF Documentation Hierarchy:
+TypF Documentation Hierarchy:
 
 START HERE
 │
@@ -282,7 +282,7 @@ START HERE
 
 **Last Updated**: 2025-11-19 (Round 21)
 
-**Coverage**: This index covers all documentation as of TYPF v2.0.0-dev
+**Coverage**: This index covers all documentation as of TypF.0-dev
 
 **Missing Documentation?** Please open an issue if you find broken links or missing docs.
 

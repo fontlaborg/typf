@@ -1,4 +1,4 @@
-# TYPF Python Bindings
+# TypF Python Bindings
 
 High-performance text rendering for Python applications.
 
@@ -248,7 +248,7 @@ typf shape TEXT [OPTIONS]
 
 ### `typf info`
 
-Display TYPF version and configuration.
+Display TypF version and configuration.
 
 ### `typf version`
 
@@ -284,7 +284,7 @@ pytest
 
 ## Performance
 
-TYPF achieves industry-leading performance through:
+TypF achieves industry-leading performance through:
 
 - SIMD-optimized blending (10GB/s+ throughput)
 - Multi-level caching (L1 < 50ns access)

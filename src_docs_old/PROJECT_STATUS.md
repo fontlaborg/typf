@@ -1,4 +1,4 @@
-# TYPF v2.0 - Project Status Summary
+# TypF - Project Status Summary
 
 **Status**: ✅ **Production-Ready**
 **Date**: 2025-11-19
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-TYPF v2.0 is a complete architectural rewrite delivering a modular, high-performance text shaping and rendering library. All PLAN.md objectives have been achieved, with comprehensive testing, documentation, and benchmarking infrastructure in place.
+TypF is a complete architectural rewrite delivering a modular, high-performance text shaping and rendering library. All PLAN.md objectives have been achieved, with comprehensive testing, documentation, and benchmarking infrastructure in place.
 
 ## Completion Metrics
 
@@ -262,7 +262,7 @@ Size (px)    Render Time    Scaling Factor
 
 ## Conclusion
 
-TYPF v2.0 successfully delivers on all PLAN.md objectives:
+TypF successfully delivers on all PLAN.md objectives:
 
 ✅ Six-stage modular pipeline
 ✅ Multiple shaping and rendering backends

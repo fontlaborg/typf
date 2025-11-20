@@ -1,4 +1,4 @@
-# TYPF Release Checklist
+# TypF Release Checklist
 
 This document outlines the process for releasing a new version of TYPF.
 

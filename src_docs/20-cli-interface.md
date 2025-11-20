@@ -142,7 +142,7 @@ Plain text file:
 ```
 Hello World
 Second Line  
-TYPF CLI
+TypF CLI
 ```
 
 JSON config:

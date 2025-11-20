@@ -358,7 +358,7 @@ def parallel_render(texts: List[str], font_path: str, workers: int = 4):
 try:
     result = renderer.render_text("Hello", "nonexistent.ttf")
 except typf.TypfError as e:
-    print(f"TYPF error: {e}")
+    print(f"TypF error: {e}")
     
 # Specific error types
 try:

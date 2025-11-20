@@ -1,6 +1,6 @@
-# Fuzz Testing - Crash TYPF Before Your Users Do
+# Fuzz Testing - Crash TypF Before Your Users Do
 
-Fuzzing throws random, malformed data at your code to find panics, crashes, and security vulnerabilities that normal testing misses. TYPF handles complex Unicode text, font files, and rendering pipelines - perfect candidates for fuzzing to ensure robustness.
+Fuzzing throws random, malformed data at your code to find panics, crashes, and security vulnerabilities that normal testing misses. TypF handles complex Unicode text, font files, and rendering pipelines - perfect candidates for fuzzing to ensure robustness.
 
 ## 🚀 Quick Start
 

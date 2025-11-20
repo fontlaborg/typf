@@ -1,12 +1,12 @@
-# TYPF v2.0 Testing Analysis Report
+# TypF Testing Analysis Report
 
 **Date:** 2025-11-19
 **Tool Version:** typfme.py
-**TYPF Version:** 2.0.0-dev
+**TypF Version:** 2.0.0-dev
 
 ## Executive Summary
 
-Successfully tested TYPF v2.0 with two shaping backends (NONE, HARFBUZZ) and the ORGE renderer. All 48 test cases passed, generating both PNG and SVG outputs. Performance is competitive, with room for optimization.
+Successfully tested TypF with two shaping backends (NONE, HARFBUZZ) and the ORGE renderer. All 48 test cases passed, generating both PNG and SVG outputs. Performance is competitive, with room for optimization.
 
 ## Test Coverage
 
@@ -200,7 +200,7 @@ warning: unused variable: `scale`
 
 ## Conclusion
 
-TYPF v2.0 is functional and produces correct output. The architecture is solid with clean separation between shaping and rendering. Key areas for improvement:
+TypF is functional and produces correct output. The architecture is solid with clean separation between shaping and rendering. Key areas for improvement:
 
 1. **SVG export efficiency** (major size reduction possible)
 2. **Rendering performance** at large sizes (13x scaling can be improved)

@@ -1,6 +1,6 @@
 # WebAssembly Integration
 
-Run TYPF in browsers and JavaScript environments with WebAssembly.
+Run TypF in browsers and JavaScript environments with WebAssembly.
 
 ## Quick Start
 

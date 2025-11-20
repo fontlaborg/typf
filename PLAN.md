@@ -1,8 +1,8 @@
-# TYPF v2.0 Implementation Plan
+# TypF Implementation Plan
 
 ## Project Status: ✅ DONE - Ready to Ship (2025-11-19)
 
-TYPF v2.0 is a complete six-stage text pipeline with selective builds and Python bindings.
+TypF is a complete six-stage text pipeline with selective builds and Python bindings.
 
 **Built**: 4 shapers × 5 renderers = 20 working backend combinations
 **Quality**: 206 tests pass, 175 verified outputs, production-ready
@@ -74,4 +74,4 @@ TYPF v2.0 is a complete six-stage text pipeline with selective builds and Python
 
 ---
 
-*TYPF v2.0: Complete text shaping and rendering pipeline, ready for release.*
+*TypF: Complete text shaping and rendering pipeline, ready for release.*

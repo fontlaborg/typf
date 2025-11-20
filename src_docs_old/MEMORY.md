@@ -85,7 +85,7 @@ Use Xcode Instruments for detailed profiling:
 
 ### Zero-Copy Font Loading
 
-TYPF uses memory-mapped fonts with `Arc<Font>` for zero-copy sharing:
+TypF uses memory-mapped fonts with `Arc<Font>` for zero-copy sharing:
 
 ```rust
 // Memory-mapped font data (no allocation)
@@ -103,7 +103,7 @@ let font_clone = Arc::clone(&font);
 
 ### Multi-Level Cache
 
-TYPF uses a three-tier cache system:
+TypF uses a three-tier cache system:
 
 ```
 L1: DashMap (concurrent, ~1000 entries)  → ~100 KB
@@ -144,7 +144,7 @@ Cache limits prevent unbounded growth:
 
 ### Leak Detection
 
-TYPF must have **zero memory leaks**. All tests pass Valgrind memcheck.
+TypF must have **zero memory leaks**. All tests pass Valgrind memcheck.
 
 **Known intentional "leaks":**
 - `Box::leak()` in `typf-fontdb` for font data caching (documented)
@@ -300,4 +300,4 @@ Fails build if:
 - [Valgrind Manual](https://valgrind.org/docs/manual/manual.html)
 - [Heaptrack Documentation](https://github.com/KDE/heaptrack)
 - [Rust Performance Book](https://nnethercote.github.io/perf-book/)
-- [TYPF BENCHMARKS.md](../BENCHMARKS.md) - Performance targets
+- [TypF BENCHMARKS.md](../BENCHMARKS.md) - Performance targets

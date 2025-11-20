@@ -1,4 +1,4 @@
-# TYPF Performance Benchmarks
+# TypF Performance Benchmarks
 
 ## Performance Summary
 

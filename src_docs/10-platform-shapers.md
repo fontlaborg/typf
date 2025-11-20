@@ -70,7 +70,7 @@ result = renderer.render_text("مرحبا بالعالم", "Arial.ttf")
 
 ## Automatic Selection
 
-TYPF picks the right shaper for your platform:
+TypF picks the right shaper for your platform:
 
 ```rust
 pub fn create_platform_shaper() -> Result<Box<dyn Shaper>> {

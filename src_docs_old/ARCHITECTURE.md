@@ -1,8 +1,8 @@
-# TYPF Architecture
+# TypF Architecture
 
 ## Overview
 
-TYPF v2.0 is a modular text rendering pipeline built on a six-stage architecture. Each stage is independent and can be replaced with different backend implementations.
+TypF is a modular text rendering pipeline built on a six-stage architecture. Each stage is independent and can be replaced with different backend implementations.
 
 ## Six-Stage Pipeline
 
