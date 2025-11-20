@@ -1,6 +1,8 @@
-//! Python bindings for TYPF text rendering pipeline
-
-#![allow(clippy::useless_conversion)]
+//! Python bindings - TYPF's power, packaged for Python developers
+//!
+//! This is where Rust meets Python: high-performance text shaping and rendering
+//! that feels native in Python code. We handle the complexity of font loading,
+//! Unicode processing, and pixel-perfect rendering—all you do is call a function.
 
 use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -16,19 +18,27 @@ use typf_fontdb::Font;
 
 // Note: Skia and Zeno renderers not yet available in workspace
 
-/// Python-facing TYPF pipeline
+/// The main TYPF interface that Python developers will love
+///
+/// This class hides all the Rust complexity behind a simple Python interface.
+/// Pick your shaper, pick your renderer, and start rendering beautiful text.
 #[pyclass]
 struct Typf {
-    shaper: Arc<dyn Shaper + Send + Sync>,
-    renderer: Arc<dyn Renderer + Send + Sync>,
+    shaper: Arc<dyn Shaper + Send + Sync>,     // How we transform text to glyphs
+    renderer: Arc<dyn Renderer + Send + Sync>, // How we turn glyphs into images
 }
 
 #[pymethods]
 impl Typf {
-    /// Create a new TYPF instance
+    /// Creates your TYPF rendering pipeline
+    ///
+    /// Choose your weapons:
+    /// - Shapers: "none" (debug), "harfbuzz" (professional), "coretext" (macOS), "icu-hb" (Unicode perfect)
+    /// - Renderers: "orge" (pure Rust), "json" (data), "coregraphics" (macOS), "skia" (pro), "zeno" (pure Rust)
     #[new]
     #[pyo3(signature = (shaper="harfbuzz", renderer="orge"))]
     fn new(shaper: &str, renderer: &str) -> PyResult<Self> {
+        // Find and create the requested text shaper
         let shaper: Arc<dyn Shaper + Send + Sync> = match shaper {
             "none" => Arc::new(typf_shape_none::NoneShaper::new()),
             #[cfg(feature = "shaping-hb")]
@@ -45,6 +55,7 @@ impl Typf {
             },
         };
 
+        // Find and create the requested pixel renderer
         let renderer: Arc<dyn Renderer + Send + Sync> = match renderer {
             #[cfg(feature = "render-json")]
             "json" => Arc::new(typf_render_json::JsonRenderer::new()),
@@ -66,7 +77,10 @@ impl Typf {
         Ok(Self { shaper, renderer })
     }
 
-    /// Render text to an image
+    /// Turns your text into beautiful pixels - the main event
+    ///
+    /// This method does the full pipeline: loads the font, shapes the text,
+    /// renders to bitmap, and returns it in a Python-friendly format.
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10))]
     fn render_text(
@@ -79,25 +93,25 @@ impl Typf {
         background: Option<(u8, u8, u8, u8)>,
         padding: u32,
     ) -> PyResult<PyObject> {
-        // Load font
+        // First, load and validate the font file
         let font = Font::from_file(font_path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
         let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
 
-        // Set up shaping parameters
+        // Configure how we want to shape the text
         let shaping_params = ShapingParams {
             size,
             direction: Direction::LeftToRight,
             ..Default::default()
         };
 
-        // Shape the text
+        // Transform text into positioned glyphs
         let shaped = self
             .shaper
             .shape(text, font_arc.clone(), &shaping_params)
             .map_err(|e| PyRuntimeError::new_err(format!("Shaping failed: {:?}", e)))?;
 
-        // Set up render parameters
+        // Parse colors (default to black on transparent)
         let foreground = color
             .map(|(r, g, b, a)| Color::rgba(r, g, b, a))
             .unwrap_or(Color::rgba(0, 0, 0, 255));
@@ -110,13 +124,13 @@ impl Typf {
             ..Default::default()
         };
 
-        // Render to bitmap
+        // Render the shaped glyphs into actual pixels
         let rendered = self
             .renderer
             .render(&shaped, font_arc, &render_params)
             .map_err(|e| PyRuntimeError::new_err(format!("Rendering failed: {:?}", e)))?;
 
-        // Convert to Python object based on output type
+        // Package the result for Python consumption
         match rendered {
             RenderOutput::Bitmap(bitmap) => {
                 let result = PyDict::new_bound(py);
@@ -124,10 +138,10 @@ impl Typf {
                 result.set_item("height", bitmap.height)?;
                 result.set_item("format", format!("{:?}", bitmap.format))?;
                 result.set_item("data", PyBytes::new_bound(py, &bitmap.data))?;
-                Ok(result.into())
+                Ok(result.into()) // Return as a dict with metadata
             },
             RenderOutput::Json(json_str) => {
-                // Return JSON string directly
+                // JSON renderers get special handling - return the raw string
                 Ok(json_str.into_py(py))
             },
             RenderOutput::Vector(_) => {
@@ -304,11 +318,14 @@ fn export_image(py: Python, image_data: PyObject, format: &str) -> PyResult<PyOb
     Ok(PyBytes::new_bound(py, &exported).into())
 }
 
-/// Simple convenience function for rendering text
+/// Quick rendering when you don't care about fonts
+///
+/// Sometimes you just need to see text on screen. This function uses
+/// a built-in stub font for ultra-simple rendering without file I/O.
 #[pyfunction]
 #[pyo3(signature = (text, size=16.0))]
 fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
-    // Create stub font for simple rendering
+    // Create a minimal font that works without a font file
     use typf_core::traits::FontRef;
 
     struct StubFont {
@@ -317,20 +334,20 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
 
     impl FontRef for StubFont {
         fn data(&self) -> &[u8] {
-            &[]
+            &[] // No actual font data needed
         }
         fn units_per_em(&self) -> u16 {
-            1000
+            1000 // Standard coordinate system
         }
         fn glyph_id(&self, ch: char) -> Option<u32> {
             if ch.is_alphanumeric() || ch.is_whitespace() {
-                Some(ch as u32)
+                Some(ch as u32) // Simple character mapping
             } else {
-                Some(0)
+                Some(0) // Fallback glyph
             }
         }
         fn advance_width(&self, _: u32) -> f32 {
-            self.size * 0.5
+            self.size * 0.5 // Rough width approximation
         }
     }
 
@@ -373,7 +390,11 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
     }
 }
 
-/// Python module definition
+/// Brings TYPF's power into the Python ecosystem
+///
+/// This is the bridge that makes all our Rust magic available to Python.
+/// We expose classes, functions, and version info so Python developers
+/// can import typf and start rendering beautiful text immediately.
 #[pymodule]
 fn typf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Typf>()?;

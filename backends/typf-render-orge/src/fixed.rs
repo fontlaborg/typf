@@ -1,107 +1,108 @@
-//! F26Dot6 fixed-point arithmetic for scan conversion.
+//! Precision beyond pixels: the mathematics of sub-pixel perfection
 //!
-//! Uses 26.6 format: 26 bits integer, 6 bits fractional.
-//! This provides 1/64 pixel precision for sub-pixel positioning.
+//! When 1/64th of a pixel matters, fixed-point arithmetic delivers.
+//! Our 26.6 format gives us 6 bits of fractional precision—enough to
+//! position text with surgical accuracy while keeping calculations fast.
+//! This is the secret sauce that makes rasterized text look smooth at any size.
 
 use std::ops::{Add, Neg, Sub};
 
-/// 26.6 fixed-point number.
+/// The perfect balance: integer speed with fraction precision
 ///
-/// Internal representation: 32-bit signed integer where the lower 6 bits
-/// represent the fractional part (1/64 units).
+/// F26Dot6 is our compromise between floating-point overhead and integer
+/// limitations. We pack 26 bits of integer precision with 6 bits of fractional
+/// detail into a single 32-bit integer. The result? Calculations that are
+/// both fast and precise enough for professional text rendering.
 ///
-/// # Examples
+/// # The Precision Dance
 ///
-/// ```
+/// ```rust
 /// use typf_render_orge::fixed::F26Dot6;
 ///
-/// let x = F26Dot6::from_int(5);
-/// assert_eq!(x.to_int(), 5);
-///
-/// let y = F26Dot6::from_float(5.5);
-/// assert_eq!(y.to_int_round(), 6);
+/// let x = F26Dot6::from_int(5);      // Exactly 5.0
+/// let y = F26Dot6::from_float(5.5); // 5 + 32/64 = 5.5
 /// ```
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct F26Dot6(i32);
 
 impl F26Dot6 {
-    /// Fractional bits (6 bits = 64 units per integer).
+    /// The magic number: 6 fractional bits = 64 precision units
     pub const FRAC_BITS: u32 = 6;
 
-    /// Fractional mask (0b111111 = 63).
+    /// Our fractional extractor: isolates the 6 lowest bits
     pub const FRAC_MASK: i32 = (1 << Self::FRAC_BITS) - 1;
 
-    /// One unit (1.0 in 26.6 format = 64).
+    /// The fundamental unit: exactly 1.0 in our fixed world
     pub const ONE: F26Dot6 = F26Dot6(1 << Self::FRAC_BITS);
 
-    /// Zero.
+    /// Nothingness itself: perfectly zero
     pub const ZERO: F26Dot6 = F26Dot6(0);
 
-    /// Half (0.5 in 26.6 format = 32).
+    /// The midpoint: exactly 0.5, perfect for rounding
     pub const HALF: F26Dot6 = F26Dot6(1 << (Self::FRAC_BITS - 1));
 
-    /// Create from integer value.
+    /// From whole number to fixed-point precision
     #[inline]
     pub const fn from_int(x: i32) -> Self {
         F26Dot6(x << Self::FRAC_BITS)
     }
 
-    /// Create from floating-point value.
+    /// Transform浮动点 precision into our fixed world
     #[inline]
     pub fn from_float(x: f32) -> Self {
         F26Dot6((x * 64.0) as i32)
     }
 
-    /// Convert to integer (truncate fractional part).
+    /// Shed the fractional baggage: pure integer result
     #[inline]
     pub const fn to_int(self) -> i32 {
         self.0 >> Self::FRAC_BITS
     }
 
-    /// Convert to integer (round to nearest).
+    /// Mathematical justice: round to the nearest whole number
     #[inline]
     pub const fn to_int_round(self) -> i32 {
         (self.0 + Self::HALF.0) >> Self::FRAC_BITS
     }
 
-    /// Get fractional part (0-63).
+    /// Extract the essence: the fractional detail that makes us precise
     #[inline]
     pub const fn frac(self) -> i32 {
         self.0 & Self::FRAC_MASK
     }
 
-    /// Convert to floating-point.
+    /// Return to the floating world: when you need decimal representation
     #[inline]
     pub fn to_float(self) -> f32 {
         self.0 as f32 / 64.0
     }
 
-    /// Multiply two F26Dot6 values.
+    /// Precision multiplication: where fractions meet fractions
     #[inline]
     pub const fn mul(self, other: F26Dot6) -> F26Dot6 {
         F26Dot6(((self.0 as i64 * other.0 as i64) >> Self::FRAC_BITS) as i32)
     }
 
-    /// Divide two F26Dot6 values.
+    /// Careful division: maintaining precision through the quotient
     #[inline]
     pub const fn div(self, other: F26Dot6) -> F26Dot6 {
         F26Dot6((((self.0 as i64) << Self::FRAC_BITS) / other.0 as i64) as i32)
     }
 
-    /// Absolute value.
+    /// Distance from zero: magnitude without direction
     #[inline]
     pub const fn abs(self) -> F26Dot6 {
         F26Dot6(self.0.abs())
     }
 
-    /// Floor (round down to nearest integer).
+    /// Gravity's pull: always round down toward the earth
     #[inline]
     pub const fn floor(self) -> F26Dot6 {
         F26Dot6(self.0 & !(Self::FRAC_MASK))
     }
 
-    /// Ceiling (round up to nearest integer).
+    /// Reach for the sky: always round up to greater heights
     #[inline]
     pub const fn ceil(self) -> F26Dot6 {
         if self.0 & Self::FRAC_MASK == 0 {
@@ -111,13 +112,13 @@ impl F26Dot6 {
         }
     }
 
-    /// Get raw internal value.
+    /// Peer under the hood: access the raw 32-bit representation
     #[inline]
     pub const fn raw(self) -> i32 {
         self.0
     }
 
-    /// Create from raw internal value.
+    /// From raw bits to meaningful numbers: the inverse of peeking inside
     #[inline]
     pub const fn from_raw(raw: i32) -> Self {
         F26Dot6(raw)

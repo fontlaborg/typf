@@ -1,7 +1,9 @@
-//! CoreGraphics Renderer - macOS native bitmap rendering backend
+//! CoreGraphics Renderer - Apple's own text rendering muscle, now in TYPF
 //!
-//! This backend uses CoreGraphics for high-quality bitmap rendering on macOS.
-//! It supports antialiasing, custom colors, and proper baseline positioning.
+//! When you're on macOS, why settle for less? This renderer taps directly
+//! into CoreGraphics, the same engine that powers macOS's text rendering.
+//! Perfect antialiasing, native performance, and results that match exactly
+//! what users see in their native apps.
 
 #![cfg(target_os = "macos")]
 
@@ -21,7 +23,10 @@ use core_graphics::{
     geometry::{CGPoint, CGRect, CGSize},
 };
 
-/// Wrapper for font data to pass to CGDataProvider
+/// Bridge between our font bytes and CoreGraphics' data expectations
+///
+/// CoreGraphics needs data that lives as long as the font object does.
+/// This wrapper keeps our font data alive with proper reference counting.
 struct ProviderData {
     bytes: Arc<[u8]>,
 }
@@ -32,38 +37,49 @@ impl AsRef<[u8]> for ProviderData {
     }
 }
 
-/// CoreGraphics renderer with bitmap output
+/// Direct access to macOS's professional text rendering pipeline
+///
+/// This isn't just another renderer—it's a first-class citizen on macOS,
+/// using the exact same APIs that Safari, Pages, and the system text renderer
+/// use. When you need pixel-perfect consistency with the platform, this is it.
 pub struct CoreGraphicsRenderer;
 
 impl CoreGraphicsRenderer {
-    /// Create a new CoreGraphics renderer
+    /// Creates a renderer ready to harness macOS's text rendering power
     pub fn new() -> Self {
         Self
     }
 
-    /// Create CGFont from raw font data
+    /// Turns raw font bytes into a CoreGraphics-ready font object
+    ///
+    /// This is where we bridge TYPF's font loading with CoreGraphics' expectations.
+    /// The data provider pattern ensures the font data stays alive as long as
+    /// CoreGraphics needs it.
     fn create_cg_font(data: &[u8]) -> Result<CGFont> {
-        // Create Arc from font data
+        // Wrap our font data in an Arc for proper lifetime management
         let provider_data = Arc::new(ProviderData {
             bytes: Arc::from(data),
         });
 
-        // Create CGDataProvider
+        // Hand the data to CoreGraphics through its provider interface
         let provider = CGDataProvider::from_buffer(provider_data);
 
-        // Create CGFont from data
+        // Let CoreGraphics parse and validate the font data
         let cg_font = CGFont::from_data_provider(provider).map_err(|_| {
             TypfError::RenderingFailed(RenderError::BackendError(
-                "Failed to create CGFont from data".to_string(),
+                "CoreGraphics rejected our font data".to_string(),
             ))
         })?;
 
         Ok(cg_font)
     }
 
-    /// Calculate dimensions for the rendered bitmap
+    /// Figures out how much canvas space our shaped text needs
+    ///
+    /// CoreGraphics needs explicit dimensions, so we calculate the bounding box
+    /// that contains all our positioned glyphs plus any requested padding.
     fn calculate_dimensions(shaped: &ShapingResult, params: &RenderParams) -> (u32, u32) {
-        // Calculate content dimensions from glyphs
+        // Track the extremes of our glyph layout
         let mut min_x = f32::MAX;
         let mut max_x = f32::MIN;
         let mut min_y = f32::MAX;
@@ -72,12 +88,12 @@ impl CoreGraphicsRenderer {
         for glyph in &shaped.glyphs {
             min_x = min_x.min(glyph.x);
             max_x = max_x.max(glyph.x + glyph.advance);
-            // Approximate glyph height based on font size (ascent + descent)
+            // Estimate vertical bounds using font proportions (80% ascent, 20% descent)
             min_y = min_y.min(glyph.y - shaped.advance_height * 0.8);
             max_y = max_y.max(glyph.y + shaped.advance_height * 0.2);
         }
 
-        // Fall back to reasonable defaults if no glyphs
+        // Don't crash on empty text—give it a minimal reasonable size
         if shaped.glyphs.is_empty() {
             min_x = 0.0;
             max_x = 1.0;
@@ -95,7 +111,7 @@ impl CoreGraphicsRenderer {
         (width, height)
     }
 
-    /// Convert Color to RGB components
+    /// Convert TYPF's Color type to CoreGraphics' normalized float format
     fn color_to_rgb(color: &Color) -> (f64, f64, f64, f64) {
         (
             color.r as f64 / 255.0,

@@ -1,7 +1,9 @@
-//! ICU + HarfBuzz shaping backend for TYPF
+//! Unicode perfection: ICU preprocessing meets HarfBuzz shaping
 //!
-//! This backend provides comprehensive Unicode preprocessing with ICU followed by HarfBuzz shaping.
-//! It's the recommended choice for applications requiring full Unicode support.
+//! Some text needs more than just shaping. It needs normalization (é vs e + ´),
+//! bidirectional analysis, script detection. ICU handles the Unicode plumbing,
+//! then passes perfect text to HarfBuzz for shaping. This is the shaper you
+//! want when you need to handle every edge case the Unicode spec throws at you.
 
 use harfbuzz_rs::{Direction as HbDirection, Face, Feature, Font as HbFont, Tag, UnicodeBuffer};
 use std::str::FromStr;
@@ -17,23 +19,23 @@ use unicode_normalization::UnicodeNormalization;
 pub mod cache;
 pub use cache::ShapingCache;
 
-/// ICU + HarfBuzz shaping backend
+/// ICU preprocessing + HarfBuzz shaping for bulletproof Unicode support
 ///
-/// Provides:
-/// - Unicode normalization (NFC)
-/// - Bidirectional text handling
-/// - Script detection
-/// - Line breaking analysis
-/// - Full OpenType shaping with HarfBuzz
+/// What this gives you:
+/// - Unicode normalization (fixes broken character sequences)
+/// - Bidirectional text handling (Arabic/Hebrew in Latin text)
+/// - Script detection (knows Arabic from Thai from Cyrillic)
+/// - Line breaking analysis (where text can safely break)
+/// - Professional OpenType shaping with HarfBuzz
 pub struct IcuHarfBuzzShaper;
 
 impl IcuHarfBuzzShaper {
-    /// Create a new ICU + HarfBuzz shaper
+    /// Creates a new shaper that's ready for any Unicode challenge
     pub fn new() -> Self {
         Self
     }
 
-    /// Convert Direction to HarfBuzz direction
+    /// Maps our direction enum to HarfBuzz's format
     fn to_hb_direction(dir: Direction) -> HbDirection {
         match dir {
             Direction::LeftToRight => HbDirection::Ltr,
@@ -84,13 +86,13 @@ impl Shaper for IcuHarfBuzzShaper {
             });
         }
 
-        // Step 1: Unicode normalization with NFC (Normalization Form Canonical Composition)
+        // Step 1: Normalize the text (fix é vs e + ´ and similar issues)
         let normalized: String = text.nfc().collect();
 
-        // Step 2: Get font data
+        // Step 2: Get the font data for HarfBuzz
         let font_data = font.data();
         if font_data.is_empty() {
-            // If no font data, fall back to simple shaping on normalized text
+            // No font data? Fall back to basic shaping on cleaned text
             let mut glyphs = Vec::new();
             let mut x_offset = 0.0;
 
@@ -116,27 +118,27 @@ impl Shaper for IcuHarfBuzzShaper {
             });
         }
 
-        // Step 3: Create HarfBuzz font
+        // Step 3: Load the font into HarfBuzz
         let hb_face = Face::from_bytes(font_data, 0);
         let mut hb_font = HbFont::new(hb_face);
 
-        // Set font size (convert from points to font units)
+        // HarfBuzz uses 26.6 fixed-point for font coordinates
         let scale = (params.size * 64.0) as i32; // 64 units per point
         hb_font.set_scale(scale, scale);
 
-        // Step 4: Create buffer and configure (builder pattern - all methods consume and return)
+        // Step 4: Set up HarfBuzz's text buffer with our normalized text
         let mut buffer = UnicodeBuffer::new()
             .add_str(&normalized)
             .set_direction(Self::to_hb_direction(params.direction));
 
-        // Set language if specified
+        // Tell HarfBuzz which language rules to use
         if let Some(ref lang) = params.language {
             if let Ok(language) = harfbuzz_rs::Language::from_str(lang) {
                 buffer = buffer.set_language(language);
             }
         }
 
-        // Set script if specified
+        // Specify the script (critical for complex scripts)
         if let Some(ref script_str) = params.script {
             if script_str.len() == 4 {
                 let script_bytes = script_str.as_bytes();
@@ -150,7 +152,7 @@ impl Shaper for IcuHarfBuzzShaper {
             }
         }
 
-        // Step 5: Apply OpenType features
+        // Step 5: Convert OpenType features to HarfBuzz format
         let features: Vec<Feature> = params
             .features
             .iter()
@@ -173,10 +175,10 @@ impl Shaper for IcuHarfBuzzShaper {
             })
             .collect();
 
-        // Step 6: Shape with HarfBuzz
+        // Step 6: Let HarfBuzz do the heavy lifting
         let output = harfbuzz_rs::shape(&hb_font, buffer, features.as_slice());
 
-        // Step 7: Extract glyph positions
+        // Step 7: Extract the beautiful positioned glyphs
         let positions = output.get_glyph_positions();
         let infos = output.get_glyph_infos();
 

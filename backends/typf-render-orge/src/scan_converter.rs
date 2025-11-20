@@ -1,9 +1,9 @@
-// this_file: backends/typf-orge/src/scan_converter.rs
-
-//! Scan converter for rasterizing vector outlines to bitmaps.
+//! The bridge between vectors and pixels: scanline conversion mastery
 //!
-//! Implements scanline rasterization with edge tables and active edge lists.
-//! Supports both monochrome and grayscale rendering (via oversampling).
+//! Vector outlines describe curves and lines, but screens need pixels. This module
+//! builds that bridge through the elegant scanline algorithm—organizing edges
+//! into tables, tracking active ones, and filling horizontal spans where shapes
+/// intersect the scanline. The result: perfect rasterization.
 
 use crate::curves::{subdivide_cubic, subdivide_quadratic};
 use crate::edge::{Edge, EdgeList};
@@ -12,50 +12,51 @@ use crate::{DropoutMode, FillRule};
 
 use skrifa::outline::OutlinePen;
 
-/// Main scan conversion engine.
+/// Your scanline conductor: orchestrating the rasterization symphony
 ///
-/// Converts vector outlines (lines and curves) to rasterized bitmaps using
-/// scanline algorithm with edge tables.
+/// This is the heart of our rasterization engine. It transforms mathematical
+/// descriptions of shapes into actual pixels through careful bookkeeping.
 #[derive(Debug)]
 pub struct ScanConverter {
-    /// Edge table: one EdgeList per scanline (indexed by Y)
+    /// Our edge memory: where each line segment first appears
     edge_table: Vec<EdgeList>,
 
-    /// Active edge list for current scanline
+    /// The current cast: edges crossing our scanline right now
     active_edges: EdgeList,
 
-    /// Current path position (for move_to/line_to)
+    /// Where our drawing pen currently sits
     current_x: F26Dot6,
     current_y: F26Dot6,
 
-    /// Start of current contour (for close)
+    /// Where we started this contour (needed for close operations)
     contour_start_x: F26Dot6,
     contour_start_y: F26Dot6,
 
-    /// Fill rule (non-zero winding or even-odd)
+    /// How we decide what's inside the shape
     fill_rule: FillRule,
 
-    /// Dropout control mode
+    /// How we handle tiny details at small sizes
     dropout_mode: DropoutMode,
 
-    /// Bitmap dimensions (in pixels)
+    /// The canvas dimensions we're working with
     width: usize,
     height: usize,
 }
 
 impl ScanConverter {
-    /// Create a new scan converter for given bitmap size.
+    /// Prepare your rasterization canvas
     ///
-    /// # Arguments
+    /// We'll set up edge tables for every scanline and prepare active edge lists.
+    /// This allocation happens once, then reuse makes every render fast.
     ///
-    /// * `width` - Bitmap width in pixels
-    /// * `height` - Bitmap height in pixels
+    /// # What You Tell Us
     ///
-    /// # Returns
+    /// * `width` - How wide your canvas will be
+    /// * `height` - How tall your canvas will be
     ///
-    /// New `ScanConverter` initialized with default settings:
-    /// - Fill rule: NonZeroWinding
-    /// - Dropout mode: None
+    /// # What We Give You
+    ///
+    /// A ready-to-use converter with sensible defaults.
     pub fn new(width: usize, height: usize) -> Self {
         // Pre-allocate edge table with one list per scanline
         // Use with_capacity to avoid reallocations (see ALLOCATION.md)

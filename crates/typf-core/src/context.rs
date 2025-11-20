@@ -1,4 +1,4 @@
-//! Pipeline context for passing data between stages
+//! The traveling container that carries data through pipeline stages
 
 use crate::{
     traits::{Exporter, FontRef, Renderer, Shaper},
@@ -7,30 +7,34 @@ use crate::{
 };
 use std::sync::Arc;
 
-/// Context passed through the pipeline stages
+/// Everything a stage needs, nothing it doesn't
+///
+/// The context flows from stage to stage, accumulating the results
+/// of each transformation. Text becomes glyphs, glyphs become pixels,
+/// and pixels become files - all tracked here.
 pub struct PipelineContext {
-    // Input
+    // What we start with
     text: String,
     font_spec: String,
 
-    // Backends
+    // Who does the work
     shaper: Option<Arc<dyn Shaper>>,
     renderer: Option<Arc<dyn Renderer>>,
     exporter: Option<Arc<dyn Exporter>>,
 
-    // Intermediate results
+    // What emerges along the way
     font: Option<Arc<dyn FontRef>>,
     shaped: Option<ShapingResult>,
     output: Option<RenderOutput>,
     exported: Option<Vec<u8>>,
 
-    // Parameters
+    // How we want it done
     shaping_params: ShapingParams,
     render_params: RenderParams,
 }
 
 impl PipelineContext {
-    /// Create a new pipeline context
+    /// Start fresh with text and a font specification
     pub fn new(text: String, font_spec: String) -> Self {
         Self {
             text,
@@ -47,7 +51,7 @@ impl PipelineContext {
         }
     }
 
-    // Getters
+    // Read what's inside
 
     pub fn text(&self) -> &str {
         &self.text
@@ -93,7 +97,7 @@ impl PipelineContext {
         &self.render_params
     }
 
-    // Setters
+    // Change what's inside
 
     pub fn set_shaper(&mut self, shaper: Arc<dyn Shaper>) {
         self.shaper = Some(shaper);

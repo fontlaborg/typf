@@ -1,18 +1,33 @@
 """
-TYPF - High-performance text rendering pipeline
+TYPF - Professional text rendering, now in Python
 
-Python bindings for the TYPF text shaping and rendering library.
+Where Rust performance meets Python elegance. This package brings
+TYPF's world-class text shaping and rendering to your Python projects
+with zero compromise on speed or quality.
+
+## Quick Start
+
+```python
+from typfpy import Typf
+
+# Create your rendering pipeline
+typf = Typf(shaper="harfbuzz", renderer="orge")
+
+# Render beautiful text
+result = typf.render_text("Hello, World!", "font.ttf", size=48)
+```
 """
 
-# Import the compiled Rust extension
+# Import the compiled Rust extension that brings the power
 from .typf import (
-    FontInfo,
-    Typf,
-    __version__,
-    export_image,
-    render_simple,
+    FontInfo,       # Font inspection and metadata
+    Typf,          # Main rendering pipeline
+    __version__,   # Version information
+    export_image,  # Convert results to files
+    render_simple,  # Quick rendering without fonts
 )
 
+# What we expose to the Python world
 __all__ = [
     "Typf",
     "FontInfo",

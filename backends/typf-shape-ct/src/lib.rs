@@ -1,7 +1,9 @@
-//! CoreText Shaper - macOS native text shaping backend
+//! macOS-native text shaping with CoreText precision
 //!
-//! This backend uses CoreText for professional-quality text shaping on macOS.
-//! It supports complex scripts (Arabic, Devanagari, Thai, CJK) and OpenType features.
+//! CoreText is Apple's professional text shaping engine, built right into macOS.
+//! It understands every script Apple supports, handles variable fonts flawlessly,
+//! and integrates perfectly with the system font rendering pipeline. This is
+//! the shaper you want on macOS for that native Apple typography feel.
 
 #![cfg(target_os = "macos")]
 
@@ -35,7 +37,7 @@ use core_text::{
 use lru::LruCache;
 use parking_lot::RwLock;
 
-// CoreText FFI declarations for variable font support
+// CoreText needs these for variable font support
 #[link(name = "CoreText", kind = "framework")]
 extern "C" {
     static kCTFontVariationAttribute: core_foundation::string::CFStringRef;
@@ -45,13 +47,13 @@ extern "C" {
     ) -> core_text::font_descriptor::CTFontDescriptorRef;
 }
 
-/// Cache key for fonts
+/// How we identify fonts in our cache
 type FontCacheKey = String;
 
-/// Cache key for shaping results
+/// How we identify shaping results in our cache
 type ShapeCacheKey = String;
 
-/// Wrapper for font data to pass to CGDataProvider
+/// Font data wrapper that CoreGraphics likes
 struct ProviderData {
     bytes: Arc<[u8]>,
 }
@@ -62,16 +64,16 @@ impl AsRef<[u8]> for ProviderData {
     }
 }
 
-/// CoreText shaper with integrated caching
+/// Professional text shaping powered by macOS CoreText
 pub struct CoreTextShaper {
-    /// Font cache to avoid recreating CTFont instances
+    /// Cache fonts to avoid expensive CTFont creation
     font_cache: RwLock<LruCache<FontCacheKey, Arc<CTFont>>>,
-    /// Shape cache to avoid redundant shaping
+    /// Cache shaping results to avoid redundant work
     shape_cache: RwLock<LruCache<ShapeCacheKey, Arc<ShapingResult>>>,
 }
 
 impl CoreTextShaper {
-    /// Create a new CoreText shaper
+    /// Creates a new shaper ready to work with CoreText
     pub fn new() -> Self {
         Self {
             font_cache: RwLock::new(LruCache::new(std::num::NonZeroUsize::new(100).unwrap())),
@@ -79,7 +81,7 @@ impl CoreTextShaper {
         }
     }
 
-    /// Create cache key for fonts
+    /// Makes a unique key for caching fonts with their settings
     fn font_cache_key(font: &Arc<dyn FontRef>, params: &ShapingParams) -> String {
         // Create a simple hash from first 32 bytes of font data
         let font_hash = font
@@ -112,21 +114,21 @@ impl CoreTextShaper {
         }
     }
 
-    /// Create cache key for shaping results
+    /// Makes a unique key for caching shaping results
     fn shape_cache_key(text: &str, font: &Arc<dyn FontRef>, params: &ShapingParams) -> String {
         format!("{}::{}", text, Self::font_cache_key(font, params))
     }
 
-    /// Build a CTFont from font data and parameters
+    /// Gets or creates a CoreText font from our font data
     fn build_ct_font(
         &self,
         font: &Arc<dyn FontRef>,
         params: &ShapingParams,
     ) -> Result<Arc<CTFont>> {
-        // Create cache key
+        // Create cache key to see if we already have this font
         let cache_key = Self::font_cache_key(font, params);
 
-        // Check cache
+        // Check cache first
         {
             let cache = self.font_cache.read();
             if let Some(cached) = cache.peek(&cache_key) {
@@ -137,11 +139,11 @@ impl CoreTextShaper {
 
         log::debug!("CoreTextShaper: Building new CTFont");
 
-        // Create font from data
+        // Create the font from our data
         let ct_font = Self::create_ct_font_from_data(font.data(), params)?;
         let arc_font = Arc::new(ct_font);
 
-        // Cache it
+        // Save it for next time
         {
             let mut cache = self.font_cache.write();
             cache.put(cache_key, Arc::clone(&arc_font));
@@ -150,7 +152,7 @@ impl CoreTextShaper {
         Ok(arc_font)
     }
 
-    /// Create CTFont from raw font data
+    /// Turns raw font bytes into a CoreText CTFont
     fn create_ct_font_from_data(data: &[u8], params: &ShapingParams) -> Result<CTFont> {
         // Create Arc from font data
         let provider_data = Arc::new(ProviderData {

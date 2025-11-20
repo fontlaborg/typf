@@ -1,6 +1,7 @@
-//! Export module for TYPF
+//! Where rendered text leaves the building: export formats for TYPF
 //!
-//! This module provides exporters for various output formats.
+//! The final stage of the pipeline. Turns your carefully rendered glyphs
+//! into files, streams, or whatever format your application needs.
 
 use std::io::Write;
 use typf_core::{
@@ -17,68 +18,69 @@ pub use json::JsonExporter;
 pub use png::PngExporter;
 pub use svg::SvgExporter;
 
-/// PNM (Portable Any Map) exporter for minimal bitmap output
+/// Simple bitmap exporter for when you just need to see what happened
 pub struct PnmExporter {
-    /// Which PNM format to use
+    /// Choose your flavor: black-and-white, grayscale, or color
     format: PnmFormat,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum PnmFormat {
-    /// PBM - Portable Bitmap (black and white)
+    /// PBM - Just black and white pixels
     Pbm,
-    /// PGM - Portable Graymap
+    /// PGM - 256 shades of gray
     Pgm,
-    /// PPM - Portable Pixmap (color)
+    /// PPM - Full RGB color
     Ppm,
 }
 
 impl PnmExporter {
-    /// Create a new PNM exporter
+    /// Creates an exporter for your chosen PNM format
     pub fn new(format: PnmFormat) -> Self {
         Self { format }
     }
 
-    /// Create a PPM (color) exporter
+    /// Quick way to get a color exporter
     pub fn ppm() -> Self {
         Self::new(PnmFormat::Ppm)
     }
 
-    /// Create a PGM (grayscale) exporter
+    /// Quick way to get a grayscale exporter
     pub fn pgm() -> Self {
         Self::new(PnmFormat::Pgm)
     }
 
+    /// Converts bitmap data into PNM's simple text format
     fn export_bitmap(&self, bitmap: &BitmapData) -> Result<Vec<u8>> {
         let mut output = Vec::new();
 
         match self.format {
             PnmFormat::Ppm => {
-                // PPM header
-                writeln!(&mut output, "P3")?; // ASCII format
+                // PPM needs a simple header first
+                writeln!(&mut output, "P3")?; // Magic number for ASCII PPM
                 writeln!(&mut output, "{} {}", bitmap.width, bitmap.height)?;
-                writeln!(&mut output, "255")?; // Max color value
+                writeln!(&mut output, "255")?; // Maximum RGB value
 
-                // Convert bitmap data to PPM format
+                // Transform bitmap data into PPM's text format
                 match bitmap.format {
                     BitmapFormat::Rgba8 => {
-                        // Write RGB values, ignoring alpha
+                        // Strip alpha, keep just RGB
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let idx = ((y * bitmap.width + x) * 4) as usize;
                                 write!(
                                     &mut output,
                                     "{} {} {} ",
-                                    bitmap.data[idx],     // R
-                                    bitmap.data[idx + 1], // G
-                                    bitmap.data[idx + 2]  // B
+                                    bitmap.data[idx],     // Red
+                                    bitmap.data[idx + 1], // Green
+                                    bitmap.data[idx + 2]  // Blue
                                 )?;
                             }
-                            writeln!(&mut output)?;
+                            writeln!(&mut output)?; // New line after each row
                         }
                     },
                     BitmapFormat::Rgb8 => {
-                        // Direct RGB copy
+                        // Copy RGB values directly
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let idx = ((y * bitmap.width + x) * 3) as usize;
@@ -94,7 +96,7 @@ impl PnmExporter {
                         }
                     },
                     BitmapFormat::Gray8 => {
-                        // Convert grayscale to RGB
+                        // Make gray look like color (triplet the value)
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let idx = (y * bitmap.width + x) as usize;
@@ -105,7 +107,7 @@ impl PnmExporter {
                         }
                     },
                     BitmapFormat::Gray1 => {
-                        // Convert 1-bit to RGB
+                        // Expand 1-bit to full RGB
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let byte_idx = ((y * bitmap.width + x) / 8) as usize;
@@ -120,14 +122,15 @@ impl PnmExporter {
                 }
             },
             PnmFormat::Pgm => {
-                // PGM header
-                writeln!(&mut output, "P2")?; // ASCII format
+                // PGM header (grayscale version of PPM)
+                writeln!(&mut output, "P2")?; // Magic number for ASCII PGM
                 writeln!(&mut output, "{} {}", bitmap.width, bitmap.height)?;
-                writeln!(&mut output, "255")?; // Max gray value
+                writeln!(&mut output, "255")?; // Maximum gray value
 
-                // Convert to grayscale
+                // Flatten everything to grayscale
                 match bitmap.format {
                     BitmapFormat::Gray8 => {
+                        // Already grayscale, just copy
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let idx = (y * bitmap.width + x) as usize;
@@ -137,14 +140,14 @@ impl PnmExporter {
                         }
                     },
                     BitmapFormat::Rgba8 => {
-                        // Convert RGBA to grayscale using luminance
+                        // Convert color to grayscale using luminance
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let idx = ((y * bitmap.width + x) * 4) as usize;
                                 let r = bitmap.data[idx] as u32;
                                 let g = bitmap.data[idx + 1] as u32;
                                 let b = bitmap.data[idx + 2] as u32;
-                                // Use standard luminance formula
+                                // ITU-R BT.709 luminance formula
                                 let gray = ((r * 299 + g * 587 + b * 114) / 1000) as u8;
                                 write!(&mut output, "{} ", gray)?;
                             }
@@ -152,7 +155,7 @@ impl PnmExporter {
                         }
                     },
                     BitmapFormat::Rgb8 => {
-                        // Convert RGB to grayscale
+                        // Color to grayscale conversion
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let idx = ((y * bitmap.width + x) * 3) as usize;
@@ -166,7 +169,7 @@ impl PnmExporter {
                         }
                     },
                     BitmapFormat::Gray1 => {
-                        // Convert 1-bit to 8-bit grayscale
+                        // Expand 1-bit to 8-bit grayscale
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let byte_idx = ((y * bitmap.width + x) / 8) as usize;
@@ -181,13 +184,14 @@ impl PnmExporter {
                 }
             },
             PnmFormat::Pbm => {
-                // PBM header
-                writeln!(&mut output, "P1")?; // ASCII format
+                // PBM header (the simplest format - just 0s and 1s)
+                writeln!(&mut output, "P1")?; // Magic number for ASCII PBM
                 writeln!(&mut output, "{} {}", bitmap.width, bitmap.height)?;
 
-                // Convert to 1-bit
+                // Everything becomes black (0) or white (1)
                 match bitmap.format {
                     BitmapFormat::Gray1 => {
+                        // Already 1-bit, just copy
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let byte_idx = ((y * bitmap.width + x) / 8) as usize;
@@ -199,7 +203,7 @@ impl PnmExporter {
                         }
                     },
                     _ => {
-                        // Convert other formats to 1-bit using threshold
+                        // Convert Everything to 1-bit with a simple threshold
                         for y in 0..bitmap.height {
                             for x in 0..bitmap.width {
                                 let gray = match bitmap.format {
@@ -222,6 +226,7 @@ impl PnmExporter {
                                     },
                                     _ => 0,
                                 };
+                                // 127 is a reasonable threshold
                                 let bit = if gray > 127 { 1 } else { 0 };
                                 write!(&mut output, "{} ", bit)?;
                             }

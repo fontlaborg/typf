@@ -1,19 +1,20 @@
-//! TYPF Core - Pipeline framework and trait definitions
+//! TYPF Core: Six stages from text to pixels
 //!
-//! This crate provides the core abstractions and types for the TYPF text rendering pipeline.
+//! Text enters as characters, exits as rendered images. This crate holds the pipeline
+//! that makes that transformation possible through six distinct stages.
 //!
-//! # Overview
+//! ## The Pipeline
 //!
-//! TYPF uses a six-stage pipeline architecture:
+//! Every piece of text follows the same journey:
 //!
-//! 1. **Input Parsing** - Text and parameters
-//! 2. **Unicode Processing** - Normalization, bidi, segmentation
-//! 3. **Font Selection** - Font database, TTC support
-//! 4. **Shaping** - Glyph selection and positioning
-//! 5. **Rendering** - Rasterization or vector output
-//! 6. **Export** - Final format (PNG, SVG, JSON, etc.)
+//! 1. **Input Parsing** - Raw text becomes structured data
+//! 2. **Unicode Processing** - Scripts normalize, bidi resolves, segmentation happens
+//! 3. **Font Selection** - The right font finds its way to each character
+//! 4. **Shaping** - Characters transform into positioned glyphs
+//! 5. **Rendering** - Glyphs become pixels or vectors
+//! 6. **Export** - Final output emerges as PNG, SVG, or JSON
 //!
-//! # Quick Start
+//! ## Build Your First Pipeline
 //!
 //! ```rust,no_run
 //! use typf_core::{Pipeline, RenderParams, ShapingParams};
@@ -56,14 +57,12 @@
 //! # }
 //! # fn load_font() -> Arc<dyn FontRef> { unimplemented!() }
 //!
-//! // Build a pipeline
 //! let pipeline = Pipeline::builder()
 //!     .shaper(Arc::new(MyShaper))
 //!     .renderer(Arc::new(MyRenderer))
 //!     .exporter(Arc::new(MyExporter))
 //!     .build()?;
 //!
-//! // Process text
 //! let font = load_font();
 //! let output = pipeline.process(
 //!     "Hello, World!",
@@ -74,19 +73,18 @@
 //! # Ok::<(), typf_core::TypfError>(())
 //! ```
 //!
-//! # Traits
+//! ## The Traits That Power Everything
 //!
-//! Implement these traits to create custom backends:
+//! Want to add your own backend? Implement one of these:
 //!
-//! - [`Stage`] - Base trait for all pipeline stages
-//! - [`Shaper`] - Text shaping backend
-//! - [`Renderer`] - Rendering backend
-//! - [`Exporter`] - Export format backend
-//! - [`traits::FontRef`] - Font data access
+//! - [`Stage`] - The foundation every pipeline component builds upon
+//! - [`Shaper`] - Where characters become glyphs
+//! - [`Renderer`] - Where glyphs become images
+//! - [`Exporter`] - Where images become files
+//! - [`traits::FontRef`] - Your window into font data
 //!
-//! # Types
-//!
-//! See the [`types`] module for core data structures.
+//! Data flows through the types in [`types`] - these structures carry
+//! the results from one stage to the next.
 
 pub mod cache;
 pub mod context;
@@ -99,12 +97,12 @@ pub use error::{Result, TypfError};
 pub use pipeline::{Pipeline, PipelineBuilder};
 pub use traits::{Exporter, Renderer, Shaper, Stage};
 
-/// Core types and utilities
+/// The data structures that power the pipeline
 pub mod types {
-    /// A glyph ID
+    /// Unique identifier for a glyph within a font
     pub type GlyphId = u32;
 
-    /// Text direction
+    /// Which way the text flows
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Direction {
         LeftToRight,
@@ -113,7 +111,7 @@ pub mod types {
         BottomToTop,
     }
 
-    /// A positioned glyph
+    /// A glyph that knows exactly where it belongs
     #[derive(Debug, Clone, PartialEq)]
     pub struct PositionedGlyph {
         pub id: GlyphId,
@@ -123,7 +121,7 @@ pub mod types {
         pub cluster: u32,
     }
 
-    /// Shaping result
+    /// What emerges after shaping: glyphs positioned and ready to render
     #[derive(Debug, Clone)]
     pub struct ShapingResult {
         pub glyphs: Vec<PositionedGlyph>,
@@ -132,7 +130,7 @@ pub mod types {
         pub direction: Direction,
     }
 
-    /// Rendering output formats
+    /// The three forms output can take
     #[derive(Debug, Clone)]
     pub enum RenderOutput {
         Bitmap(BitmapData),
@@ -140,7 +138,7 @@ pub mod types {
         Json(String),
     }
 
-    /// Bitmap data
+    /// Raw pixel data from rasterized glyphs
     #[derive(Debug, Clone)]
     pub struct BitmapData {
         pub width: u32,
@@ -149,7 +147,7 @@ pub mod types {
         pub data: Vec<u8>,
     }
 
-    /// Bitmap formats
+    /// How pixels are arranged in the bitmap
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum BitmapFormat {
         Rgba8,
@@ -158,21 +156,21 @@ pub mod types {
         Gray1,
     }
 
-    /// Vector data (SVG, PDF, etc.)
+    /// Scalable paths instead of pixels
     #[derive(Debug, Clone)]
     pub struct VectorData {
         pub format: VectorFormat,
         pub data: String,
     }
 
-    /// Vector formats
+    /// Which vector format we're speaking
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum VectorFormat {
         Svg,
         Pdf,
     }
 
-    /// Options for text segmentation
+    /// How text gets broken into manageable pieces
     #[derive(Debug, Clone)]
     pub struct SegmentOptions {
         pub language: Option<String>,
@@ -192,7 +190,7 @@ pub mod types {
         }
     }
 
-    /// A run of text with uniform properties
+    /// Text that shares the same script, direction, and language
     #[derive(Debug, Clone)]
     pub struct TextRun {
         pub text: String,
@@ -204,7 +202,7 @@ pub mod types {
     }
 }
 
-/// Shaping parameters
+/// How shaping should behave
 #[derive(Debug, Clone)]
 pub struct ShapingParams {
     pub size: f32,
@@ -230,15 +228,15 @@ impl Default for ShapingParams {
     }
 }
 
-/// Rendering parameters
+/// How rendering should look
 #[derive(Debug, Clone)]
 pub struct RenderParams {
     pub foreground: Color,
     pub background: Option<Color>,
     pub padding: u32,
     pub antialias: bool,
-    /// Variable font variations (e.g., [("wght", 700.0), ("wdth", 100.0)])
-    /// Required for rendering variable fonts at specific coordinates
+    /// Variable font variations like [("wght", 700.0), ("wdth", 100.0)]
+    /// Variable fonts need specific coordinates to render correctly
     pub variations: Vec<(String, f32)>,
 }
 
@@ -254,7 +252,7 @@ impl Default for RenderParams {
     }
 }
 
-/// Color representation
+/// Simple RGBA color that works everywhere
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Color {
     pub r: u8,

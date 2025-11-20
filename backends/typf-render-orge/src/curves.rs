@@ -1,31 +1,37 @@
-// this_file: backends/typf-orge/src/curves.rs
-
-//! Bézier curve linearization via subdivision.
+//! Taming Bézier curves, one subdivision at a time
 //!
-//! Implements de Casteljau subdivision for quadratic and cubic Bézier curves.
-//! Curves are recursively subdivided until they are "flat enough" for line rendering.
+//! Font outlines are beautiful curves, but computers think in straight lines.
+//! We bridge that gap using de Casteljau's subdivision algorithm—splitting curves
+//! until they're practically straight. The result? Smooth glyphs rendered with
+//! mathematical precision.
 
 use crate::fixed::F26Dot6;
 
-/// Flatness threshold in 26.6 fixed-point format.
+/// When good enough is perfect: our flatness tolerance
 ///
-/// A curve is considered "flat" if the control points are within this distance
-/// from the line connecting the endpoints. Value of 4 = 4/64 pixels = 1/16 pixel.
+/// A curve gets the "flat enough" stamp when its control point strays less than
+/// 1/16th of a pixel from the straight line between endpoints. At that point,
+/// the human eye can't tell the difference—time to stop subdividing.
 pub const FLATNESS_THRESHOLD: F26Dot6 = F26Dot6::from_raw(4);
 
-/// Maximum subdivision depth to prevent infinite recursion.
+/// The recursion guardrail that prevents infinite loops
+///
+/// Even the most complex curves surrender after 16 subdivisions. This safety
+/// net protects us from malformed font data that could otherwise send us
+/// spinning forever.
 const MAX_DEPTH: u32 = 16;
 
-/// Compute flatness metric for quadratic Bézier curve.
+/// How rebellious is your quadratic curve?
 ///
-/// Returns the maximum perpendicular distance from the control point to the
-/// line connecting the endpoints.
+/// We measure flatness by checking how far the control point strays from the
+/// straight line between start and end. The farther it wanders, the more
+/// subdivision we'll need to tame it.
 ///
-/// # Arguments
+/// # The Geometry Dance
 ///
-/// * `x0, y0` - Start point
-/// * `x1, y1` - Control point
-/// * `x2, y2` - End point
+/// * `x0, y0` - Where the curve begins its journey
+/// * `x1, y1` - The control point that pulls the curve off course
+/// * `x2, y2` - Where the curve finally settles
 pub fn compute_quadratic_flatness(
     x0: F26Dot6,
     y0: F26Dot6,
@@ -47,18 +53,19 @@ pub fn compute_quadratic_flatness(
     F26Dot6::from_raw(dx + dy)
 }
 
-/// Subdivide quadratic Bézier curve and output line segments.
+/// The curve whisperer: transforms rebellious Béziers into obedient lines
 ///
-/// Uses de Casteljau subdivision algorithm. Recursively subdivides the curve
-/// until it is flat enough, then outputs a line segment.
+/// De Casteljau's algorithm is our secret weapon. We keep splitting curves
+/// in half until they surrender and become straight lines. Each split creates
+/// two better-behaved curves that are easier to render.
 ///
-/// # Arguments
+/// # The Subdivision Spell
 ///
-/// * `x0, y0` - Start point
-/// * `x1, y1` - Control point
-/// * `x2, y2` - End point
-/// * `output` - Callback for line segments: `(x_end, y_end)`
-/// * `depth` - Current recursion depth
+/// * `x0, y0` - Where we start drawing
+/// * `x1, y1` - The curve's influence point
+/// * `x2, y2` - Where we end up
+/// * `output` - Where we send each conquered line segment
+/// * `depth` - How many times we've cast this spell
 #[allow(clippy::too_many_arguments)]
 pub fn subdivide_quadratic<F>(
     x0: F26Dot6,
@@ -106,17 +113,18 @@ pub fn subdivide_quadratic<F>(
     subdivide_quadratic(m012_x, m012_y, m12_x, m12_y, x2, y2, output, depth + 1);
 }
 
-/// Compute flatness metric for cubic Bézier curve.
+/// Cubic curves: double the control points, double the complexity
 ///
-/// Returns approximate maximum perpendicular distance from control points to
-/// the line connecting the endpoints.
+/// With four points to manage instead of three, cubic Béziers can create
+/// incredibly smooth shapes. We measure flatness by checking both control
+/// points—the farther they drift from the straight path, the more work we have.
 ///
-/// # Arguments
+/// # The Four-Point Symphony
 ///
-/// * `x0, y0` - Start point
-/// * `x1, y1` - First control point
-/// * `x2, y2` - Second control point
-/// * `x3, y3` - End point
+/// * `x0, y0` - The opening note
+/// * `x1, y1` - First control point's influence
+/// * `x2, y2` - Second control point's touch
+/// * `x3, y3` - The grand finale
 #[allow(clippy::too_many_arguments)]
 pub fn compute_cubic_flatness(
     x0: F26Dot6,
@@ -144,19 +152,21 @@ pub fn compute_cubic_flatness(
     F26Dot6::from_raw(dist1.max(dist2))
 }
 
-/// Subdivide cubic Bézier curve and output line segments.
+/// Taming the wild cubic beast, one split at a time
 ///
-/// Uses de Casteljau subdivision algorithm. Recursively subdivides the curve
-/// until it is flat enough, then outputs a line segment.
+/// Cubic Béziers are the divas of font design—beautiful but demanding.
+/// Our de Casteljau subdivision treats them with respect, carefully splitting
+/// until they behave like proper straight lines. Each split creates eight new
+/// points, but the result is worth it: curves that render perfectly.
 ///
-/// # Arguments
+/// # The Cubic Ballet
 ///
-/// * `x0, y0` - Start point
-/// * `x1, y1` - First control point
-/// * `x2, y2` - Second control point
-/// * `x3, y3` - End point
-/// * `output` - Callback for line segments: `(x_end, y_end)`
-/// * `depth` - Current recursion depth
+/// * `x0, y0` - Stage entrance
+/// * `x1, y1` - First controller's guidance
+/// * `x2, y2` - Second controller's wisdom
+/// * `x3, y3` - Graceful exit
+/// * `output` - Receives each perfected line segment
+/// * `depth` - How deep into the subdivision rabbit hole we've gone
 #[allow(clippy::too_many_arguments)]
 pub fn subdivide_cubic<F>(
     x0: F26Dot6,

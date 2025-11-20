@@ -1,4 +1,8 @@
-//! Unicode processing module for TYPF v2.0
+//! Where text becomes understandable: Unicode processing for TYPF
+//!
+//! The second stage of the pipeline transforms raw strings into structured
+//! runs that understand direction, scripts, and boundaries. Without this stage,
+//! Arabic would render backwards and Chinese characters might break randomly.
 
 use icu_properties::props::Script;
 use icu_segmenter::{GraphemeClusterSegmenter, LineSegmenter, WordSegmenter};
@@ -10,7 +14,7 @@ use typf_core::{
     types::{Direction, TextRun},
 };
 
-/// Options for Unicode processing
+/// Configuration for how deeply we analyze your text
 #[derive(Debug, Clone, Default)]
 pub struct UnicodeOptions {
     pub detect_scripts: bool,
@@ -19,51 +23,51 @@ pub struct UnicodeOptions {
     pub language: Option<String>,
 }
 
-/// Unicode processor
+/// Your text's tour guide through the Unicode landscape
 pub struct UnicodeProcessor;
 
 impl UnicodeProcessor {
-    /// Create a new Unicode processor
+    /// Creates a new processor ready to tackle any Unicode challenge
     pub fn new() -> Self {
         Self
     }
 
-    /// Process text with Unicode operations
+    /// Transforms raw text into directionally-aware runs
     pub fn process(&self, text: &str, options: &UnicodeOptions) -> Result<Vec<TextRun>> {
         if text.is_empty() {
             return Ok(vec![]);
         }
 
-        // Normalize text if requested (NFC - Normalization Form Canonical Composition)
+        // Clean up messy Unicode (é from e + ´ becomes é)
         let normalized = if options.normalize {
             text.nfc().collect::<String>()
         } else {
             text.to_string()
         };
 
-        // Detect scripts if requested
+        // Figure out which writing system each part uses
         let scripts = if options.detect_scripts {
             self.detect_scripts(&normalized)?
         } else {
             vec![(Script::Common, 0, normalized.len())]
         };
 
-        // Segment by grapheme clusters
+        // Find where graphemes start and end (for complex scripts like Thai)
         let grapheme_segmenter = GraphemeClusterSegmenter::new();
         let _grapheme_breaks: Vec<usize> = grapheme_segmenter.segment_str(text).collect();
 
-        // Bidirectional text analysis if requested
+        // Handle bidirectional text (Arabic/Hebrew vs Latin)
         let runs = if options.bidi_resolve {
             self.create_bidi_runs(&normalized, scripts, options)?
         } else {
-            // Simple runs without bidi analysis
+            // Simple left-to-right processing
             self.create_simple_runs(&normalized, scripts, options, Direction::LeftToRight)?
         };
 
         Ok(runs)
     }
 
-    /// Detect scripts in text
+    /// Maps out when and where writing systems change in your text
     fn detect_scripts(&self, text: &str) -> Result<Vec<(Script, usize, usize)>> {
         use icu_properties::script::ScriptWithExtensions;
         let script_data = ScriptWithExtensions::new();
@@ -94,7 +98,7 @@ impl UnicodeProcessor {
         Ok(scripts)
     }
 
-    /// Create simple text runs without bidi analysis
+    /// Creates text runs assuming everyone reads left-to-right
     fn create_simple_runs(
         &self,
         text: &str,
@@ -116,7 +120,7 @@ impl UnicodeProcessor {
         Ok(runs)
     }
 
-    /// Create text runs with bidirectional analysis
+    /// Creates text runs that respect text direction (critical for Arabic/Hebrew)
     fn create_bidi_runs(
         &self,
         text: &str,
@@ -125,13 +129,13 @@ impl UnicodeProcessor {
     ) -> Result<Vec<TextRun>> {
         let bidi_info = BidiInfo::new(text, None);
 
-        // Get bidi levels for the text
+        // Extract the directional information
         let levels = bidi_info.levels;
         let mut runs = Vec::new();
 
-        // For each script segment, determine its direction from bidi levels
+        // For each script segment, decide if it reads RTL or LTR
         for (script, start, end) in scripts {
-            // Get the predominant level for this segment
+            // Look at the actual characters to determine direction
             let segment_levels = &levels[start..end];
             let has_rtl = segment_levels.iter().any(|level| level.is_rtl());
 
@@ -154,7 +158,7 @@ impl UnicodeProcessor {
         Ok(runs)
     }
 
-    /// Segment text into words
+    /// Breaks text into words using locale-aware rules
     pub fn segment_words(&self, text: &str) -> Result<Vec<String>> {
         use icu_segmenter::options::WordBreakInvariantOptions;
         let segmenter = WordSegmenter::new_auto(WordBreakInvariantOptions::default());
@@ -174,7 +178,7 @@ impl UnicodeProcessor {
         Ok(words)
     }
 
-    /// Segment text into lines (find line break opportunities)
+    /// Finds all the places where text could safely break across lines
     pub fn segment_lines(&self, text: &str) -> Result<Vec<usize>> {
         use icu_segmenter::options::LineBreakOptions;
         let segmenter = LineSegmenter::new_auto(LineBreakOptions::default());

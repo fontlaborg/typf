@@ -1,4 +1,7 @@
-//! Basic example of using TYPF to render text
+//! Watch TYPF turn text into pixels - the simplest possible way
+//!
+//! This example shows TYPF's six-stage pipeline in action: text goes in,
+//! gets shaped, rendered, and exported as an image. No complex setup required.
 
 use std::fs;
 use std::sync::Arc;
@@ -11,7 +14,10 @@ use typf_export::{PnmExporter, PnmFormat};
 use typf_render_orge::OrgeRenderer;
 use typf_shape_none::NoneShaper;
 
-/// A simple stub font for demonstration
+/// A bare-bones font that maps ASCII characters to glyph IDs
+///
+/// In real applications, you'd load actual font files. This stub exists
+/// purely to demonstrate the pipeline mechanics without file dependencies.
 struct StubFont;
 
 impl FontRef for StubFont {
@@ -37,32 +43,31 @@ impl FontRef for StubFont {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Text to render
-    let text = "Hello, TYPF!";
+    let text = "Hello, TYPF!"; // The raw string we'll transform
 
-    // Create a stub font (in real usage, load an actual font)
+    // In production, you'd load a real font file here
     let font = Arc::new(StubFont);
 
-    // Configure shaping parameters
+    // Stage 1: Shape the text - convert characters to positioned glyphs
     let shaping_params = ShapingParams {
-        size: 24.0,
+        size: 24.0,          // 24-point text
         ..Default::default()
     };
 
-    // Configure rendering parameters
+    // Stage 2: Render the glyphs - turn them into pixels
     let render_params = RenderParams {
-        foreground: Color::black(),
-        background: Some(Color::white()),
-        padding: 10,
+        foreground: Color::black(),      // Black text on...
+        background: Some(Color::white()), // ...white background
+        padding: 10,                      // 10-pixel border
         ..Default::default()
     };
 
-    // Create pipeline components
-    let shaper = NoneShaper::new();
-    let renderer = OrgeRenderer::new();
-    let exporter = PnmExporter::new(PnmFormat::Ppm);
+    // Build our pipeline: shape → render → export
+    let shaper = NoneShaper::new();      // Handles character-to-glyph conversion
+    let renderer = OrgeRenderer::new();  // Rasterizes glyphs to bitmap
+    let exporter = PnmExporter::new(PnmFormat::Ppm); // Saves as PPM image
 
-    // Execute the pipeline
+    // Execute the complete pipeline
     println!("Shaping text: {}", text);
     let shaped = shaper.shape(text, font.clone(), &shaping_params)?;
     println!("  Generated {} glyphs", shaped.glyphs.len());
@@ -73,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Exporting to PPM format...");
     let exported = exporter.export(&rendered)?;
 
-    // Save to file
+    // Write the final image to disk
     let output_path = "examples/output.ppm";
     fs::write(output_path, exported)?;
     println!("Saved to {}", output_path);

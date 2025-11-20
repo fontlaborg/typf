@@ -1,47 +1,51 @@
-// this_file: backends/typf-orge/src/edge.rs
-
-//! Edge list management for scan conversion.
+//! The edge detectives: line segments that build glyph foundations
 //!
-//! An edge represents a line segment in the glyph outline, stored in a format
-//! optimized for scanline rasterization.
+//! Every glyph starts as a collection of edges—straight lines that trace
+//! the character's outline. These edges become the roadmap for our rasterizer,
+//! telling it exactly which pixels should be filled. Think of them as the
+//! scaffolding that holds up beautiful text.
 
 use crate::fixed::F26Dot6;
 
-/// A single edge in the glyph outline.
+/// One edge, infinite possibilities
 ///
-/// Represents a line segment from (x, y_min) to (x + dx, y_max) where dx is
-/// computed incrementally as we scan down.
+/// An edge is more than just a line—it's a promise. It promises that for every
+/// scanline it crosses, it knows exactly where to be. We store both its current
+/// position and its slope, making rasterization a simple march down the screen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Edge {
-    /// Current X coordinate (at current scanline).
+    /// Where we are right now (X position at current scanline)
     pub x: F26Dot6,
 
-    /// X increment per scanline (dx/dy slope).
+    /// How we move each step down (slope in X per scanline)
     pub x_increment: F26Dot6,
 
-    /// Winding direction: +1 for upward, -1 for downward.
+    /// Which way we're going (upward fills vs downward carves)
     pub direction: i8,
 
-    /// Maximum Y coordinate (inclusive) where this edge is active.
+    /// The last scanline where we matter (inclusive)
     pub y_max: i32,
 
-    /// Minimum Y coordinate (inclusive) where this edge is active.
+    /// The first scanline where we appear (inclusive)
     pub y_min: i32,
 }
 
 impl Edge {
-    /// Create a new edge from two points.
+    /// Birth of an edge: two points become a rasterization warrior
     ///
-    /// Returns `None` if the edge is horizontal (y1 == y2) or doesn't cross any scanlines.
+    /// We transform any two points into a scan-ready edge. Horizontal edges get
+    /// discarded (they don't cross scanlines), and everything else gets sorted
+    /// so we always scan from top to bottom. The result is an edge that knows
+    /// its purpose from the moment it's created.
     ///
-    /// # Arguments
+    /// # The Point Partnership
     ///
-    /// * `x1, y1` - Starting point (in F26Dot6 format)
-    /// * `x2, y2` - Ending point (in F26Dot6 format)
+    /// * `x1, y1` - Where the edge begins its journey
+    /// * `x2, y2` - Where the edge completes its mission
     ///
     /// # Returns
     ///
-    /// `Some(Edge)` if valid, `None` otherwise
+    /// A battle-ready edge, or `None` if the points refuse to cooperate
     pub fn new(x1: F26Dot6, y1: F26Dot6, x2: F26Dot6, y2: F26Dot6) -> Option<Self> {
         let dy = y2 - y1;
 
@@ -86,45 +90,53 @@ impl Edge {
         })
     }
 
-    /// Step the edge to the next scanline.
+    /// One step closer to completion
     ///
-    /// Updates `x` by adding `x_increment`.
+    /// Each scanline brings us one step down the edge. We simply add our slope
+    /// to our current position—no complex math, just elegant progression.
     #[inline]
     pub fn step(&mut self) {
         self.x = self.x + self.x_increment;
     }
 
-    /// Check if edge is active at given Y coordinate.
+    /// Are we still relevant at this height?
+    ///
+    /// An edge knows when it's time to retire. Once we've passed our maximum
+    /// Y coordinate, we're done contributing to the glyph.
     #[inline]
     pub fn is_active(&self, y: i32) -> bool {
         y <= self.y_max
     }
 }
 
-/// A collection of edges, maintained in sorted order.
+/// The edge orchestra: many lines working in harmony
 ///
-/// Used for both the edge table (one list per scanline) and the active edge list.
+/// Managing one edge is simple, but glyphs have hundreds. This collection
+/// keeps them sorted by X position, making scanline traversal efficient.
+/// Whether we're building the global edge table or managing active edges,
+/// this structure ensures every edge finds its place.
 #[derive(Debug, Clone, Default)]
 pub struct EdgeList {
     edges: Vec<Edge>,
 }
 
 impl EdgeList {
-    /// Create a new empty edge list.
+    /// Start fresh: a clean slate for new edges
     pub fn new() -> Self {
         Self { edges: Vec::new() }
     }
 
-    /// Create with pre-allocated capacity.
+    /// Room for everyone: pre-allocate space for efficiency
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             edges: Vec::with_capacity(capacity),
         }
     }
 
-    /// Insert an edge in sorted order by X coordinate.
+    /// Find the perfect spot: insert while maintaining order
     ///
-    /// Uses binary search to find insertion point.
+    /// We use binary search to locate exactly where each edge belongs.
+    /// No messy linear searches—just surgical precision.
     pub fn insert_sorted(&mut self, edge: Edge) {
         let pos = self
             .edges
@@ -133,17 +145,17 @@ impl EdgeList {
         self.edges.insert(pos, edge);
     }
 
-    /// Sort all edges by X coordinate.
+    /// Restore order: sort everyone by their X position
     pub fn sort_by_x(&mut self) {
         self.edges.sort_by(|a, b| a.x.cmp(&b.x));
     }
 
-    /// Remove inactive edges (where y > y_max).
+    /// Spring cleaning: remove edges that have finished their journey
     pub fn remove_inactive(&mut self, y: i32) {
         self.edges.retain(|edge| edge.is_active(y));
     }
 
-    /// Step all edges to next scanline.
+    /// March together: advance every edge one scanline down
     pub fn step_all(&mut self) {
         for edge in &mut self.edges {
             edge.step();

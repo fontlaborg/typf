@@ -1,53 +1,61 @@
-// this_file: backends/typf-orge/src/grayscale.rs
-
-//! Grayscale rendering via oversampling.
+//! Where beauty meets precision: the art of anti-aliased text
 //!
-//! Implements anti-aliasing by rendering at higher resolution and
-//! accumulating coverage to produce 0-255 alpha values.
+//! Jagged edges betray amateur rendering. Professional text embraces
+//! grayscale—rendering at higher resolution then gracefully downscaling
+//! to create smooth edges that please the eye. This module transforms
+//! monochrome precision into 256 levels of visual perfection.
 
 use crate::scan_converter::ScanConverter;
 
-/// Grayscale rendering level (oversampling factor).
+/// The quality spectrum: how smooth do you want your text?
+///
+/// More samples mean smoother edges but slower rendering. Choose your
+/// balance between speed and beauty based on your needs.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GrayscaleLevel {
-    /// 2x2 oversampling (4 samples per pixel)
+    /// Good enough: 2x2 oversampling for fast, decent results
     Level2x2 = 2,
-    /// 4x4 oversampling (16 samples per pixel)
+    /// Sweet spot: 4x4 oversampling that most users love
     Level4x4 = 4,
-    /// 8x8 oversampling (64 samples per pixel)
+    /// Perfectionist: 8x8 oversampling for magazine-quality text
     Level8x8 = 8,
 }
 
 impl GrayscaleLevel {
-    /// Get oversampling factor.
+    /// How many pixels wide and tall we render internally
     pub const fn factor(self) -> usize {
         self as usize
     }
 
-    /// Get total samples per pixel.
+    /// The total sample count that determines alpha precision
     pub const fn samples_per_pixel(self) -> usize {
         let f = self.factor();
         f * f
     }
 
-    /// Get maximum alpha value (samples per pixel).
+    /// The highest alpha value achievable at this quality level
     pub const fn max_alpha(self) -> u8 {
         self.samples_per_pixel() as u8
     }
 }
 
-/// Render glyph with grayscale anti-aliasing.
+/// Transform crisp edges into smooth beauty
 ///
-/// # Arguments
+/// We take your perfectly outlined glyph and apply oversampling magic.
+/// The result is an alpha map where 255 means fully covered and 0 means
+/// completely transparent—all the values in between create the visual
+/// smoothness that makes text readable at any size.
 ///
-/// * `sc` - Scan converter with outline already added
-/// * `width` - Output bitmap width in pixels
-/// * `height` - Output bitmap height in pixels
-/// * `level` - Grayscale oversampling level
+/// # The Beauty Recipe
+///
+/// * `sc` - Your scan converter, loaded with glyph outlines
+/// * `width` - How wide the final beauty will be
+/// * `height` - How tall the final beauty will be
+/// * `level` - Your chosen quality setting
 ///
 /// # Returns
 ///
-/// Vec of alpha values (0-255), size = width * height
+/// A vector of alpha values, each begging to be blended into your canvas
 pub fn render_grayscale(
     sc: &mut ScanConverter,
     width: usize,
@@ -70,7 +78,11 @@ pub fn render_grayscale(
     downsample_to_grayscale(&mono_bitmap, mono_width, mono_height, width, height, level)
 }
 
-/// Downsample monochrome bitmap to grayscale using optimized vectorizable code.
+/// SIMD-accelerated downsampling: when speed matters as much as beauty
+///
+/// Modern CPUs can process multiple pixels at once. This function leverages
+/// SIMD instructions to transform high-resolution monochrome into smooth
+/// grayscale with remarkable speed.
 #[cfg(target_feature = "simd128")]
 fn downsample_to_grayscale_simd(
     mono: &[u8],
@@ -124,7 +136,10 @@ fn downsample_to_grayscale_simd(
     output
 }
 
-/// Downsample monochrome bitmap to grayscale (scalar fallback).
+/// The reliable workhorse: pixel-by-pixel grayscale transformation
+///
+/// When SIMD isn't available, we fall back to careful scalar processing.
+/// Slower, but compatible with every CPU and equally precise.
 fn downsample_to_grayscale_scalar(
     mono: &[u8],
     mono_width: usize,
@@ -166,9 +181,10 @@ fn downsample_to_grayscale_scalar(
     output
 }
 
-/// Downsample monochrome bitmap to grayscale.
+/// Choose your weapon: SIMD or scalar, automatically selected
 ///
-/// Automatically selects SIMD or scalar implementation based on CPU features.
+/// We detect CPU capabilities at compile time and choose the fastest
+/// available implementation. No configuration needed—just performance.
 #[inline]
 fn downsample_to_grayscale(
     mono: &[u8],
@@ -188,9 +204,11 @@ fn downsample_to_grayscale(
     }
 }
 
-/// Render grayscale with outline built directly at oversampled resolution.
+/// Build at high resolution, render at perfection
 ///
-/// This is more efficient than rendering mono then downsampling.
+/// Instead of rendering twice (mono then downsample), we build the outline
+/// directly at oversampled resolution. Less memory, fewer operations,
+/// better performance—the holy trinity of optimization.
 pub fn render_grayscale_direct(
     width: usize,
     height: usize,

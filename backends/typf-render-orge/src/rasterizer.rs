@@ -1,7 +1,9 @@
-//! Glyph rasterizer - integrates scan converter with font outline extraction
+//! Where fonts meet pixels: the final transformation
 //!
-//! This module bridges skrifa's outline extraction with our scan converter
-//! to produce anti-aliased glyph bitmaps.
+//! Font files store mathematical curves, but screens need pixels. This module
+//! orchestrates the delicate dance between skrifa's outline extraction and
+//! our scan converter, turning vector curves into beautiful anti-aliased
+//! bitmaps that humans can read.
 
 use crate::fixed::F26Dot6;
 use crate::grayscale::GrayscaleLevel;
@@ -14,41 +16,45 @@ use skrifa::outline::DrawSettings;
 use skrifa::prelude::LocationRef;
 use skrifa::{GlyphId as SkrifaGlyphId, MetadataProvider};
 
-/// Glyph rasterizer combining scan conversion and anti-aliasing
+/// Your personal glyph artist: turning outlines into masterpieces
 ///
-/// This is the main entry point for rendering individual glyphs.
-/// It handles:
-/// - Outline extraction from skrifa fonts
-/// - Scan conversion to monochrome bitmap
-/// - Grayscale anti-aliasing via oversampling
+/// Every glyph starts as a mathematical blueprint in font files. This rasterizer
+/// brings them to life through three careful steps:
+/// - Extract perfect outlines from any font format
+/// - Convert curves to crisp monochrome pixels
+/// - Apply anti-aliasing magic for smooth edges
 ///
-/// # Example
+/// # Your First Rendering
 /// ```ignore
 /// let rasterizer = GlyphRasterizer::new(font_data, size)?;
 /// let bitmap = rasterizer.render_glyph(glyph_id, fill_rule, dropout_mode)?;
+/// // bitmap.data now contains pixels ready for your screen
 /// ```
 pub struct GlyphRasterizer<'a> {
-    /// Font reference from read-fonts
+    /// The font we're bringing to life
     font: ReadFontsRef<'a>,
-    /// Font size in pixels
+    /// How big to make the glyphs (in pixels, not font units)
     size: f32,
-    /// Oversampling factor for anti-aliasing (typically 4 or 8)
+    /// Our smoothing level: 1=crisp, 4=balanced, 8=perfect
     oversample: u8,
-    /// Variable font location (coordinates for variable fonts)
+    /// Variable font coordinates for infinite font variation
     location: skrifa::instance::Location,
 }
 
 impl<'a> GlyphRasterizer<'a> {
-    /// Create a new glyph rasterizer
+    /// Ready your glyph artist
     ///
-    /// # Arguments
+    /// Give us font data and your desired size, we'll prepare everything
+    /// needed to transform those mathematical curves into beautiful pixels.
     ///
-    /// * `font_data` - Raw font bytes (TTF/OTF)
-    /// * `size` - Font size in pixels
+    /// # What You Need
     ///
-    /// # Returns
+    /// * `font_data` - Raw bytes from your TTF/OTF file
+    /// * `size` - Target pixel size (12 for body text, 48+ for headlines)
     ///
-    /// New `GlyphRasterizer` or error if font parsing fails
+    /// # What You Get
+    ///
+    /// A ready-to-use rasterizer or a helpful error message
     pub fn new(font_data: &'a [u8], size: f32) -> Result<Self, String> {
         let font =
             ReadFontsRef::new(font_data).map_err(|e| format!("Failed to parse font: {}", e))?;
@@ -61,10 +67,11 @@ impl<'a> GlyphRasterizer<'a> {
         })
     }
 
-    /// Set variable font coordinates
+    /// Shape your variable font: bend axes to your will
     ///
-    /// This creates a Location from the provided variations, which will be used
-    /// when rendering all subsequent glyphs.
+    /// Variable fonts contain infinite styles. This function lets you specify
+    /// exactly which variation you want—weight, width, slant, or custom axes.
+    /// All subsequent renderings will use this beautiful new shape.
     pub fn set_variations(&mut self, variations: &[(String, f32)]) -> Result<(), String> {
         use read_fonts::types::Tag;
 
@@ -110,31 +117,35 @@ impl<'a> GlyphRasterizer<'a> {
         Ok(())
     }
 
-    /// Set the oversampling factor for anti-aliasing
+    /// Choose your smoothness: from razor-sharp to buttery-smooth
     ///
-    /// Higher values produce smoother edges but increase memory usage.
-    /// Common values: 1 (no AA), 2, 4, 8
+    /// Anti-aliasing is the art of compromise between speed and beauty.
+    /// Higher oversampling creates smoother edges but demands more memory
+    /// and processing time. Pick your sweet spot.
     pub fn with_oversample(mut self, oversample: u8) -> Self {
         self.oversample = oversample.max(1);
         self
     }
 
-    /// Render a single glyph to a grayscale bitmap
+    /// The moment of truth: curves become pixels
     ///
-    /// # Arguments
+    /// This is where the magic happens. We take everything you've configured—
+    /// font, size, variations, smoothing—and transform a single glyph from
+    /// mathematical curves into actual pixels you can display.
     ///
-    /// * `glyph_id` - Glyph ID to render
-    /// * `fill_rule` - Fill rule (NonZeroWinding or EvenOdd)
-    /// * `dropout_mode` - Dropout control mode
+    /// # The Recipe
     ///
-    /// # Returns
+    /// * `glyph_id` - Which character to bring to life
+    /// * `fill_rule` - How to decide what's inside vs outside
+    /// * `dropout_mode` - How to handle tiny details at small sizes
     ///
-    /// `GlyphBitmap` containing the rasterized glyph, or error
+    /// # Your Reward
     ///
-    /// # Notes
+    /// A complete bitmap with alpha values, ready for blending into any surface
     ///
-    /// Variable font variations should be set using `set_variations()` before
-    /// calling this method.
+    /// # Before You Call
+    ///
+    /// Set up variable variations with `set_variations()` if needed
     pub fn render_glyph(
         &self,
         glyph_id: u32,
@@ -151,8 +162,8 @@ impl<'a> GlyphRasterizer<'a> {
             .get(skrifa_gid)
             .ok_or_else(|| format!("Glyph {} not found", glyph_id))?;
 
-        // Get glyph bounds by drawing it into a recording pen
-        // This is simpler and more reliable than accessing glyf/loca directly
+        // Bounds detection: how much canvas do we really need?
+        // We'll draw into a temporary pen to find the glyph's natural size
         struct BoundsCalculator {
             x_min: f32,
             y_min: f32,
@@ -206,7 +217,7 @@ impl<'a> GlyphRasterizer<'a> {
 
         let size_setting = Size::new(self.size);
 
-        // Use the location stored in the rasterizer (set via set_variations)
+        // Variable font location comes from our stored coordinates
         let location_ref = self.location.coords();
         let draw_settings = DrawSettings::unhinted(size_setting, location_ref);
 
@@ -216,7 +227,7 @@ impl<'a> GlyphRasterizer<'a> {
             .map_err(|e| format!("Failed to calculate bounds: {:?}", e))?;
 
         if !bounds_calc.has_points {
-            // Empty glyph (e.g., space)
+            // Empty glyph (spaces, tabs, etc.) - perfectly valid, just needs no canvas
             return Ok(GlyphBitmap {
                 width: 0,
                 height: 0,
@@ -226,8 +237,8 @@ impl<'a> GlyphRasterizer<'a> {
             });
         }
 
-        // bounds_calc already has scaled coordinates (from DrawSettings with size)
-        // So we just convert to integers
+        // DrawSettings already scaled from font units to pixels
+        // Now we convert to integer pixel coordinates
         let x_min = bounds_calc.x_min.floor() as i32;
         let y_min = bounds_calc.y_min.floor() as i32;
         let x_max = bounds_calc.x_max.ceil() as i32;
@@ -236,25 +247,24 @@ impl<'a> GlyphRasterizer<'a> {
         let width = ((x_max - x_min) as u32 * self.oversample as u32).max(1);
         let height = ((y_max - y_min) as u32 * self.oversample as u32).max(1);
 
-        // Prevent excessive memory allocation
+        // Guard against memory bombs (malicious fonts or giant sizes)
         if width > 4096 || height > 4096 {
             return Err(format!("Glyph bitmap too large: {}x{} (max 4096x4096)", width, height));
         }
 
-        // Create scan converter with oversampled dimensions
+        // Prepare our canvas, oversized for smooth anti-aliasing
         let mut scan_converter = ScanConverter::new(width as usize, height as usize);
         scan_converter.set_fill_rule(fill_rule);
         scan_converter.set_dropout_mode(dropout_mode);
 
-        // Calculate transform: pixel coordinates → oversampled pixel coordinates
-        // Note: skrifa's DrawSettings already handles font units → pixels scaling,
-        // so we only need to apply oversampling here
+        // Transform magic: where do pixels go in our oversized canvas?
+        // skrifa handled font units → pixels, now we apply oversampling
         let oversample_scale = self.oversample as f32;
         let x_offset = -x_min as f32 * self.oversample as f32;
-        // With Y-flip: after negating Y coords, we need to offset by y_max (not y_min)
+        // Y-flip: fonts go bottom-up, bitmaps go top-down
         let y_offset = y_max as f32 * self.oversample as f32;
 
-        // Create a pen that transforms coordinates and feeds to ScanConverter
+        // Our coordinate transformer: shapes the canvas for the scan converter
         struct TransformPen<'p> {
             inner: &'p mut ScanConverter,
             scale: f32,
@@ -265,7 +275,7 @@ impl<'a> GlyphRasterizer<'a> {
         impl<'p> skrifa::outline::OutlinePen for TransformPen<'p> {
             fn move_to(&mut self, x: f32, y: f32) {
                 let tx = x * self.scale + self.x_offset;
-                let ty = -y * self.scale + self.y_offset; // Flip Y: font coords are bottom-up, bitmap is top-down
+                let ty = -y * self.scale + self.y_offset; // Flip Y for bitmap coordinates
                 self.inner
                     .move_to(F26Dot6::from_float(tx), F26Dot6::from_float(ty));
             }
@@ -328,8 +338,8 @@ impl<'a> GlyphRasterizer<'a> {
             .draw(draw_settings, &mut transform_pen)
             .map_err(|e| format!("Failed to draw outline: {:?}", e))?;
 
-        // Apply grayscale anti-aliasing by downsampling
-        // (render_grayscale will call scan_converter.rasterize() internally)
+        // The final touch: smooth those crisp pixels into beauty
+        // This downsampling creates the anti-aliased effect readers love
         let grayscale_level = match self.oversample {
             2 => GrayscaleLevel::Level2x2,
             4 => GrayscaleLevel::Level4x4,
@@ -353,29 +363,33 @@ impl<'a> GlyphRasterizer<'a> {
             width: out_width as u32,
             height: out_height as u32,
             left: x_min,
-            top: y_max, // Note: TrueType uses bottom-left origin, we use top-left
+            top: y_max, // TrueType origins are bottom-left, we prefer top-left
             data: gray_bitmap,
         })
     }
 }
 
-/// A rasterized glyph bitmap
+/// Your rendered glyph: pixels, position, and purpose
+///
+/// This isn't just a bitmap—it's a complete rendering package. We give you
+/// the pixels plus exact positioning information so you can place each glyph
+/// perfectly in your text layout.
 #[derive(Debug, Clone)]
 pub struct GlyphBitmap {
-    /// Bitmap width in pixels
+    /// How wide this glyph wants to be (in pixels)
     pub width: u32,
-    /// Bitmap height in pixels
+    /// How tall this glyph wants to be (in pixels)
     pub height: u32,
-    /// Left bearing (offset from origin to left edge)
+    /// How far from the origin to start drawing (left edge)
     pub left: i32,
-    /// Top bearing (offset from origin to top edge)
+    /// How far from the baseline to the top (for proper alignment)
     pub top: i32,
-    /// Grayscale bitmap data (0 = transparent, 255 = opaque)
+    /// The actual alpha values: 0=invisible air, 255=solid ink
     pub data: Vec<u8>,
 }
 
 #[cfg(test)]
 mod tests {
-    // Tests require actual font data
-    // Integration tests with real fonts are in the CLI tests
+    // Real font testing happens in integration tests
+    // Unit tests would need embedded font data, which we avoid
 }

@@ -1,21 +1,21 @@
-//! TYPF v2.0 - A modular text rendering pipeline
+//! TYPF: Text becomes art through six carefully crafted stages
 //!
-//! TYPF provides a six-stage pipeline for text rendering:
-//! 1. Input parsing and validation
-//! 2. Unicode processing and normalization
-//! 3. Font selection and loading
-//! 4. Text shaping
-//! 5. Glyph rendering
-//! 6. Output export
+//! Every character tells a story. TYPF tells it through:
+//! 1. Input parsing - Raw text finds structure
+//! 2. Unicode processing - Scripts normalize, language emerges
+//! 3. Font selection - The right font finds each character
+//! 4. Text shaping - Characters learn their positions
+//! 5. Glyph rendering - Positions become pixels or paths
+//! 6. Export - The final format emerges
 //!
-//! # Features
+//! ## Why TYPF?
 //!
-//! - **Modular Architecture**: Each stage can be replaced with different implementations
-//! - **Performance**: SIMD optimizations and multi-level caching
-//! - **Flexibility**: Support for multiple shaping and rendering backends
-//! - **Safety**: Memory-safe with minimal unsafe code
+//! - **Swap any stage** - Need a different shaper? Just plug it in
+//! - **Blazing fast** - SIMD and multi-level caching keep you responsive
+//! - **Pick your backends** - HarfBuzz, CoreText, Skia, Orge - you choose
+//! - **Memory safe** - All the performance, none of the unsafety
 //!
-//! # Example
+//! ## Start Rendering
 //!
 //! ```ignore
 //! use typf::prelude::*;
@@ -28,13 +28,13 @@
 //!     .build()?;
 //! ```
 //!
-//! # Feature Flags
+//! ## Build What You Need
 //!
-//! - `minimal`: Minimal build with NoneShaper and OrgeRenderer
-//! - `unicode`: Unicode processing support
-//! - `fontdb`: Font database support
-//! - `export-pnm`: PNM export formats (PPM, PGM, PBM)
-//! - `full`: All features enabled
+//! - `minimal` - Just the essentials: NoneShaper + OrgeRenderer
+//! - `unicode` - Script detection, bidi, segmentation
+//! - `fontdb` - System font discovery and caching
+//! - `export-pnm` - PPM, PGM, PBM output formats
+//! - `full` - Everything unlocked and ready to go
 
 pub use typf_core::{error, traits, Color, Pipeline, RenderParams, ShapingParams};
 
@@ -82,7 +82,7 @@ pub use typf_render_skia as render_skia;
 #[cfg(feature = "render-zeno")]
 pub use typf_render_zeno as render_zeno;
 
-/// Common imports for typical usage
+/// Everything you need to start rendering
 pub mod prelude {
     pub use typf_core::{
         error::{Result, TypfError},

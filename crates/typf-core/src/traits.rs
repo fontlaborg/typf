@@ -1,25 +1,25 @@
-//! Core trait definitions for TYPF
+//! The contracts that bind every backend together
 //!
-//! This module defines the fundamental traits that power the TYPF text rendering pipeline.
+//! Five traits, infinite possibilities. Each trait defines a role
+//! in the pipeline, allowing you to swap implementations without
+//! touching a single line of user code.
 //!
-//! # Overview
+//! ## The Players
 //!
-//! TYPF uses a trait-based architecture to allow swappable backends at each stage:
-//! - [`Stage`] - Base trait for pipeline stages
-//! - [`FontRef`] - Font data access interface
-//! - [`Shaper`] - Text shaping (character to glyph conversion)
-//! - [`Renderer`] - Glyph rendering (rasterization)
-//! - [`Exporter`] - Output format conversion
+//! - [`Stage`] - The foundation every pipeline component builds upon
+//! - [`FontRef`] - Your window into font data and metrics
+/// - [`Shaper`] - Where characters become glyphs
+/// - [`Renderer`] - Where glyphs become images
+/// - [`Exporter`] - Where images become files
 
 use crate::{error::Result, types::*, PipelineContext, RenderParams, ShapingParams};
 use std::sync::Arc;
 
-/// A stage in the processing pipeline
+/// Every pipeline dancer learns these same steps
 ///
-/// All pipeline components implement this base trait to participate
-/// in the six-stage text rendering pipeline.
+/// Implement Stage and your component can join the six-stage procession
+/// that transforms text into rendered output.
 ///
-/// # Example
 /// ```ignore
 /// struct MyStage;
 ///
@@ -29,32 +29,30 @@ use std::sync::Arc;
 ///     }
 ///
 ///     fn process(&self, context: PipelineContext) -> Result<PipelineContext> {
-///         // Process and return modified context
+///         // Transform the context, pass it forward
 ///         Ok(context)
 ///     }
 /// }
 /// ```
 pub trait Stage: Send + Sync {
-    /// Name of this stage for debugging and logging
+    /// Who are you? Used for debugging and logging
     fn name(&self) -> &'static str;
 
-    /// Process the pipeline context through this stage
+    /// Do your work and pass the context forward
     ///
-    /// Takes ownership of the context, performs transformations,
-    /// and returns the modified context for the next stage.
+    /// Take the context, make your changes, and return it for the next stage.
     fn process(&self, context: PipelineContext) -> Result<PipelineContext>;
 }
 
-/// Font reference for shaping and rendering
+/// Your key to unlocking font secrets
 ///
-/// This trait provides a unified interface for accessing font data and metrics.
-/// Implementations can wrap various font formats (TTF, OTF, WOFF, etc.).
+/// Every font format speaks the same language through this trait.
+/// TTF, OTF, WOFF - they all expose their data and metrics the same way.
 ///
-/// # Example
 /// ```ignore
 /// struct MyFont {
 ///     data: Vec<u8>,
-///     // ... other fields
+///     // ... your internal state
 /// }
 ///
 /// impl FontRef for MyFont {
@@ -63,55 +61,57 @@ pub trait Stage: Send + Sync {
 ///     }
 ///
 ///     fn units_per_em(&self) -> u16 {
-///         1000 // typical value
+///         1000 // Common for Type 1 fonts
 ///     }
 ///
 ///     fn glyph_id(&self, ch: char) -> Option<GlyphId> {
-///         // Map character to glyph ID
+///         // Turn Unicode into font-specific glyph IDs
 ///         Some(42)
 ///     }
 ///
 ///     fn advance_width(&self, glyph_id: GlyphId) -> f32 {
-///         // Return advance width in font units
+///         // How far to move after this glyph
 ///         500.0
 ///     }
 /// }
 /// ```
 pub trait FontRef: Send + Sync {
-    /// Get raw font data (TTF/OTF bytes)
+    /// Raw font bytes as they live in the file
     fn data(&self) -> &[u8];
 
-    /// Get units per em from the font's head table
+    /// The font's internal coordinate system scale
     ///
-    /// This value is used to scale font metrics to the desired size.
-    /// Common values are 1000 (Type 1) or 2048 (TrueType).
+    /// Used to convert between font units and rendered pixels.
+    /// Type 1 fonts use 1000, TrueType often uses 2048.
     fn units_per_em(&self) -> u16;
 
-    /// Map a Unicode character to a glyph ID
+    /// Find the glyph that represents this character
     ///
-    /// Returns `None` if the character is not present in the font.
+    /// Returns None when the font doesn't contain this character.
     fn glyph_id(&self, ch: char) -> Option<GlyphId>;
 
-    /// Get the advance width for a glyph in font units
+    /// How wide this glyph stands in font units
     ///
-    /// The advance width determines the horizontal spacing between glyphs.
+    /// This spacing determines how glyphs sit next to each other.
     fn advance_width(&self, glyph_id: GlyphId) -> f32;
 
-    /// Get the total number of glyphs in the font
+    /// How many glyphs this font contains
     ///
-    /// This is useful for validating glyph IDs returned by shapers.
-    /// Returns None if the glyph count cannot be determined.
+    /// Useful for validation when shapers return glyph IDs.
     fn glyph_count(&self) -> Option<u32> {
-        None // Default implementation returns None
+        None // Not all implementations can provide this
     }
 }
 
-/// Text shaping backend
+/// Where characters learn their positions
+///
+/// Text shaping is where script rules, font features, and character clusters
+/// collide to produce perfectly positioned glyphs ready for rendering.
 pub trait Shaper: Send + Sync {
-    /// Name of this shaping backend
+    /// Identify yourself in logs and error messages
     fn name(&self) -> &'static str;
 
-    /// Shape text into positioned glyphs
+    /// Transform characters into positioned glyphs
     fn shape(
         &self,
         text: &str,
@@ -119,21 +119,24 @@ pub trait Shaper: Send + Sync {
         params: &ShapingParams,
     ) -> Result<ShapingResult>;
 
-    /// Check if a script is supported
+    /// Can you handle this script?
     fn supports_script(&self, _script: &str) -> bool {
-        true // Default: claim to support all scripts
+        true // Optimistic by default
     }
 
-    /// Clear any internal caches
+    /// Flush any cached shaping data
     fn clear_cache(&self) {}
 }
 
-/// Rendering backend
+/// Where glyphs become visible
+///
+/// Rasterizers turn positioned glyphs into pixels. Vector renderers
+/// turn them into paths. Both implement this trait.
 pub trait Renderer: Send + Sync {
-    /// Name of this rendering backend
+    /// Your renderer's signature
     fn name(&self) -> &'static str;
 
-    /// Render shaped text
+    /// Convert glyphs to visual output
     fn render(
         &self,
         shaped: &ShapingResult,
@@ -141,26 +144,29 @@ pub trait Renderer: Send + Sync {
         params: &RenderParams,
     ) -> Result<RenderOutput>;
 
-    /// Check if a format is supported
+    /// Do you understand this output format?
     fn supports_format(&self, _format: &str) -> bool {
-        true // Default: claim to support all formats
+        true // Assume we can handle anything
     }
 
-    /// Clear any internal caches
+    /// Free up rendering resources
     fn clear_cache(&self) {}
 }
 
-/// Export backend for various output formats
+/// The final step: pixels become files
+///
+/// Exporters know how to encode rendered output into the format
+/// users actually want - PNG, SVG, JSON, and more.
 pub trait Exporter: Send + Sync {
-    /// Name of this exporter
+    /// Who are you?
     fn name(&self) -> &'static str;
 
-    /// Export rendered output to bytes
+    /// Encode the rendered output as bytes
     fn export(&self, output: &RenderOutput) -> Result<Vec<u8>>;
 
-    /// Get the file extension for this format
+    /// What file extension should be used?
     fn extension(&self) -> &'static str;
 
-    /// Get MIME type
+    /// What MIME type identifies your format?
     fn mime_type(&self) -> &'static str;
 }

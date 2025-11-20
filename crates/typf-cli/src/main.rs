@@ -1,4 +1,7 @@
-//! TYPF CLI - Command-line interface for the TYPF text rendering pipeline
+//! TYPF meets the terminal: Fast text rendering from the command line
+//!
+//! Render text to images, process batches, or explore interactively.
+//! Perfect for scripts, testing, and quick typography experiments.
 
 mod batch;
 mod jsonl;
@@ -21,22 +24,22 @@ use typf_fontdb::Font;
 use typf_render_orge::OrgeRenderer;
 use typf_shape_none::NoneShaper;
 
-/// Simple command-line arguments
+/// Command-line arguments for single text rendering
 #[derive(Debug)]
 struct Args {
-    /// Text to render
+    /// What we're rendering
     text: String,
-    /// Output file path
+    /// Where the output goes
     output: PathBuf,
-    /// Font file path
+    /// Font file (optional - uses stub if not provided)
     font: Option<PathBuf>,
-    /// Shaping backend (future use - currently hardcoded to None)
+    /// Which shaper to use (future: none, harfbuzz)
     _shaper: String,
-    /// Rendering backend (future use - currently hardcoded to Orge)
+    /// Which renderer to use (future: orge, skia)
     _renderer: String,
-    /// Font size in points
+    /// How big the text should be
     size: f32,
-    /// Output format (ppm, pgm, pbm, svg)
+    /// What format we're outputting
     format: String,
 }
 
@@ -159,7 +162,7 @@ impl Args {
     }
 }
 
-/// A stub font implementation for testing
+/// Minimal font for when no real font file is provided
 struct StubFont {
     units_per_em: u16,
 }
@@ -180,16 +183,16 @@ impl FontRef for StubFont {
     }
 
     fn glyph_id(&self, ch: char) -> Option<u32> {
-        // Simple mapping: use Unicode code point as glyph ID for ASCII
+        // ASCII characters map directly, everything else gets .notdef
         if ch.is_ascii() {
             Some(ch as u32)
         } else {
-            Some(0) // .notdef
+            Some(0)
         }
     }
 
     fn advance_width(&self, _glyph_id: u32) -> f32 {
-        // Fixed advance width for simplicity
+        // Fixed width for demonstration purposes
         600.0
     }
 }

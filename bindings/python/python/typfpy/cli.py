@@ -1,13 +1,26 @@
 """
-TYPF Command Line Interface
+TYPF Command Line Interface - Beautiful text from your terminal
 
-Fire-based CLI for text rendering operations.
+Where professional text rendering meets command-line simplicity.
+Render, shape, and export text with the same power that drives
+desktop applications—all from your terminal.
+
+## Quick Start
+
+```bash
+# Render text to an image
+python -m typfpy render "Hello, World!" hello.png
+
+# Use custom fonts and colors
+python -m typfpy render "مرحبا" arabic.png --font=/path/to/font.ttf
+```
 """
 
 import sys
 from pathlib import Path
 from typing import Optional
 
+# Fire gives us that magical command-line interface
 try:
     import fire
 except ImportError:
@@ -17,6 +30,7 @@ except ImportError:
     )
     sys.exit(1)
 
+# Our Rust-Python bridge must be available
 try:
     from typfpy import Typf, __version__, export_image, render_simple
 except ImportError:
@@ -25,10 +39,10 @@ except ImportError:
 
 
 class TypfCLI:
-    """TYPF Text Rendering CLI"""
+    """Your gateway to professional text rendering from the command line"""
 
     def __init__(self):
-        """Initialize the CLI"""
+        """Initialize the CLI with version tracking"""
         self.version = __version__
 
     def render(
@@ -45,24 +59,36 @@ class TypfCLI:
         padding: int = 10,
     ):
         """
-        Render text to an image file.
+        Transform your text into stunning images
+
+        This command takes your text, shapes it with professional algorithms,
+        and renders it to your favorite image format. Perfect for thumbnails,
+        headers, testing, or any time you need programmatic text rendering.
 
         Args:
-            text: Text to render
-            output: Output file path
-            font: Path to font file (optional, uses stub font if not provided)
-            size: Font size in points
-            shaper: Shaping backend ('none' or 'harfbuzz')
-            renderer: Rendering backend ('orge')
-            format: Output format (inferred from extension if not specified)
-            color: Foreground color as R,G,B,A (default: black)
-            background: Background color as R,G,B,A (optional)
-            padding: Padding in pixels
+            text: The text you want to render
+            output: Where to save the resulting image
+            font: Path to a .ttf/.otf font file (optional - uses built-in font if omitted)
+            size: How big should the text appear (in points/pixels)
+            shaper: Text shaping engine ('none', 'harfbuzz', 'coretext', 'icu-hb')
+            renderer: Pixel rendering engine ('orge', 'skia', 'zeno', 'coregraphics', 'json')
+            format: Output format (guessed from file extension if not specified)
+            color: Text color as "R,G,B,A" (default: black)
+            background: Background color as "R,G,B,A" (optional: transparent if omitted)
+            padding: Space around your text in pixels
 
         Examples:
-            typf render "Hello World" output.png
-            typf render "مرحبا" output.png --font=/path/to/font.ttf --shaper=harfbuzz
-            typf render "Test" output.svg --size=64 --color="255,0,0,255"
+            # Simple black text on transparent background
+            typf render "Hello World" hello.png
+
+            # Arabic text with proper shaping
+            typf render "مرحبا بالعالم" arabic.png --font=/path/to/arabic.ttf
+
+            # Red text on white background
+            typf render "Alert" warning.png --color="255,0,0,255" --background="255,255,255,255"
+
+            # SVG output for scalability
+            typf render "Logo" logo.svg --size=128 --font=/path/to/logo.ttf
         """
         # Parse colors
         try:

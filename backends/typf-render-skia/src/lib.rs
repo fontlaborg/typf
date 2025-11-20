@@ -1,15 +1,17 @@
-//! Skia rendering backend for TYPF
+//! Skia Renderer - Professional-grade rasterization via tiny-skia
 //!
-//! This backend uses tiny-skia for high-quality glyph rasterization with anti-aliasing.
+//! When you need production-quality text rendering, Skia delivers.
+//! This backend transforms font outlines into crisp anti-aliased bitmaps
+//! using the same path rendering tech that powers Chrome and Android.
 //!
-//! ## Features
+//! ## What Makes Skia Special
 //!
-//! - Sub-pixel anti-aliasing via tiny-skia
-//! - Vector path rendering with Bézier curves
-//! - Winding fill rule for glyph outlines
-//! - Grayscale alpha channel extraction
+//! - Sub-pixel precision that makes text readable at any size
+//! - True vector path rendering with proper Bézier curve handling
+//! - Winding fill rules that match font designer expectations
+//! - Clean alpha extraction for perfect compositing
 //!
-//! Made by FontLab - https://www.fontlab.com/
+//! Crafted with care by FontLab - https://www.fontlab.com/
 
 use kurbo::Shape;
 use skrifa::MetadataProvider;
@@ -21,19 +23,28 @@ use typf_core::{
     RenderParams,
 };
 
-/// Skia-based renderer using tiny-skia
+/// tiny-skia powered renderer for pristine glyph output
+///
+/// This isn't just another bitmap renderer—it's a precision instrument
+/// that extracts glyph outlines and renders them using industry-proven
+/// algorithms. Perfect when quality matters more than raw speed.
 pub struct SkiaRenderer {
-    /// Maximum canvas size
+    /// Maximum canvas dimension to prevent memory exhaustion
+    /// Keeps even the most ambitious rendering jobs within bounds
     max_size: u32,
 }
 
 impl SkiaRenderer {
-    /// Create a new Skia renderer
+    /// Creates a renderer that treats every glyph with professional care
     pub fn new() -> Self {
         Self { max_size: 8192 }
     }
 
-    /// Render a single glyph to a bitmap
+    /// Converts a single glyph from outline to bitmap with surgical precision
+    ///
+    /// This method extracts the glyph outline using skrifa, builds a path,
+    /// and renders it with tiny-skia's advanced anti-aliasing. The result
+    /// is a clean alpha bitmap ready for compositing.
     fn render_glyph(
         &self,
         font: &Arc<dyn FontRef>,
@@ -43,41 +54,42 @@ impl SkiaRenderer {
         use kurbo::{BezPath, PathEl};
         use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Transform};
 
-        // Extract glyph outline using skrifa
+        // Pull raw font data for skrifa to parse
         let font_data = font.data();
         let font_ref = skrifa::FontRef::new(font_data).map_err(|_| RenderError::InvalidFont)?;
 
-        // Get outline glyphs collection
+        // Navigate to the outline glyph collection
         let outlines = font_ref.outline_glyphs();
         let glyph_id = skrifa::GlyphId::from(glyph_id as u16);
 
-        // Get the specific glyph
+        // Find the specific glyph we need to render
         let glyph = outlines
             .get(glyph_id)
             .ok_or_else(|| RenderError::GlyphNotFound(glyph_id.to_u32()))?;
 
-        // Build path from glyph outline
+        // Build a kurbo path from the glyph's outline data
         let mut path = BezPath::new();
-        // Note: skrifa's DrawSettings with Size already handles scaling from font units to pixels
-        // So we don't need manual scaling in PathPen
+        // skrifa's DrawSettings handles the tricky font-unit-to-pixel scaling
+        // for us, so our PathPen can stay simple and focused
         let mut pen = PathPen {
             path: &mut path,
-            scale: 1.0, // No manual scaling - skrifa handles it
+            scale: 1.0, // skrifa does the heavy lifting on scaling
         };
 
-        // Use unhinted drawing
+        // Request unhinted outlines at the exact size we need
         let size = skrifa::instance::Size::new(font_size);
         let location = skrifa::instance::LocationRef::default();
         let settings = skrifa::outline::DrawSettings::unhinted(size, location);
 
+        // Trace the glyph outline into our kurbo path
         glyph
             .draw(settings, &mut pen)
             .map_err(|_| RenderError::OutlineExtractionFailed)?;
 
-        // Calculate bounding box
+        // Figure out how much canvas space this glyph needs
         let bbox = path.bounding_box();
 
-        // Check for invalid bounding box
+        // Guard against malformed glyphs that could crash the renderer
         if bbox.x0.is_infinite()
             || bbox.y0.is_infinite()
             || bbox.x1.is_infinite()
@@ -93,6 +105,7 @@ impl SkiaRenderer {
             .into());
         }
 
+        // Ensure we always have at least 1x1 pixels for rendering
         let width = (bbox.width().ceil() as u32).max(1);
         let height = (bbox.height().ceil() as u32).max(1);
 
@@ -107,7 +120,7 @@ impl SkiaRenderer {
             height
         );
 
-        // Convert kurbo BezPath to tiny-skia Path
+        // Translate kurbo's path format into tiny-skia's native format
         let mut builder = PathBuilder::new();
         for element in path.elements() {
             match *element {
@@ -130,33 +143,34 @@ impl SkiaRenderer {
 
         let skia_path = builder.finish().ok_or(RenderError::PathBuildingFailed)?;
 
-        // Create pixmap
+        // Create our rendering surface
         let mut pixmap = Pixmap::new(width, height).ok_or(RenderError::PixmapCreationFailed)?;
 
-        // Fill path with anti-aliasing (match old implementation exactly)
+        // Set up painter with anti-aliasing for smooth edges
         let paint = Paint {
             anti_alias: true,
             ..Default::default()
         };
 
-        // Transform to fit in pixmap:
-        // 1. Flip Y axis (font coords are y-up, bitmap is y-down)
-        // 2. Translate to fit bbox
+        // Critical coordinate transform:
+        // 1. Flip Y (fonts use y-up, bitmaps use y-down)
+        // 2. Shift so bbox fits perfectly in our pixmap
         let transform =
             Transform::from_scale(1.0, -1.0).post_translate(-bbox.x0 as f32, bbox.y1 as f32);
 
+        // Render the filled path to our pixmap
         pixmap.fill_path(&skia_path, &paint, FillRule::Winding, transform, None);
 
-        // Extract alpha channel (tiny-skia uses RGBA, we want grayscale alpha)
+        // Extract just the alpha channel (tiny-skia gives us RGBA, we need grayscale)
         let data = pixmap.data();
         let mut alpha = vec![0u8; (width * height) as usize];
         for i in 0..(width * height) as usize {
-            alpha[i] = data[i * 4 + 3]; // Extract alpha channel
+            alpha[i] = data[i * 4 + 3]; // Alpha lives in channel 4
         }
 
-        // Return bearing information from bbox
-        // left bearing: x_min
-        // top bearing: y_max (maximum Y coordinate in font coords, positive upward from baseline)
+        // Return positioning info so the glyph lands in the right place
+        // bearing_x: how far from origin the leftmost pixel appears
+        // bearing_y: how far above baseline the topmost pixel appears
         Ok(GlyphBitmap {
             width,
             height,
@@ -292,16 +306,19 @@ impl Renderer for SkiaRenderer {
     }
 }
 
-/// Glyph bitmap with positioning information
+/// A rendered glyph with everything needed for proper positioning
 struct GlyphBitmap {
-    width: u32,
-    height: u32,
-    data: Vec<u8>,
-    bearing_x: i32,
-    bearing_y: i32,
+    width: u32,      // Pixel width of the glyph bitmap
+    height: u32,     // Pixel height of the glyph bitmap
+    data: Vec<u8>,   // Grayscale alpha values for each pixel
+    bearing_x: i32,  // Horizontal offset from origin to left edge
+    bearing_y: i32,  // Vertical offset from baseline to top edge
 }
 
-/// Pen for converting skrifa outline to kurbo path
+/// Bridge between skrifa's outline commands and kurbo's path format
+///
+/// This pen receives drawing commands from skrifa and translates them
+/// into kurbo's path representation, handling scaling along the way.
 struct PathPen<'a> {
     path: &'a mut kurbo::BezPath,
     scale: f32,
@@ -309,16 +326,19 @@ struct PathPen<'a> {
 
 impl skrifa::outline::OutlinePen for PathPen<'_> {
     fn move_to(&mut self, x: f32, y: f32) {
+        // Start a new subpath at this position
         self.path
             .move_to((x as f64 * self.scale as f64, y as f64 * self.scale as f64));
     }
 
     fn line_to(&mut self, x: f32, y: f32) {
+        // Draw a straight line to this point
         self.path
             .line_to((x as f64 * self.scale as f64, y as f64 * self.scale as f64));
     }
 
     fn quad_to(&mut self, cx0: f32, cy0: f32, x: f32, y: f32) {
+        // Draw a quadratic Bézier curve with one control point
         self.path.quad_to(
             (cx0 as f64 * self.scale as f64, cy0 as f64 * self.scale as f64),
             (x as f64 * self.scale as f64, y as f64 * self.scale as f64),
@@ -326,6 +346,7 @@ impl skrifa::outline::OutlinePen for PathPen<'_> {
     }
 
     fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
+        // Draw a cubic Bézier curve with two control points
         self.path.curve_to(
             (cx0 as f64 * self.scale as f64, cy0 as f64 * self.scale as f64),
             (cx1 as f64 * self.scale as f64, cy1 as f64 * self.scale as f64),
@@ -334,6 +355,7 @@ impl skrifa::outline::OutlinePen for PathPen<'_> {
     }
 
     fn close(&mut self) {
+        // Close the current subpath, connecting back to the start
         self.path.close_path();
     }
 }

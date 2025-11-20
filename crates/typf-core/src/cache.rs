@@ -1,9 +1,11 @@
-//! Multi-level cache system for TYPF
+//! Speed up your pipeline with intelligent caching
 //!
-//! Implements a three-level cache hierarchy:
-//! - L1: Ultra-fast in-memory cache (target <50ns access)
-//! - L2: Larger LRU cache with bounded size
-//! - L3: Optional persistent cache (disk-based)
+//! Two levels of caching keep frequently-used data at your fingertips:
+//! - L1: Blazing fast hot cache (<50ns access) for the most recent items
+//! - L2: Larger LRU cache for everything else that still matters
+//!
+//! Shaping results and rendered glyphs get cached automatically,
+//! so repeated text or fonts feel instant.
 
 use lru::LruCache;
 use parking_lot::RwLock;
@@ -13,48 +15,49 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-/// Cache key for shaped text
+/// Uniquely identifies shaped text for caching
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ShapingCacheKey {
-    /// Text content hash
+    /// Hash of the text content
     pub text_hash: u64,
-    /// Font identifier
+    /// Which font we're using
     pub font_id: String,
-    /// Shaping parameters hash
+    /// How we want it shaped
     pub params_hash: u64,
 }
 
-/// Cache key for rendered glyphs
+/// Uniquely identifies rendered glyphs for caching
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct GlyphCacheKey {
-    /// Font identifier
+    /// Which font this glyph comes from
     pub font_id: String,
-    /// Glyph ID
+    /// The specific glyph
     pub glyph_id: u32,
-    /// Size in pixels
+    /// How big we want it
     pub size: u32,
-    /// Rendering parameters hash
+    /// Rendering style parameters
     pub params_hash: u64,
 }
 
-/// Cached value with metadata
+/// Data that's been cached, plus useful metadata
 #[derive(Debug, Clone)]
 pub struct CachedValue<T> {
-    /// The cached data
+    /// The actual cached data
     pub data: T,
-    /// When this was cached
+    /// When we first cached this
     pub timestamp: Instant,
-    /// How many times this has been accessed
+    /// How popular this entry has been
     pub hit_count: u32,
 }
 
-/// L1 Cache - Ultra-fast, small capacity
+/// The sprinter: small, blindingly fast, for the hottest data
 pub struct L1Cache<K: Hash + Eq + Clone, V: Clone> {
     cache: Arc<RwLock<HashMap<K, CachedValue<V>>>>,
     max_size: usize,
 }
 
 impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
+    /// Create a new L1 cache with the specified capacity
     pub fn new(max_size: usize) -> Self {
         Self {
             cache: Arc::new(RwLock::new(HashMap::with_capacity(max_size))),
@@ -62,6 +65,7 @@ impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
         }
     }
 
+    /// Grab data if we have it, update stats along the way
     pub fn get(&self, key: &K) -> Option<V> {
         let mut cache = self.cache.write();
         if let Some(entry) = cache.get_mut(key) {
@@ -72,10 +76,11 @@ impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
         }
     }
 
+    /// Store something valuable for fast access later
     pub fn insert(&self, key: K, value: V) {
         let mut cache = self.cache.write();
 
-        // Simple eviction: remove oldest if at capacity
+        // Evict the oldest entry when we're full
         if cache.len() >= self.max_size && !cache.contains_key(&key) {
             if let Some(oldest_key) = cache
                 .iter()
@@ -96,6 +101,7 @@ impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
         );
     }
 
+    /// Get a snapshot of cache performance
     pub fn stats(&self) -> CacheStats {
         let cache = self.cache.read();
         let total_hits: u32 = cache.values().map(|v| v.hit_count).sum();
@@ -103,18 +109,19 @@ impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
             size: cache.len(),
             capacity: self.max_size,
             total_hits,
-            hit_rate: 0.0, // Calculated externally
+            hit_rate: 0.0, // Calculated at higher levels
         }
     }
 }
 
-/// L2 Cache - Larger LRU cache
+/// The marathon runner: bigger, smart about what to forget
 pub struct L2Cache<K: Hash + Eq + Clone, V: Clone> {
     cache: Arc<RwLock<LruCache<K, CachedValue<V>>>>,
     capacity: NonZeroUsize,
 }
 
 impl<K: Hash + Eq + Clone, V: Clone> L2Cache<K, V> {
+    /// Create a new L2 cache with LRU eviction
     pub fn new(capacity: usize) -> Self {
         let capacity = NonZeroUsize::new(capacity).unwrap_or(NonZeroUsize::new(1000).unwrap());
         Self {
@@ -123,6 +130,7 @@ impl<K: Hash + Eq + Clone, V: Clone> L2Cache<K, V> {
         }
     }
 
+    /// Find data we cached recently
     pub fn get(&self, key: &K) -> Option<V> {
         let mut cache = self.cache.write();
         if let Some(entry) = cache.get_mut(key) {
@@ -133,6 +141,7 @@ impl<K: Hash + Eq + Clone, V: Clone> L2Cache<K, V> {
         }
     }
 
+    /// Remember this for next time
     pub fn insert(&self, key: K, value: V) {
         let mut cache = self.cache.write();
         cache.put(
@@ -145,6 +154,7 @@ impl<K: Hash + Eq + Clone, V: Clone> L2Cache<K, V> {
         );
     }
 
+    /// Performance metrics for this cache level
     pub fn stats(&self) -> CacheStats {
         let cache = self.cache.read();
         let total_hits: u32 = cache.iter().map(|(_, v)| v.hit_count).sum();
@@ -157,7 +167,7 @@ impl<K: Hash + Eq + Clone, V: Clone> L2Cache<K, V> {
     }
 }
 
-/// Multi-level cache combining L1 and L2
+/// Both levels working together for the best of both worlds
 pub struct MultiLevelCache<K: Hash + Eq + Clone, V: Clone> {
     l1: L1Cache<K, V>,
     l2: L2Cache<K, V>,
@@ -165,6 +175,7 @@ pub struct MultiLevelCache<K: Hash + Eq + Clone, V: Clone> {
 }
 
 impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {
+    /// Build a two-level cache with specified capacities
     pub fn new(l1_size: usize, l2_size: usize) -> Self {
         Self {
             l1: L1Cache::new(l1_size),
@@ -173,23 +184,24 @@ impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {
         }
     }
 
+    /// Smart lookup: L1 first, then L2 with auto-promotion
     pub fn get(&self, key: &K) -> Option<V> {
         let start = Instant::now();
         let mut stats = self.stats.write();
         stats.total_requests += 1;
 
-        // Try L1 first
+        // L1: The sprinter responds instantly
         if let Some(value) = self.l1.get(key) {
             stats.l1_hits += 1;
             stats.total_l1_time += start.elapsed();
             return Some(value);
         }
 
-        // Try L2
+        // L2: The marathon runner helps out
         if let Some(value) = self.l2.get(key) {
             stats.l2_hits += 1;
             stats.total_l2_time += start.elapsed();
-            // Promote to L1
+            // Popular data gets promoted to L1
             self.l1.insert(key.clone(), value.clone());
             return Some(value);
         }
@@ -198,12 +210,13 @@ impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {
         None
     }
 
+    /// Store in both levels for maximum availability
     pub fn insert(&self, key: K, value: V) {
-        // Insert into both L1 and L2
         self.l1.insert(key.clone(), value.clone());
         self.l2.insert(key, value);
     }
 
+    /// How often do we find what we're looking for?
     pub fn hit_rate(&self) -> f64 {
         let stats = self.stats.read();
         if stats.total_requests == 0 {
@@ -214,6 +227,7 @@ impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {
         }
     }
 
+    /// Average time to fetch cached data
     pub fn avg_access_time(&self) -> Duration {
         let stats = self.stats.read();
         let total_time = stats.total_l1_time + stats.total_l2_time;
@@ -225,12 +239,13 @@ impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {
         }
     }
 
+    /// Full performance snapshot
     pub fn metrics(&self) -> CacheMetrics {
         self.stats.read().clone()
     }
 }
 
-/// Cache statistics
+/// Basic cache statistics
 #[derive(Debug, Clone)]
 pub struct CacheStats {
     pub size: usize,
@@ -239,7 +254,7 @@ pub struct CacheStats {
     pub hit_rate: f32,
 }
 
-/// Detailed cache metrics
+/// Everything you need to know about cache performance
 #[derive(Debug, Clone, Default)]
 pub struct CacheMetrics {
     pub total_requests: u64,
@@ -268,51 +283,58 @@ impl CacheMetrics {
     }
 }
 
-/// Global cache manager
+/// One place to manage all your caches
 pub struct CacheManager {
     shaping_cache: MultiLevelCache<ShapingCacheKey, Arc<Vec<u8>>>,
     glyph_cache: MultiLevelCache<GlyphCacheKey, Arc<Vec<u8>>>,
 }
 
 impl CacheManager {
+    /// Create a manager with sensible default sizes
     pub fn new() -> Self {
         Self {
-            // L1: 100 entries, L2: 10,000 entries
+            // Shaping: 100 hot, 10k total (shaping is expensive)
             shaping_cache: MultiLevelCache::new(100, 10_000),
+            // Glyphs: 1000 hot, 100k total (individual glyphs are cheap)
             glyph_cache: MultiLevelCache::new(1000, 100_000),
         }
     }
 
+    /// Look up previously shaped text
     pub fn get_shaped(&self, key: &ShapingCacheKey) -> Option<Arc<Vec<u8>>> {
         self.shaping_cache.get(key)
     }
 
+    /// Save shaping results for next time
     pub fn cache_shaped(&self, key: ShapingCacheKey, data: Arc<Vec<u8>>) {
         self.shaping_cache.insert(key, data);
     }
 
+    /// Find a rendered glyph we cached earlier
     pub fn get_glyph(&self, key: &GlyphCacheKey) -> Option<Arc<Vec<u8>>> {
         self.glyph_cache.get(key)
     }
 
+    /// Remember this glyph for future renders
     pub fn cache_glyph(&self, key: GlyphCacheKey, data: Arc<Vec<u8>>) {
         self.glyph_cache.insert(key, data);
     }
 
+    /// Human-readable performance report
     pub fn report_metrics(&self) -> String {
         let shaping = self.shaping_cache.metrics();
         let glyph = self.glyph_cache.metrics();
 
         format!(
-            "Cache Metrics:\n\
+            "Cache Performance:\n\
              Shaping Cache:\n\
-             - Hit Rate: {:.2}%\n\
-             - L1 Hit Rate: {:.2}%\n\
-             - Avg Access Time: {:?}\n\
+             - Overall Hit Rate: {:.2}%\n\
+             - L1 (Hot) Hit Rate: {:.2}%\n\
+             - Average Access: {:?}\n\
              Glyph Cache:\n\
-             - Hit Rate: {:.2}%\n\
-             - L1 Hit Rate: {:.2}%\n\
-             - Avg Access Time: {:?}",
+             - Overall Hit Rate: {:.2}%\n\
+             - L1 (Hot) Hit Rate: {:.2}%\n\
+             - Average Access: {:?}",
             shaping.hit_rate() * 100.0,
             shaping.l1_hit_rate() * 100.0,
             self.shaping_cache.avg_access_time(),

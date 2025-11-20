@@ -1,8 +1,8 @@
-//! JSON rendering backend for TYPF
+//! JSON Renderer - When you need to see what the shaper really did
 //!
-//! Outputs shaping results in HarfBuzz-compatible JSON format.
-//! This is useful for debugging and for applications that need to process
-//! shaping results programmatically.
+//! Sometimes pixels aren't enough—you need the raw glyph data.
+//! This renderer outputs shaping results in HarfBuzz-compatible JSON,
+//! perfect for debugging text rendering issues or building custom pipelines.
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -13,32 +13,38 @@ use typf_core::{
     RenderParams,
 };
 
-/// HarfBuzz-compatible glyph information
+/// Individual glyph data that matches HarfBuzz's JSON output format
+///
+/// Use this to compare TYPF's output with HarfBuzz reference implementations
+/// or to feed glyph data into custom rendering pipelines.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HbGlyphInfo {
-    pub g: u32,    // glyph ID
-    pub cl: usize, // cluster
-    pub ax: i32,   // x advance (in font units)
-    pub ay: i32,   // y advance (in font units)
-    pub dx: i32,   // x offset (in font units)
-    pub dy: i32,   // y offset (in font units)
+    pub g: u32,    // Glyph identifier in the font
+    pub cl: usize, // Cluster mapping back to original text
+    pub ax: i32,   // Horizontal advance (how far to move after this glyph)
+    pub ay: i32,   // Vertical advance (for vertical text layouts)
+    pub dx: i32,   // Horizontal offset from default position
+    pub dy: i32,   // Vertical offset from default position
 }
 
-/// JSON output format
+/// Complete shaping output in a debug-friendly format
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonOutput {
-    pub glyphs: Vec<HbGlyphInfo>,
-    pub direction: String,
-    pub script: Option<String>,
-    pub language: Option<String>,
-    pub advance: f32,
+    pub glyphs: Vec<HbGlyphInfo>, // The positioned glyph sequence
+    pub direction: String,        // Text direction that influenced shaping
+    pub script: Option<String>,   // Script detection result (when available)
+    pub language: Option<String>, // Language context (when available)
+    pub advance: f32,              // Total width of the shaped text
 }
 
-/// JSON renderer backend
+/// The renderer that turns shaping results into structured data
+///
+/// Unlike bitmap renderers, this doesn't create pixels—it creates insight.
+/// Perfect for testing, debugging, or feeding other rendering systems.
 pub struct JsonRenderer;
 
 impl JsonRenderer {
-    /// Create a new JSON renderer
+    /// Creates a renderer that speaks JSON instead of pixels
     pub fn new() -> Self {
         Self
     }
@@ -80,41 +86,42 @@ impl Renderer for JsonRenderer {
         _font: Arc<dyn FontRef>,
         _params: &RenderParams,
     ) -> Result<RenderOutput> {
-        // Convert PositionedGlyphs to HbGlyphInfo
+        // Transform TYPF's PositionedGlyph into HarfBuzz-compatible format
         let glyphs: Vec<HbGlyphInfo> = shaped
             .glyphs
             .iter()
             .map(|g| {
-                // Convert to font units (assuming 64 subpixel units per pixel)
-                let scale = 64.0; // HarfBuzz uses 1/64 pixel units
+                // HarfBuzz thinks in 1/64 pixel units (26.6 fixed point)
+                // This conversion ensures compatibility with HB tools
+                let scale = 64.0;
                 HbGlyphInfo {
                     g: g.id,
                     cl: g.cluster as usize,
                     ax: (g.advance * scale) as i32,
-                    ay: 0,
+                    ay: 0, // TYPF doesn't yet support vertical advances
                     dx: (g.x * scale) as i32,
                     dy: (g.y * scale) as i32,
                 }
             })
             .collect();
 
-        // Create JSON output
+        // Package everything for downstream consumption
         let output = JsonOutput {
             glyphs,
             direction: format!("{:?}", shaped.direction),
-            script: None,   // TODO: Extract from params
-            language: None, // TODO: Extract from params
+            script: None,   // Future: extract from Unicode processing stage
+            language: None, // Future: extract from input parameters
             advance: shaped.advance_width,
         };
 
-        // Serialize to JSON
+        // Turn our structured data into a pretty JSON string
         let json = serde_json::to_string_pretty(&output).map_err(|e| {
             typf_core::error::TypfError::RenderingFailed(
                 typf_core::error::RenderError::BackendError(e.to_string()),
             )
         })?;
 
-        // Return as JSON output
+        // Hand back the JSON for whatever comes next
         Ok(RenderOutput::Json(json))
     }
 }

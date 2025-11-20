@@ -1,4 +1,9 @@
-//! HarfBuzz shaping backend for TYPF
+//! Where text gets professionally shaped: HarfBuzz backend
+//!
+//! HarfBuzz is the gold standard for OpenType text shaping. It understands
+//! Arabic joins, Devanagari conjuncts, Thai vowel positioning, and all the
+//! complex ways that characters turn into glyphs. This is the shaper you want
+//! for real-world text in any language.
 
 use std::str::FromStr;
 use std::sync::Arc;
@@ -15,16 +20,16 @@ use typf_core::{
 pub mod cache;
 pub use cache::ShapingCache;
 
-/// HarfBuzz shaping backend
+/// Professional text shaping powered by HarfBuzz
 pub struct HarfBuzzShaper;
 
 impl HarfBuzzShaper {
-    /// Create a new HarfBuzz shaper
+    /// Creates a new HarfBuzz shaper ready to handle any script
     pub fn new() -> Self {
         Self
     }
 
-    /// Convert Direction to HarfBuzz direction
+    /// Translates our direction enum to HarfBuzz's format
     fn to_hb_direction(dir: Direction) -> HbDirection {
         match dir {
             Direction::LeftToRight => HbDirection::Ltr,
@@ -75,10 +80,10 @@ impl Shaper for HarfBuzzShaper {
             });
         }
 
-        // Get font data
+        // Try to get the actual font data
         let font_data = font.data();
         if font_data.is_empty() {
-            // If no font data, fall back to simple shaping
+            // No font data? Fall back to basic shaping
             let mut glyphs = Vec::new();
             let mut x_offset = 0.0;
 
@@ -104,15 +109,15 @@ impl Shaper for HarfBuzzShaper {
             });
         }
 
-        // Create HarfBuzz face and font
+        // Load the font into HarfBuzz
         let face = Face::from_bytes(font_data, 0);
         let mut hb_font = HbFont::new(face);
 
-        // Set font size (convert from points to font units)
+        // HarfBuzz uses 26.6 fixed-point for coordinates
         let scale = (params.size * 64.0) as i32; // 64 units per point
         hb_font.set_scale(scale, scale);
 
-        // Set variable font variations if specified
+        // Apply variable font coordinates (weight, width, optical size, etc.)
         if !params.variations.is_empty() {
             let variations: Vec<harfbuzz_rs::Variation> = params
                 .variations
@@ -135,19 +140,19 @@ impl Shaper for HarfBuzzShaper {
             hb_font.set_variations(&variations);
         }
 
-        // Create and configure buffer using builder pattern
+        // Set up the text buffer with all our parameters
         let mut buffer = UnicodeBuffer::new()
             .add_str(text)
             .set_direction(Self::to_hb_direction(params.direction));
 
-        // Set language if specified
+        // Tell HarfBuzz which language rules to use
         if let Some(ref lang) = params.language {
             if let Ok(language) = harfbuzz_rs::Language::from_str(lang) {
                 buffer = buffer.set_language(language);
             }
         }
 
-        // Set script if specified
+        // Specify the script (crucial for languages like Arabic, Devanagari)
         if let Some(ref script_str) = params.script {
             if script_str.len() == 4 {
                 let bytes = script_str.as_bytes();
@@ -161,7 +166,7 @@ impl Shaper for HarfBuzzShaper {
             }
         }
 
-        // Convert OpenType features to HarfBuzz features
+        // Convert OpenType features (liga, kern, etc.) to HarfBuzz format
         let hb_features: Vec<Feature> = params
             .features
             .iter()
@@ -181,10 +186,10 @@ impl Shaper for HarfBuzzShaper {
             })
             .collect();
 
-        // Shape the text with features
+        // Let HarfBuzz work its magic
         let output = harfbuzz_rs::shape(&hb_font, buffer, &hb_features);
 
-        // Extract glyph information
+        // Pull out the positioned glyphs HarfBuzz created
         let mut glyphs = Vec::new();
         let mut x_offset = 0.0;
 
@@ -215,7 +220,7 @@ impl Shaper for HarfBuzzShaper {
     }
 
     fn supports_script(&self, _script: &str) -> bool {
-        // HarfBuzz supports all scripts
+        // HarfBuzz knows how to shape every script there is
         true
     }
 }

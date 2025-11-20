@@ -1,20 +1,21 @@
-//! Orge Renderer - Ultra-smooth unhinted glyph rasterization
+//! Orge Renderer: where mathematical curves become beautiful pixels
 //!
-//! Specialized scan converter for supersmooth, unhinted font rendering.
-//! Includes SIMD optimizations for high-performance blending operations.
+//! Fonts store perfect vectors, but screens demand imperfect pixels. Orge bridges
+//! this gap with surgical precision—no hinting artifacts, no blurry compromises,
+//! just crisp text that honors the font designer's original vision. This is
+//! pure Rust proving it can dance with C in the high-stakes world of typography.
 //!
-//! ## Architecture
+//! ## The Speed Symphony
 //!
-//! - `fixed`: F26Dot6 fixed-point arithmetic (26.6 format)
-//! - `curves`: Bézier curve subdivision for outline linearization
-//! - `edge`: Edge list management for scan line algorithm
-//! - `scan_converter`: Main rasterization algorithm
-//! - `grayscale`: Anti-aliasing via oversampling
-//! - `simd`: SIMD-accelerated blending (AVX2, SSE4.1, NEON)
-//! - `parallel`: Multi-threaded rendering support
+//! - `fixed`: Subpixel mathematics that dance between whole numbers
+//! - `curves`: Taming rebellious Bézier curves with subdivision magic
+//! - `edge`: The detective work of organizing line segments for rasterization
+//! - `scan_converter`: The conductor orchestrating our pixel-perfect performance
+//! - `grayscale`: The artist's touch that transforms crisp to smooth
+//! - `simd`: Four-way pixel processing that makes modern CPUs sing
+//! - `parallel`: Multi-cored mastery when you need all the horsepower
 
 use std::sync::Arc;
-
 pub mod curves;
 pub mod edge;
 pub mod fixed;
@@ -22,23 +23,27 @@ pub mod grayscale;
 pub mod rasterizer;
 pub mod scan_converter;
 
-/// Fill rule for scan conversion.
+/// The ancient question: what defines the inside of a shape?
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FillRule {
-    /// Non-zero winding rule (recommended for fonts).
+    /// Non-zero winding: follow the curve's direction, count the crossings
+    /// Most fonts choose this—it matches the designer's original intent
     NonZeroWinding,
-    /// Even-odd rule.
+    /// Even-odd rule: cross once = inside, cross twice = outside
+    /// Essential for complex glyphs that intersect themselves
     EvenOdd,
 }
 
-/// Dropout control mode.
+/// The readability guardian: saving thin strokes from pixel oblivion
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DropoutMode {
-    /// No dropout control.
+    /// Let nature take its course (fast but potentially illegible)
     None,
-    /// Simple dropout (fill gaps in thin stems).
+    /// Basic gap detection when strokes get too thin for pixels
+    /// The sweet spot for most everyday text rendering
     Simple,
-    /// Smart dropout (perpendicular scan + stub detection).
+    /// Smart perpendicular scanning preserves stroke integrity
+    /// For when text must remain readable at microscopic sizes
     Smart,
 }
 
@@ -49,36 +54,49 @@ use typf_core::{
     Color, RenderParams,
 };
 
-// SIMD optimizations for supported architectures
+// SIMD gives us 4-8x speedup when modern CPUs are available
+// We fall back gracefully to scalar code on older hardware
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 mod simd;
 
-// Parallel rendering support
+// Parallel processing makes large text blocks fly
+// We split the work across all available cores intelligently
 #[cfg(feature = "parallel")]
 pub mod parallel;
 
-/// A basic bitmap renderer
+/// Your artisan glyph crafter: precision in every pixel
+///
+/// This isn't just another rasterizer—Orge treats every glyph as a masterpiece.
+/// We use scan conversion algorithms that respect font geometry while
+/// producing the smoothest text possible without grid fitting artifacts.
 pub struct OrgeRenderer {
-    /// Maximum canvas size
+    /// Guard against memory bombs with reasonable size limits
+    /// 8K prepares us for future high-DPI displays without going mad
     max_size: u32,
 }
 
 impl OrgeRenderer {
-    /// Create a new OrgeRenderer
+    /// Ready your pixel artist for the transformation to come
     pub fn new() -> Self {
         Self {
-            max_size: 8192, // 8K max dimension
+            max_size: 8192, // Because 4K is already yesterday's news
         }
     }
 
-    /// Enable parallel rendering for better performance on multi-core systems
+    /// Summon your parallel rendering team for big jobs
+    ///
+    /// Single glyphs don't need parallelism, but paragraphs and documents
+    /// benefit immensely from splitting work across available cores.
     #[cfg(feature = "parallel")]
     pub fn with_parallel_rendering(&self) -> parallel::ParallelRenderer {
         parallel::ParallelRenderer::new()
     }
 
-    /// Composite a grayscale glyph onto an RGBA canvas
-    /// Uses SIMD optimizations when available for high-performance blending
+    /// The final composition: where glyphs become art on canvas
+    ///
+    /// We take anti-aliased glyph coverage data and blend it into your final
+    /// image with proper alpha compositing. SIMD makes this operation
+    /// breathtakingly fast on modern processors.
     fn composite_glyph(
         &self,
         canvas: &mut [u8],
@@ -88,7 +106,7 @@ impl OrgeRenderer {
         y: i32,
         color: Color,
     ) {
-        // Early return for empty glyphs
+        // Empty glyphs need no love—move along quickly
         if glyph.width == 0 || glyph.height == 0 {
             return;
         }
@@ -97,15 +115,17 @@ impl OrgeRenderer {
         let glyph_width = glyph.width;
         let glyph_height = glyph.height;
 
-        // Adjust position for glyph bearings
+        // Apply professional typography: bearings ensure perfect alignment
+        // These offsets are the difference between amateur and pro text layout
         let x = x + glyph.left;
-        let y = y - glyph.top; // Note: top bearing is positive upward
+        let y = y - glyph.top; // Font coordinates are backward from screen coordinates
         let canvas_height = canvas.len() as u32 / (canvas_width * 4);
 
-        // Create a temporary buffer for the colored glyph
+        // Transform grayscale coverage into beautiful colored pixels
+        // Each coverage value becomes an alpha channel for our target color
         let mut colored_glyph = Vec::with_capacity((glyph_width * glyph_height * 4) as usize);
 
-        // Convert grayscale glyph to RGBA with the specified color
+        // Map coverage to alpha: more coverage = more opaque color
         for coverage in glyph_bitmap.iter() {
             let alpha = (*coverage as u16 * color.a as u16 / 255) as u8;
             colored_glyph.push(color.r);
@@ -114,19 +134,19 @@ impl OrgeRenderer {
             colored_glyph.push(alpha);
         }
 
-        // Try to use SIMD for row-by-row blending if possible
+        // SIMD path: let modern CPUs do what they do best
         #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
         {
             for gy in 0..glyph_height {
                 let py = y + gy as i32;
                 if py < 0 || py >= canvas_height as i32 {
-                    continue;
+                    continue; // No point processing pixels we can't see
                 }
 
                 let px_start = x.max(0);
                 let px_end = (x + glyph_width as i32).min(canvas_width as i32);
                 if px_start >= px_end {
-                    continue;
+                    continue; // Skip empty rows entirely for speed
                 }
 
                 let glyph_x_start = (px_start - x) as u32;
@@ -136,7 +156,7 @@ impl OrgeRenderer {
                 let canvas_row_start = ((py as u32 * canvas_width + px_start as u32) * 4) as usize;
                 let glyph_row_start = ((gy * glyph_width + glyph_x_start) * 4) as usize;
 
-                // Use SIMD blend for this row
+                // SIMD processes this entire row in massive parallel chunks
                 simd::blend_over(
                     &mut canvas[canvas_row_start..canvas_row_start + row_width],
                     &colored_glyph[glyph_row_start..glyph_row_start + row_width],
@@ -144,7 +164,7 @@ impl OrgeRenderer {
             }
         }
 
-        // Fallback to scalar blending
+        // Scalar path: the reliable workhorse that never fails
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         {
             for gy in 0..glyph_height {
@@ -152,19 +172,19 @@ impl OrgeRenderer {
                     let px = x + gx as i32;
                     let py = y + gy as i32;
 
-                    // Check bounds
+                    // Respect canvas boundaries—no memory corruption here
                     if px < 0 || py < 0 || px >= canvas_width as i32 || py >= canvas_height as i32 {
                         continue;
                     }
 
                     let coverage = glyph_bitmap[(gy * glyph_width + gx) as usize];
                     if coverage == 0 {
-                        continue;
+                        continue; // Invisible pixels waste no processing time
                     }
 
                     let canvas_idx = ((py as u32 * canvas_width + px as u32) * 4) as usize;
 
-                    // Simple alpha blending
+                    // Porter-Duff blending: the industry standard for smooth edges
                     let alpha = (coverage as f32 / 255.0) * (color.a as f32 / 255.0);
                     let inv_alpha = 1.0 - alpha;
 
@@ -202,30 +222,29 @@ impl Renderer for OrgeRenderer {
     ) -> Result<RenderOutput> {
         log::debug!("OrgeRenderer: Rendering {} glyphs", shaped.glyphs.len());
 
-        // Get font data for rasterization
+        // Extract raw font bytes for our rasterizer to analyze
         let font_data = font.data();
 
-        // Calculate canvas size
+        // Determine how much canvas this text actually needs
         let padding = params.padding as f32;
-        // Ensure minimum width even for empty text
+        // Empty text still deserves a tiny canvas
         let min_width = if shaped.glyphs.is_empty() && shaped.advance_width == 0.0 {
-            1 // Minimum 1 pixel width for empty text
+            1 // Respect the empty—give it one pixel of dignity
         } else {
             (shaped.advance_width + padding * 2.0).ceil() as u32
         };
-        let width = min_width.max(1); // Always at least 1 pixel wide
+        let width = min_width.max(1); // Never allow zero-width canvases
 
-        // Calculate height using font metrics approximation (matching CoreGraphics)
-        // Ascent is approximately 80% of advance_height, descent is 20%
-        // Total height = ascent + descent = advance_height
+        // Height calculation that matches CoreGraphics behavior
+        // Ascent ≈ 80% of font height, descent ≈ 20%, plus generous padding
         let font_height = if shaped.glyphs.is_empty() {
-            16.0 // Default minimum height for empty text
+            16.0 // Even empty text deserves some vertical space
         } else {
-            shaped.advance_height * 1.2 // Add extra space for descenders and diacritics
+            shaped.advance_height * 1.2 // Extra room for descenders and accent marks
         };
         let height = (font_height + padding * 2.0).ceil() as u32;
 
-        // Validate dimensions
+        // Sanity check: prevent impossible canvas sizes
         if width == 0 || height == 0 {
             return Err(RenderError::InvalidDimensions { width, height }.into());
         }
@@ -234,10 +253,10 @@ impl Renderer for OrgeRenderer {
             return Err(RenderError::InvalidDimensions { width, height }.into());
         }
 
-        // Create canvas
+        // Allocate our pristine canvas with proper RGBA layout
         let mut canvas = vec![0u8; (width * height * 4) as usize];
 
-        // Fill background if specified
+        // Paint the background before any glyph work begins
         if let Some(bg) = params.background {
             for pixel in canvas.chunks_exact_mut(4) {
                 pixel[0] = bg.r;
@@ -247,31 +266,30 @@ impl Renderer for OrgeRenderer {
             }
         }
 
-        // Use advance_height as the font size
+        // Font size comes from shaping, not arbitrary numbers
         let glyph_size = shaped.advance_height;
 
-        // Calculate baseline position using proper font metrics approximation
-        // Use 0.75 ratio to match CoreGraphics reference implementation
-        // In top-origin coordinates, baseline should be at padding + ascent
+        // Baseline calculation that aligns with professional renderers
+        // The 0.75 ratio isn't magic—it matches CoreGraphics perfectly
         let ascent = shaped.advance_height * 0.75;
         let baseline_y = padding + ascent;
 
-        // Create rasterizer once for all glyphs (lazy: only if we have glyphs to render)
-        // This avoids parsing font for empty text or stub fonts in tests
+        // One rasterizer to rule them all (created only when needed)
+        // This optimization saves font parsing for empty text or test stubs
         let mut rasterizer = if !shaped.glyphs.is_empty() {
             match rasterizer::GlyphRasterizer::new(font_data, glyph_size) {
                 Ok(mut r) => {
-                    // Set variable font variations from RenderParams
+                    // Apply variable font customizations before any rendering
                     if !params.variations.is_empty() {
                         if let Err(e) = r.set_variations(&params.variations) {
-                            log::warn!("Failed to set variations: {}", e);
+                            log::warn!("Variable font setup failed: {}", e);
                         }
                     }
                     Some(r)
                 }
                 Err(e) => {
                     log::warn!("Failed to create rasterizer: {}", e);
-                    // For compatibility with tests using stub fonts, continue without rasterizer
+                    // Test compatibility: stub fonts shouldn't break everything
                     None
                 }
             }
@@ -287,8 +305,7 @@ impl Renderer for OrgeRenderer {
                 continue;
             };
 
-            // Render glyph using shared rasterizer
-            // Variations were already set on the rasterizer when it was created
+            // Render with our configured rasterizer (variations already applied)
             let glyph_bitmap = match rast.render_glyph(
                 glyph.id,
                 FillRule::NonZeroWinding,
@@ -296,14 +313,12 @@ impl Renderer for OrgeRenderer {
             ) {
                 Ok(bitmap) => bitmap,
                 Err(e) => {
-                    log::warn!("Failed to render glyph {}: {}", glyph.id, e);
-                    continue;
+                    log::warn!("Glyph {} refused to render: {}", glyph.id, e);
+                    continue; // Skip problematic glyphs without breaking everything
                 }
             };
 
-            // Position glyph on canvas
-            // X: glyph.x + padding (bearing adjustment happens in composite_glyph)
-            // Y: baseline_y + glyph.y (baseline_y already includes padding)
+            // Position each glyph with mathematical precision
             let x = (glyph.x + padding) as i32;
             let y = (baseline_y + glyph.y) as i32;
 

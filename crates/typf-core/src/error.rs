@@ -1,10 +1,10 @@
-//! Error types for TYPF
+//! When things go wrong in the pipeline
 
 use thiserror::Error;
 
 pub type Result<T, E = TypfError> = std::result::Result<T, E>;
 
-/// Main error type for TYPF
+/// Every failure in TYPF has a story to tell
 #[derive(Debug, Error)]
 pub enum TypfError {
     #[error("Feature not implemented: {0}")]
@@ -41,7 +41,7 @@ pub enum TypfError {
     Other(String),
 }
 
-/// Font loading errors
+/// When fonts refuse to load
 #[derive(Debug, Error)]
 pub enum FontLoadError {
     #[error("Font file not found: {0}")]
@@ -57,7 +57,7 @@ pub enum FontLoadError {
     SystemFontNotFound(String),
 }
 
-/// Shaping errors
+/// When shaping goes wrong
 #[derive(Debug, Error)]
 pub enum ShapingError {
     #[error("Invalid text input")]
@@ -76,7 +76,7 @@ pub enum ShapingError {
     BackendError(String),
 }
 
-/// Rendering errors
+/// When rendering fails
 #[derive(Debug, Error)]
 pub enum RenderError {
     #[error("Invalid bitmap dimensions: {width}x{height} (max ~10,000 pixels per dimension). For long texts, use smaller font sizes, implement line wrapping, or use SVG export instead of bitmap rendering.")]
@@ -107,7 +107,7 @@ pub enum RenderError {
     PixmapCreationFailed,
 }
 
-/// Export errors
+/// When export can't finish
 #[derive(Debug, Error)]
 pub enum ExportError {
     #[error("Format not supported: {0}")]

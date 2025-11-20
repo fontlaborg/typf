@@ -1,18 +1,19 @@
-//! WebAssembly bindings for TYPF
+//! TYPF meets the web: Text rendering in your browser
 //!
-//! Provides JavaScript-friendly API for using TYPF in web browsers.
+//! JavaScript calls, Rust speed. Perfect for canvas rendering,
+//! text measurement, and dynamic typography on the web.
 
 use crate::prelude::*;
 use wasm_bindgen::prelude::*;
 
-/// Initialize panic hook for better error messages in WASM
+/// Better panic messages make better debugging experiences
 #[wasm_bindgen(start)]
 pub fn init_panic_hook() {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
 }
 
-/// WASM-friendly text renderer
+/// Your browser's new best friend for text rendering
 #[wasm_bindgen]
 pub struct WasmRenderer {
     #[cfg(feature = "shaping-none")]
@@ -23,11 +24,11 @@ pub struct WasmRenderer {
 
 #[wasm_bindgen]
 impl WasmRenderer {
-    /// Create a new WASM renderer with default backends
+    /// Ready to render with the minimal, web-friendly backends
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<WasmRenderer, JsValue> {
         #[cfg(not(all(feature = "shaping-none", feature = "render-orge")))]
-        return Err(JsValue::from_str("WASM build requires shaping-none and render-orge features"));
+        return Err(JsValue::from_str("WASM needs shaping-none and render-orge features"));
 
         #[cfg(all(feature = "shaping-none", feature = "render-orge"))]
         {
@@ -41,9 +42,9 @@ impl WasmRenderer {
         }
     }
 
-    /// Render text to RGBA bitmap
+    /// Turn text into pixels, right in your browser
     ///
-    /// Returns a Uint8Array containing RGBA pixel data
+    /// Returns RGBA bytes ready for canvas or image data
     #[wasm_bindgen]
     pub fn render_text(
         &self,
@@ -57,7 +58,7 @@ impl WasmRenderer {
 
         #[cfg(all(feature = "shaping-none", feature = "render-orge"))]
         {
-            // Create mock font for now
+            // TODO: Replace with real font loading
             struct MockFont {
                 font_size: f32,
             }
@@ -78,7 +79,7 @@ impl WasmRenderer {
 
             let font = std::sync::Arc::new(MockFont { font_size });
 
-            // Shape the text
+            // Shape those characters
             let shaping_params = ShapingParams {
                 size: font_size,
                 ..Default::default()
@@ -108,16 +109,16 @@ impl WasmRenderer {
         }
     }
 
-    /// Get version string
+    /// Which version of TYPF are you running?
     #[wasm_bindgen]
     pub fn version(&self) -> String {
         env!("CARGO_PKG_VERSION").to_string()
     }
 }
 
-/// Simple text measurement function
+/// Quick text width measurement (approximation for now)
 #[wasm_bindgen]
 pub fn measure_text(text: &str, font_size: f32) -> f32 {
-    // Simple approximation for now
+    // TODO: Use proper text measurement
     text.len() as f32 * font_size * 0.6
 }

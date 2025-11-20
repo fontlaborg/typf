@@ -1,19 +1,19 @@
-//! JSONL batch job types for TYPF v2
+//! Structured batch processing: JSON in, JSON out
 //!
-//! Defines job specifications and results for batch processing,
-//! compatible with old-typf for migration.
+//! Perfect for automation, testing frameworks, and integration with
+//! other tools. Each line is a complete job specification.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// Complete batch job specification (JSON input)
+/// A batch of rendering jobs to process
 #[derive(Debug, Clone, Deserialize)]
 pub struct JobSpec {
-    /// API version (should be "2.0") - validated during deserialization
+    /// API version compatibility (defaults to "2.0")
     #[serde(default = "default_version")]
     pub _version: String,
-    /// List of rendering jobs to process
+    /// All the jobs we need to render
     pub jobs: Vec<Job>,
 }
 
@@ -21,129 +21,128 @@ fn default_version() -> String {
     "2.0".to_string()
 }
 
-/// Single rendering job
+/// One complete rendering request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
-    /// Unique job identifier for correlation with results
+    /// How to identify this job in the results
     pub id: String,
-    /// Font configuration
+    /// Which font to use and how
     pub font: FontConfig,
-    /// Text to render
+    /// What text to render
     pub text: TextConfig,
-    /// Rendering parameters
+    /// How the output should look
     pub rendering: RenderingConfig,
 }
 
-/// Font configuration for a job
+/// Font selection and configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FontConfig {
-    /// Path to font file
+    /// Where to find the font file
     pub path: PathBuf,
-    /// Font size in points
+    /// How big the text should be
     pub size: f32,
-    /// Variable font coordinates (axis tag → value)
+    /// Variable font axis settings (weight, width, etc.)
     #[serde(default)]
     pub variations: HashMap<String, f32>,
 }
 
-/// Text configuration for a job
+/// Text content and language settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextConfig {
-    /// Text content to render
+    /// What we're actually rendering
     pub content: String,
-    /// Optional script hint (e.g., "Latn", "Arab")
+    /// Script hint for better shaping (Latn, Arab, etc.)
     #[serde(default)]
     pub script: Option<String>,
-    /// Text direction (ltr, rtl)
+    /// Which way the text flows
     #[serde(default)]
     pub direction: Option<String>,
-    /// Language hint (e.g., "en", "ar")
+    /// Language for locale-specific rules
     #[serde(default)]
     pub language: Option<String>,
-    /// OpenType feature toggles (e.g., ["liga", "kern=0"])
+    /// OpenType features to enable/disable
     #[serde(default)]
     pub features: Vec<String>,
 }
 
-/// Rendering parameters for a job
+/// Output format and rendering settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderingConfig {
-    /// Output format ("ppm", "pgm", "pbm", "png", "metrics")
+    /// What we're outputting (ppm, pgm, pbm, png, metrics)
     pub format: String,
-    /// Encoding ("base64" for JSONL, "binary" for files)
+    /// How to encode the data (base64 for JSONL)
     pub encoding: String,
-    /// Canvas width in pixels
+    /// How wide the canvas should be
     pub width: u32,
-    /// Canvas height in pixels
+    /// How tall the canvas should be
     pub height: u32,
 }
 
-/// Job result (JSONL output line)
+/// What came out of processing a job
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobResult {
-    /// Job ID (matches input)
+    /// Matches the input job ID
     pub id: String,
-    /// Status: "success" or "error"
+    /// Did we succeed or fail?
     pub status: String,
-    /// Rendering output (only present on success)
+    /// The rendered image (if successful)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rendering: Option<RenderingOutput>,
-    /// Metrics output (present when format == "metrics")
+    /// Text metrics (if requested)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metrics: Option<MetricsOutput>,
-    /// Error message (only present on error)
+    /// What went wrong (if failed)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
-    /// Font metadata
+    /// Info about the font we used
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font: Option<FontResult>,
-    /// Timing information
+    /// How long everything took
     pub timing: TimingInfo,
 }
 
-/// Rendering output data
+/// The actual rendered image data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderingOutput {
-    /// Output format ("ppm", "pgm", "pbm", "png")
+    /// What format we produced
     pub format: String,
-    /// Encoding ("base64")
+    /// How we encoded it
     pub encoding: String,
-    /// Base64-encoded image data
+    /// Base64-encoded pixel data
     pub data: String,
-    /// Image width in pixels
+    /// Image dimensions
     pub width: u32,
-    /// Image height in pixels
     pub height: u32,
 }
 
-/// Metrics output data for metrics-only jobs
+/// Text measurement data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricsOutput {
-    /// Number of glyphs rendered
+    /// How many glyphs we shaped
     pub glyph_count: usize,
-    /// Total advance width
+    /// How wide the text runs
     pub advance_width: f32,
-    /// Bounding box (x, y, width, height)
+    /// Bounding box coordinates
     pub bbox: (f32, f32, f32, f32),
 }
 
-/// Timing statistics for a job
+/// Performance timing breakdown
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimingInfo {
-    /// Time spent shaping text (milliseconds)
+    /// Time spent turning characters into glyphs
     pub shape_ms: f64,
-    /// Time spent rendering (milliseconds)
+    /// Time spent turning glyphs into pixels
     pub render_ms: f64,
-    /// Total time for job (milliseconds)
+    /// Total time from start to finish
     pub total_ms: f64,
 }
 
-/// Font metadata emitted with each job result
+/// Information about the font we actually used
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FontResult {
-    /// Font path used
+    /// Which font file was loaded
     pub path: String,
-    /// Applied variation coordinates
+    /// What variable font settings were applied
     #[serde(skip_serializing_if = "HashMap::is_empty", default)]
     pub variations: HashMap<String, f32>,
 }
@@ -209,26 +208,26 @@ impl JobResult {
     }
 }
 
-/// Run batch mode: read JobSpec from stdin, process jobs, output JSONL results
+/// Process a complete batch of jobs from JSON input
 pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
     use std::io::{stdin, stdout, Write};
     use std::time::Instant;
 
     let start = Instant::now();
 
-    // Read entire stdin as JSON
+    // Read the entire job specification
     let mut input = String::new();
     std::io::Read::read_to_string(&mut stdin().lock(), &mut input)?;
 
-    // Parse job specification
+    // Parse what we need to do
     let spec: JobSpec = serde_json::from_str(&input)?;
 
     eprintln!("Processing {} jobs...", spec.jobs.len());
 
-    // Process each job sequentially (could parallelize with rayon)
+    // Process each job (TODO: parallelize with rayon for speed)
     let results: Vec<JobResult> = spec.jobs.iter().map(process_job).collect();
 
-    // Output JSONL results to stdout
+    // Write out results, one JSON per line
     let mut out = stdout().lock();
     for result in results {
         serde_json::to_writer(&mut out, &result)?;
@@ -240,19 +239,20 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Run streaming mode: read JSONL from stdin, process each job, output JSONL results
+/// Stream jobs one by one, perfect for pipelines
 pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
     use std::io::{stdin, stdout, BufRead, Write};
 
     let mut out = stdout().lock();
 
+    // Read, process, and output one job at a time
     for line in stdin().lock().lines() {
         let line = line?;
         if line.trim().is_empty() {
             continue;
         }
 
-        // Parse job from JSONL
+        // Try to parse the job
         let job: Job = match serde_json::from_str(&line) {
             Ok(job) => job,
             Err(e) => {
@@ -264,10 +264,10 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
             },
         };
 
-        // Process job
+        // Do the actual rendering work
         let result = process_job(&job);
 
-        // Output result immediately (streaming)
+        // Send the result back immediately
         serde_json::to_writer(&mut out, &result)?;
         writeln!(&mut out)?;
         out.flush()?;
@@ -276,7 +276,7 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Process a single rendering job
+/// Turn one job spec into one rendered result
 fn process_job(job: &Job) -> JobResult {
     use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
     use std::fs;

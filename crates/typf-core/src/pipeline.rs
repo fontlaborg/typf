@@ -1,4 +1,4 @@
-//! Pipeline implementation
+//! The engine that drives text through six stages to become images
 
 use crate::{
     context::PipelineContext,
@@ -8,17 +8,15 @@ use crate::{
 };
 use std::sync::Arc;
 
-/// The main text processing pipeline
+/// Six stages, one purpose: turn text into rendered output
 ///
-/// A `Pipeline` orchestrates the six-stage text rendering process:
-/// 1. Input Parsing - Validates and prepares input text
-/// 2. Unicode Processing - Normalization and segmentation
-/// 3. Font Selection - Chooses appropriate fonts
-/// 4. Shaping - Converts text to positioned glyphs
-/// 5. Rendering - Rasterizes glyphs to bitmap
-/// 6. Export - Encodes output to desired format
-///
-/// # Examples
+/// The Pipeline orchestrates text's journey through:
+/// 1. Input Parsing - Raw text becomes structured data
+/// 2. Unicode Processing - Scripts normalize, bidi resolves
+/// 3. Font Selection - The right font finds each character
+/// 4. Shaping - Characters transform into positioned glyphs
+/// 5. Rendering - Glyphs become pixels or vectors
+/// 6. Export - Final output emerges as files
 ///
 /// ```ignore
 /// use typf_core::Pipeline;
@@ -44,12 +42,12 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    /// Create a new pipeline builder
+    /// Start building a new pipeline
     pub fn builder() -> PipelineBuilder {
         PipelineBuilder::new()
     }
 
-    /// Process text through the pipeline
+    /// Send text through all six stages and get the final bytes
     pub fn process(
         &self,
         text: &str,
@@ -57,7 +55,7 @@ impl Pipeline {
         shaping_params: &ShapingParams,
         render_params: &RenderParams,
     ) -> Result<Vec<u8>> {
-        // Use the configured backends
+        // Grab the three essential backends
         let shaper = self
             .shaper
             .as_ref()
@@ -71,7 +69,7 @@ impl Pipeline {
             .as_ref()
             .ok_or_else(|| TypfError::ConfigError("No exporter configured".into()))?;
 
-        // Execute pipeline
+        // Shape → Render → Export
         let shaped = shaper.shape(text, font.clone(), shaping_params)?;
         let rendered = renderer.render(&shaped, font, render_params)?;
         let exported = exporter.export(&rendered)?;
@@ -79,9 +77,9 @@ impl Pipeline {
         Ok(exported)
     }
 
-    /// Execute the pipeline with the given input
+    /// Run the full pipeline with a prepared context
     pub fn execute(&self, mut context: PipelineContext) -> Result<PipelineContext> {
-        // Store backends in context
+        // Backends need to know where they live
         if let Some(shaper) = &self.shaper {
             context.set_shaper(shaper.clone());
         }
@@ -92,7 +90,7 @@ impl Pipeline {
             context.set_exporter(exporter.clone());
         }
 
-        // Execute each stage
+        // One stage at a time, each transforms the context
         for stage in &self.stages {
             log::debug!("Executing stage: {}", stage.name());
             context = stage.process(context)?;
@@ -102,25 +100,22 @@ impl Pipeline {
     }
 }
 
-/// Builder for constructing text processing pipelines
+/// Build pipelines your way, piece by piece
 ///
-/// Provides a fluent interface for configuring and constructing a `Pipeline`.
-/// Use this to specify which backends (shaper, renderer, exporter) to use,
-/// and optionally customize the pipeline stages.
-///
-/// # Examples
+/// Chain together the backends you need, customize stages, or use defaults.
+/// The builder pattern makes configuration clear and explicit.
 ///
 /// ```ignore
 /// use typf_core::Pipeline;
 ///
-/// // Build with default stages
+/// // Quick start with defaults
 /// let pipeline = Pipeline::builder()
 ///     .shaper(Arc::new(HarfBuzzShaper::new()))
 ///     .renderer(Arc::new(OrgeRenderer::new()))
 ///     .exporter(Arc::new(PnmExporter::new(PnmFormat::Ppm)))
 ///     .build()?;
 ///
-/// // Build with custom stages
+/// // Full control with custom stages
 /// let pipeline = Pipeline::builder()
 ///     .stage(Box::new(CustomInputStage))
 ///     .shaper(my_shaper)
@@ -135,7 +130,7 @@ pub struct PipelineBuilder {
 }
 
 impl PipelineBuilder {
-    /// Create a new builder
+    /// Start with a clean slate
     pub fn new() -> Self {
         Self {
             stages: Vec::new(),
@@ -145,33 +140,33 @@ impl PipelineBuilder {
         }
     }
 
-    /// Add a stage to the pipeline
+    /// Add your own stage to the flow
     pub fn stage(mut self, stage: Box<dyn Stage>) -> Self {
         self.stages.push(stage);
         self
     }
 
-    /// Set the shaping backend
+    /// Choose who turns characters into glyphs
     pub fn shaper(mut self, shaper: Arc<dyn Shaper>) -> Self {
         self.shaper = Some(shaper);
         self
     }
 
-    /// Set the rendering backend
+    /// Choose who turns glyphs into pixels
     pub fn renderer(mut self, renderer: Arc<dyn Renderer>) -> Self {
         self.renderer = Some(renderer);
         self
     }
 
-    /// Set the export backend
+    /// Choose who packages the final output
     pub fn exporter(mut self, exporter: Arc<dyn Exporter>) -> Self {
         self.exporter = Some(exporter);
         self
     }
 
-    /// Build the pipeline
+    /// Create the pipeline, ready to run
     pub fn build(self) -> Result<Pipeline> {
-        // If no stages specified, use default stages
+        // No custom stages? Use the classic six
         let stages = if self.stages.is_empty() {
             vec![
                 Box::new(InputParsingStage) as Box<dyn Stage>,
@@ -200,7 +195,7 @@ impl Default for PipelineBuilder {
     }
 }
 
-// Default pipeline stages
+// The six stages that make up the default pipeline
 
 struct InputParsingStage;
 impl Stage for InputParsingStage {
@@ -210,7 +205,7 @@ impl Stage for InputParsingStage {
 
     fn process(&self, context: PipelineContext) -> Result<PipelineContext> {
         log::trace!("Parsing input");
-        // Input parsing logic will be implemented
+        // TODO: Validate and structure the raw input
         Ok(context)
     }
 }
@@ -223,7 +218,7 @@ impl Stage for UnicodeProcessingStage {
 
     fn process(&self, context: PipelineContext) -> Result<PipelineContext> {
         log::trace!("Processing Unicode");
-        // Unicode processing logic will be implemented
+        // TODO: Normalize text, resolve bidi, segment by script
         Ok(context)
     }
 }
@@ -236,7 +231,7 @@ impl Stage for FontSelectionStage {
 
     fn process(&self, context: PipelineContext) -> Result<PipelineContext> {
         log::trace!("Selecting font");
-        // Font selection logic will be implemented
+        // TODO: Match characters to fonts, handle fallbacks
         Ok(context)
     }
 }

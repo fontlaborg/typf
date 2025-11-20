@@ -1,6 +1,7 @@
-//! Batch processing module for TYPF CLI
+//! Turn lists of text into images, fast and organized
 //!
-//! Supports processing multiple text inputs from a file or stdin.
+//! Process hundreds or thousands of text lines from files or stdin.
+//! Perfect for testing fonts, generating samples, or batch processing.
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
@@ -14,20 +15,20 @@ use typf_core::{
     Color, RenderParams, ShapingParams,
 };
 
-/// Batch processing configuration
+/// How the batch processor should behave
 #[derive(Debug, Clone)]
 pub struct BatchConfig {
-    /// Input file (or stdin if None)
+    /// Where we're reading from (stdin if None)
     pub input: Option<PathBuf>,
-    /// Output directory
+    /// Where the output files go
     pub output_dir: PathBuf,
-    /// Output file pattern (e.g., "output_{}.ppm")
+    /// How to name the output files ({} gets replaced with line number)
     pub output_pattern: String,
-    /// Font size
+    /// How big the text should be
     pub size: f32,
-    /// Output format
+    /// What format we're outputting
     pub format: String,
-    /// Whether to show progress
+    /// Show progress or work silently
     pub verbose: bool,
 }
 
@@ -123,7 +124,7 @@ impl BatchConfig {
     }
 }
 
-/// Process a batch of text inputs
+/// Turn a file of text lines into a folder of images
 pub fn process_batch<S, R, E, F>(
     config: &BatchConfig,
     shaper: Arc<S>,
@@ -137,7 +138,7 @@ where
     E: Exporter + 'static,
     F: FontRef + 'static,
 {
-    // Open input source (file or stdin)
+    // Open our input source (file or stdin)
     let reader: Box<dyn BufRead> = match &config.input {
         Some(path) => {
             let file = File::open(path).map_err(|e| {
@@ -176,6 +177,7 @@ where
     let mut count = 0;
     let mut errors = 0;
 
+    // Process each line as a separate rendering job
     for (line_num, line_result) in reader.lines().enumerate() {
         let line = match line_result {
             Ok(l) => l.trim().to_string(),
@@ -188,12 +190,12 @@ where
             },
         };
 
-        // Skip empty lines
+        // Skip empty lines - nothing to render
         if line.is_empty() {
             continue;
         }
 
-        // Generate output filename
+        // Figure out where this output file should go
         let output_filename = config
             .output_pattern
             .replace("{}", &(count + 1).to_string());
@@ -203,7 +205,7 @@ where
             println!("[{}/...] Processing: \"{}\"", count + 1, line);
         }
 
-        // Process this line
+        // Shape, render, and export this line
         match process_single_line(&line, &output_path, &shaping_params, &render_params, &components)
         {
             Ok(_) => {
@@ -232,7 +234,7 @@ where
     Ok(count)
 }
 
-/// Pipeline components bundle
+/// All the pipeline pieces, bundled together for easy passing
 struct PipelineComponents<S, R, E, F> {
     shaper: Arc<S>,
     renderer: Arc<R>,
@@ -240,7 +242,7 @@ struct PipelineComponents<S, R, E, F> {
     font: Arc<F>,
 }
 
-/// Process a single line of text
+/// One line of text, one rendered image
 fn process_single_line<S, R, E, F>(
     text: &str,
     output_path: &Path,
@@ -254,20 +256,20 @@ where
     E: Exporter + 'static,
     F: FontRef + 'static,
 {
-    // Shape the text
+    // Shape the text into positioned glyphs
     let shaped = components
         .shaper
         .shape(text, components.font.clone(), shaping_params)?;
 
-    // Render to bitmap
+    // Render those glyphs to pixels
     let rendered = components
         .renderer
         .render(&shaped, components.font.clone(), render_params)?;
 
-    // Export to file
+    // Export the pixels to the chosen format
     let exported = components.exporter.export(&rendered)?;
 
-    // Write to file
+    // Write the result to disk
     let mut file = File::create(output_path)
         .map_err(|e| TypfError::Other(format!("Failed to create output file: {}", e)))?;
     file.write_all(&exported)

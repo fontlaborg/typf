@@ -1,4 +1,7 @@
-//! REPL (Read-Eval-Print Loop) mode for interactive TYPF usage
+//! Interactive text rendering: explore TYPF in real-time
+//!
+//! Perfect for experimenting with fonts, testing text samples,
+//! and understanding how the pipeline works step by step.
 
 #[cfg(feature = "repl")]
 use colored::Colorize;
@@ -16,6 +19,7 @@ pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
     let mut rl = DefaultEditor::new()?;
     let mut context = ReplContext::default();
 
+    // The main interactive loop
     loop {
         let prompt = format!("{}> ", "typf".green().bold());
         let readline = rl.readline(&prompt);
@@ -28,10 +32,10 @@ pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 }
 
-                // Add to history
+                // Remember what we typed
                 rl.add_history_entry(line)?;
 
-                // Process command
+                // Figure out what to do
                 match process_command(line, &mut context) {
                     Ok(ControlFlow::Continue) => {},
                     Ok(ControlFlow::Exit) => {
@@ -195,7 +199,7 @@ fn set_option(
 #[cfg(feature = "repl")]
 fn render_text(text: &str, _context: &ReplContext) -> Result<(), Box<dyn std::error::Error>> {
     println!("{} '{}'", "Rendering:".green(), text.cyan());
-    // TODO: Implement actual rendering with context settings
+    // TODO: Actually render using the context settings
     println!("{}", "(Rendering not yet implemented in REPL)".yellow());
     Ok(())
 }

@@ -1,7 +1,9 @@
-//! Parallel rendering support for OrgeRenderer
+//! Divide and conquer: multi-core rendering made simple
 //!
-//! Provides multi-threaded glyph rendering using Rayon for improved performance
-//! on multi-core systems.
+//! Why render one glyph at a time when you have multiple CPU cores? This module
+//! splits your text across available threads, letting each one work on a portion
+/// of the glyphs. Rayon handles the thread management—we just reap the speed
+/// benefits.
 
 use rayon::prelude::*;
 use typf_core::{
@@ -9,29 +11,30 @@ use typf_core::{
     Color,
 };
 
-/// Parallel glyph renderer
+/// Your multi-core orchestrator: coordinating glyph rendering across threads
 pub struct ParallelRenderer {
-    /// Number of threads to use (0 = auto)
+    /// How many cores to enlist (0 = let Rayon decide optimally)
     thread_count: usize,
 }
 
 impl ParallelRenderer {
-    /// Create a new parallel renderer
+    /// Ready your parallel rendering team
     pub fn new() -> Self {
         Self {
-            thread_count: 0, // Auto-detect
+            thread_count: 0, // Let Rayon's thread pool choose wisely
         }
     }
 
-    /// Create with specific thread count
+    /// Take manual control of thread allocation
     pub fn with_threads(thread_count: usize) -> Self {
         Self { thread_count }
     }
 
-    /// Render glyphs in parallel
+    /// Parallel glyph rendering: faster when you have many cores
     ///
-    /// Splits the glyph list into chunks and renders each chunk in a separate thread.
-    /// Results are then composited together.
+    /// We split your glyph list into chunks, hand each to a different thread,
+    /// then carefully blend results back together. Perfect for large paragraphs
+    /// or batch processing where speed matters.
     pub fn render_parallel(
         &self,
         glyphs: &[PositionedGlyph],
@@ -41,11 +44,11 @@ impl ParallelRenderer {
         color: Color,
         background: Option<Color>,
     ) -> Vec<u8> {
-        // Initialize canvas
+        // Set up our rendering canvas with proper dimensions
         let canvas_size = (canvas_width * canvas_height * 4) as usize;
         let mut canvas = vec![0u8; canvas_size];
 
-        // Fill background if specified
+        // Apply background color before任何 glyph rendering begins
         if let Some(bg) = background {
             for pixel in canvas.chunks_exact_mut(4) {
                 pixel[0] = bg.r;
@@ -55,7 +58,7 @@ impl ParallelRenderer {
             }
         }
 
-        // Configure thread pool if needed
+        // Override Rayon's default thread pool if you know better
         if self.thread_count > 0 {
             rayon::ThreadPoolBuilder::new()
                 .num_threads(self.thread_count)
@@ -63,7 +66,7 @@ impl ParallelRenderer {
                 .ok();
         }
 
-        // Render glyphs in parallel
+        // Send each glyph to a thread and collect the results
         let glyph_bitmaps: Vec<_> = glyphs
             .par_iter()
             .map(|glyph| {
@@ -72,7 +75,7 @@ impl ParallelRenderer {
             })
             .collect();
 
-        // Composite results (must be sequential for correct blending)
+        // Carefully blend results back together (order matters for alpha)
         for (glyph, bitmap) in glyph_bitmaps {
             self.composite_glyph(
                 &mut canvas,
@@ -87,10 +90,11 @@ impl ParallelRenderer {
         canvas
     }
 
-    /// Render glyph regions in parallel
+    /// Regional parallelism: divide the canvas, conquer the text
     ///
-    /// Divides the canvas into regions and renders each region in parallel.
-    /// This is useful for large text blocks where glyphs don't overlap.
+    /// Instead of splitting glyphs, we split the canvas itself. Each thread
+    /// works on a different horizontal region. This shines when you have
+    /// tall text blocks with minimal cross-line glyph overlap.
     pub fn render_regions(
         &self,
         shaped: &ShapingResult,
@@ -99,18 +103,18 @@ impl ParallelRenderer {
         glyph_renderer: impl Fn(&PositionedGlyph) -> Vec<u8> + Send + Sync,
         color: Color,
     ) -> Vec<u8> {
-        // Determine optimal region size
+        // Split canvas into sensible horizontal strips
         let region_height = 64; // Typical line height
         let num_regions = (canvas_height / region_height).max(1);
 
-        // Group glyphs by region
+        // Assign each glyph to its home region based on Y position
         let mut regions = vec![Vec::new(); num_regions as usize];
         for glyph in &shaped.glyphs {
             let region_idx = (glyph.y as u32 / region_height).min(num_regions - 1) as usize;
             regions[region_idx].push(glyph.clone());
         }
 
-        // Render regions in parallel
+        // Let each thread paint its portion of the canvas independently
         let rendered_regions: Vec<_> = regions
             .par_iter()
             .enumerate()
@@ -136,7 +140,7 @@ impl ParallelRenderer {
             })
             .collect();
 
-        // Combine regions
+        // Stitch the regions together into our final masterpiece
         let mut canvas = vec![0u8; (canvas_width * canvas_height * 4) as usize];
         for (idx, region_data) in rendered_regions {
             let region_y = idx as u32 * region_height;
@@ -148,7 +152,7 @@ impl ParallelRenderer {
         canvas
     }
 
-    /// Composite a glyph bitmap onto the canvas
+    /// The final touch: blending individual glyphs into the canvas
     fn composite_glyph(
         &self,
         canvas: &mut [u8],
@@ -158,7 +162,7 @@ impl ParallelRenderer {
         y: i32,
         color: Color,
     ) {
-        // Simple compositing - in production would use SIMD
+        // Alpha blending with proper color mixing (SIMD would be faster here)
         let glyph_size = (glyph_bitmap.len() as f32).sqrt() as u32;
         let canvas_height = canvas.len() as u32 / (canvas_width * 4);
 
@@ -178,7 +182,7 @@ impl ParallelRenderer {
 
                 let canvas_idx = ((py as u32 * canvas_width + px as u32) * 4) as usize;
 
-                // Alpha blending
+                // Classic Porter-Duff blending for smooth edges
                 let alpha = (coverage as f32 / 255.0) * (color.a as f32 / 255.0);
                 let inv_alpha = 1.0 - alpha;
 
@@ -201,7 +205,7 @@ impl Default for ParallelRenderer {
     }
 }
 
-/// Parallel rendering statistics
+/// Your performance dashboard: measuring parallel benefits
 #[derive(Debug, Clone, Default)]
 pub struct ParallelStats {
     pub total_glyphs: usize,

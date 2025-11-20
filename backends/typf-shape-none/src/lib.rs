@@ -1,7 +1,9 @@
-//! None Shaper - Simple left-to-right horizontal advancement
+//! When you just need characters laid out: the simplest possible shaper
 //!
-//! This is the most basic shaper that simply advances glyphs
-//! horizontally without any complex shaping logic.
+//! This is our "just the basics" shaper. No ligatures, no kerning, no complex
+//! script support. Just takes your text, finds the matching glyphs, and lays
+//! them out left-to-right. Perfect for ASCII, debugging, or when you don't
+//! want the complexity of HarfBuzz.
 
 use std::sync::Arc;
 use typf_core::{
@@ -11,11 +13,11 @@ use typf_core::{
     ShapingParams,
 };
 
-/// A minimal shaper that only does simple LTR advancement
+/// The simplest shaper: one character = one glyph, laid out left-to-right
 pub struct NoneShaper;
 
 impl NoneShaper {
-    /// Create a new NoneShaper
+    /// Creates a new shaper that does the absolute minimum
     pub fn new() -> Self {
         Self
     }
@@ -44,15 +46,16 @@ impl Shaper for NoneShaper {
         let mut x_advance = 0.0;
         let scale = params.size / font.units_per_em() as f32;
 
+        // One character becomes one glyph, positioned sequentially
         for (cluster, ch) in text.char_indices() {
-            // Get glyph ID for character
+            // Find which glyph draws this character
             let glyph_id = font.glyph_id(ch).unwrap_or(0); // Use .notdef (0) if not found
 
-            // Get advance width
+            // Get the glyph's width and scale it to our display size
             let advance_unscaled = font.advance_width(glyph_id);
             let advance = advance_unscaled * scale + params.letter_spacing;
 
-            // Create positioned glyph
+            // Place the glyph at the current position
             glyphs.push(PositionedGlyph {
                 id: glyph_id,
                 x: x_advance,
@@ -61,6 +64,7 @@ impl Shaper for NoneShaper {
                 cluster: cluster as u32,
             });
 
+            // Move to the right for the next glyph
             x_advance += advance;
         }
 
@@ -73,7 +77,7 @@ impl Shaper for NoneShaper {
     }
 
     fn supports_script(&self, _script: &str) -> bool {
-        // Only claim to support basic Latin
+        // We're honest about our limitations
         false
     }
 }

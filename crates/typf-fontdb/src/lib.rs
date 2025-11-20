@@ -1,4 +1,8 @@
-//! Font database and loading module for TYPF
+//! Where fonts come to life: database and loading for TYPF
+//!
+//! The third stage of the pipeline. Finds, loads, and manages fonts so
+//! your text can wear the right glyphs. Without fonts, text is just
+//! invisible characters floating in digital space.
 
 use std::fs;
 use std::path::Path;
@@ -11,7 +15,7 @@ use typf_core::{
     traits::FontRef as TypfFontRef,
 };
 
-/// A loaded font with its data
+/// A font that's been brought into memory, ready to shape text
 pub struct Font {
     data: Vec<u8>,
     font_ref: Option<ReadFontRef<'static>>,
@@ -19,7 +23,7 @@ pub struct Font {
 }
 
 impl Font {
-    /// Load a font from a file path
+    /// Opens a font file from disk and makes it usable
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let data = fs::read(path.as_ref())
             .map_err(|_| FontLoadError::FileNotFound(path.as_ref().display().to_string()))?;
@@ -27,16 +31,18 @@ impl Font {
         Self::from_data(data)
     }
 
-    /// Load a font from raw data
+    /// Turns raw font bytes into something we can work with
     pub fn from_data(data: Vec<u8>) -> Result<Self> {
-        // Leak the data to get a 'static reference (font will own the data)
+        // We leak the data intentionally - fonts live for the program's lifetime
+        // This avoids the lifetime gymnastics of font parsing
         let data_ref: &'static [u8] = Box::leak(data.clone().into_boxed_slice());
 
-        // Parse the font (handle TrueType Collections)
+        // Parse the font (works for single fonts and TTC collections)
         let font_ref =
             ReadFontRef::from_index(data_ref, 0).map_err(|_| FontLoadError::InvalidData)?;
 
-        // Get units per em
+        // Extract the fundamental measurement: units per em
+        // This tells us how big the font's grid is
         let units_per_em = font_ref
             .head()
             .map(|head| head.units_per_em())
@@ -49,34 +55,34 @@ impl Font {
         })
     }
 
-    /// Get glyph ID for a character
+    /// Finds which glyph draws this character
     pub fn glyph_id(&self, ch: char) -> Option<u32> {
         self.font_ref
             .as_ref()
             .and_then(|font| font.cmap().ok()?.map_codepoint(ch).map(|gid| gid.to_u32()))
     }
 
-    /// Get advance width for a glyph
+    /// Measures how wide this glyph will be
     pub fn advance_width(&self, glyph_id: u32) -> f32 {
         self.font_ref
             .as_ref()
             .and_then(|font| {
-                // Get horizontal metrics table
+                // Look up the horizontal metrics table
                 let hmtx = font.hmtx().ok()?;
 
-                // Get advance width for this glyph
+                // Get the advance width for this specific glyph
                 use read_fonts::types::GlyphId;
                 let glyph = GlyphId::new(glyph_id);
                 let advance = hmtx.advance(glyph)?;
 
-                // Convert from font units to a standard value
+                // Convert from font units to something predictable
                 let upem = self.units_per_em as f32;
                 Some(advance as f32 / upem * 1000.0)
             })
-            .unwrap_or(500.0)
+            .unwrap_or(500.0) // Reasonable default when metrics fail
     }
 
-    /// Get the total number of glyphs in the font
+    /// Counts how many different glyphs this font contains
     pub fn glyph_count(&self) -> Option<u32> {
         self.font_ref
             .as_ref()
@@ -106,14 +112,14 @@ impl TypfFontRef for Font {
     }
 }
 
-/// Font database for managing multiple fonts
+/// Your font library: keeps track of all loaded fonts
 pub struct FontDatabase {
     fonts: Vec<Arc<Font>>,
     default_font: Option<Arc<Font>>,
 }
 
 impl FontDatabase {
-    /// Create a new empty font database
+    /// Starts with an empty library
     pub fn new() -> Self {
         Self {
             fonts: Vec::new(),
@@ -121,12 +127,12 @@ impl FontDatabase {
         }
     }
 
-    /// Load a font and add it to the database
+    /// Loads a font file and remembers it for future use
     pub fn load_font(&mut self, path: impl AsRef<Path>) -> Result<Arc<Font>> {
         let font = Arc::new(Font::from_file(path)?);
         self.fonts.push(font.clone());
 
-        // Set as default if it's the first font
+        // First font loaded becomes the default
         if self.default_font.is_none() {
             self.default_font = Some(font.clone());
         }
@@ -134,12 +140,12 @@ impl FontDatabase {
         Ok(font)
     }
 
-    /// Load font from data
+    /// Adds a font from memory to the library
     pub fn load_font_data(&mut self, data: Vec<u8>) -> Result<Arc<Font>> {
         let font = Arc::new(Font::from_data(data)?);
         self.fonts.push(font.clone());
 
-        // Set as default if it's the first font
+        // First font loaded becomes the default
         if self.default_font.is_none() {
             self.default_font = Some(font.clone());
         }
@@ -147,17 +153,17 @@ impl FontDatabase {
         Ok(font)
     }
 
-    /// Get the default font
+    /// Returns the font we fall back to when nothing else is specified
     pub fn default_font(&self) -> Option<Arc<Font>> {
         self.default_font.clone()
     }
 
-    /// Get all fonts
+    /// Shows all fonts currently loaded
     pub fn fonts(&self) -> &[Arc<Font>] {
         &self.fonts
     }
 
-    /// Find fonts by name (simplified - would need metadata in real implementation)
+    /// Looks up a font by name (simplified for now)
     pub fn find_font(&self, _name: &str) -> Option<Arc<Font>> {
         self.default_font.clone()
     }

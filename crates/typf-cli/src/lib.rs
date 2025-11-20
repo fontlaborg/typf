@@ -1,3 +1,9 @@
+//! Command-line interface for TYPF text rendering
+//!
+//! This crate provides the CLI that turns TYPF's powerful pipeline
+//! into commands you can run from your terminal or script.
+
+/// Simple addition function for demonstration
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
