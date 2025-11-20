@@ -8,9 +8,9 @@ and PNG bitmap output across all renderers.
 
 import sys
 import time
-from pathlib import Path
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from pathlib import Path
+from typing import Dict, List, Optional
 
 # Import from bindings/python if available (development)
 sys.path.insert(0, str(Path(__file__).parent.parent / "bindings" / "python"))
@@ -25,6 +25,7 @@ except ImportError:
 @dataclass
 class BenchmarkResult:
     """Results from a single benchmark run."""
+
     renderer: str
     format: str
     text: str
@@ -46,16 +47,14 @@ class SVGBenchmark:
 
         # Test configurations
         self.sample_text = "AVAST Wallflower Efficiency"  # Same as typfme.py
-        self.font_path = self.base_dir / "fonts" / "Kalnia[wdth,wght].ttf"
+        self.font_path = self.base_dir.parent / "test-fonts" / "Kalnia[wdth,wght].ttf"
         self.font_size = 48.0
         self.iterations = 500  # More iterations for statistical significance
 
         # Renderers that support both PNG and SVG
         self.renderers = ["coregraphics", "orge", "skia", "zeno"]
 
-    def benchmark_format(
-        self, renderer: str, format: str
-    ) -> Optional[BenchmarkResult]:
+    def benchmark_format(self, renderer: str, format: str) -> Optional[BenchmarkResult]:
         """Benchmark a specific renderer and format combination."""
         try:
             engine = typf.Typf(shaper="harfbuzz", renderer=renderer)
@@ -113,7 +112,11 @@ class SVGBenchmark:
 
             # Get output size from last iteration
             if format == "svg":
-                output_size = len(output.encode("utf-8")) if isinstance(output, str) else len(output)
+                output_size = (
+                    len(output.encode("utf-8"))
+                    if isinstance(output, str)
+                    else len(output)
+                )
             else:
                 output_size = len(output) if output else 0
 
@@ -134,9 +137,9 @@ class SVGBenchmark:
 
     def run(self):
         """Run comprehensive SVG vs PNG benchmark."""
-        print("="*100)
+        print("=" * 100)
         print("TYPF SVG vs PNG BENCHMARK")
-        print("="*100)
+        print("=" * 100)
         print(f"Text: {self.sample_text}")
         print(f"Font: {self.font_path.name}")
         print(f"Size: {self.font_size}px")
@@ -147,7 +150,7 @@ class SVGBenchmark:
         # Benchmark each renderer with both formats
         for renderer in self.renderers:
             print(f"\n{renderer.upper()}")
-            print("-"*100)
+            print("-" * 100)
 
             for format in ["png", "svg"]:
                 result = self.benchmark_format(renderer, format)
@@ -172,11 +175,13 @@ class SVGBenchmark:
 
     def _generate_comparison_table(self, results: List[BenchmarkResult]):
         """Generate performance comparison table."""
-        print("\n" + "="*100)
+        print("\n" + "=" * 100)
         print("PERFORMANCE COMPARISON: SVG vs PNG")
-        print("="*100)
-        print(f"{'Renderer':<15} {'PNG (ms)':<12} {'SVG (ms)':<12} {'Speedup':<10} {'PNG Size':<12} {'SVG Size':<12} {'Ratio'}")
-        print("-"*100)
+        print("=" * 100)
+        print(
+            f"{'Renderer':<15} {'PNG (ms)':<12} {'SVG (ms)':<12} {'Speedup':<10} {'PNG Size':<12} {'SVG Size':<12} {'Ratio'}"
+        )
+        print("-" * 100)
 
         # Group by renderer
         by_renderer: Dict[str, Dict[str, BenchmarkResult]] = {}
@@ -201,7 +206,7 @@ class SVGBenchmark:
                 if speedup > 1:
                     speedup_str = f"SVG {speedup:.2f}x"
                 else:
-                    speedup_str = f"PNG {1/speedup:.2f}x"
+                    speedup_str = f"PNG {1 / speedup:.2f}x"
 
                 print(
                     f"{renderer:<15} {png.avg_time_ms:>9.3f}   {svg.avg_time_ms:>9.3f}   "
@@ -210,9 +215,9 @@ class SVGBenchmark:
 
     def _generate_efficiency_analysis(self, results: List[BenchmarkResult]):
         """Analyze efficiency trade-offs."""
-        print("\n" + "="*100)
+        print("\n" + "=" * 100)
         print("EFFICIENCY ANALYSIS")
-        print("="*100)
+        print("=" * 100)
 
         # Find best in each category
         png_results = [r for r in results if r.format == "png"]
@@ -223,39 +228,59 @@ class SVGBenchmark:
             smallest_png = min(png_results, key=lambda r: r.output_size_bytes)
 
             print(f"\n📊 PNG Results:")
-            print(f"   Fastest: {fastest_png.renderer} @ {fastest_png.avg_time_ms:.3f}ms")
-            print(f"   Smallest: {smallest_png.renderer} @ {smallest_png.output_size_bytes/1024:.2f} KB")
+            print(
+                f"   Fastest: {fastest_png.renderer} @ {fastest_png.avg_time_ms:.3f}ms"
+            )
+            print(
+                f"   Smallest: {smallest_png.renderer} @ {smallest_png.output_size_bytes / 1024:.2f} KB"
+            )
 
         if svg_results:
             fastest_svg = min(svg_results, key=lambda r: r.avg_time_ms)
             smallest_svg = min(svg_results, key=lambda r: r.output_size_bytes)
 
             print(f"\n🎨 SVG Results:")
-            print(f"   Fastest: {fastest_svg.renderer} @ {fastest_svg.avg_time_ms:.3f}ms")
-            print(f"   Smallest: {smallest_svg.renderer} @ {smallest_svg.output_size_bytes/1024:.2f} KB")
+            print(
+                f"   Fastest: {fastest_svg.renderer} @ {fastest_svg.avg_time_ms:.3f}ms"
+            )
+            print(
+                f"   Smallest: {smallest_svg.renderer} @ {smallest_svg.output_size_bytes / 1024:.2f} KB"
+            )
 
         # Overall winner
         all_fastest = min(results, key=lambda r: r.avg_time_ms)
         all_smallest = min(results, key=lambda r: r.output_size_bytes)
 
         print(f"\n🏆 Overall Winners:")
-        print(f"   Fastest: {all_fastest.renderer} {all_fastest.format.upper()} @ {all_fastest.avg_time_ms:.3f}ms")
-        print(f"   Smallest: {all_smallest.renderer} {all_smallest.format.upper()} @ {all_smallest.output_size_bytes/1024:.2f} KB")
+        print(
+            f"   Fastest: {all_fastest.renderer} {all_fastest.format.upper()} @ {all_fastest.avg_time_ms:.3f}ms"
+        )
+        print(
+            f"   Smallest: {all_smallest.renderer} {all_smallest.format.upper()} @ {all_smallest.output_size_bytes / 1024:.2f} KB"
+        )
 
     def _generate_summary(self, results: List[BenchmarkResult]):
         """Generate executive summary."""
-        print("\n" + "="*100)
+        print("\n" + "=" * 100)
         print("SUMMARY")
-        print("="*100)
+        print("=" * 100)
 
         png_count = len([r for r in results if r.format == "png"])
         svg_count = len([r for r in results if r.format == "svg"])
 
-        png_avg_time = sum(r.avg_time_ms for r in results if r.format == "png") / max(png_count, 1)
-        svg_avg_time = sum(r.avg_time_ms for r in results if r.format == "svg") / max(svg_count, 1)
+        png_avg_time = sum(r.avg_time_ms for r in results if r.format == "png") / max(
+            png_count, 1
+        )
+        svg_avg_time = sum(r.avg_time_ms for r in results if r.format == "svg") / max(
+            svg_count, 1
+        )
 
-        png_avg_size = sum(r.output_size_bytes for r in results if r.format == "png") / max(png_count, 1)
-        svg_avg_size = sum(r.output_size_bytes for r in results if r.format == "svg") / max(svg_count, 1)
+        png_avg_size = sum(
+            r.output_size_bytes for r in results if r.format == "png"
+        ) / max(png_count, 1)
+        svg_avg_size = sum(
+            r.output_size_bytes for r in results if r.format == "svg"
+        ) / max(svg_count, 1)
 
         print(f"\n📈 Average Performance:")
         print(f"   PNG: {png_avg_time:.3f}ms/op")
@@ -263,18 +288,24 @@ class SVGBenchmark:
 
         if svg_avg_time > 0:
             if png_avg_time < svg_avg_time:
-                print(f"   → PNG is {svg_avg_time/png_avg_time:.2f}x faster on average")
+                print(
+                    f"   → PNG is {svg_avg_time / png_avg_time:.2f}x faster on average"
+                )
             else:
-                print(f"   → SVG is {png_avg_time/svg_avg_time:.2f}x faster on average")
+                print(
+                    f"   → SVG is {png_avg_time / svg_avg_time:.2f}x faster on average"
+                )
 
         print(f"\n💾 Average File Size:")
-        print(f"   PNG: {png_avg_size/1024:.2f} KB")
-        print(f"   SVG: {svg_avg_size/1024:.2f} KB")
-        print(f"   → Size ratio: SVG is {svg_avg_size/png_avg_size:.2f}x the size of PNG")
+        print(f"   PNG: {png_avg_size / 1024:.2f} KB")
+        print(f"   SVG: {svg_avg_size / 1024:.2f} KB")
+        print(
+            f"   → Size ratio: SVG is {svg_avg_size / png_avg_size:.2f}x the size of PNG"
+        )
 
-        print("\n" + "="*100)
+        print("\n" + "=" * 100)
         print(f"✅ Benchmarked {len(results)} configurations successfully")
-        print("="*100)
+        print("=" * 100)
 
 
 def main():

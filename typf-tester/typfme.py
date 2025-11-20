@@ -72,7 +72,7 @@ class TypfTester:
 
     def __init__(self):
         self.base_dir = Path(__file__).parent
-        self.fonts_dir = self.base_dir / "fonts"
+        self.fonts_dir = self.base_dir.parent / "test-fonts"
         self.output_dir = self.base_dir / "output"
         self.output_dir.mkdir(exist_ok=True)
 

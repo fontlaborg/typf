@@ -1,24 +1,27 @@
 # TypF TODO List
 
-## Release Tasks (v2.0.0)
+## Immediate
 
-- [ ] **Version Bump** - Update to v2.0.0 in all Cargo.toml files
-- [ ] **Final Test** - Run full test suite
-- [ ] **GitHub Release** - Create v2.0.0 release with notes
-- [ ] **crates.io** - Publish workspace members to crates.io
-- [ ] **Python Wheels** - Build and publish to PyPI
+- [x] Process @./issues/372.md
+- [x] Process @./issues/381.md
+- [x] Process @./issues/381-cli-spec.md
+- [x] Implement unified CLI for Rust and Python
+- [x] Clean up WORK.md
+- [x] Update README.md with new CLI syntax
+- [x] Test Python CLI with Click
 
-## Future Work (v2.1+)
+## Release (v2.0.0)
 
-- [ ] Color font support (COLR/CPAL, SVG tables) - v2.2
-- [ ] REPL mode for interactive text shaping - v2.1
-- [ ] Rich output with progress bars - v2.1
-- [ ] DirectWrite/Direct2D Windows backends - v2.2
-- [ ] Variable fonts optimization - v2.2
-- [ ] SIMD optimizations for rendering - v2.3
+- [ ] Version bump to v2.0.0 in all Cargo.toml files
+- [ ] Final comprehensive test run
+- [ ] Create GitHub release with notes
+- [ ] Publish to crates.io
+- [ ] Build and publish Python wheels to PyPI 
 
----
+## Future Work (v3.0)
 
-**Project Status**: v2.0 development complete (78 rounds, 206 tests passing)
+- [ ] Color font support (COLR/CPAL, SVG tables)
+- [ ] DirectWrite/Direct2D Windows backends
+- [ ] Variable fonts optimization
+- [ ] SIMD optimizations for rendering
 
-_Updated: 2025-11-20_

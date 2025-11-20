@@ -13,7 +13,6 @@ use crate::{DropoutMode, FillRule};
 use read_fonts::FontRef as ReadFontsRef;
 use skrifa::instance::Size;
 use skrifa::outline::DrawSettings;
-use skrifa::prelude::LocationRef;
 use skrifa::{GlyphId as SkrifaGlyphId, MetadataProvider};
 
 /// Your personal glyph artist: turning outlines into masterpieces
@@ -331,7 +330,7 @@ impl<'a> GlyphRasterizer<'a> {
 
         // Draw the glyph outline
         let size_setting = Size::new(self.size);
-        let location_ref: LocationRef = Default::default(); // No variations for now
+        let location_ref = self.location.coords(); // Use stored variations
         let draw_settings = DrawSettings::unhinted(size_setting, location_ref);
 
         glyph

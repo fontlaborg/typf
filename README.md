@@ -16,8 +16,8 @@ git clone https://github.com/fontlaborg/typf.git
 cd typf
 cargo build --release
 
-./target/release/typf "Hello, World!" --output hello.ppm --size 48
-open hello.ppm
+./target/release/typf render "Hello, World!" -o hello.png -s 48
+open hello.png
 ```
 
 That's it. Your text is rendered.
@@ -59,8 +59,78 @@ cargo build --release --all-features
 
 # SVG export (23× faster than PNG)
 cargo build --release --features export-svg
-./target/release/typf "Scalable" --output out.svg --size 48
+./target/release/typf render "Scalable" -o out.svg -s 48
 ```
+
+## CLI usage
+
+The unified CLI supports both Rust (`typf`) and Python (`typfpy`) with identical syntax.
+
+**Show available backends:**
+```bash
+typf info
+typf info --shapers --renderers --formats
+```
+
+**Basic rendering:**
+```bash
+# Simple text
+typf render "Hello World" -o output.png
+
+# With custom font and size
+typf render "Typography" -f /path/to/font.ttf -s 128 -o big.png
+
+# SVG output
+typf render "Vector" -f font.ttf -O svg -o vector.svg
+```
+
+**Advanced options:**
+```bash
+# Arabic text with proper shaping
+typf render "مرحبا بالعالم" \
+  -f arabic.ttf \
+  --shaper hb \
+  --language ar \
+  --script Arab \
+  --direction rtl \
+  -o arabic.png
+
+# Custom colors (RRGGBBAA hex)
+typf render "Colored Text" \
+  -c FF0000FF \
+  -b FFFFFFFF \
+  -o colored.png
+
+# Font features
+typf render "Ligatures" \
+  -f font.ttf \
+  -F "liga,kern,dlig" \
+  -o features.png
+
+# Unicode escapes
+typf render "Wave \u{1F44B}" -o emoji.png
+```
+
+**Batch processing:**
+```bash
+# Create jobs file
+cat > jobs.jsonl << 'EOF'
+{"text": "Title", "size": 72, "output": "title.png"}
+{"text": "Subtitle", "size": 48, "output": "subtitle.png"}
+{"text": "Body", "size": 16, "output": "body.png"}
+EOF
+
+# Process all jobs
+typf batch -i jobs.jsonl -o ./rendered/
+```
+
+**Python CLI** (identical syntax):
+```bash
+typfpy info
+typfpy render "Hello" -f font.ttf -o output.png -s 72
+```
+
+See [CLI_MIGRATION.md](./CLI_MIGRATION.md) for complete documentation.
 
 ## Use in code
 
@@ -93,14 +163,15 @@ Tests all backend combos on your hardware. Results go to `output/`.
 
 ## Status
 
-Production ready. All features work:
+**v2.0.0** - Production ready. All features work:
 
-- ✅ 6-stage pipeline  
-- ✅ 4 shapers, 5 renderers
+- ✅ 6-stage pipeline
+- ✅ 4 shapers, 5 renderers (20 combinations)
 - ✅ PNM, PNG, SVG, JSON export
-- ✅ Python bindings
+- ✅ Unified CLI (Rust + Python)
+- ✅ Python bindings (PyO3)
 - ✅ Linux, macOS, Windows, WASM
-- ✅ 206 tests pass
+- ✅ 206 unit tests + 240 integration tests pass
 
 ## Limits
 

@@ -20,7 +20,7 @@ except ImportError:
 
 def main():
     base_dir = Path(__file__).parent.parent  # typf-tester
-    font_path = base_dir / "fonts" / "Kalnia[wdth,wght].ttf"
+    font_path = base_dir.parent / "test-fonts" / "Kalnia[wdth,wght].ttf"
     output_dir = Path(__file__).parent
 
     if not font_path.exists():

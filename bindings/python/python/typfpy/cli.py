@@ -1,34 +1,14 @@
 """
 TYPF Command Line Interface - Beautiful text from your terminal
 
-Where professional text rendering meets command-line simplicity.
-Render, shape, and export text with the same power that drives
-desktop applications—all from your terminal.
-
-## Quick Start
-
-```bash
-# Render text to an image
-python -m typfpy render "Hello, World!" hello.png
-
-# Use custom fonts and colors
-python -m typfpy render "مرحبا" arabic.png --font=/path/to/font.ttf
-```
+Unified CLI using Click for consistent interface with Rust CLI.
 """
 
 import sys
 from pathlib import Path
 from typing import Optional
 
-# Fire gives us that magical command-line interface
-try:
-    import fire
-except ImportError:
-    print(
-        "Error: 'fire' package not installed. Install with: pip install fire",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+import click
 
 # Our Rust-Python bridge must be available
 try:
@@ -38,209 +18,267 @@ except ImportError:
     sys.exit(1)
 
 
-class TypfCLI:
-    """Your gateway to professional text rendering from the command line"""
+@click.group()
+@click.version_option(version=__version__, prog_name="typfpy")
+def cli():
+    """TYPF - Professional text rendering from the command line"""
+    pass
 
-    def __init__(self):
-        """Initialize the CLI with version tracking"""
-        self.version = __version__
 
-    def render(
-        self,
-        text: str,
-        output: str,
-        font: Optional[str] = None,
-        size: float = 48.0,
-        shaper: str = "harfbuzz",
-        renderer: str = "orge",
-        format: Optional[str] = None,
-        color: str = "0,0,0,255",
-        background: Optional[str] = None,
-        padding: int = 10,
-    ):
-        """
-        Transform your text into stunning images
+@cli.command(name="info")
+@click.option("--shapers", is_flag=True, help="List available shaping backends")
+@click.option("--renderers", is_flag=True, help="List available rendering backends")
+@click.option("--formats", is_flag=True, help="List available output formats")
+def info(shapers: bool, renderers: bool, formats: bool):
+    """Display information about available backends and formats"""
 
-        This command takes your text, shapes it with professional algorithms,
-        and renders it to your favorite image format. Perfect for thumbnails,
-        headers, testing, or any time you need programmatic text rendering.
+    # If no specific flags, show all info
+    show_all = not (shapers or renderers or formats)
 
-        Args:
-            text: The text you want to render
-            output: Where to save the resulting image
-            font: Path to a .ttf/.otf font file (optional - uses built-in font if omitted)
-            size: How big should the text appear (in points/pixels)
-            shaper: Text shaping engine ('none', 'harfbuzz', 'coretext', 'icu-hb')
-            renderer: Pixel rendering engine ('orge', 'skia', 'zeno', 'coregraphics', 'json')
-            format: Output format (guessed from file extension if not specified)
-            color: Text color as "R,G,B,A" (default: black)
-            background: Background color as "R,G,B,A" (optional: transparent if omitted)
-            padding: Space around your text in pixels
+    click.echo(f"TYPF v{__version__}")
+    click.echo()
 
-        Examples:
-            # Simple black text on transparent background
-            typf render "Hello World" hello.png
+    if show_all or shapers:
+        click.echo("Shapers:")
+        click.echo("  none              - No shaping (direct character mapping)")
+        click.echo("  hb                - HarfBuzz (Unicode-aware text shaping)")
+        click.echo("  icu-hb            - ICU + HarfBuzz (advanced Unicode + shaping)")
+        if show_all:
+            click.echo()
 
-            # Arabic text with proper shaping
-            typf render "مرحبا بالعالم" arabic.png --font=/path/to/arabic.ttf
+    if show_all or renderers:
+        click.echo("Renderers:")
+        click.echo("  orge              - Orge (pure Rust, monochrome/grayscale)")
+        click.echo("  skia              - TinySkia (cross-platform, antialiased)")
+        click.echo("  zeno              - Zeno (cross-platform vector rasterizer)")
+        if show_all:
+            click.echo()
 
-            # Red text on white background
-            typf render "Alert" warning.png --color="255,0,0,255" --background="255,255,255,255"
+    if show_all or formats:
+        click.echo("Output Formats:")
+        click.echo("  pbm               - Portable Bitmap (monochrome, no antialiasing)")
+        click.echo("  png1              - PNG monochrome (1-bit)")
+        click.echo("  pgm               - Portable Graymap (8-bit grayscale)")
+        click.echo("  png4              - PNG grayscale (4-bit)")
+        click.echo("  png8              - PNG grayscale (8-bit)")
+        click.echo("  png               - PNG RGBA (full color with alpha)")
+        click.echo("  svg               - Scalable Vector Graphics")
+        click.echo("  ppm               - Portable Pixmap (RGB, legacy)")
 
-            # SVG output for scalability
-            typf render "Logo" logo.svg --size=128 --font=/path/to/logo.ttf
-        """
-        # Parse colors
-        try:
-            fg_parts = [int(x) for x in color.split(",")]
-            if len(fg_parts) != 4:
-                raise ValueError("Color must have 4 components (R,G,B,A)")
-            fg_color = tuple(fg_parts)
-        except ValueError as e:
-            print(f"Error parsing foreground color: {e}", file=sys.stderr)
-            return 1
 
-        bg_color = None
-        if background:
-            try:
-                bg_parts = [int(x) for x in background.split(",")]
-                if len(bg_parts) != 4:
-                    raise ValueError("Background must have 4 components (R,G,B,A)")
-                bg_color = tuple(bg_parts)
-            except ValueError as e:
-                print(f"Error parsing background color: {e}", file=sys.stderr)
-                return 1
+@cli.command(name="render")
+@click.argument("text", required=False)
+@click.option("-f", "--font-file", type=click.Path(exists=True), help="Font file path (.ttf, .otf, .ttc, .otc)")
+@click.option("-y", "--face-index", type=int, default=0, help="Face index for TTC/OTC collections")
+@click.option("-i", "--instance", help="Named/dynamic instance spec")
+@click.option("-t", "--text-arg", "text_opt", help="Input text (alternative to positional argument)")
+@click.option("-T", "--text-file", type=click.Path(exists=True), help="Read input text from file")
+@click.option("--shaper", default="auto", help="Shaping backend: auto, none, hb, icu-hb, mac, win")
+@click.option("--renderer", default="auto", help="Rendering backend: auto, orge, skia, zeno, mac, win, json")
+@click.option("-d", "--direction", default="auto", help="Text direction: auto, ltr, rtl, ttb, btt")
+@click.option("-l", "--language", help="Language tag (BCP 47), e.g., en, ar, zh-Hans")
+@click.option("-S", "--script", default="auto", help="Script tag (ISO 15924), e.g., Latn, Arab, Hans")
+@click.option("-F", "--features", help="Font feature settings (comma or space separated)")
+@click.option("-s", "--font-size", default="200", help="Font size in pixels (or 'em' for UPM)")
+@click.option("-L", "--line-height", type=int, default=120, help="Line height as %% of font size")
+@click.option("-W", "--width-height", default="none", help="Canvas size spec: <width>x<height>, <width>x, x<height>, or none")
+@click.option("-m", "--margin", type=int, default=10, help="Margin in pixels")
+@click.option("--font-optical-sizing", default="auto", help="Optical sizing: auto, none")
+@click.option("-c", "--foreground", default="000000FF", help="Text color (RRGGBB or RRGGBBAA)")
+@click.option("-b", "--background", default="FFFFFF00", help="Background color (RRGGBB or RRGGBBAA)")
+@click.option("-p", "--color-palette", type=int, default=0, help="Font CPAL palette index")
+@click.option("-o", "--output-file", type=click.Path(), help="Output file path (stdout if omitted)")
+@click.option("-O", "--format", "output_format", default="png", help="Output format: pbm, png1, pgm, png4, png8, png, svg")
+@click.option("-q", "--quiet", is_flag=True, help="Silent mode (no progress info)")
+@click.option("--verbose", is_flag=True, help="Verbose output")
+def render(
+    text: Optional[str],
+    font_file: Optional[str],
+    face_index: int,
+    instance: Optional[str],
+    text_opt: Optional[str],
+    text_file: Optional[str],
+    shaper: str,
+    renderer: str,
+    direction: str,
+    language: Optional[str],
+    script: str,
+    features: Optional[str],
+    font_size: str,
+    line_height: int,
+    width_height: str,
+    margin: int,
+    font_optical_sizing: str,
+    foreground: str,
+    background: str,
+    color_palette: int,
+    output_file: Optional[str],
+    output_format: str,
+    quiet: bool,
+    verbose: bool,
+):
+    """Render text to an image file"""
 
-        # Infer format from extension if not specified
-        if format is None:
-            ext = Path(output).suffix.lower().lstrip(".")
-            format = ext if ext else "ppm"
+    try:
+        # 1. Get input text
+        input_text = get_input_text(text, text_opt, text_file)
 
-        try:
-            # Create TYPF instance
-            typf = Typf(shaper=shaper, renderer=renderer)
+        if not quiet:
+            click.echo("TYPF Python CLI", err=True)
+            click.echo("Rendering text...", err=True)
 
-            # Render the text
-            if font:
-                image_data = typf.render_text(
-                    text,
-                    font_path=font,
-                    size=size,
-                    color=fg_color,
-                    background=bg_color,
-                    padding=padding,
-                )
-            else:
-                # Use simple render with stub font
-                image_data = render_simple(text, size=size)
+        # 2. Parse font size
+        if font_size == "em":
+            size = 1000.0
+        else:
+            size = float(font_size)
 
-            # Export to requested format
-            output_data = export_image(image_data, format)
+        # 3. Parse colors
+        fg_color = parse_color(foreground)
+        bg_color = parse_color(background) if background else None
 
-            # Write to file
-            with open(output, "wb") as f:
+        # 4. Create TYPF instance
+        typf = Typf(shaper=shaper if shaper != "auto" else "hb",
+                    renderer=renderer if renderer != "auto" else "orge")
+
+        # 5. Render the text
+        if font_file:
+            if verbose:
+                click.echo(f"Loading font from {font_file}", err=True)
+
+            image_data = typf.render_text(
+                input_text,
+                font_path=font_file,
+                size=size,
+                color=fg_color,
+                background=bg_color,
+                padding=margin,
+            )
+        else:
+            if verbose:
+                click.echo("Using stub font (no font file provided)", err=True)
+
+            image_data = render_simple(input_text, size=size)
+
+        # 6. Export to requested format
+        if verbose:
+            click.echo(f"Exporting to {output_format} format...", err=True)
+
+        output_data = export_image(image_data, output_format)
+
+        # 7. Write output
+        if output_file:
+            with open(output_file, "wb") as f:
                 f.write(output_data)
 
-            print(f"✓ Rendered to {output} ({len(output_data)} bytes)")
-            return 0
+            if not quiet:
+                click.echo(f"✓ Successfully rendered to {output_file}", err=True)
+                click.echo(f"  Format: {output_format.upper()}", err=True)
+                click.echo(f"  Size: {len(output_data)} bytes", err=True)
+        else:
+            # Write to stdout
+            sys.stdout.buffer.write(output_data)
 
-        except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
-            return 1
+            if not quiet:
+                click.echo("✓ Successfully rendered to stdout", err=True)
 
-    def shape(
-        self,
-        text: str,
-        font: Optional[str] = None,
-        size: float = 48.0,
-        shaper: str = "harfbuzz",
-        features: Optional[str] = None,
-        language: Optional[str] = None,
-        script: Optional[str] = None,
-        output: Optional[str] = None,
-    ):
-        """
-        Shape text and output glyph positioning (JSON format).
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
-        Args:
-            text: Text to shape
-            font: Path to font file
-            size: Font size in points
-            shaper: Shaping backend ('none' or 'harfbuzz')
-            features: OpenType features as comma-separated key=value pairs
-            language: Language tag (e.g., 'ar', 'en')
-            script: Script tag (e.g., 'arab', 'latn')
-            output: Output file path (stdout if not specified)
 
-        Examples:
-            typf shape "Hello" --font=/path/to/font.ttf
-            typf shape "مرحبا" --font=/path/to/font.ttf --language=ar --script=arab
-            typf shape "Text" --features="liga=1,kern=1" --output=shaped.json
-        """
-        print(f"Shaping '{text}' with {shaper}...", file=sys.stderr)
+def get_input_text(text: Optional[str], text_opt: Optional[str], text_file: Optional[str]) -> str:
+    """Get input text from various sources"""
 
-        # Parse features
-        feature_dict = {}
-        if features:
-            for pair in features.split(","):
-                if "=" in pair:
-                    key, value = pair.split("=", 1)
-                    feature_dict[key.strip()] = int(value.strip())
+    # Priority: text positional > --text > --text-file > stdin
+    if text:
+        return decode_unicode_escapes(text)
 
-        try:
-            typf = Typf(shaper=shaper, renderer="orge")
+    if text_opt:
+        return decode_unicode_escapes(text_opt)
 
-            # For now, just render and note that JSON shaping output
-            # would require additional API exposure
-            print(
-                "Note: Full JSON shaping output requires extended API", file=sys.stderr
-            )
-            print(f"Shaper: {shaper}, Features: {feature_dict}", file=sys.stderr)
+    if text_file:
+        with open(text_file, "r") as f:
+            return f.read()
 
-            if font:
-                print(f"Font: {font}", file=sys.stderr)
+    # Read from stdin
+    return sys.stdin.read()
 
-            return 0
 
-        except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
-            return 1
+def decode_unicode_escapes(text: str) -> str:
+    """Decode Unicode escape sequences like \\uXXXX or \\u{X...}"""
+    result = []
+    i = 0
 
-    def info(self):
-        """
-        Display TYPF version and configuration information.
+    while i < len(text):
+        if i < len(text) - 1 and text[i] == '\\' and text[i+1] == 'u':
+            i += 2  # Skip \\u
 
-        Examples:
-            typf info
-        """
-        print(f"TYPF v{self.version}")
-        print("\nAvailable backends:")
-        print("  Shapers: none, harfbuzz")
-        print("  Renderers: orge")
-        print("  Exporters: pnm, png, svg, json")
-        print("\nPython bindings built with PyO3")
-        return 0
+            if i < len(text) and text[i] == '{':
+                # \\u{X...} format
+                i += 1  # Skip {
+                hex_str = ""
+                while i < len(text) and text[i] != '}':
+                    hex_str += text[i]
+                    i += 1
+                if i < len(text):
+                    i += 1  # Skip }
 
-    def version(self):
-        """
-        Display version information.
+                try:
+                    code = int(hex_str, 16)
+                    result.append(chr(code))
+                    continue
+                except ValueError:
+                    pass
 
-        Examples:
-            typf version
-        """
-        print(f"TYPF v{self.version}")
-        return 0
+            else:
+                # \\uXXXX format (exactly 4 hex digits)
+                hex_str = text[i:i+4]
+                if len(hex_str) == 4:
+                    try:
+                        code = int(hex_str, 16)
+                        result.append(chr(code))
+                        i += 4
+                        continue
+                    except ValueError:
+                        pass
+
+        result.append(text[i])
+        i += 1
+
+    return ''.join(result)
+
+
+def parse_color(color_str: str) -> tuple:
+    """Parse color in RRGGBB or RRGGBBAA format"""
+    hex_str = color_str.lstrip('#')
+
+    if len(hex_str) == 6:
+        # RRGGBB format
+        r = int(hex_str[0:2], 16)
+        g = int(hex_str[2:4], 16)
+        b = int(hex_str[4:6], 16)
+        return (r, g, b, 255)
+    elif len(hex_str) == 8:
+        # RRGGBBAA format
+        r = int(hex_str[0:2], 16)
+        g = int(hex_str[2:4], 16)
+        b = int(hex_str[4:6], 16)
+        a = int(hex_str[6:8], 16)
+        return (r, g, b, a)
+    else:
+        raise ValueError(f"Invalid color format: {color_str}. Must be RRGGBB or RRGGBBAA")
 
 
 def main():
     """Main CLI entry point"""
     try:
-        fire.Fire(TypfCLI)
+        cli()
     except KeyboardInterrupt:
-        print("\nInterrupted", file=sys.stderr)
+        click.echo("\nInterrupted", err=True)
         sys.exit(130)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 

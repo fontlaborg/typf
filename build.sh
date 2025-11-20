@@ -16,13 +16,14 @@ echo ""
 echo "Setting up Python environment..."
 # Create or update virtual environment
 if [ ! -d ".venv" ]; then
-	uv venv --python 3.12
+  uv venv --python 3.12
 fi
 source .venv/bin/activate
 
 # Install Python dependencies and the package itself
 echo "Installing Python dependencies and typfpy..."
-uv pip install .[dev]
+uv pip install --upgrade .[dev]
+uv pip install --system --upgrade .[dev]
 
 echo ""
 echo "Installing zensical CLI for documentation building..."
