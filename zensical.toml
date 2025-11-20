@@ -1,0 +1,177 @@
+[project]
+site_name = "TYPF v2.0 Documentation"
+site_url = "https://fontlab.org/typf/"
+site_description = "TYPF v2.0: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings"
+# Build configuration - source and output directories
+docs_dir = "./src_docs"
+site_dir = "./docs"
+# Repository
+repo_name = "fontlaborg/typf"
+repo_url = "https://github.com/fontlaborg/typf"
+edit_uri = "https://github.com/fontlaborg/typf/edit/main/src_docs/"
+# Copyright
+copyright = "Copyright &copy; 2025 Fontlab Ltd"
+
+# Theme configuration
+[project.theme]
+features = [
+  "announce.dismiss",
+  "content.action.edit",
+  "content.action.view",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.code.select",
+  "content.footnote.tooltips",
+  "content.tabs.link",
+  "content.tooltips",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.tabs",
+  "navigation.top",
+  "search.highlight"
+]
+
+# Palette configuration with automatic, light, and dark modes
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+
+[project.theme.palette.toggle]
+icon = "lucide/sun-moon"
+name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "blue"
+accent = "blue"
+
+[project.theme.palette.toggle]
+icon = "lucide/sun"
+name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "blue"
+accent = "orange"
+
+[project.theme.palette.toggle]
+icon = "lucide/moon-star"
+name = "Switch to system preference"
+
+# Additional configuration
+[project.extra]
+homepage = "https://fontlab.org/typf/"
+scope = "/"
+
+[project.extra.status]
+new = "Recently added"
+deprecated = "Deprecated"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/fontlaborg/typf"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/typf/"
+
+[project.extra.tags]
+default = "default"
+
+# Markdown extensions configuration
+[project.markdown_extensions]
+abbr = {  }
+admonition = {  }
+attr_list = {  }
+def_list = {  }
+footnotes = {  }
+md_in_html = {  }
+
+[project.markdown_extensions.toc]
+permalink = true
+
+[project.markdown_extensions.pymdownx]
+caret = {  }
+details = {  }
+emoji = {  }
+inlinehilite = {  }
+keys = {  }
+mark = {  }
+smartsymbols = {  }
+snippets = {  }
+tilde = {  }
+
+[project.markdown_extensions.pymdownx.arithmatex]
+generic = true
+
+[project.markdown_extensions.pymdownx.betterem]
+smart_enable = "all"
+
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+
+[project.markdown_extensions.pymdownx.magiclink]
+normalize_issue_symbols = true
+repo_url_shorthand = true
+user = "fontlaborg"
+repo = "typf"
+
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [{ name = "mermaid", class = "mermaid" }]
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+combine_header_slug = true
+
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+
+# Navigation - TYPF v2.0 Comprehensive Documentation
+[project.nav]
+"TYPF Documentation" = "index.md"
+"Getting Started" = [
+  { "01 Introduction" = "01-introduction.md" },
+  { "02 Quick Start" = "02-quick-start.md" },
+  { "03 Architecture Overview" = "03-architecture-overview.md" },
+  { "04 Installation" = "04-installation.md" }
+]
+"Core Concepts" = [
+  { "05 Six-Stage Pipeline" = "05-six-stage-pipeline.md" },
+  { "06 Backend Architecture" = "06-backend-architecture.md" },
+  { "07 Memory Management" = "07-memory-management.md" },
+  { "08 Performance Fundamentals" = "08-performance-fundamentals.md" }
+]
+"Shaping Backends" = [
+  { "09 HarfBuzz Shaping" = "09-harfbuzz-shaping.md" },
+  { "10 Platform Shapers" = "10-platform-shapers.md" },
+  { "11 ICU-HarfBuzz Composition" = "11-icu-harfbuzz-composition.md" },
+  { "12 None Shaper" = "12-none-shaper.md" }
+]
+"Rendering Backends" = [
+  { "13 Skia Renderer" = "13-skia-renderer.md" },
+  { "14 Orge Renderer" = "14-orge-renderer.md" },
+  { "15 Platform Renderers" = "15-platform-renderers.md" },
+  { "16 Zeno Renderer" = "16-zeno-renderer.md" }
+]
+"Output & Export" = [{ "17 Export Formats" = "17-export-formats.md" }]
+"API Reference" = [
+  { "18 Rust API" = "18-rust-api.md" },
+  { "19 Python API" = "19-python-api.md" },
+  { "20 CLI Interface" = "20-cli-interface.md" }
+]
+"Advanced Topics" = [
+  { "21 WebAssembly Integration" = "21-webassembly-integration.md" },
+  { "22 Performance Optimization" = "22-performance-optimization.md" },
+  { "23 Deployment and Integration" = "23-deployment-integration.md" },
+  { "24 Troubleshooting and Best Practices" = "24-troubleshooting-best-practices.md" }
+]
+
+# Plugins configuration (zensical equivalents)
+[project.plugins]
+search = {  }
+tags = {  }

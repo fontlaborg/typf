@@ -151,6 +151,46 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
         skip-existing: true
 
+  build-docs:
+    name: Build Documentation for Release
+    needs: create-release
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+    - name: Install zensical
+      run: uv pip install zensical
+
+    - name: Build documentation
+      run: |
+        zensical build
+        echo "Documentation built successfully"
+
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-documentation
+        path: docs/
+        retention-days: 90
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs
+        destination_dir: docs
+
   publish-crates:
     name: Publish to crates.io
     needs: create-release

@@ -39,9 +39,7 @@ echo ""
 
 echo "Building comprehensive documentation..."
 echo ""
-cd src_docs
 zensical build
-cd ..
 
 echo "Running TYPF tester..."
 echo ""
@@ -51,4 +49,4 @@ python typf-tester/typfme.py bench
 
 echo ""
 echo "📚 Documentation built successfully!"
-echo "View documentation with: cd src_docs && zensical serve"
+echo "View documentation with: zensical serve"
