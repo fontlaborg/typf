@@ -25,15 +25,30 @@ echo "Installing Python dependencies and typfpy..."
 uv pip install .[dev]
 
 echo ""
+echo "Installing zensical CLI for documentation building..."
+uv pip install zensical
+
+echo ""
 echo "✅ Build and installation complete!"
 echo ""
 echo "Installed components:"
 echo "  - typf-cli (Rust CLI tool)"
 echo "  - typfpy (Python package with native bindings)"
+echo "  - zensical (documentation builder)"
 echo ""
+
+echo "Building comprehensive documentation..."
+echo ""
+cd src_docs
+zensical build
+cd ..
 
 echo "Running TYPF tester..."
 echo ""
 python typf-tester/typfme.py render
 echo ""
 python typf-tester/typfme.py bench
+
+echo ""
+echo "📚 Documentation built successfully!"
+echo "View documentation with: cd src_docs && zensical serve"
