@@ -237,6 +237,9 @@ pub struct RenderParams {
     pub background: Option<Color>,
     pub padding: u32,
     pub antialias: bool,
+    /// Variable font variations (e.g., [("wght", 700.0), ("wdth", 100.0)])
+    /// Required for rendering variable fonts at specific coordinates
+    pub variations: Vec<(String, f32)>,
 }
 
 impl Default for RenderParams {
@@ -246,6 +249,7 @@ impl Default for RenderParams {
             background: None,
             padding: 0,
             antialias: true,
+            variations: Vec::new(),
         }
     }
 }

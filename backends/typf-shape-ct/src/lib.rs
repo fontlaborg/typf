@@ -16,6 +16,7 @@ use typf_core::{
 use core_foundation::{
     attributed_string::CFMutableAttributedString,
     base::{CFRange, TCFType},
+    dictionary::CFDictionary,
     number::CFNumber,
     string::CFString,
 };
@@ -25,13 +26,24 @@ use core_graphics::{
     geometry::{CGPoint, CGSize},
 };
 use core_text::{
-    font::{new_from_CGFont, CTFont},
+    font::{new_from_CGFont, new_from_descriptor, CTFont},
+    font_descriptor::CTFontDescriptor,
     line::CTLine,
     run::{CTRun, CTRunRef},
     string_attributes::{kCTFontAttributeName, kCTKernAttributeName, kCTLigatureAttributeName},
 };
 use lru::LruCache;
 use parking_lot::RwLock;
+
+// CoreText FFI declarations for variable font support
+#[link(name = "CoreText", kind = "framework")]
+extern "C" {
+    static kCTFontVariationAttribute: core_foundation::string::CFStringRef;
+
+    fn CTFontDescriptorCreateWithAttributes(
+        attributes: core_foundation::dictionary::CFDictionaryRef,
+    ) -> core_text::font_descriptor::CTFontDescriptorRef;
+}
 
 /// Cache key for fonts
 type FontCacheKey = String;
@@ -80,7 +92,24 @@ impl CoreTextShaper {
             })
             .unwrap_or(0);
 
-        format!("{}:{}", font_hash, params.size as u32)
+        // Include variations in cache key - critical for variable fonts!
+        let var_key = if params.variations.is_empty() {
+            String::new()
+        } else {
+            let mut sorted_vars: Vec<_> = params.variations.iter().collect();
+            sorted_vars.sort_by(|a, b| a.0.cmp(&b.0));
+            sorted_vars
+                .iter()
+                .map(|(tag, val)| format!("{}={:.1}", tag, val))
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+
+        if var_key.is_empty() {
+            format!("{}:{}", font_hash, params.size as u32)
+        } else {
+            format!("{}:{}:{}", font_hash, params.size as u32, var_key)
+        }
     }
 
     /// Create cache key for shaping results
@@ -138,8 +167,62 @@ impl CoreTextShaper {
             ))
         })?;
 
-        // Create CTFont from CGFont
-        let ct_font = new_from_CGFont(&cg_font, params.size as f64);
+        // Create base CTFont from CGFont
+        let mut ct_font = new_from_CGFont(&cg_font, params.size as f64);
+
+        // Apply variable font coordinates if specified
+        if !params.variations.is_empty() {
+            log::debug!(
+                "CoreTextShaper: Applying {} variation coordinates",
+                params.variations.len()
+            );
+
+            // Convert variations to CoreFoundation format
+            let mut var_dict_entries = Vec::new();
+            for (tag, value) in &params.variations {
+                if tag.len() == 4 {
+                    // Convert 4-character tag string to CFNumber key
+                    let tag_num = u32::from_be_bytes([
+                        tag.as_bytes()[0],
+                        tag.as_bytes()[1],
+                        tag.as_bytes()[2],
+                        tag.as_bytes()[3],
+                    ]);
+                    let tag_cf = CFNumber::from(tag_num as i64);
+                    let value_cf = CFNumber::from(*value as f64);
+                    var_dict_entries.push((tag_cf, value_cf));
+                }
+            }
+
+            if !var_dict_entries.is_empty() {
+                // Create variation dictionary - pairs of (tag_number, value)
+                let var_pairs: Vec<_> = var_dict_entries
+                    .iter()
+                    .map(|(k, v)| (k.as_CFType(), v.as_CFType()))
+                    .collect();
+
+                let var_dict = CFDictionary::from_CFType_pairs(&var_pairs);
+
+                // Create font descriptor with variation attributes
+                // SAFETY: kCTFontVariationAttribute is a valid CoreText constant
+                let desc_pairs = vec![(
+                    unsafe { CFString::wrap_under_get_rule(kCTFontVariationAttribute).as_CFType() },
+                    var_dict.as_CFType(),
+                )];
+
+                let desc_attrs = CFDictionary::from_CFType_pairs(&desc_pairs);
+
+                // Create CTFontDescriptor with variation attributes using FFI
+                let descriptor = unsafe {
+                    use core_foundation::base::TCFType;
+                    let desc_ref = CTFontDescriptorCreateWithAttributes(desc_attrs.as_concrete_TypeRef());
+                    CTFontDescriptor::wrap_under_create_rule(desc_ref)
+                };
+
+                // Create new CTFont with variation coordinates applied
+                ct_font = new_from_descriptor(&descriptor, params.size as f64);
+            }
+        }
 
         Ok(ct_font)
     }

@@ -34,6 +34,8 @@ pub struct GlyphRasterizer<'a> {
     size: f32,
     /// Oversampling factor for anti-aliasing (typically 4 or 8)
     oversample: u8,
+    /// Variable font location (coordinates for variable fonts)
+    location: skrifa::instance::Location,
 }
 
 impl<'a> GlyphRasterizer<'a> {
@@ -55,7 +57,57 @@ impl<'a> GlyphRasterizer<'a> {
             font,
             size,
             oversample: 4, // 4x oversampling by default
+            location: skrifa::instance::Location::default(),
         })
+    }
+
+    /// Set variable font coordinates
+    ///
+    /// This creates a Location from the provided variations, which will be used
+    /// when rendering all subsequent glyphs.
+    pub fn set_variations(&mut self, variations: &[(String, f32)]) -> Result<(), String> {
+        use read_fonts::types::Tag;
+
+        if variations.is_empty() {
+            self.location = skrifa::instance::Location::default();
+            return Ok(());
+        }
+
+        let axes = self.font.axes();
+
+        // Create a Location with space for all axes
+        let axis_count = axes.len();
+        let mut location = skrifa::instance::Location::new(axis_count);
+        let coords_mut = location.coords_mut();
+
+        // Map variation tags to axis indices and set values
+        for (index, axis) in axes.iter().enumerate() {
+            let axis_tag = axis.tag();
+
+            // Check if we have a variation for this axis
+            let mut found = false;
+            for (tag_str, value) in variations {
+                if tag_str.len() == 4 {
+                    let bytes = tag_str.as_bytes();
+                    let tag = Tag::new(&[bytes[0], bytes[1], bytes[2], bytes[3]]);
+
+                    if tag == axis_tag {
+                        // Normalize and set this coordinate
+                        coords_mut[index] = axis.normalize(*value);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            // If no variation specified, use default (already set to 0.0)
+            if !found {
+                // coords_mut[index] is already NormalizedCoord::default()
+            }
+        }
+
+        self.location = location;
+        Ok(())
     }
 
     /// Set the oversampling factor for anti-aliasing
@@ -78,6 +130,11 @@ impl<'a> GlyphRasterizer<'a> {
     /// # Returns
     ///
     /// `GlyphBitmap` containing the rasterized glyph, or error
+    ///
+    /// # Notes
+    ///
+    /// Variable font variations should be set using `set_variations()` before
+    /// calling this method.
     pub fn render_glyph(
         &self,
         glyph_id: u32,
@@ -148,7 +205,9 @@ impl<'a> GlyphRasterizer<'a> {
         }
 
         let size_setting = Size::new(self.size);
-        let location_ref: LocationRef = Default::default();
+
+        // Use the location stored in the rasterizer (set via set_variations)
+        let location_ref = self.location.coords();
         let draw_settings = DrawSettings::unhinted(size_setting, location_ref);
 
         let mut bounds_calc = BoundsCalculator::new();

@@ -258,14 +258,22 @@ impl Renderer for OrgeRenderer {
 
         // Create rasterizer once for all glyphs (lazy: only if we have glyphs to render)
         // This avoids parsing font for empty text or stub fonts in tests
-        let rasterizer = if !shaped.glyphs.is_empty() {
+        let mut rasterizer = if !shaped.glyphs.is_empty() {
             match rasterizer::GlyphRasterizer::new(font_data, glyph_size) {
-                Ok(r) => Some(r),
+                Ok(mut r) => {
+                    // Set variable font variations from RenderParams
+                    if !params.variations.is_empty() {
+                        if let Err(e) = r.set_variations(&params.variations) {
+                            log::warn!("Failed to set variations: {}", e);
+                        }
+                    }
+                    Some(r)
+                }
                 Err(e) => {
                     log::warn!("Failed to create rasterizer: {}", e);
                     // For compatibility with tests using stub fonts, continue without rasterizer
                     None
-                },
+                }
             }
         } else {
             None
@@ -274,20 +282,24 @@ impl Renderer for OrgeRenderer {
         // Render each glyph
         for glyph in &shaped.glyphs {
             // Skip if we don't have a valid rasterizer
-            let Some(ref rast) = rasterizer else {
+            let Some(ref mut rast) = rasterizer else {
                 log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
                 continue;
             };
 
             // Render glyph using shared rasterizer
-            let glyph_bitmap =
-                match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
-                    Ok(bitmap) => bitmap,
-                    Err(e) => {
-                        log::warn!("Failed to render glyph {}: {}", glyph.id, e);
-                        continue;
-                    },
-                };
+            // Variations were already set on the rasterizer when it was created
+            let glyph_bitmap = match rast.render_glyph(
+                glyph.id,
+                FillRule::NonZeroWinding,
+                DropoutMode::None,
+            ) {
+                Ok(bitmap) => bitmap,
+                Err(e) => {
+                    log::warn!("Failed to render glyph {}: {}", glyph.id, e);
+                    continue;
+                }
+            };
 
             // Position glyph on canvas
             // X: glyph.x + padding (bearing adjustment happens in composite_glyph)
