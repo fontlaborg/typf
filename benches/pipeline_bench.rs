@@ -107,6 +107,7 @@ fn bench_full_pipeline(c: &mut Criterion) {
         background: Some(Color::white()),
         padding: 5,
         antialias: false,
+        variations: Vec::new(),
     };
 
     c.bench_function("full_pipeline_short", |b| {

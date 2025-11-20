@@ -399,6 +399,7 @@ fn process_job(job: &Job) -> JobResult {
         background: Some(Color::white()),
         padding: 10,
         antialias: true,
+        variations: Vec::new(),
     };
 
     let renderer = Arc::new(OrgeRenderer::new());

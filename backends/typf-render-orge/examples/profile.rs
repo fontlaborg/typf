@@ -80,6 +80,7 @@ fn main() {
         background: Some(Color::white()),
         padding: 0,
         antialias: true,
+        variations: Vec::new(),
     };
 
     let renderer = OrgeRenderer::default();

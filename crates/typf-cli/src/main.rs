@@ -269,6 +269,7 @@ fn main() -> Result<()> {
         background: Some(Color::white()),
         padding: 10,
         antialias: true,
+        variations: Vec::new(),
     };
 
     // Create backends

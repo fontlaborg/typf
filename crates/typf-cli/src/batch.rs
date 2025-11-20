@@ -163,6 +163,7 @@ where
         background: Some(Color::white()),
         padding: 10,
         antialias: true,
+        variations: Vec::new(),
     };
 
     let components = PipelineComponents {
