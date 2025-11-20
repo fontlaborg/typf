@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\nSuccess! HarfBuzz shaping is working with real fonts.");
-    println!("Made by FontLab https://www.fontlab.com/");
+    println!("Community project by FontLab https://www.fontlab.org/");
 
     Ok(())
 }

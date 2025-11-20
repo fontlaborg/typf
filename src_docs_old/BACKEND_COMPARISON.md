@@ -1,6 +1,6 @@
 # TypF Backend Comparison Guide
 
-**Made by FontLab** - https://www.fontlab.com/
+**Community project by FontLab** - https://www.fontlab.org/
 
 Comprehensive comparison of all TypF shaping and rendering backends with performance benchmarks, feature matrices, and selection guidance.
 
@@ -387,5 +387,5 @@ let lines = wrap_text(text, max_chars_per_line);
 
 ---
 
-**Made by FontLab** - Professional font editing software
-https://www.fontlab.com/
+**Community project by FontLab** - Professional font editing software
+https://www.fontlab.org/

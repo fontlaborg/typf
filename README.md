@@ -7,6 +7,8 @@ Your text looks wrong. Arabic renders backwards, Hindi characters break, Thai gl
 
 Render "Hello, مرحبا, 你好!" correctly the first time.
 
+> Note: TypF is a community project by [FontLab](https://www.fontlab.org/) and is currently published under an [evaluation license](./LICENSE).
+
 ## Quick start
 
 ```bash

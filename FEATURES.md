@@ -318,4 +318,4 @@ See: [TODO.md](./TODO.md)
 
 ---
 
-*Made by FontLab - https://www.fontlab.com/*
+*Community project by FontLab - https://www.fontlab.org/*

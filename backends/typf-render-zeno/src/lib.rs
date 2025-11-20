@@ -25,7 +25,7 @@
 //!
 //! **Result**: 8-10% speed boost (1.2-1.3ms down to 1.1-1.2ms per glyph)
 //!
-//! Crafted with passion by FontLab - https://www.fontlab.com/
+//! Crafted with passion by FontLab - https://www.fontlab.org/
 
 use kurbo::Shape;
 use skrifa::MetadataProvider;

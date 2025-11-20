@@ -256,7 +256,7 @@ This file contains archived work sessions from earlier development rounds (Round
 
 ---
 
-*Made by FontLab - https://www.fontlab.com/*
+*Community project by FontLab - https://www.fontlab.org/*
 ## Previous Session (2025-11-19 - Round 35)
 
 ### ✅ Bug Fix - Mixed-Script SVG Export
@@ -491,4 +491,4 @@ else:
 
 ---
 
-*Made by FontLab - https://www.fontlab.com/*
+*Community project by FontLab - https://www.fontlab.org/*

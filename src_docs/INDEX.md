@@ -1,6 +1,8 @@
 # TypF Documentation
 
-Text looks wrong. TypF fixes it.
+TypF turns text into pixels, fast. 
+
+> Note: TypF is a community project by [FontLab](https://www.fontlab.org/) and is currently published under an [evaluation license](https://github.com/fontlaborg/typf/blob/main/LICENSE).
 
 ## Quick Start
 
@@ -17,7 +19,7 @@ python -m typf render --text "Hello 世界" --font font.ttf
 
 ## What This Is
 
-TypF turns text into pixels. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.
+TypF turns text into pixels, fast. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.
 
 Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font loading.
 
@@ -89,4 +91,4 @@ Stuck? Check the relevant chapter first. Each section has troubleshooting exampl
 
 ---
 
-TYPF: Fast text rendering that works.
+TypF: Fast text rendering that works.

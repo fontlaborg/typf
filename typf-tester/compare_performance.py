@@ -6,8 +6,8 @@ Analyzes benchmark data and creates visual comparisons of renderer performance.
 """
 
 import json
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
 
 def load_benchmark_data():
@@ -35,11 +35,11 @@ def group_by_renderer(data):
 
 def create_comparison_table(stats):
     """Create ASCII table comparing renderer performance."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("RENDERER PERFORMANCE COMPARISON")
-    print("="*80)
+    print("=" * 80)
     print(f"{'Renderer':<15} {'Avg Time (ms)':<18} {'Avg Ops/sec':<18} {'Samples':<10}")
-    print("-"*80)
+    print("-" * 80)
 
     # Calculate averages and sort by speed (ops/sec descending)
     renderer_avgs = []
@@ -54,7 +54,7 @@ def create_comparison_table(stats):
     for renderer, avg_time, avg_ops, samples in renderer_avgs:
         print(f"{renderer:<15} {avg_time:>15.3f}   {avg_ops:>15.1f}   {samples:>8}")
 
-    print("="*80)
+    print("=" * 80)
 
     # Show speed ratios
     fastest = renderer_avgs[0]
@@ -66,7 +66,7 @@ def create_comparison_table(stats):
     print(f"  • Speed ratio: {fastest[2] / slowest[2]:.1f}x faster")
 
     # Bitmap renderers only (exclude JSON)
-    bitmap_renderers = [r for r in renderer_avgs if r[0] not in ['json', 'svg']]
+    bitmap_renderers = [r for r in renderer_avgs if r[0] not in ["json", "svg"]]
     if bitmap_renderers:
         print(f"\n🎨 Bitmap Renderers:")
         for renderer, avg_time, avg_ops, samples in bitmap_renderers:
@@ -75,9 +75,9 @@ def create_comparison_table(stats):
 
 def create_visual_chart(stats):
     """Create simple ASCII bar chart."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("RELATIVE PERFORMANCE CHART (Ops/sec)")
-    print("="*80)
+    print("=" * 80)
 
     # Calculate averages
     renderer_avgs = []
@@ -95,7 +95,7 @@ def create_visual_chart(stats):
         bar = "█" * bar_length
         print(f"{renderer:15s} {bar} {ops:8.1f}")
 
-    print("="*80)
+    print("=" * 80)
 
 
 def main():
@@ -111,11 +111,12 @@ def main():
     print(f"\n✅ Analysis complete!")
     print(f"   Total backends tested: {len(data['backends'])}")
     print(f"   Unique renderers: {len(stats)}")
-    print(f"\nMade by FontLab - https://www.fontlab.com/\n")
+    print(f"\nCommunity project by FontLab - https://www.fontlab.org/\n")
 
     return 0
 
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

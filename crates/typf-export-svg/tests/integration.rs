@@ -1,6 +1,6 @@
 //! Integration tests for SVG exporter
 //!
-//! Made by FontLab - https://www.fontlab.com/
+//! Community project by FontLab - https://www.fontlab.org/
 
 use std::sync::Arc;
 use typf_core::{

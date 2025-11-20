@@ -390,4 +390,4 @@ let engine = Typf::builder()
 
 *Last Updated: 2025-11-19*
 *Based on comprehensive benchmarking with typfme.py*
-*Made by FontLab - https://www.fontlab.com/*
+*Community project by FontLab - https://www.fontlab.org/*

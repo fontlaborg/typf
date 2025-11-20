@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build script for TYPF v2.0
-# Made by FontLab https://www.fontlab.com/
+# Community project by FontLab https://www.fontlab.org/
 
 cd "$(dirname "$0")"
 set -e

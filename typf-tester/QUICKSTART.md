@@ -1,6 +1,6 @@
 # TypF Tester - Quick Start Guide
 
-**Made by FontLab** - https://www.fontlab.com/
+**Community project by FontLab** - https://www.fontlab.org/
 
 A comprehensive testing and benchmarking tool for TypF text shaping and rendering backends.
 
@@ -322,5 +322,5 @@ From comprehensive benchmarking (see `output/benchmark_summary.md`):
 
 ---
 
-**Made by FontLab** - Professional font editing software
-https://www.fontlab.com/
+**Community project by FontLab** - Professional font editing software
+https://www.fontlab.org/

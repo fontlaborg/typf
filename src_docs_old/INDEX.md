@@ -2,7 +2,7 @@
 
 **Complete documentation sitemap for TypF text shaping and rendering library**
 
-Made by FontLab - https://www.fontlab.com/
+Community project by FontLab - https://www.fontlab.org/
 
 ---
 
@@ -273,7 +273,7 @@ START HERE
 
 - **GitHub Repository**: https://github.com/fontlab/typf
 - **Issue Tracker**: https://github.com/fontlab/typf/issues
-- **FontLab Website**: https://www.fontlab.com/
+- **FontLab Website**: https://www.fontlab.org/
 - **Community Forum**: https://forum.fontlab.com/
 
 ---
@@ -288,5 +288,5 @@ START HERE
 
 ---
 
-**Made by FontLab** - Professional font editing software
-https://www.fontlab.com/
+**Community project by FontLab** - Professional font editing software
+https://www.fontlab.org/

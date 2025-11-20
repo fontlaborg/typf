@@ -277,5 +277,5 @@ TypF successfully delivers on all PLAN.md objectives:
 
 ---
 
-*Made by FontLab - https://www.fontlab.com/*
+*Community project by FontLab - https://www.fontlab.org/*
 *Last Updated: 2025-11-19*

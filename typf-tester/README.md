@@ -2,7 +2,7 @@
 
 Comprehensive testing and benchmarking tool for TypF text rendering pipeline.
 
-Made by FontLab https://www.fontlab.com/
+Community project by FontLab https://www.fontlab.org/
 
 ## Overview
 
@@ -610,8 +610,8 @@ Apache-2.0
 
 For issues or questions:
 - File an issue on GitHub
-- Contact FontLab: https://www.fontlab.com/
+- Contact FontLab: https://www.fontlab.org/
 
 ---
 
-Made by FontLab https://www.fontlab.com/
+Community project by FontLab https://www.fontlab.org/

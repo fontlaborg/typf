@@ -205,5 +205,5 @@ fn main() {
     println!("  opsz - Optical size: Optimizes for display size");
     println!("  ital - Italic (0 or 1): Roman to Italic switch");
     println!("  GRAD - Grade: Similar to weight but affects spacing more");
-    println!("\nMade by FontLab - https://www.fontlab.com/");
+    println!("\nCommunity project by FontLab - https://www.fontlab.org/");
 }

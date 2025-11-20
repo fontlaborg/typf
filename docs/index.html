@@ -1619,7 +1619,10 @@
 
 
 <h1 id="typf-documentation">TypF Documentation<a class="headerlink" href="#typf-documentation" title="Permanent link">&para;</a></h1>
-<p>Text looks wrong. TypF fixes it.</p>
+<p>TypF turns text into pixels, fast. </p>
+<blockquote>
+<p>Note: TypF is a community project by <a href="https://www.fontlab.org/">FontLab</a> and is currently published under an <a href="https://github.com/fontlaborg/typf/blob/main/LICENSE">evaluation license</a>.</p>
+</blockquote>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Build everything</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>./build.sh
@@ -1631,7 +1634,7 @@
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>python<span class="w"> </span>-m<span class="w"> </span>typf<span class="w"> </span>render<span class="w"> </span>--text<span class="w"> </span><span class="s2">&quot;Hello 世界&quot;</span><span class="w"> </span>--font<span class="w"> </span>font.ttf
 </span></code></pre></div>
 <h2 id="what-this-is">What This Is<a class="headerlink" href="#what-this-is" title="Permanent link">&para;</a></h2>
-<p>TypF turns text into pixels. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.</p>
+<p>TypF turns text into pixels, fast. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.</p>
 <p>Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font loading.</p>
 <hr />
 <h1 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h1>
@@ -1691,7 +1694,7 @@
 <h2 id="get-help">Get Help<a class="headerlink" href="#get-help" title="Permanent link">&para;</a></h2>
 <p>Stuck? Check the relevant chapter first. Each section has troubleshooting examples. File GitHub issues for bugs you find.</p>
 <hr />
-<p>TYPF: Fast text rendering that works.</p>
+<p>TypF: Fast text rendering that works.</p>
 
 
 

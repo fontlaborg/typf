@@ -11,7 +11,7 @@
 //! - Winding fill rules that match font designer expectations
 //! - Clean alpha extraction for perfect compositing
 //!
-//! Crafted with care by FontLab - https://www.fontlab.com/
+//! Crafted with care by FontLab - https://www.fontlab.org/
 
 use kurbo::Shape;
 use skrifa::MetadataProvider;

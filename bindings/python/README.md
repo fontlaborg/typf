@@ -297,4 +297,4 @@ EVALUATION LICENSE
 
 ---
 
-*Made by FontLab - https://www.fontlab.com/*
+*Community project by FontLab - https://www.fontlab.org/*

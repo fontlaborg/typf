@@ -10,7 +10,7 @@
 //! - Compact SVG output with optimized path commands
 //! - Viewbox calculation for proper sizing
 //!
-//! Made by FontLab - https://www.fontlab.com/
+//! Community project by FontLab - https://www.fontlab.org/
 
 use skrifa::MetadataProvider;
 use std::fmt::Write as FmtWrite;

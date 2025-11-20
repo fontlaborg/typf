@@ -9,7 +9,7 @@ Usage:
     python typfme.py bench            # Benchmark all backend combinations
     python typfme.py compare          # Side-by-side backend comparison
 
-Made by FontLab https://www.fontlab.com/
+Community project by FontLab https://www.fontlab.org/
 """
 
 import json
@@ -254,7 +254,7 @@ class TypfTester:
         """
         print("TYPF v2.0 Backend Rendering Test")
         print("=" * 80)
-        print("Made by FontLab https://www.fontlab.com/\n")
+        print("Community project by FontLab https://www.fontlab.org/\n")
 
         # Detect available backends
         backends = self._detect_available_backends()
@@ -371,7 +371,7 @@ class TypfTester:
         """
         print("TYPF v2.0 Comprehensive Backend Benchmark")
         print("=" * 80)
-        print("Made by FontLab https://www.fontlab.com/\n")
+        print("Community project by FontLab https://www.fontlab.org/\n")
 
         # Detect available backends
         backends = self._detect_available_backends()
@@ -665,8 +665,7 @@ class TypfTester:
 
         # Sort results for consistent output: Backend -> Text -> Size
         sorted_results = sorted(
-            results,
-            key=lambda r: (r.config.description, r.text, r.font_size)
+            results, key=lambda r: (r.config.description, r.text, r.font_size)
         )
 
         for r in sorted_results:
@@ -679,7 +678,9 @@ class TypfTester:
                 f"| {r.config.description} | {r.text} | {r.font_size:.0f}px | {ops_str} |"
             )
 
-        md_lines.append("\n---\n*Made by FontLab - https://www.fontlab.com/*\n")
+        md_lines.append(
+            "\n---\n*Community project by FontLab - https://www.fontlab.org/*\n"
+        )
 
         md_path.write_text("\n".join(md_lines))
 
@@ -702,7 +703,7 @@ class TypfTester:
         """
         print("TYPF v2.0 Shaping-Only Performance Benchmark")
         print("=" * 80)
-        print("Made by FontLab https://www.fontlab.com/\n")
+        print("Community project by FontLab https://www.fontlab.org/\n")
 
         # Detect available backends
         backends = self._detect_available_backends()
@@ -879,7 +880,7 @@ class TypfTester:
         """
         print("TYPF v2.0 Rendering-Only Performance Benchmark")
         print("=" * 80)
-        print("Made by FontLab https://www.fontlab.com/\n")
+        print("Community project by FontLab https://www.fontlab.org/\n")
 
         # Detect available backends
         backends = self._detect_available_backends()
@@ -1088,7 +1089,7 @@ class TypfTester:
         """
         print("TYPF v2.0 Text Length Scaling Benchmark")
         print("=" * 80)
-        print("Made by FontLab https://www.fontlab.com/\n")
+        print("Community project by FontLab https://www.fontlab.org/\n")
 
         # Combine short and long texts
         all_texts = {**self.sample_texts, **self.long_texts}
@@ -1276,7 +1277,7 @@ class TypfTester:
         """
         print("TYPF v2.0 Backend Comparison")
         print("=" * 80)
-        print("Made by FontLab https://www.fontlab.com/\n")
+        print("Community project by FontLab https://www.fontlab.org/\n")
 
         # Use a distinctive sample for comparison
         sample_text = "AVAST Typography"
@@ -1331,7 +1332,7 @@ class TypfTester:
         """Display information about available backends and fonts"""
         print("TYPF v2.0 Testing Environment")
         print("=" * 80)
-        print("Made by FontLab https://www.fontlab.com/\n")
+        print("Community project by FontLab https://www.fontlab.org/\n")
 
         # Version and capabilities
         print(f"TYPF Version: {typf.__version__}")

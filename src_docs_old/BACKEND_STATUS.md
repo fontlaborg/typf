@@ -231,5 +231,5 @@ TypF has achieved **complete backend ecosystem implementation** with:
 
 ---
 
-*Made by FontLab - https://www.fontlab.com/*
+*Community project by FontLab - https://www.fontlab.org/*
 *Generated: 2025-11-19*
