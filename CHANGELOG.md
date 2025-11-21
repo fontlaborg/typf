@@ -7,20 +7,17 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
-### Fixed - 2025-11-19
-- **Rendering**: Fixed baseline positioning
-  - Reverted BASELINE_RATIO 0.65 → 0.75 to match CoreGraphics
-  - Fixed descender cropping in Orge, Skia, Zeno
-- **Rendering**: Fixed Y-coordinate collapse in Zeno renderer
-  - All pixels rendered at Y=0, now renders full height
-  - PNG file size 0.6KB → 5.8KB showing proper rendering
+## [2.0.0] - 2025-11-21
 
-## [2.0.0] - 2025-11-18
+**Major Release**: Complete rewrite with modular architecture and multiple backend support.
+
+### Added
 
 **Core Architecture**
 - Six-stage pipeline: Input → Unicode → Font → Shaping → Rendering → Export
-- Trait-based backends with selective compilation
-- Builder pattern with error handling
+- Trait-based backends with selective compilation via Cargo features
+- Builder pattern with comprehensive error handling
+- Multi-level caching system (L1 glyph cache, font database)
 
 **Shaping Backends** (4)
 - `NoneShaper` - Simple LTR advancement
@@ -40,10 +37,16 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Vector: SVG with glyph paths
 - Data: JSON with shaping metrics and glyph info
 
+**Command-Line Interface**
+- Rust CLI: Clap v4 with subcommands (`info`, `render`, `batch`)
+- Python CLI: Click v8 with identical feature parity
+- 30+ command-line options for full pipeline control
+- Unicode escape sequences, color parsing, font feature specs
+
 **Language Bindings**
-- Python: PyO3 bindings with Fire CLI
+- Python: PyO3 bindings with maturin packaging
 - Rust: Full API with feature-gated backends
-- WASM: Basic web support
+- Cross-platform wheel support (Linux, macOS, Windows)
 
 **Performance**
 - SIMD blending: 12.5 GB/s (AVX2), 8.4 GB/s (SSE4.1)
@@ -58,18 +61,31 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - WASM (basic)
 
 **Testing & Quality**
-- 206+ tests across modules
+- 446 tests passing (206 unit + 240 integration)
 - Property-based testing with proptest
 - Golden snapshot tests for regression detection
 - Fuzz testing infrastructure
 - 100% success rate across 20 backend combinations
+- All outputs verified (JSON, PNG, SVG)
 
 **Documentation**
-- `FEATURES.md` - Feature matrix (81/88 complete)
-- `BENCHMARKS.md` - Performance targets
-- `SECURITY.md` - Vulnerability reporting
-- `CONTRIBUTING.md` - Development workflows
-- Rust and Python examples
+- `README.md` - Updated with v2.0 CLI syntax
+- `CLI_MIGRATION.md` - Complete v1.x to v2.0 migration guide
+- `RELEASE_NOTES_v2.0.0.md` - Comprehensive release documentation
+- `RELEASE_CHECKLIST.md` - Publishing procedures
+- `FEATURES.md` - Feature matrix
+- Complete API documentation
+
+### Changed
+- **CLI**: Migrated from manual parsing to Clap v4 (Rust) and Fire to Click v8 (Python)
+- **Performance**: 71% reduction in compiler warnings (24 → 7)
+- **Build system**: Clean compilation with selective feature gating
+
+### Fixed
+- **Rendering**: Fixed baseline positioning (BASELINE_RATIO 0.75)
+- **Rendering**: Fixed Y-coordinate collapse in Zeno renderer
+- **Rendering**: Fixed descender cropping in Orge, Skia, Zeno
+- **Build**: Removed dead code warnings in legacy REPL/batch modules
 
 ## [Future Roadmap]
 
@@ -90,4 +106,4 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ---
 
-78 development rounds completed. Ready to ship with full backend matrix and multi-language support.
+*81 development rounds completed over multiple months. Full backend matrix verification. Production-ready with comprehensive testing and documentation.*

@@ -167,3 +167,22 @@ massif.out*
 heaptrack.*.gz
 callgrind.out*
 perf.data*
+
+# Build and test artifacts
+output.ppm
+test_output.txt
+typf-tester/output/*.json
+typf-tester/output/*.png
+typf-tester/output/*.svg
+typf-tester/output/*.md
+
+# Old/backup files
+*_old.py
+*_old.rs
+*.old
+
+# Temporary documentation
+docs/INDEX/
+
+# Issue tracking (if needed, remove this line to track issues/)
+issues/
