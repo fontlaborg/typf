@@ -120,3 +120,8 @@ required-features = ["shaping-hb"]
 name = "long_text_handling"
 path = "../../examples/long_text_handling.rs"
 required-features = ["shaping-hb", "export-svg"]
+
+[[example]]
+name = "quickstart_backends"
+path = "../../examples/quickstart_backends.rs"
+required-features = ["minimal"]
