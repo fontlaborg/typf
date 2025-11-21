@@ -15,6 +15,7 @@ use typf_core::{
     Color, RenderParams,
 };
 
+use core_foundation::base::{TCFType, TCFTypeRef};
 use core_graphics::{
     color_space::CGColorSpace,
     context::{CGContext, CGTextDrawingMode},
@@ -201,9 +202,27 @@ impl Renderer for CoreGraphicsRenderer {
         let (r, g, b, a) = Self::color_to_rgb(&params.foreground);
         context.set_rgb_fill_color(r, g, b, a);
 
+        // Validate font size before creating CTFont
+        // CoreText requires a positive, finite font size
+        let font_size = shaped.advance_height as f64;
+        if !font_size.is_finite() || font_size <= 0.0 {
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(
+                format!("Invalid font size: {}. Font size must be positive and finite.", font_size),
+            )));
+        }
+
         // Create CGFont and CTFont
         let cg_font = Self::create_cg_font(font.data())?;
-        let ct_font = core_text::font::new_from_CGFont(&cg_font, shaped.advance_height as f64);
+        let ct_font = core_text::font::new_from_CGFont(&cg_font, font_size);
+
+        // Verify CTFont creation succeeded
+        // CoreText might return a CTFont with NULL internal pointer on failure
+        // which would later crash when CFRelease is called during drop
+        if ct_font.as_concrete_TypeRef().as_void_ptr().is_null() {
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(
+                "CTFont creation failed: CoreText returned NULL font object".to_string(),
+            )));
+        }
 
         // Prepare glyph data
         let glyph_ids: Vec<CGGlyph> = shaped
