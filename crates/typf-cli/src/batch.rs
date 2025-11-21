@@ -3,6 +3,8 @@
 //! Process hundreds or thousands of text lines from files or stdin.
 //! Perfect for testing fonts, generating samples, or batch processing.
 
+#![allow(dead_code)] // Legacy batch processing infrastructure - retained for future v2.1 REPL mode
+
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};

@@ -3,6 +3,8 @@
 //! Perfect for automation, testing frameworks, and integration with
 //! other tools. Each line is a complete job specification.
 
+#![allow(dead_code)] // Legacy JSONL batch processing - retained for future v2.1 batch command
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;

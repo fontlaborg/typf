@@ -5,7 +5,6 @@
 use crate::cli::{OutputFormat, RenderArgs};
 use std::fs::File;
 use std::io::{self, Read, Write};
-use std::path::PathBuf;
 use std::sync::Arc;
 use typf::error::{Result, TypfError};
 use typf_core::{

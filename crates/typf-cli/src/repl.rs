@@ -3,6 +3,8 @@
 //! Perfect for experimenting with fonts, testing text samples,
 //! and understanding how the pipeline works step by step.
 
+#![allow(dead_code)] // Legacy REPL infrastructure - retained for future v2.1 REPL mode
+
 #[cfg(feature = "repl")]
 use colored::Colorize;
 #[cfg(feature = "repl")]
