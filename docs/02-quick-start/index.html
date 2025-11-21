@@ -1739,21 +1739,23 @@
 </span></code></pre></div>
 <p>That's it. The build script installs everything you need.</p>
 <h2 id="your-first-render">Your First Render<a class="headerlink" href="#your-first-render" title="Permanent link">&para;</a></h2>
-<p>CLI:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>typf-cli<span class="w"> </span>render<span class="w"> </span>--text<span class="w"> </span><span class="s2">&quot;Hello, 世界!&quot;</span><span class="w"> </span>--font<span class="w"> </span>/System/Library/Fonts/Arial.ttf<span class="w"> </span>--output<span class="w"> </span>hello.png
+<p>Rust CLI:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>typf<span class="w"> </span>render<span class="w"> </span><span class="s2">&quot;Hello, 世界!&quot;</span><span class="w"> </span>-f<span class="w"> </span>/System/Library/Fonts/Arial.ttf<span class="w"> </span>-o<span class="w"> </span>hello.png
 </span></code></pre></div></p>
-<p>Python:
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">typfpy</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">typfpy</span><span class="o">.</span><span class="n">render_text</span><span class="p">(</span><span class="s2">&quot;Hello, 世界!&quot;</span><span class="p">,</span> <span class="s2">&quot;/System/Library/Fonts/Arial.ttf&quot;</span><span class="p">,</span> <span class="mf">32.0</span><span class="p">)</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;hello.png&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">png_data</span><span class="p">)</span>
+<p>Python CLI:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>typfpy<span class="w"> </span>render<span class="w"> </span><span class="s2">&quot;Hello, 世界!&quot;</span><span class="w"> </span>-f<span class="w"> </span>/System/Library/Fonts/Arial.ttf<span class="w"> </span>-o<span class="w"> </span>hello.png
+</span></code></pre></div></p>
+<p>Python API:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">typf</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">typf</span><span class="o">.</span><span class="n">render_text</span><span class="p">(</span><span class="s2">&quot;Hello, 世界!&quot;</span><span class="p">,</span> <span class="s2">&quot;/System/Library/Fonts/Arial.ttf&quot;</span><span class="p">)</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;hello.png&quot;</span><span class="p">)</span>
 </span></code></pre></div></p>
 <h2 id="choose-your-backends">Choose Your Backends<a class="headerlink" href="#choose-your-backends" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># See what&#39;s available</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>typf-cli<span class="w"> </span>backend-list
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Use specific backends</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>typf-cli<span class="w"> </span>render<span class="w"> </span>--text<span class="w"> </span><span class="s2">&quot;Sample&quot;</span><span class="w"> </span>--font<span class="w"> </span>font.ttf<span class="w"> </span>--shaper<span class="w"> </span>harfbuzz<span class="w"> </span>--renderer<span class="w"> </span>skia<span class="w"> </span>--output<span class="w"> </span>out.png
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># See what&#39;s available</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>typf<span class="w"> </span>info
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Use specific backends</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>typf<span class="w"> </span>render<span class="w"> </span><span class="s2">&quot;Sample&quot;</span><span class="w"> </span>-f<span class="w"> </span>font.ttf<span class="w"> </span>--shaper<span class="w"> </span>harfbuzz<span class="w"> </span>--renderer<span class="w"> </span>skia<span class="w"> </span>-o<span class="w"> </span>out.png
 </span></code></pre></div>
 <h2 id="what-just-happened">What Just Happened<a class="headerlink" href="#what-just-happened" title="Permanent link">&para;</a></h2>
 <ol>
@@ -1765,12 +1767,12 @@
 <li><strong>Export</strong>: PNG file written to disk</li>
 </ol>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Try the examples</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>python<span class="w"> </span>examples/simple_render.py
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>cargo<span class="w"> </span>run<span class="w"> </span>--example<span class="w"> </span>basic
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Test everything works</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>./typf-tester/typfme.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Try the examples</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>python<span class="w"> </span>examples/simple_render.py
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>cargo<span class="w"> </span>run<span class="w"> </span>--example<span class="w"> </span>basic
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Test everything works</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>./typf-tester/typfme.py
 </span></code></pre></div>
 <p>Read <a href="../03-architecture-overview/">Architecture Overview</a> to understand how it works.</p>
 

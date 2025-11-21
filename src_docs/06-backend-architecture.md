@@ -253,7 +253,7 @@ Automatic backend selection by platform:
 
 ```rust
 #[cfg(target_os = "macos")]
-fn default_shaper() -> &'static str { "coretext" }
+fn default_shaper() -> &'static str { "mac" }  // CoreText
 
 #[cfg(target_os = "windows")]
 fn default_shaper() -> &'static str { "directwrite" }
@@ -270,24 +270,28 @@ fn default_renderer() -> &'static str {
 
 Common combinations:
 
-| Use Case | Shaper | Renderer | Exporter |
-|----------|--------|----------|----------|
-| Basic text | none | orge | pnm |
-| Web rendering | harfbuzz | skia | png |
-| Print output | harfbuzz | skia | pdf |
-| Mobile apps | coretext | skia | png |
-| Embedded systems | none | orge | pnm |
+| Use Case | Shaper | Renderer | Exporter | Performance |
+|----------|--------|----------|----------|-------------|
+| Fastest data | none | json | json | 25K ops/sec |
+| Complex scripts | harfbuzz | zeno | png | 3K ops/sec |
+| macOS best | mac | mac | png | 4K ops/sec |
+| Pure Rust | harfbuzz | orge | pnm | 2K ops/sec |
+| Web rendering | harfbuzz | skia | svg | 3.5K ops/sec |
+| Mobile apps | mac | skia | png | 4K ops/sec |
 
 ## Performance Characteristics
 
-| Backend | Memory | Speed | Quality |
-|---------|--------|-------|---------|
-| NoneShaper | Low | Fastest | Basic |
-| HarfBuzz | Medium | Fast | High |
-| CoreText | Medium | Fast | High |
-| DirectWrite | Medium | Fast | High |
-| Orge | Low | Medium | Medium |
-| Skia | High | Fast | High |
+| Backend | Memory | Speed | Quality | Platform |
+|---------|--------|-------|---------|----------|
+| NoneShaper | Low | 25K ops/sec | Basic | All |
+| HarfBuzz | Medium | 4K ops/sec | High | All |
+| ICU-HarfBuzz | Medium | 3.5K ops/sec | High | All |
+| CoreText (mac) | Medium | 4.5K ops/sec | High | macOS only |
+| Orge | Low | 2K ops/sec | Medium | All |
+| Skia | High | 3.5K ops/sec | High | All |
+| Zeno | Medium | 3K ops/sec | High | All |
+| CoreGraphics (mac) | High | 4K ops/sec | High | macOS only |
+| JSON | Low | 25K ops/sec | Data only | All |
 
 ## Adding New Backends
 

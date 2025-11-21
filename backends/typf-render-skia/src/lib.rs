@@ -37,7 +37,7 @@ pub struct SkiaRenderer {
 impl SkiaRenderer {
     /// Creates a renderer that treats every glyph with professional care
     pub fn new() -> Self {
-        Self { max_size: 8192 }
+        Self { max_size: 65535 }
     }
 
     /// Converts a single glyph from outline to bitmap with surgical precision
@@ -374,7 +374,7 @@ mod tests {
     fn test_renderer_default() {
         let renderer = SkiaRenderer::default();
         assert_eq!(renderer.name(), "skia");
-        assert_eq!(renderer.max_size, 8192);
+        assert_eq!(renderer.max_size, 65535);
     }
 
     #[test]

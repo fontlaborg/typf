@@ -79,7 +79,7 @@ impl OrgeRenderer {
     /// Ready your pixel artist for the transformation to come
     pub fn new() -> Self {
         Self {
-            max_size: 8192, // Because 4K is already yesterday's news
+            max_size: 65535, // Maximum u16 value, practical limit for bitmap dimensions
         }
     }
 

@@ -28,6 +28,7 @@ members = [
 
     # CLI
     "crates/typf-cli",
+    "crates/typf-bench",
 
     # Bindings
     "bindings/python",
@@ -50,6 +51,7 @@ typf-input = { path = "crates/typf-input" }
 typf-unicode = { path = "crates/typf-unicode" }
 typf-fontdb = { path = "crates/typf-fontdb" }
 typf-export = { path = "crates/typf-export" }
+typf-bench = { path = "crates/typf-bench" }
 
 # Shaping backends
 typf-shape-none = { path = "backends/typf-shape-none" }

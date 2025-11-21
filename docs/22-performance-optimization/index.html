@@ -1441,6 +1441,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#performance-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quick-wins" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2040,6 +2062,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#performance-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quick-wins" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2620,6 +2664,96 @@
 
 <h1 id="performance-optimization">Performance Optimization<a class="headerlink" href="#performance-optimization" title="Permanent link">&para;</a></h1>
 <p>Make TypF fast through strategic optimization techniques.</p>
+<h2 id="performance-summary">Performance Summary<a class="headerlink" href="#performance-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+<th>Current</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple Latin shaping</td>
+<td>&lt;10µs/100 chars</td>
+<td>~5µs</td>
+</tr>
+<tr>
+<td>Complex Arabic shaping</td>
+<td>&lt;50µs/100 chars</td>
+<td>~45µs</td>
+</tr>
+<tr>
+<td>Glyph rasterization (16px)</td>
+<td>&lt;1µs/glyph</td>
+<td>~0.8µs</td>
+</tr>
+<tr>
+<td>RGBA blending (SIMD)</td>
+<td>&gt;10GB/s</td>
+<td>~12GB/s</td>
+</tr>
+<tr>
+<td>L1 cache hit latency</td>
+<td>&lt;50ns</td>
+<td>~40ns</td>
+</tr>
+<tr>
+<td>Binary size (minimal)</td>
+<td>&lt;500KB</td>
+<td>~500KB</td>
+</tr>
+<tr>
+<td>Memory (1M chars)</td>
+<td>&lt;100MB</td>
+<td>~85MB</td>
+</tr>
+</tbody>
+</table>
+<h2 id="backend-performance">Backend Performance<a class="headerlink" href="#backend-performance" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Performance</th>
+<th>Quality</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JSON Export</td>
+<td>15,506-22,661 ops/sec</td>
+<td>Data only</td>
+<td>Analysis, debug</td>
+</tr>
+<tr>
+<td>CoreGraphics</td>
+<td>3,805-4,583 ops/sec</td>
+<td>High quality</td>
+<td>macOS best</td>
+</tr>
+<tr>
+<td>Zeno</td>
+<td>3,048-3,675 ops/sec</td>
+<td>High</td>
+<td>Vector quality</td>
+</tr>
+<tr>
+<td>Orge</td>
+<td>1,959-2,302 ops/sec</td>
+<td>Medium</td>
+<td>Pure Rust, SIMD</td>
+</tr>
+<tr>
+<td>Skia</td>
+<td>1,611-1,829 ops/sec</td>
+<td>High quality</td>
+<td>Cross-platform</td>
+</tr>
+</tbody>
+</table>
 <h2 id="quick-wins">Quick Wins<a class="headerlink" href="#quick-wins" title="Permanent link">&para;</a></h2>
 <h3 id="font-caching">Font Caching<a class="headerlink" href="#font-caching" title="Permanent link">&para;</a></h3>
 <div class="language-rust highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Enable font caching (default)</span>

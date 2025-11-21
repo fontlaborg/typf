@@ -7,9 +7,22 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
+### Added
+- **Backend Documentation**: Comprehensive comparison tables for shapers, renderers, and export formats in README.md
+- **Quickstart Example**: New `examples/quickstart_backends.rs` demonstrating all major backend combinations with conditional compilation
+- **Cargo Integration**: Registered quickstart_backends example in Cargo.toml for easy execution
+
 ### Fixed
 - **macOS Backend Detection**: Both `typf` and `typfpy` CLIs now correctly report macOS-native backends (CoreText shaper, CoreGraphics renderer) in `info` command output
-- **Test Script**: Fixed KeyError in benchmark script due to incorrect font dictionary keys
+- **Rust CLI Feature Flags**: Fixed mismatch between feature flag names (`shaping-mac`/`render-mac`) and actual backend packages (`typf-shape-ct`/`typf-render-cg`)
+- **Python CLI Dynamic Detection**: Replaced hardcoded backend lists with dynamic probing of available backends
+- **Test Script Font Keys**: Fixed KeyError in benchmark script by correcting font dictionary keys ("kalnia" → "kalniav", "notoarabic" → "notoara", "notosans" → "notosan")
+- **Documentation**: Fixed duplicate heading in WORK.md
+
+### Improved
+- **Platform-Aware Builds**: Enhanced build.sh with platform-specific feature selection for macOS backends
+- **Backend Aliases**: Added support for mac/ct/cg aliases in CLI backend selection
+- **Documentation Structure**: Better organization of backend comparison information
 
 ## [2.0.0] - 2025-11-21
 

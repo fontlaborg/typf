@@ -23,27 +23,31 @@ That's it. The build script installs everything you need.
 
 ## Your First Render
 
-CLI:
+Rust CLI:
 ```bash
-typf-cli render --text "Hello, 世界!" --font /System/Library/Fonts/Arial.ttf --output hello.png
+typf render "Hello, 世界!" -f /System/Library/Fonts/Arial.ttf -o hello.png
 ```
 
-Python:
+Python CLI:
+```bash
+typfpy render "Hello, 世界!" -f /System/Library/Fonts/Arial.ttf -o hello.png
+```
+
+Python API:
 ```python
-import typfpy
-result = typfpy.render_text("Hello, 世界!", "/System/Library/Fonts/Arial.ttf", 32.0)
-with open("hello.png", "wb") as f:
-    f.write(result.png_data)
+import typf
+result = typf.render_text("Hello, 世界!", "/System/Library/Fonts/Arial.ttf")
+result.save("hello.png")
 ```
 
 ## Choose Your Backends
 
 ```bash
 # See what's available
-typf-cli backend-list
+typf info
 
 # Use specific backends
-typf-cli render --text "Sample" --font font.ttf --shaper harfbuzz --renderer skia --output out.png
+typf render "Sample" -f font.ttf --shaper harfbuzz --renderer skia -o out.png
 ```
 
 ## What Just Happened

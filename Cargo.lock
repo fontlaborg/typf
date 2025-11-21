@@ -1789,6 +1789,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "typf-bench"
+version = "2.0.0"
+dependencies = [
+ "clap",
+ "colored",
+ "env_logger",
+ "serde",
+ "serde_json",
+ "typf-core",
+ "typf-export",
+ "typf-fontdb",
+ "typf-render-cg",
+ "typf-render-orge",
+ "typf-render-skia",
+ "typf-render-zeno",
+ "typf-shape-ct",
+ "typf-shape-hb",
+ "typf-shape-icu-hb",
+ "typf-shape-none",
+]
+
+[[package]]
 name = "typf-cli"
 version = "2.0.0"
 dependencies = [

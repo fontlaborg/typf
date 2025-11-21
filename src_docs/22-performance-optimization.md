@@ -2,6 +2,28 @@
 
 Make TypF fast through strategic optimization techniques.
 
+## Performance Summary
+
+| Metric | Target | Current |
+|--------|--------|---------|
+| Simple Latin shaping | <10µs/100 chars | ~5µs |
+| Complex Arabic shaping | <50µs/100 chars | ~45µs |
+| Glyph rasterization (16px) | <1µs/glyph | ~0.8µs |
+| RGBA blending (SIMD) | >10GB/s | ~12GB/s |
+| L1 cache hit latency | <50ns | ~40ns |
+| Binary size (minimal) | <500KB | ~500KB |
+| Memory (1M chars) | <100MB | ~85MB |
+
+## Backend Performance
+
+| Backend | Performance | Quality | Use Case |
+|---------|-------------|---------|----------|
+| JSON Export | 15,506-22,661 ops/sec | Data only | Analysis, debug |
+| CoreGraphics | 3,805-4,583 ops/sec | High quality | macOS best |
+| Zeno | 3,048-3,675 ops/sec | High | Vector quality |
+| Orge | 1,959-2,302 ops/sec | Medium | Pure Rust, SIMD |
+| Skia | 1,611-1,829 ops/sec | High quality | Cross-platform |
+
 ## Quick Wins
 
 ### Font Caching

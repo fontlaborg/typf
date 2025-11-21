@@ -6,36 +6,50 @@ TYPF's command-line interface provides fast text rendering from the terminal.
 
 ```bash
 # Simple text rendering
-typf render "Hello World" --font font.ttf --output hello.png
+typf render "Hello World" -f font.ttf -o hello.png
 
 # Use specific backends
-typf render "Text" --font font.ttf --shaper harfbuzz --renderer skia --output text.png
+typf render "Text" -f font.ttf --shaper harfbuzz --renderer skia -o text.png
 
-# Quick render with defaults
-typf quick "Hello CLI" --output hello.png
+# Python CLI (identical syntax)
+typfpy render "Hello World" -f font.ttf -o hello.png
 ```
 
 ## Installation
 
 ```bash
-# Install from crates.io
-cargo install typf-cli
-
 # Build from source
-cargo install --path crates/typf-cli
+git clone https://github.com/fontlaborg/typf.git
+cd typf
+./build.sh
 
-# Build with features
-cargo install --path crates/typf-cli --features "shaping-harfbuzz,render-skia"
+# Install Python bindings
+cd bindings/python
+uv sync
+maturin develop
 ```
 
 ## Commands
+
+### info
+
+Show available backends and system information.
+
+```bash
+typf info [--shapers] [--renderers] [--formats]
+
+Options:
+  --shapers       Show available shaper backends
+  --renderers     Show available renderer backends
+  --formats       Show supported export formats
+```
 
 ### render
 
 Main command for text rendering.
 
 ```bash
-typf render [OPTIONS] <TEXT> --font <FONT>
+typf render [OPTIONS] <TEXT>
 
 Arguments:
   <TEXT>          Text to render
@@ -43,17 +57,19 @@ Arguments:
 Options:
   -f, --font <FONT>           Font file path [required]
   -o, --output <OUTPUT>       Output file path
-  -s, --size <SIZE>           Font size in pixels [default: 16]
-  -w, --width <WIDTH>         Image width [default: 800]
-  -h, --height <HEIGHT>       Image height [default: 600]
-      --shaper <SHAPER>       Text shaper backend
-      --renderer <RENDERER>   Rendering backend
-      --format <FORMAT>       Output format [png|svg|pdf|pnm|json]
-      --color <COLOR>         Text color (rgba)
-      --background <COLOR>    Background color (rgba)
+  -s, --size <SIZE>           Font size in pixels [default: 32]
+  -w, --width <WIDTH>         Image width [default: auto]
+  -h, --height <HEIGHT>       Image height [default: auto]
+      --shaper <SHAPER>       Text shaper backend [none|hb|icu-hb|mac]
+      --renderer <RENDERER>   Rendering backend [orge|skia|zeno|json|mac|cg]
+      --format <FORMAT>       Output format [png|svg|pnm|json]
+  -c, --color <COLOR>         Text color (RRGGBBAA hex) [default: 000000FF]
+  -b, --background <COLOR>    Background color (RRGGBBAA hex) [default: 00000000]
+      --direction <DIR>       Text direction [ltr|rtl|ttb] [default: auto]
+      --language <LANG>       Language code [default: auto]
+      --script <SCRIPT>       Unicode script [default: auto]
+  -F, --features <FEATURES>   Font features (comma-separated)
       --dpi <DPI>             Output resolution [default: 72]
-      --no-antialiasing       Disable edge smoothing
-      --hinting <HINTING>     Font hinting mode
   -v, --verbose               Show detailed output
 ```
 
@@ -61,246 +77,63 @@ Options:
 
 ```bash
 # Basic rendering
-typf render "Hello World" --font Roboto.ttf --output hello.png
+typf render "Hello World" -f Roboto.ttf -o hello.png
 
 # Large text for printing
-typf render "Print Title" --font serif.ttf --size 48 --dpi 300 --output title.png
+typf render "Print Title" -f serif.ttf -s 48 --dpi 300 -o title.png
 
 # SVG export
-typf render "Vector Text" --font sans.ttf --format svg --output vector.svg
+typf render "Vector Text" -f sans.ttf --format svg -o vector.svg
 
-# Custom colors
-typf render "Red Text" --font font.ttf --color "255,0,0,255" --background "240,240,240,255" --output red.png
+# Custom colors (hex format)
+typf render "Red Text" -f font.ttf -c FF0000FF -b F0F0F0FF -o red.png
 
-# Using backends
-typf render "Hi-Quality" --font font.ttf --shaper harfbuzz --renderer skia --output high.png
-```
+# Using specific backends
+typf render "Hi-Quality" -f font.ttf --shaper harfbuzz --renderer skia -o high.png
 
-### quick
+# Complex script with proper settings
+typf render "مرحبا بالعالم" -f arabic.ttf --shaper harfbuzz --language ar --script Arab --direction rtl -o arabic.png
 
-Simplified rendering with sensible defaults.
-
-```bash
-typf quick [OPTIONS] <TEXT> --output <OUTPUT>
-
-Arguments:
-  <TEXT>          Text to render
-
-Options:
-  -o, --output <OUTPUT>       Output file path [required]
-  -f, --font <FONT>           Font file (uses system fonts if omitted)
-      --size <SIZE>           Font size [default: 24]
-      --format <FORMAT>       Output format [default: png]
-```
-
-### Examples
-
-```bash
-# Quick PNG with system fonts
-typf quick "Hello" --output hello.png
-
-# Quick SVG
-typf quick "SVG Text" --output text.svg --format svg
-
-# Custom font
-typf quick "Custom Font" --output custom.png --font myfont.ttf
+# Font features
+typf render "Ligatures" -f font.ttf -F "liga,kern,dlig" -o features.png
 ```
 
 ### batch
 
-Render multiple texts from a file or stdin.
+Render multiple texts from a JSONL file.
 
 ```bash
-typf batch [OPTIONS] --input <INPUT> --template <TEMPLATE>
+typf batch [OPTIONS] --input <INPUT> --output-dir <OUTPUT_DIR>
 
 Options:
-  -i, --input <INPUT>         Input file path or "-" for stdin
-  -t, --template <TEMPLATE>   Output filename template
-  -f, --font <FONT>           Font file path
-      --format <FORMAT>       Output format
-      --config <CONFIG>       JSON config file
+  -i, --input <INPUT>         Input JSONL file path
+  -o, --output-dir <OUTPUT_DIR>  Output directory
+  -f, --font <FONT>           Default font file path
+      --format <FORMAT>       Default output format [default: png]
+      --size <SIZE>           Default font size [default: 32]
 ```
 
-### Template Variables
+### Input Format (JSONL)
 
-Use variables in output filenames:
+Each line contains a JSON object:
+```jsonl
+{"text": "Hello World", "size": 24, "output": "hello.png"}
+{"text": "Big Title", "size": 48, "output": "title.png", "shaper": "harfbuzz"}
+{"text": "مرحبا", "language": "ar", "script": "Arab", "direction": "rtl", "output": "arabic.png"}
+```
+
+### Example
 
 ```bash
-# Template with line number
-typf batch --input texts.txt --template "output_{line}.png"
+# Create jobs file
+cat > jobs.jsonl << 'EOF'
+{"text": "Title", "size": 72, "output": "title.png"}
+{"text": "Subtitle", "size": 48, "output": "subtitle.png"}
+{"text": "Body", "size": 16, "output": "body.png"}
+EOF
 
-# Template with text hash
-typf batch --input texts.txt --template "output_{hash}.svg"
-
-# Template with timestamp
-typf batch --input texts.txt --template "output_{time}.png"
-```
-
-### Input Formats
-
-Plain text file:
-```
-Hello World
-Second Line  
-TypF CLI
-```
-
-JSON config:
-```json
-{
-  "font": "Roboto.ttf",
-  "size": 16,
-  "format": "png",
-  "texts": [
-    {"text": "Hello", "output": "hello.png"},
-    {"text": "World", "size": 24, "output": "world.png"}
-  ]
-}
-```
-
-### font
-
-Font information and testing.
-
-```bash
-typf font [OPTIONS] <COMMAND>
-
-Commands:
-  info     Show font information
-  list     List available fonts
-  test     Test font rendering
-  search   Search for fonts
-```
-
-#### font info
-
-```bash
-typf font info <FONT_PATH>
-
-Options:
-  -v, --verbose    Show detailed glyph information
-```
-
-Output:
-```
-Font: Roboto-Regular.ttf
-Family: Roboto
-Style: Regular
-Units per EM: 2048
-Ascender: 1900
-Descender: -500
-Line Gap: 0
-Supported scripts: Latin, Cyrillic, Greek
-```
-
-#### font list
-
-```bash
-typf font list [OPTIONS]
-
-Options:
-  -f, --family <FAMILY>    Filter by font family
-  -s, --style <STYLE>      Filter by style
-  --system                 Include system fonts
-```
-
-#### font test
-
-```bash
-typf font test <FONT_PATH> --output <OUTPUT>
-
-Options:
-      --size <SIZE>         Test font size [default: 16]
-      --text <TEXT>         Test text [default: "Hello World"]
-      --sample              Generate comprehensive test
-```
-
-### shape
-
-Text shaping analysis and debugging.
-
-```bash
-typf shape [OPTIONS] <TEXT> --font <FONT>
-
-Options:
-  -f, --font <FONT>           Font file path
-  -s, --shaper <SHAPER>       Shaper backend
-      --direction <DIR>       Text direction [ltr|rtl|ttb]
-      --script <SCRIPT>       Unicode script
-      --language <LANG>       Language code
-  -o, --output <OUTPUT>       Save analysis to file
-      --format <FORMAT>       Output format [json|yaml]
-```
-
-### Examples
-
-```bash
-# Basic shaping analysis
-typf shape "Hello World" --font Roboto.ttf
-
-# Right-to-left text
-typf shape "مرحبا بالعالم" --font arabic.ttf --direction rtl
-
-# Save analysis
-typf shape "Analysis" --font font.ttf --output analysis.json
-```
-
-### benchmark
-
-Performance testing and benchmarks.
-
-```bash
-typf benchmark [OPTIONS]
-
-Options:
-  -f, --font <FONT>           Font file path
-  -t, --text <TEXT>           Test text
-      --iterations <N>        Number of iterations [default: 100]
-      --backends <BACKENDS>   Test specific backends
-      --output <OUTPUT>       Save results to file
-      --format <FORMAT>       Results format [json|csv|markdown]
-```
-
-### Examples
-
-```bash
-# Quick benchmark
-typf benchmark --font Roboto.ttf
-
-# Custom test
-typf benchmark --font font.ttf --text "Performance test" --iterations 1000
-
-# Test specific backends
-typf benchmark --backends "harfbuzz+orge,harfbuzz+skia" --output results.json
-```
-
-### repl
-
-Interactive REPL for testing.
-
-```bash
-typf repl [OPTIONS]
-
-Options:
-  -f, --font <FONT>           Default font
-      --size <SIZE>           Default font size
-      --output <DIR>          Default output directory
-```
-
-REPL Commands:
-```
-> render "Hello World" --font Roboto.ttf
-Rendered to output_001.png
-
-> shape "Unicode test 😊" --font emoji.ttf
-Text: Unicode test 😊
-Glyphs: 14 (includes emoji)
-Script: Mixed
-
-> help
-Available commands: render, shape, font, benchmark, quit
-
-> quit
+# Process all jobs
+typf batch -i jobs.jsonl -o ./rendered/
 ```
 
 ## Configuration
@@ -557,6 +390,40 @@ clean:
     name: text-assets
     path: generated/
 ```
+
+## Migration from v1.x
+
+If you're upgrading from TYPF v1.x, the CLI has changed significantly:
+
+### Command Structure Changes
+
+**Before (v1.x)**:
+```bash
+typf "Hello" --font font.ttf --output hello.png --size 48
+python -m typfpy render "Hello" hello.png --font=/path/to/font.ttf
+```
+
+**After (v2.0.0)**:
+```bash
+typf render "Hello" -f font.ttf -o hello.png -s 48
+typfpy render "Hello" -f /path/to/font.ttf -o hello.png
+```
+
+### Key Changes
+
+- **Subcommands**: Now uses `info`, `render`, `batch` subcommands
+- **Option names**: Shortened (`--output` → `-o`, `--font` → `-f`, `--size` → `-s`)
+- **Python CLI**: Renamed from `python -m typfpy` to `typfpy`
+- **Features**: Enhanced with Unicode escapes, color parsing, font features
+
+### New Features
+
+- Unicode escape sequences: `\u{1F44B}` for emoji
+- Color format: RRGGBBAA hex (e.g., `FF0000FF` for red)
+- Font features: `-F "liga,kern,dlig"`
+- Better backend detection and selection
+
+For complete migration details, see the main repository's `CLI_MIGRATION.md` file.
 
 ---
 

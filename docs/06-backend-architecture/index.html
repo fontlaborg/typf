@@ -2198,7 +2198,7 @@
 <h2 id="platform-defaults">Platform Defaults<a class="headerlink" href="#platform-defaults" title="Permanent link">&para;</a></h2>
 <p>Automatic backend selection by platform:</p>
 <div class="language-rust highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="cp">#[cfg(target_os = </span><span class="s">&quot;macos&quot;</span><span class="cp">)]</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">fn</span><span class="w"> </span><span class="nf">default_shaper</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kp">&amp;</span><span class="o">&#39;</span><span class="nb">static</span><span class="w"> </span><span class="kt">str</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;coretext&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">fn</span><span class="w"> </span><span class="nf">default_shaper</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kp">&amp;</span><span class="o">&#39;</span><span class="nb">static</span><span class="w"> </span><span class="kt">str</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;mac&quot;</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1">// CoreText</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="cp">#[cfg(target_os = </span><span class="s">&quot;windows&quot;</span><span class="cp">)]</span>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">fn</span><span class="w"> </span><span class="nf">default_shaper</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kp">&amp;</span><span class="o">&#39;</span><span class="nb">static</span><span class="w"> </span><span class="kt">str</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;directwrite&quot;</span><span class="w"> </span><span class="p">}</span>
@@ -2219,38 +2219,51 @@
 <th>Shaper</th>
 <th>Renderer</th>
 <th>Exporter</th>
+<th>Performance</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Basic text</td>
+<td>Fastest data</td>
 <td>none</td>
+<td>json</td>
+<td>json</td>
+<td>25K ops/sec</td>
+</tr>
+<tr>
+<td>Complex scripts</td>
+<td>harfbuzz</td>
+<td>zeno</td>
+<td>png</td>
+<td>3K ops/sec</td>
+</tr>
+<tr>
+<td>macOS best</td>
+<td>mac</td>
+<td>mac</td>
+<td>png</td>
+<td>4K ops/sec</td>
+</tr>
+<tr>
+<td>Pure Rust</td>
+<td>harfbuzz</td>
 <td>orge</td>
 <td>pnm</td>
+<td>2K ops/sec</td>
 </tr>
 <tr>
 <td>Web rendering</td>
 <td>harfbuzz</td>
 <td>skia</td>
-<td>png</td>
-</tr>
-<tr>
-<td>Print output</td>
-<td>harfbuzz</td>
-<td>skia</td>
-<td>pdf</td>
+<td>svg</td>
+<td>3.5K ops/sec</td>
 </tr>
 <tr>
 <td>Mobile apps</td>
-<td>coretext</td>
+<td>mac</td>
 <td>skia</td>
 <td>png</td>
-</tr>
-<tr>
-<td>Embedded systems</td>
-<td>none</td>
-<td>orge</td>
-<td>pnm</td>
+<td>4K ops/sec</td>
 </tr>
 </tbody>
 </table>
@@ -2262,44 +2275,72 @@
 <th>Memory</th>
 <th>Speed</th>
 <th>Quality</th>
+<th>Platform</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>NoneShaper</td>
 <td>Low</td>
-<td>Fastest</td>
+<td>25K ops/sec</td>
 <td>Basic</td>
+<td>All</td>
 </tr>
 <tr>
 <td>HarfBuzz</td>
 <td>Medium</td>
-<td>Fast</td>
+<td>4K ops/sec</td>
 <td>High</td>
+<td>All</td>
 </tr>
 <tr>
-<td>CoreText</td>
+<td>ICU-HarfBuzz</td>
 <td>Medium</td>
-<td>Fast</td>
+<td>3.5K ops/sec</td>
 <td>High</td>
+<td>All</td>
 </tr>
 <tr>
-<td>DirectWrite</td>
+<td>CoreText (mac)</td>
 <td>Medium</td>
-<td>Fast</td>
+<td>4.5K ops/sec</td>
 <td>High</td>
+<td>macOS only</td>
 </tr>
 <tr>
 <td>Orge</td>
 <td>Low</td>
+<td>2K ops/sec</td>
 <td>Medium</td>
-<td>Medium</td>
+<td>All</td>
 </tr>
 <tr>
 <td>Skia</td>
 <td>High</td>
-<td>Fast</td>
+<td>3.5K ops/sec</td>
 <td>High</td>
+<td>All</td>
+</tr>
+<tr>
+<td>Zeno</td>
+<td>Medium</td>
+<td>3K ops/sec</td>
+<td>High</td>
+<td>All</td>
+</tr>
+<tr>
+<td>CoreGraphics (mac)</td>
+<td>High</td>
+<td>4K ops/sec</td>
+<td>High</td>
+<td>macOS only</td>
+</tr>
+<tr>
+<td>JSON</td>
+<td>Low</td>
+<td>25K ops/sec</td>
+<td>Data only</td>
+<td>All</td>
 </tr>
 </tbody>
 </table>

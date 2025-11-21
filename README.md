@@ -201,7 +201,9 @@ Tests all backend combos on your hardware. Results go to `output/`.
 - ✅ Unified CLI (Rust + Python)
 - ✅ Python bindings (PyO3)
 - ✅ Linux, macOS, Windows, WASM
-- ✅ 206 unit tests + 240 integration tests pass
+- ✅ 446 total tests passing (206 unit + 240 integration)
+- ✅ macOS native backends (CoreText + CoreGraphics)
+- ✅ Comprehensive backend documentation and examples
 
 ## Limits
 

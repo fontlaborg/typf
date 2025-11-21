@@ -52,7 +52,7 @@ impl ZenoRenderer {
     /// Creates a renderer that's pure Rust and proud of it
     pub fn new() -> Self {
         Self {
-            max_size: 8192, // Ready for the 8K future
+            max_size: 65535, // Maximum u16 value, practical limit for bitmap dimensions
         }
     }
 

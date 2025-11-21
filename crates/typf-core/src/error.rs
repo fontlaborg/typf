@@ -79,7 +79,7 @@ pub enum ShapingError {
 /// When rendering fails
 #[derive(Debug, Error)]
 pub enum RenderError {
-    #[error("Invalid bitmap dimensions: {width}x{height} (max ~10,000 pixels per dimension). For long texts, use smaller font sizes, implement line wrapping, or use SVG export instead of bitmap rendering.")]
+    #[error("Invalid bitmap dimensions: {width}x{height} (max 65,535 pixels per dimension). For long texts, use smaller font sizes, implement line wrapping, or use SVG export instead of bitmap rendering.")]
     InvalidDimensions { width: u32, height: u32 },
 
     #[error("Out of memory")]
