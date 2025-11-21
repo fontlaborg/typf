@@ -48,6 +48,36 @@ That's it. Your text is rendered.
 | macOS best | `coretext + coregraphics` | 4K ops/sec | 254 levels |
 | Pure Rust | `harfbuzz + orge` | 2K ops/sec | 25 levels (mono) |
 
+## Backend comparison
+
+### Shapers
+
+| Backend | Scripts | Features | Performance | Platform |
+|---------|---------|----------|-------------|----------|
+| **none** | Latin only | Simple LTR | 25K ops/sec | All |
+| **harfbuzz** | All (200+) | Full OpenType | 4K ops/sec | All |
+| **icu-hb** | All + normalization | Unicode + OpenType | 3.5K ops/sec | All |
+| **coretext** | All | Native macOS | 4.5K ops/sec | macOS only |
+
+### Renderers
+
+| Backend | Anti-alias | Color | Output | Performance | Platform |
+|---------|------------|-------|--------|-------------|----------|
+| **orge** | Monochrome | No | Bitmap | 2K ops/sec | All (pure Rust) |
+| **skia** | 256 levels | No | Bitmap | 3.5K ops/sec | All |
+| **zeno** | 256 levels | No | Bitmap | 3K ops/sec | All (pure Rust) |
+| **coregraphics** | 256 levels | Yes (sbix/COLR) | Bitmap | 4K ops/sec | macOS only |
+| **json** | N/A | N/A | JSON data | 25K ops/sec | All |
+
+### Export Formats
+
+| Format | Size | Antialiasing | Use Case |
+|--------|------|--------------|----------|
+| **PNG** | Small | Yes | Web, print |
+| **SVG** | Scalable | Vector | Icons, logos |
+| **JSON** | Smallest | N/A | Analysis, debug |
+| **PGM/PPM** | Large | Yes/No | Testing, legacy |
+
 ## Build options
 
 ```bash

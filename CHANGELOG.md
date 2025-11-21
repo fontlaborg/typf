@@ -7,6 +7,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
+### Fixed
+- **macOS Backend Detection**: Both `typf` and `typfpy` CLIs now correctly report macOS-native backends (CoreText shaper, CoreGraphics renderer) in `info` command output
+- **Test Script**: Fixed KeyError in benchmark script due to incorrect font dictionary keys
+
 ## [2.0.0] - 2025-11-21
 
 **Major Release**: Complete rewrite with modular architecture and multiple backend support.
