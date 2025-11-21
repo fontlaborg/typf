@@ -35,8 +35,6 @@
 
 ### 2025-11-21 02:25 - macOS Backend Detection Fix ✅
 
-### macOS Backend Detection Fix ✅
-
 **Issue**: Both `typf` (Rust CLI) and `typfpy` (Python CLI) were not reporting macOS-native backends (`mac` shaper and renderer) in `info` command output, even though the backends were compiled and functional.
 
 **Root Causes**:
