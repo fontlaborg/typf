@@ -119,10 +119,15 @@ class TypfTester:
 
         # Available fonts
         self.fonts = {
-            "kalnia": self.fonts_dir / "Kalnia[wdth,wght].ttf",
-            "notoarabic": self.fonts_dir / "NotoNaskhArabic-Regular.ttf",
-            "notosans": self.fonts_dir
-            / "NotoSans-Regular.ttf",  # Broad Unicode coverage
+            "abecbdt": self.fonts_dir / "AbeloneRegular-CBDT.ttf",
+            "abecolr": self.fonts_dir / "AbeloneRegular-COLRv1.ttf",
+            "abesbix": self.fonts_dir / "AbeloneRegular-sbix.ttf",
+            "abesvg": self.fonts_dir / "AbeloneRegular-SVG.otf",
+            "kalniav": self.fonts_dir / "Kalnia[wdth,wght].ttf",
+            "notoara": self.fonts_dir / "NotoNaskhArabic-Regular.ttf",
+            "notosan": self.fonts_dir / "NotoSans-Regular.ttf",
+            "sourcev": self.fonts_dir / "SourceSansVariable-Italic.otf",
+            "stixmat": self.fonts_dir / "STIX2Math.otf",
         }
 
         # Verify fonts exist

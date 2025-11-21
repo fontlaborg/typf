@@ -1805,7 +1805,10 @@ dependencies = [
  "typf-export-svg",
  "typf-fontdb",
  "typf-render-orge",
+ "typf-render-skia",
+ "typf-render-zeno",
  "typf-shape-hb",
+ "typf-shape-icu-hb",
  "typf-shape-none",
 ]
 
