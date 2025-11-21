@@ -6,7 +6,34 @@
 
 ---
 
-## Latest Update (2025-11-21 02:25)
+## Latest Updates
+
+### 2025-11-21 02:35 - Documentation & Examples Enhancement ✅
+
+**Added comprehensive backend documentation and examples:**
+
+1. **README.md Backend Comparison Tables**:
+   - Detailed shaper comparison: none, harfbuzz, icu-hb, coretext
+   - Renderer comparison: orge, skia, zeno, coregraphics, json
+   - Export format comparison: PNG, SVG, JSON, PGM/PPM
+   - Each table shows performance, features, and platform availability
+
+2. **New Quickstart Example** (`examples/quickstart_backends.rs`):
+   - Demonstrates all major backend combinations
+   - Conditionally compiled based on available features
+   - Shows basic usage pattern for each backend
+   - Registered in Cargo.toml for easy execution
+
+3. **CHANGELOG.md Updates**:
+   - Added Unreleased section with recent fixes
+   - Documented macOS backend detection fix
+   - Documented test script font key fixes
+
+**Impact**: Users can now easily understand backend tradeoffs and get started with different configurations.
+
+---
+
+### 2025-11-21 02:25 - macOS Backend Detection Fix ✅
 
 ### macOS Backend Detection Fix ✅
 
