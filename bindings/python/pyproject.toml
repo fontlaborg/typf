@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "typfpy"
-version = "2.0.0.dev0"
+version = "2.0.0"
 description = "High-performance text rendering pipeline"
 authors = [{name = "FontLab", email = "dev@fontlab.com"}]
 license = {text = "EVALUATION LICENSE"}

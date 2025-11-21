@@ -1765,7 +1765,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "typf"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "console_error_panic_hook",
  "criterion",
@@ -1790,7 +1790,7 @@ dependencies = [
 
 [[package]]
 name = "typf-cli"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "base64",
  "clap",
@@ -1811,7 +1811,7 @@ dependencies = [
 
 [[package]]
 name = "typf-core"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "icu_properties",
  "log",
@@ -1822,7 +1822,7 @@ dependencies = [
 
 [[package]]
 name = "typf-export"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "image",
  "serde",
@@ -1832,7 +1832,7 @@ dependencies = [
 
 [[package]]
 name = "typf-export-svg"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "read-fonts",
  "skrifa",
@@ -1842,7 +1842,7 @@ dependencies = [
 
 [[package]]
 name = "typf-fontdb"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "log",
  "read-fonts",
@@ -1853,11 +1853,11 @@ dependencies = [
 
 [[package]]
 name = "typf-input"
-version = "2.0.0-dev"
+version = "2.0.0"
 
 [[package]]
 name = "typf-py"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "pyo3",
  "typf",
@@ -1878,7 +1878,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-cg"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "core-foundation",
  "core-graphics 0.23.2",
@@ -1890,7 +1890,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-json"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "env_logger",
  "log",
@@ -1902,7 +1902,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-orge"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "log",
  "rayon",
@@ -1913,7 +1913,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-skia"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "kurbo",
  "log",
@@ -1926,7 +1926,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-zeno"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "kurbo",
  "log",
@@ -1939,7 +1939,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-ct"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "core-foundation",
  "core-graphics 0.23.2",
@@ -1955,7 +1955,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-hb"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "harfbuzz_rs",
  "log",
@@ -1967,7 +1967,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-icu-hb"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "env_logger",
  "harfbuzz_rs",
@@ -1981,7 +1981,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-none"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "log",
  "typf-core",
@@ -1989,7 +1989,7 @@ dependencies = [
 
 [[package]]
 name = "typf-unicode"
-version = "2.0.0-dev"
+version = "2.0.0"
 dependencies = [
  "icu_properties",
  "icu_segmenter",
