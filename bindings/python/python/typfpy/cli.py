@@ -18,6 +18,58 @@ except ImportError:
     sys.exit(1)
 
 
+def detect_available_shapers():
+    """Detect which shaping backends are actually available"""
+    shapers = []
+
+    # Always available
+    shapers.append(("none", "No shaping (direct character mapping)"))
+
+    # Try to create each backend to see if it's available
+    test_backends = [
+        ("hb", "harfbuzz", "HarfBuzz (Unicode-aware text shaping)"),
+        ("icu-hb", "icu-hb", "ICU + HarfBuzz (advanced Unicode + shaping)"),
+        ("mac", "mac", "CoreText (macOS native)"),
+    ]
+
+    for shaper_id, shaper_name, description in test_backends:
+        try:
+            Typf(shaper=shaper_name, renderer="orge")
+            shapers.append((shaper_id, description))
+        except ValueError:
+            # Backend not available
+            pass
+
+    return shapers
+
+
+def detect_available_renderers():
+    """Detect which rendering backends are actually available"""
+    renderers = []
+
+    # Always available
+    renderers.append(("orge", "Orge (pure Rust, monochrome/grayscale)"))
+
+    # Try to create each backend to see if it's available
+    test_backends = [
+        ("json", "json", "JSON (structured glyph data)"),
+        ("cg", "coregraphics", "CoreGraphics (macOS native)"),
+        ("mac", "mac", "CoreGraphics (macOS native, alias)"),
+        ("skia", "skia", "TinySkia (cross-platform, antialiased)"),
+        ("zeno", "zeno", "Zeno (cross-platform vector rasterizer)"),
+    ]
+
+    for renderer_id, renderer_name, description in test_backends:
+        try:
+            Typf(shaper="none", renderer=renderer_name)
+            renderers.append((renderer_id, description))
+        except ValueError:
+            # Backend not available
+            pass
+
+    return renderers
+
+
 @click.group()
 @click.version_option(version=__version__, prog_name="typfpy")
 def cli():
@@ -40,17 +92,17 @@ def info(shapers: bool, renderers: bool, formats: bool):
 
     if show_all or shapers:
         click.echo("Shapers:")
-        click.echo("  none              - No shaping (direct character mapping)")
-        click.echo("  hb                - HarfBuzz (Unicode-aware text shaping)")
-        click.echo("  icu-hb            - ICU + HarfBuzz (advanced Unicode + shaping)")
+        available_shapers = detect_available_shapers()
+        for shaper_id, description in available_shapers:
+            click.echo(f"  {shaper_id:18s} - {description}")
         if show_all:
             click.echo()
 
     if show_all or renderers:
         click.echo("Renderers:")
-        click.echo("  orge              - Orge (pure Rust, monochrome/grayscale)")
-        click.echo("  skia              - TinySkia (cross-platform, antialiased)")
-        click.echo("  zeno              - Zeno (cross-platform vector rasterizer)")
+        available_renderers = detect_available_renderers()
+        for renderer_id, description in available_renderers:
+            click.echo(f"  {renderer_id:18s} - {description}")
         if show_all:
             click.echo()
 

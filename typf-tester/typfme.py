@@ -294,19 +294,14 @@ class TypfTester:
             print(f"\n{config.description}")
             print("-" * 80)
 
-            # Render each sample text
-            for text_name, text in self.sample_texts.items():
-                # Choose appropriate font based on script
-                if text_name == "arab":
-                    font_path = self.fonts["notoarabic"]
-                    font_name = "NotoArabic"
-                elif text_name == "mixd":
-                    # Mixed scripts need broad Unicode coverage (includes CJK)
-                    font_path = self.fonts["notosans"]
-                    font_name = "NotoSans"
-                else:
-                    font_path = self.fonts["kalnia"]
-                    font_name = "Kalnia"
+            for font_name, font_path in self.fonts.items():
+                text_name = "latn"
+                if font_name == "notoara":
+                    text_name = "arab"
+                elif font_name == "notosan":
+                    text_name = "mixd"
+                text = self.sample_texts[text_name]
+                font_name = font_name.replace("", "")
 
                 if not font_path.exists():
                     print(f"  {text_name:20s} ✗ Font not found: {font_path}")
@@ -322,7 +317,7 @@ class TypfTester:
                     if success:
                         # Save output with appropriate extension
                         ext = "json" if config.renderer == "json" else fmt
-                        filename = f"render-{config.shaper}-{config.renderer}-{text_name}.{ext}"
+                        filename = f"render-{font_name}-{config.shaper}-{config.renderer}-{text_name}.{ext}"
                         output_path = self.output_dir / filename
                         output_path.write_bytes(output_bytes)
 
@@ -402,12 +397,12 @@ class TypfTester:
             for text_name, text in self.sample_texts.items():
                 # Choose appropriate font based on script
                 if text_name == "arab":
-                    font_path = self.fonts["notoarabic"]
+                    font_path = self.fonts["notoara"]
                 elif text_name == "mixd":
                     # Mixed scripts need broad Unicode coverage (includes CJK)
-                    font_path = self.fonts["notosans"]
+                    font_path = self.fonts["notosan"]
                 else:
-                    font_path = self.fonts["kalnia"]
+                    font_path = self.fonts["kalniav"]
 
                 if not font_path.exists():
                     continue
@@ -739,12 +734,12 @@ class TypfTester:
             for text_name, text in self.sample_texts.items():
                 # Choose appropriate font based on script
                 if text_name == "arab":
-                    font_path = self.fonts["notoarabic"]
+                    font_path = self.fonts["notoara"]
                 elif text_name == "mixd":
                     # Mixed scripts need broad Unicode coverage (includes CJK)
-                    font_path = self.fonts["notosans"]
+                    font_path = self.fonts["notosan"]
                 else:
-                    font_path = self.fonts["kalnia"]
+                    font_path = self.fonts["kalniav"]
 
                 if not font_path.exists():
                     continue
@@ -919,12 +914,12 @@ class TypfTester:
             for text_name, text in self.sample_texts.items():
                 # Choose appropriate font based on script
                 if text_name == "arab":
-                    font_path = self.fonts["notoarabic"]
+                    font_path = self.fonts["notoara"]
                 elif text_name == "mixd":
                     # Mixed scripts need broad Unicode coverage (includes CJK)
-                    font_path = self.fonts["notosans"]
+                    font_path = self.fonts["notosan"]
                 else:
-                    font_path = self.fonts["kalnia"]
+                    font_path = self.fonts["kalniav"]
 
                 if not font_path.exists():
                     continue

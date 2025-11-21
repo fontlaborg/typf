@@ -17,8 +17,10 @@ typf-core = { workspace = true }
 typf-fontdb = { workspace = true }
 typf-shape-none = { workspace = true }
 typf-shape-hb = { workspace = true, optional = true }
+typf-shape-ct = { workspace = true, optional = true }
 typf-shape-icu-hb = { workspace = true, optional = true }
 typf-render-orge = { workspace = true }
+typf-render-cg = { workspace = true, optional = true }
 typf-render-skia = { workspace = true, optional = true }
 typf-render-zeno = { workspace = true, optional = true }
 typf-export = { workspace = true }
@@ -33,12 +35,14 @@ colored = { version = "2.1", optional = true }
 
 [features]
 default = []
-shaping-hb = ["dep:typf-shape-hb"]
-shaping-icu-hb = ["dep:typf-shape-icu-hb", "shaping-hb"]
-shaping-mac = []
+shaping-hb = ["dep:typf-shape-hb", "typf/shaping-hb"]
+shaping-ct = ["dep:typf-shape-ct", "typf/shaping-ct"]
+shaping-icu-hb = ["dep:typf-shape-icu-hb", "shaping-hb", "typf/shaping-icu-hb"]
+shaping-mac = ["shaping-ct"]
 shaping-win = []
-render-skia = ["dep:typf-render-skia"]
-render-zeno = ["dep:typf-render-zeno"]
-render-mac = []
+render-cg = ["dep:typf-render-cg", "typf/render-cg"]
+render-skia = ["dep:typf-render-skia", "typf/render-skia"]
+render-zeno = ["dep:typf-render-zeno", "typf/render-zeno"]
+render-mac = ["render-cg"]
 render-win = []
 repl = ["dep:rustyline", "dep:colored"]

@@ -319,6 +319,12 @@ fn select_shaper(shaper_name: &str) -> Result<Arc<dyn Shaper + Send + Sync>> {
         #[cfg(feature = "shaping-hb")]
         "hb" | "harfbuzz" => Ok(Arc::new(typf_shape_hb::HarfBuzzShaper::new())),
 
+        #[cfg(feature = "shaping-ct")]
+        "ct" | "coretext" | "mac" => Ok(Arc::new(typf_shape_ct::CoreTextShaper::new())),
+
+        #[cfg(feature = "shaping-icu-hb")]
+        "icu-hb" | "icu-harfbuzz" => Ok(Arc::new(typf_shape_icu_hb::IcuHarfBuzzShaper::new())),
+
         _ => Err(TypfError::Other(format!(
             "Unknown or unavailable shaper: {}",
             shaper_name
@@ -329,6 +335,15 @@ fn select_shaper(shaper_name: &str) -> Result<Arc<dyn Shaper + Send + Sync>> {
 fn select_renderer(renderer_name: &str) -> Result<Arc<dyn Renderer + Send + Sync>> {
     match renderer_name {
         "auto" | "orge" => Ok(Arc::new(OrgeRenderer::new())),
+
+        #[cfg(feature = "render-cg")]
+        "cg" | "coregraphics" | "mac" => Ok(Arc::new(typf_render_cg::CoreGraphicsRenderer::new())),
+
+        #[cfg(feature = "render-skia")]
+        "skia" => Ok(Arc::new(typf_render_skia::SkiaRenderer::new())),
+
+        #[cfg(feature = "render-zeno")]
+        "zeno" => Ok(Arc::new(typf_render_zeno::ZenoRenderer::new())),
 
         _ => Err(TypfError::Other(format!(
             "Unknown or unavailable renderer: {}",
