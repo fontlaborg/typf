@@ -12,8 +12,8 @@
 
 ## Release (v2.0.0)
 
-- [ ] Version bump to v2.0.0 in all Cargo.toml files
-- [ ] Final comprehensive test run
+- [x] Version bump to v2.0.0 in all Cargo.toml files
+- [x] Final comprehensive test run
 - [ ] Create GitHub release with notes
 - [ ] Publish to crates.io
 - [ ] Build and publish Python wheels to PyPI 
