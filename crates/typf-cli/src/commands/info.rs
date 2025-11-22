@@ -1,6 +1,6 @@
-///! Info command implementation
-///!
-///! Displays information about available backends and formats.
+//! Info command implementation
+//!
+//! Displays information about available backends and formats.
 
 use crate::cli::InfoArgs;
 use typf::error::Result;

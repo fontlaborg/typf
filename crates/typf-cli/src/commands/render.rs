@@ -1,6 +1,6 @@
-///! Render command implementation
-///!
-///! Handles text rendering with full pipeline control.
+//! Render command implementation
+//!
+//! Handles text rendering with full pipeline control.
 
 use crate::cli::{OutputFormat, RenderArgs};
 use std::fs::File;
@@ -170,42 +170,39 @@ fn decode_unicode_escapes(text: &str) -> String {
 
     while let Some(ch) = chars.next() {
         if ch == '\\' {
-            match chars.peek() {
-                Some('u') => {
-                    chars.next(); // consume 'u'
-                    if chars.peek() == Some(&'{') {
-                        // \u{X...} format
-                        chars.next(); // consume '{'
-                        let mut hex = String::new();
-                        while let Some(&c) = chars.peek() {
-                            if c == '}' {
-                                chars.next(); // consume '}'
-                                break;
-                            }
-                            hex.push(c);
-                            chars.next();
+            if let Some('u') = chars.peek() {
+                chars.next(); // consume 'u'
+                if chars.peek() == Some(&'{') {
+                    // \u{X...} format
+                    chars.next(); // consume '{'
+                    let mut hex = String::new();
+                    while let Some(&c) = chars.peek() {
+                        if c == '}' {
+                            chars.next(); // consume '}'
+                            break;
                         }
-                        if let Ok(code) = u32::from_str_radix(&hex, 16) {
-                            if let Some(unicode_char) = char::from_u32(code) {
-                                result.push(unicode_char);
-                                continue;
-                            }
-                        }
-                    } else {
-                        // \uXXXX format (exactly 4 hex digits)
-                        let mut hex = String::new();
-                        for _ in 0..4 {
-                            if let Some(c) = chars.next() {
-                                hex.push(c);
-                            }
-                        }
-                        if let Ok(code) = u16::from_str_radix(&hex, 16) {
-                            result.push(char::from_u32(code as u32).unwrap_or('�'));
+                        hex.push(c);
+                        chars.next();
+                    }
+                    if let Ok(code) = u32::from_str_radix(&hex, 16) {
+                        if let Some(unicode_char) = char::from_u32(code) {
+                            result.push(unicode_char);
                             continue;
                         }
                     }
+                } else {
+                    // \uXXXX format (exactly 4 hex digits)
+                    let mut hex = String::new();
+                    for _ in 0..4 {
+                        if let Some(c) = chars.next() {
+                            hex.push(c);
+                        }
+                    }
+                    if let Ok(code) = u16::from_str_radix(&hex, 16) {
+                        result.push(char::from_u32(code as u32).unwrap_or('�'));
+                        continue;
+                    }
                 }
-                _ => {}
             }
         }
         result.push(ch);
@@ -286,16 +283,16 @@ fn parse_features(features_str: &Option<String>) -> Result<Vec<(String, u32)>> {
     };
 
     let mut result = Vec::new();
-    for part in features.split(|c| c == ',' || c == ' ') {
+    for part in features.split([',', ' ']) {
         let part = part.trim();
         if part.is_empty() {
             continue;
         }
 
-        let (tag, value) = if part.starts_with('+') {
-            (&part[1..], 1)
-        } else if part.starts_with('-') {
-            (&part[1..], 0)
+        let (tag, value) = if let Some(stripped) = part.strip_prefix('+') {
+            (stripped, 1)
+        } else if let Some(stripped) = part.strip_prefix('-') {
+            (stripped, 0)
         } else if let Some(pos) = part.find('=') {
             let tag = &part[..pos];
             let val = part[pos + 1..]

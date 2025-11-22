@@ -8,9 +8,9 @@
 //!
 //! - [`Stage`] - The foundation every pipeline component builds upon
 //! - [`FontRef`] - Your window into font data and metrics
-/// - [`Shaper`] - Where characters become glyphs
-/// - [`Renderer`] - Where glyphs become images
-/// - [`Exporter`] - Where images become files
+//! - [`Shaper`] - Where characters become glyphs
+//! - [`Renderer`] - Where glyphs become images
+//! - [`Exporter`] - Where images become files
 
 use crate::{error::Result, types::*, PipelineContext, RenderParams, ShapingParams};
 use std::sync::Arc;

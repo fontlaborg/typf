@@ -4,6 +4,8 @@
 //! that feels native in Python code. We handle the complexity of font loading,
 //! Unicode processing, and pixel-perfect rendering—all you do is call a function.
 
+#![allow(clippy::useless_conversion)]
+
 use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
@@ -82,6 +84,7 @@ impl Typf {
     /// This method does the full pipeline: loads the font, shapes the text,
     /// renders to bitmap, and returns it in a Python-friendly format.
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::useless_conversion)]
     #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10))]
     fn render_text(
         &self,
@@ -161,6 +164,7 @@ impl Typf {
     }
 
     /// Shape text without rendering (for benchmarking and JSON export)
+    #[allow(clippy::useless_conversion)]
     #[pyo3(signature = (text, font_path, size=16.0))]
     fn shape_text(&self, py: Python, text: &str, font_path: &str, size: f32) -> PyResult<PyObject> {
         // Load font
@@ -190,6 +194,7 @@ impl Typf {
 
     /// Render text to SVG vector format
     #[cfg(feature = "export-svg")]
+    #[allow(clippy::useless_conversion)]
     #[pyo3(signature = (text, font_path, size=16.0, color=None, padding=10))]
     fn render_to_svg(
         &self,
@@ -258,6 +263,7 @@ impl FontInfo {
     }
 
     /// Get glyph ID for a character
+    #[allow(clippy::useless_conversion)]
     fn glyph_id(&self, ch: char) -> PyResult<Option<u32>> {
         let font = Font::from_file(&self.path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
@@ -270,6 +276,7 @@ impl FontInfo {
 ///
 /// Accepts either raw bytes (data, width, height) or a dict from render_text()
 #[pyfunction]
+#[allow(clippy::useless_conversion)]
 #[pyo3(signature = (image_data, format="ppm"))]
 fn export_image(py: Python, image_data: PyObject, format: &str) -> PyResult<PyObject> {
     // Handle dict input from render_text() or tuple of (data, width, height)
@@ -323,6 +330,7 @@ fn export_image(py: Python, image_data: PyObject, format: &str) -> PyResult<PyOb
 /// Sometimes you just need to see text on screen. This function uses
 /// a built-in stub font for ultra-simple rendering without file I/O.
 #[pyfunction]
+#[allow(clippy::useless_conversion)]
 #[pyo3(signature = (text, size=16.0))]
 fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
     // Create a minimal font that works without a font file

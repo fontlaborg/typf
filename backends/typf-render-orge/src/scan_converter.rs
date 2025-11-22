@@ -3,7 +3,7 @@
 //! Vector outlines describe curves and lines, but screens need pixels. This module
 //! builds that bridge through the elegant scanline algorithm—organizing edges
 //! into tables, tracking active ones, and filling horizontal spans where shapes
-/// intersect the scanline. The result: perfect rasterization.
+//! intersect the scanline. The result: perfect rasterization.
 
 use crate::curves::{subdivide_cubic, subdivide_quadratic};
 use crate::edge::{Edge, EdgeList};

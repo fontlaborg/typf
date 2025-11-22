@@ -2,8 +2,8 @@
 //!
 //! Why render one glyph at a time when you have multiple CPU cores? This module
 //! splits your text across available threads, letting each one work on a portion
-/// of the glyphs. Rayon handles the thread management—we just reap the speed
-/// benefits.
+//! of the glyphs. Rayon handles the thread management—we just reap the speed
+//! benefits.
 
 use rayon::prelude::*;
 use typf_core::{

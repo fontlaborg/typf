@@ -1,12 +1,12 @@
-///! Batch command implementation
-///!
-///! Processes multiple rendering jobs from a JSONL file.
+//! Batch command implementation
+//!
+//! Processes multiple rendering jobs from a JSONL file.
 
 use crate::cli::BatchArgs;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use typf::error::{Result, TypfError};
 
 /// JSONL job specification
@@ -135,7 +135,7 @@ pub fn run(args: &BatchArgs) -> Result<()> {
     }
 }
 
-fn process_job(job: &BatchJob, output_file: &PathBuf, args: &BatchArgs) -> Result<()> {
+fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<()> {
     // Build RenderArgs from BatchJob
     // For now, this is a simplified version
     // In practice, you would construct proper RenderArgs and call render::run()
@@ -173,7 +173,7 @@ fn process_job(job: &BatchJob, output_file: &PathBuf, args: &BatchArgs) -> Resul
         foreground: job.foreground.clone().unwrap_or_else(|| "000000FF".to_string()),
         background: job.background.clone().unwrap_or_else(|| "FFFFFF00".to_string()),
         color_palette: 0,
-        output_file: Some(output_file.clone()),
+        output_file: Some(output_file.to_path_buf()),
         format,
         quiet: args.quiet,
         verbose: args.verbose,

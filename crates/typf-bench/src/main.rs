@@ -9,7 +9,6 @@ use colored::*;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Instant;
 use typf_core::{
     traits::{Shaper, Renderer},
     types::Direction,
@@ -38,6 +37,7 @@ struct BenchmarkConfig {
     font_sizes: Vec<f32>,
     sample_texts: Vec<&'static str>,
     text_lengths: Vec<usize>,
+    #[allow(dead_code)]
     render_sizes: Vec<(u32, u32)>,
     iterations_per_combo: u32,
 }
@@ -139,13 +139,17 @@ struct Args {
 struct BenchmarkResult {
     shaper_name: String,
     renderer_name: String,
+    #[allow(dead_code)]
     font_name: String,
     text_sample: String,
     font_size: f32,
     text_length: usize,
+    #[allow(dead_code)]
     render_size: (u32, u32),
-    ops_per_ns: f64,
+    ns_per_op: f64,
+    #[allow(dead_code)]
     total_time_ns: u128,
+    #[allow(dead_code)]
     iterations: u32,
 }
 
@@ -208,6 +212,7 @@ impl BenchmarkRunner {
         Ok(Self { fonts, config })
     }
 
+    #[allow(clippy::vec_init_then_push)]
     fn get_shapers(&self) -> Vec<Arc<dyn Shaper>> {
         let mut shapers: Vec<Arc<dyn Shaper>> = Vec::new();
 
@@ -225,6 +230,7 @@ impl BenchmarkRunner {
         shapers
     }
 
+    #[allow(clippy::vec_init_then_push)]
     fn get_renderers(&self) -> Vec<Arc<dyn Renderer>> {
         let mut renderers: Vec<Arc<dyn Renderer>> = Vec::new();
 
@@ -305,10 +311,8 @@ impl BenchmarkRunner {
 
         let elapsed = start_time.elapsed();
         let total_time_ns = elapsed.as_nanos();
-        let ops_per_ns = if total_time_ns > 0 {
-            // Calculate nanoseconds per operation, then extrapolate to ops/ns
-            let ns_per_op = total_time_ns as f64 / iterations as f64;
-            1.0 / ns_per_op
+        let ns_per_op = if total_time_ns > 0 {
+            total_time_ns as f64 / iterations as f64
         } else {
             0.0
         };
@@ -329,7 +333,7 @@ impl BenchmarkRunner {
             font_size,
             text_length: text.len(),
             render_size: (0, 0), // Simplified for now
-            ops_per_ns,
+            ns_per_op,
             total_time_ns,
             iterations,
         })
@@ -379,13 +383,13 @@ impl BenchmarkRunner {
                                         println!(
                                             "{}",
                                             format!(
-                                                "S: {:12} | R: {:12} | Size: {:6.1} | Text: {:20} | Length: {:4} | ops/ns: {:8.3}",
+                                                "S: {:12} | R: {:12} | Size: {:6.1} | Text: {:20} | Length: {:4} | ns/op: {:10.1}",
                                                 result.shaper_name,
                                                 result.renderer_name,
                                                 result.font_size,
                                                 result.text_sample,
                                                 result.text_length,
-                                                result.ops_per_ns
+                                                result.ns_per_op
                                             ).bright_black()
                                         );
                                         std::io::Write::flush(&mut std::io::stdout()).unwrap();

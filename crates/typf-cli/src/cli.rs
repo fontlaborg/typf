@@ -1,7 +1,7 @@
-///! CLI argument definitions using Clap v4
-///!
-///! This module defines the command-line interface structure
-///! following the unified TYPF CLI specification.
+//! CLI argument definitions using Clap v4
+//!
+//! This module defines the command-line interface structure
+//! following the unified TYPF CLI specification.
 
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
@@ -23,7 +23,7 @@ pub enum Commands {
 
     /// Render text to an image file
     #[command(alias = "r")]
-    Render(RenderArgs),
+    Render(Box<RenderArgs>),
 
     /// Process multiple rendering jobs from a JSONL file
     Batch(BatchArgs),
