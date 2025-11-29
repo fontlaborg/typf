@@ -221,7 +221,26 @@ def render(
         input_text = get_input_text(text, text_opt, text_file)
 
         # Check if using linra renderer
-        use_linra = is_linra_renderer(renderer)
+        # "auto" now defaults to linra if available (unless SVG output requested)
+        # Track actual renderer to use after any fallback
+        actual_renderer = renderer
+        if renderer == "auto":
+            # Auto-select: use linra if available, but not for SVG output
+            use_linra = LINRA_AVAILABLE and output_format.lower() != "svg" and font_file is not None
+            if not use_linra:
+                actual_renderer = "opixa"  # Default traditional renderer
+        else:
+            use_linra = is_linra_renderer(renderer)
+            # SVG export extracts glyph outlines from font after shaping.
+            # Linra combines shaping+rendering atomically, so we can't get shaping result.
+            if use_linra and output_format.lower() == "svg":
+                click.echo(
+                    "⚠ SVG export needs shaping results. Falling back to HarfBuzz shaper "
+                    "(linra combines shaping+rendering atomically).",
+                    err=True
+                )
+                use_linra = False
+                actual_renderer = "opixa"  # Fall back to traditional renderer
 
         if not quiet:
             if use_linra:
@@ -253,11 +272,12 @@ def render(
             if not font_file:
                 raise ValueError("Linra rendering requires a font file (-f/--font-file)")
 
-            if output_format.lower() == "svg":
-                raise ValueError("SVG export not supported with linra renderers. Use traditional renderer instead.")
+            # Note: SVG is handled before entering this branch - we fall back to traditional pipeline
 
-            # Map renderer name to linra backend name
-            linra_backend = "mac" if renderer in ("linra", "linra-mac", "linra-os") else "win"
+            # Map renderer name to linra backend name ("auto" uses platform default)
+            linra_backend = "auto" if renderer == "auto" else (
+                "mac" if renderer in ("linra", "linra-mac", "linra-os") else "win"
+            )
             linra = TypfLinra(renderer=linra_backend)
 
             if verbose:
@@ -283,7 +303,7 @@ def render(
         else:
             # Traditional mode: separate shaper + renderer
             typf = Typf(shaper=shaper if shaper != "auto" else "hb",
-                        renderer=renderer if renderer != "auto" else "opixa")
+                        renderer=actual_renderer if actual_renderer != "auto" else "opixa")
 
             if font_file:
                 if verbose:

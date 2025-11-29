@@ -27,11 +27,20 @@ from .typf import (
     render_simple,  # Quick rendering without fonts
 )
 
+# Try to import linra support (conditionally compiled)
+try:
+    from .typf import TypfLinra, __linra_available__
+except ImportError:
+    TypfLinra = None
+    __linra_available__ = False
+
 # What we expose to the Python world
 __all__ = [
     "Typf",
+    "TypfLinra",
     "FontInfo",
     "render_simple",
     "export_image",
     "__version__",
+    "__linra_available__",
 ]

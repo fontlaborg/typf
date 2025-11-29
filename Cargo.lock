@@ -1887,7 +1887,6 @@ dependencies = [
  "typf",
  "typf-core",
  "typf-export",
- "typf-export-svg",
  "typf-fontdb",
  "typf-os",
  "typf-os-mac",
@@ -1895,6 +1894,7 @@ dependencies = [
  "typf-render-cg",
  "typf-render-opixa",
  "typf-render-skia",
+ "typf-render-svg",
  "typf-render-zeno",
  "typf-shape-ct",
  "typf-shape-hb",
@@ -2053,6 +2053,15 @@ dependencies = [
  "skrifa",
  "thiserror",
  "tiny-skia",
+ "typf-core",
+]
+
+[[package]]
+name = "typf-render-svg"
+version = "2.0.0"
+dependencies = [
+ "log",
+ "skrifa",
  "typf-core",
 ]
 

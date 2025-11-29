@@ -8,11 +8,19 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 ## [Unreleased]
 
 ### Added
+- **SVG Renderer Backend**: New `typf-render-svg` crate as a proper Renderer
+  - Implements `Renderer` trait returning `RenderOutput::Vector`
+  - Extracts glyph outlines from fonts using skrifa
+  - Produces scalable vector graphics with perfect path data
+  - Available via `--renderer svg` or `--format svg` in CLI
 - **Linra Integration**: Exposed single-pass shaping+rendering (linra) to Rust and Python CLIs
   - New `--renderer linra-mac` and `--renderer linra-win` options in Rust CLI
   - New `TypfLinra` class in Python bindings with `render_text()` method
   - `__linra_available__` module attribute for feature detection
   - Updated `info` command to display available linra renderers
+- **Linra as Default**: Auto-selects linra when available for bitmap output
+  - Falls back gracefully to traditional pipeline for SVG output
+  - Warning message when linra requested with SVG (uses system shaper instead)
 - **PNG Export**: Added `PngExporter` to CLI render command (replaces PGM placeholder)
 - **Variable Font Instance Parsing**: New `--instance` flag for axis variations
   - Supports formats: `wght=700,wdth=100` and `wght:700 wdth:100`

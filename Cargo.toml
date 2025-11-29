@@ -20,6 +20,7 @@ members = [
     # Rendering backends
     "backends/typf-render-json",
     "backends/typf-render-opixa",
+    "backends/typf-render-svg",
     "backends/typf-render-cg",
     "backends/typf-render-skia",
     "backends/typf-render-zeno",
@@ -67,6 +68,7 @@ typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb" }
 # Rendering backends
 typf-render-json = { path = "backends/typf-render-json" }
 typf-render-opixa = { path = "backends/typf-render-opixa" }
+typf-render-svg = { path = "backends/typf-render-svg" }
 typf-render-cg = { path = "backends/typf-render-cg" }
 typf-render-skia = { path = "backends/typf-render-skia" }
 typf-render-zeno = { path = "backends/typf-render-zeno" }

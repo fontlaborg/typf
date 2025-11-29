@@ -10,15 +10,15 @@ use std::sync::Arc;
 use typf::error::{Result, TypfError};
 use typf_core::{
     traits::{FontRef, Renderer, Shaper},
-    types::Direction,
+    types::{Direction, RenderOutput},
     Color, RenderParams, ShapingParams,
 };
 #[cfg(feature = "linra")]
 use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_export::{PngExporter, PnmExporter};
-use typf_export_svg::SvgExporter;
 use typf_fontdb::Font;
 use typf_render_opixa::OpixaRenderer;
+use typf_render_svg::SvgRenderer;
 use typf_shape_none::NoneShaper;
 
 /// Minimal stub font for demonstration
@@ -56,7 +56,46 @@ impl FontRef for StubFont {
 
 pub fn run(args: &RenderArgs) -> Result<()> {
     // Check if using linra (single-pass) renderer
-    if is_linra_renderer(&args.renderer) {
+    // "auto" now defaults to linra if available (unless SVG output requested)
+    let use_linra = if args.renderer == "auto" {
+        // Auto-select: use linra if available, but not for SVG output
+        #[cfg(feature = "linra")]
+        {
+            !matches!(args.format, OutputFormat::Svg)
+        }
+        #[cfg(not(feature = "linra"))]
+        {
+            false
+        }
+    } else {
+        is_linra_renderer(&args.renderer)
+    };
+
+    // Track if we're falling back from linra for SVG export
+    let svg_fallback_shaper: Option<&str> = if use_linra && matches!(args.format, OutputFormat::Svg) {
+        // SVG export extracts glyph outlines from font after shaping.
+        // Linra combines shaping+rendering atomically, so we can't get shaping result.
+        // Fall back to the matching system shaper for consistent results.
+        let fallback = match args.renderer.as_str() {
+            "linra-mac" | "linra" => {
+                #[cfg(feature = "shaping-ct")]
+                { Some("ct") }
+                #[cfg(not(feature = "shaping-ct"))]
+                { Some("hb") }
+            }
+            "linra-win" => {
+                // TODO: DirectWrite shaper when available
+                Some("hb")
+            }
+            _ => Some("hb"),
+        };
+        eprintln!(
+            "⚠ SVG export needs shaping results. Falling back to {} shaper \
+             (linra combines shaping+rendering atomically).",
+            fallback.unwrap_or("default")
+        );
+        fallback
+    } else if use_linra {
         #[cfg(feature = "linra")]
         return run_linra(args);
 
@@ -66,7 +105,9 @@ pub fn run(args: &RenderArgs) -> Result<()> {
              Build with --features linra-mac or linra-win",
             args.renderer
         )));
-    }
+    } else {
+        None
+    };
 
     // Traditional pipeline (shaper + renderer)
 
@@ -115,12 +156,21 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     };
 
     // 6. Select backends
-    let shaper = select_shaper(&args.shaper)?;
-    let renderer = select_renderer(&args.renderer)?;
+    // Use fallback shaper if we're falling back from linra for SVG
+    let shaper_name = svg_fallback_shaper.unwrap_or(&args.shaper);
+    let shaper = select_shaper(shaper_name)?;
+
+    // For SVG output, use SVG renderer; otherwise use requested renderer
+    let renderer_name = if matches!(args.format, OutputFormat::Svg) {
+        "svg"
+    } else {
+        &args.renderer
+    };
+    let renderer = select_renderer(renderer_name)?;
 
     // 7. Shape text
     if args.verbose {
-        eprintln!("Shaping with {} backend...", args.shaper);
+        eprintln!("Shaping with {} backend...", shaper_name);
     }
     let shaped = shaper.shape(&text, font.clone(), &shaping_params)?;
 
@@ -128,35 +178,56 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         eprintln!("Shaped {} glyphs", shaped.glyphs.len());
     }
 
-    // 8. Handle SVG export separately
-    if matches!(args.format, OutputFormat::Svg) {
-        return export_svg(args, &shaped, font, foreground);
-    }
-
-    // 9. Render to bitmap
+    // 8. Render
     if args.verbose {
-        eprintln!("Rendering with {} backend...", args.renderer);
+        eprintln!("Rendering with {} backend...", renderer_name);
     }
     let rendered = renderer.render(&shaped, font, &render_params)?;
 
-    // 10. Export to requested format
-    if args.verbose {
-        eprintln!("Exporting to {} format...", args.format.as_str());
-    }
-    let exporter = create_exporter(args.format)?;
-    let exported = exporter.export(&rendered)?;
+    // 9. Export and write output
+    match rendered {
+        RenderOutput::Vector(vector_data) => {
+            // Vector output (SVG) - write directly
+            if let Some(ref path) = args.output_file {
+                let mut file = File::create(path)?;
+                file.write_all(vector_data.data.as_bytes())?;
+            } else {
+                io::stdout().write_all(vector_data.data.as_bytes())?;
+            }
 
-    // 11. Write output
-    write_output(args, &exported)?;
-
-    if !args.quiet {
-        if let Some(ref path) = args.output_file {
-            eprintln!("✓ Successfully rendered to {}", path.display());
-        } else {
-            eprintln!("✓ Successfully rendered to stdout");
+            if !args.quiet {
+                if let Some(ref path) = args.output_file {
+                    eprintln!("✓ Successfully rendered to {}", path.display());
+                } else {
+                    eprintln!("✓ Successfully rendered to stdout");
+                }
+                eprintln!("  Format: {} (vector)", args.format.as_str().to_uppercase());
+                eprintln!("  Size: {} bytes", vector_data.data.len());
+            }
         }
-        eprintln!("  Format: {}", args.format.as_str().to_uppercase());
-        eprintln!("  Size: {} bytes", exported.len());
+        RenderOutput::Bitmap(_) => {
+            // Bitmap output - export to requested format
+            if args.verbose {
+                eprintln!("Exporting to {} format...", args.format.as_str());
+            }
+            let exporter = create_exporter(args.format)?;
+            let exported = exporter.export(&rendered)?;
+
+            write_output(args, &exported)?;
+
+            if !args.quiet {
+                if let Some(ref path) = args.output_file {
+                    eprintln!("✓ Successfully rendered to {}", path.display());
+                } else {
+                    eprintln!("✓ Successfully rendered to stdout");
+                }
+                eprintln!("  Format: {}", args.format.as_str().to_uppercase());
+                eprintln!("  Size: {} bytes", exported.len());
+            }
+        }
+        RenderOutput::Json(_) => {
+            return Err(TypfError::Other("JSON output not yet supported".into()));
+        }
     }
 
     Ok(())
@@ -403,6 +474,8 @@ fn select_renderer(renderer_name: &str) -> Result<Arc<dyn Renderer + Send + Sync
     match renderer_name {
         "auto" | "opixa" => Ok(Arc::new(OpixaRenderer::new())),
 
+        "svg" => Ok(Arc::new(SvgRenderer::new())),
+
         #[cfg(feature = "render-cg")]
         "cg" | "coregraphics" | "mac" => Ok(Arc::new(typf_render_cg::CoreGraphicsRenderer::new())),
 
@@ -426,12 +499,12 @@ fn is_linra_renderer(renderer_name: &str) -> bool {
 fn select_linra_renderer(renderer_name: &str) -> Result<Arc<dyn LinraRenderer>> {
     match renderer_name {
         #[cfg(feature = "linra-mac")]
-        "linra" | "linra-mac" | "linra-os" => {
+        "auto" | "linra" | "linra-mac" | "linra-os" => {
             Ok(Arc::new(typf_os_mac::CoreTextLinraRenderer::new()))
         }
 
         #[cfg(all(feature = "linra-win", target_os = "windows"))]
-        "linra" | "linra-win" | "linra-os" => {
+        "auto" | "linra" | "linra-win" | "linra-os" => {
             typf_os_win::DirectWriteLinraRenderer::new()
                 .map(|r| Arc::new(r) as Arc<dyn LinraRenderer>)
         }
@@ -493,14 +566,8 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
         eprintln!("Using linra renderer: {}", linra_renderer.name());
     }
 
-    // 6. Handle SVG export separately (linra doesn't support vector output)
-    if matches!(args.format, OutputFormat::Svg) {
-        return Err(TypfError::Other(
-            "SVG export not supported with linra renderers. Use traditional renderer (e.g., opixa) instead.".into()
-        ));
-    }
-
-    // 7. Render text (single-pass: shaping + rendering combined)
+    // 6. Render text (single-pass: shaping + rendering combined)
+    // Note: SVG is handled before calling run_linra() - we fall back to traditional pipeline
     if args.verbose {
         eprintln!("Rendering with linra backend...");
     }
@@ -540,43 +607,12 @@ fn create_exporter(format: OutputFormat) -> Result<Arc<dyn typf_core::traits::Ex
             // PNG1 and PNG4 not yet supported - fall back to PNG8
             Ok(Arc::new(PngExporter::new()))
         },
-        OutputFormat::Svg => Err(TypfError::Other("SVG export handled separately".into())),
+        OutputFormat::Svg => {
+            // SVG is handled via SvgRenderer returning RenderOutput::Vector
+            // This path shouldn't be reached, but provide a fallback error
+            Err(TypfError::Other("SVG uses vector renderer, not bitmap exporter".into()))
+        },
     }
-}
-
-fn export_svg(
-    args: &RenderArgs,
-    shaped: &typf_core::types::ShapingResult,
-    font: Arc<dyn FontRef>,
-    foreground: Color,
-) -> Result<()> {
-    if font.data().is_empty() {
-        return Err(TypfError::Other(
-            "SVG export requires a real font file (stub font not supported)".into(),
-        ));
-    }
-
-    let svg_exporter = SvgExporter::new();
-    let svg_data = svg_exporter.export(shaped, font, foreground)?;
-
-    if let Some(ref path) = args.output_file {
-        let mut file = File::create(path)?;
-        file.write_all(svg_data.as_bytes())?;
-    } else {
-        io::stdout().write_all(svg_data.as_bytes())?;
-    }
-
-    if !args.quiet {
-        if let Some(ref path) = args.output_file {
-            eprintln!("✓ Successfully exported to {}", path.display());
-        } else {
-            eprintln!("✓ Successfully exported to stdout");
-        }
-        eprintln!("  Format: SVG (vector)");
-        eprintln!("  Glyphs: {}", shaped.glyphs.len());
-    }
-
-    Ok(())
 }
 
 fn write_output(args: &RenderArgs, data: &[u8]) -> Result<()> {
