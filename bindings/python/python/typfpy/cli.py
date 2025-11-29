@@ -13,6 +13,13 @@ import click
 # Our Rust-Python bridge must be available
 try:
     from typfpy import Typf, __version__, export_image, render_simple
+    # Try to import linra support (may not be available on all platforms)
+    try:
+        from typfpy import TypfLinra, __linra_available__
+        LINRA_AVAILABLE = __linra_available__
+    except ImportError:
+        TypfLinra = None
+        LINRA_AVAILABLE = False
 except ImportError:
     print("Error: TYPF extension not built. Run: maturin develop", file=sys.stderr)
     sys.exit(1)
@@ -70,6 +77,35 @@ def detect_available_renderers():
     return renderers
 
 
+def detect_available_linra_renderers():
+    """Detect which linra (single-pass) backends are available"""
+    renderers = []
+
+    if not LINRA_AVAILABLE or TypfLinra is None:
+        return renderers
+
+    # Try to create each linra backend
+    test_backends = [
+        ("linra-mac", "mac", "CoreText CTLineDraw (macOS, optimal performance)"),
+        ("linra-win", "win", "DirectWrite DrawTextLayout (Windows, optimal performance)"),
+    ]
+
+    for renderer_id, renderer_name, description in test_backends:
+        try:
+            TypfLinra(renderer=renderer_name)
+            renderers.append((renderer_id, description))
+        except ValueError:
+            # Backend not available
+            pass
+
+    return renderers
+
+
+def is_linra_renderer(renderer_name: str) -> bool:
+    """Check if the renderer name is a linra renderer"""
+    return renderer_name in ("linra", "linra-mac", "linra-win", "linra-os")
+
+
 @click.group()
 @click.version_option(version=__version__, prog_name="typfpy")
 def cli():
@@ -99,10 +135,19 @@ def info(shapers: bool, renderers: bool, formats: bool):
             click.echo()
 
     if show_all or renderers:
-        click.echo("Renderers:")
+        click.echo("Renderers (traditional - separate shaping step):")
         available_renderers = detect_available_renderers()
         for renderer_id, description in available_renderers:
             click.echo(f"  {renderer_id:18s} - {description}")
+
+        click.echo()
+        click.echo("Linra Renderers (single-pass shaping+rendering):")
+        linra_renderers = detect_available_linra_renderers()
+        if linra_renderers:
+            for renderer_id, description in linra_renderers:
+                click.echo(f"  {renderer_id:18s} - {description}")
+        else:
+            click.echo("  (none available)")
         if show_all:
             click.echo()
 
@@ -125,8 +170,8 @@ def info(shapers: bool, renderers: bool, formats: bool):
 @click.option("-i", "--instance", help="Named/dynamic instance spec")
 @click.option("-t", "--text-arg", "text_opt", help="Input text (alternative to positional argument)")
 @click.option("-T", "--text-file", type=click.Path(exists=True), help="Read input text from file")
-@click.option("--shaper", default="auto", help="Shaping backend: auto, none, hb, icu-hb, mac, win")
-@click.option("--renderer", default="auto", help="Rendering backend: auto, opixa, skia, zeno, mac, win, json")
+@click.option("--shaper", default="auto", help="Shaping backend: auto, none, hb, icu-hb, mac, win (ignored for linra)")
+@click.option("--renderer", default="auto", help="Rendering backend: auto, opixa, skia, zeno, mac, win, json, linra-mac, linra-win")
 @click.option("-d", "--direction", default="auto", help="Text direction: auto, ltr, rtl, ttb, btt")
 @click.option("-l", "--language", help="Language tag (BCP 47), e.g., en, ar, zh-Hans")
 @click.option("-S", "--script", default="auto", help="Script tag (ISO 15924), e.g., Latn, Arab, Hans")
@@ -175,9 +220,16 @@ def render(
         # 1. Get input text
         input_text = get_input_text(text, text_opt, text_file)
 
+        # Check if using linra renderer
+        use_linra = is_linra_renderer(renderer)
+
         if not quiet:
-            click.echo("TYPF Python CLI", err=True)
-            click.echo("Rendering text...", err=True)
+            if use_linra:
+                click.echo("TYPF Python CLI (linra mode)", err=True)
+                click.echo("Rendering text with single-pass pipeline...", err=True)
+            else:
+                click.echo("TYPF Python CLI", err=True)
+                click.echo("Rendering text...", err=True)
 
         # 2. Parse font size
         if font_size == "em":
@@ -189,34 +241,88 @@ def render(
         fg_color = parse_color(foreground)
         bg_color = parse_color(background) if background else None
 
-        # 4. Create TYPF instance
-        typf = Typf(shaper=shaper if shaper != "auto" else "hb",
-                    renderer=renderer if renderer != "auto" else "opixa")
+        # 4. Render using linra or traditional pipeline
+        if use_linra:
+            # Linra mode: single-pass shaping + rendering
+            if not LINRA_AVAILABLE or TypfLinra is None:
+                raise ValueError(
+                    f"Linra renderer '{renderer}' requested but linra is not available. "
+                    "Ensure the extension was built with linra support."
+                )
 
-        # 5. Render the text
-        if font_file:
+            if not font_file:
+                raise ValueError("Linra rendering requires a font file (-f/--font-file)")
+
+            if output_format.lower() == "svg":
+                raise ValueError("SVG export not supported with linra renderers. Use traditional renderer instead.")
+
+            # Map renderer name to linra backend name
+            linra_backend = "mac" if renderer in ("linra", "linra-mac", "linra-os") else "win"
+            linra = TypfLinra(renderer=linra_backend)
+
             if verbose:
+                click.echo(f"Using linra renderer: {linra.get_renderer()}", err=True)
                 click.echo(f"Loading font from {font_file}", err=True)
 
-            image_data = typf.render_text(
+            # Parse features if provided
+            parsed_features = None
+            if features:
+                parsed_features = parse_features(features)
+
+            image_data = linra.render_text(
                 input_text,
                 font_path=font_file,
                 size=size,
                 color=fg_color,
                 background=bg_color,
                 padding=margin,
+                features=parsed_features,
+                language=language,
+                script=script if script != "auto" else None,
             )
         else:
-            if verbose:
-                click.echo("Using stub font (no font file provided)", err=True)
+            # Traditional mode: separate shaper + renderer
+            typf = Typf(shaper=shaper if shaper != "auto" else "hb",
+                        renderer=renderer if renderer != "auto" else "opixa")
 
-            image_data = render_simple(input_text, size=size)
+            if font_file:
+                if verbose:
+                    click.echo(f"Loading font from {font_file}", err=True)
+
+                image_data = typf.render_text(
+                    input_text,
+                    font_path=font_file,
+                    size=size,
+                    color=fg_color,
+                    background=bg_color,
+                    padding=margin,
+                )
+            else:
+                if verbose:
+                    click.echo("Using stub font (no font file provided)", err=True)
+
+                image_data = render_simple(input_text, size=size)
 
         # 6. Export to requested format
         if verbose:
             click.echo(f"Exporting to {output_format} format...", err=True)
 
-        output_data = export_image(image_data, output_format)
+        # SVG needs special handling - it uses vector output from shaping, not bitmap
+        # (linra+svg already rejected at line 256-257)
+        if output_format.lower() == "svg":
+            if not font_file:
+                raise ValueError("SVG export requires a font file (-f/--font-file)")
+
+            # Use render_to_svg for proper vector output
+            output_data = typf.render_to_svg(
+                input_text,
+                font_path=font_file,
+                size=size,
+                color=fg_color,
+                padding=margin,
+            ).encode('utf-8')
+        else:
+            output_data = export_image(image_data, output_format)
 
         # 7. Write output
         if output_file:
@@ -227,12 +333,16 @@ def render(
                 click.echo(f"✓ Successfully rendered to {output_file}", err=True)
                 click.echo(f"  Format: {output_format.upper()}", err=True)
                 click.echo(f"  Size: {len(output_data)} bytes", err=True)
+                if use_linra:
+                    click.echo("  Mode: linra (single-pass)", err=True)
         else:
             # Write to stdout
             sys.stdout.buffer.write(output_data)
 
             if not quiet:
                 click.echo("✓ Successfully rendered to stdout", err=True)
+                if use_linra:
+                    click.echo("  Mode: linra (single-pass)", err=True)
 
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
@@ -320,6 +430,27 @@ def parse_color(color_str: str) -> tuple:
         return (r, g, b, a)
     else:
         raise ValueError(f"Invalid color format: {color_str}. Must be RRGGBB or RRGGBBAA")
+
+
+def parse_features(features_str: str) -> list:
+    """Parse OpenType feature settings"""
+    result = []
+    for part in features_str.replace(',', ' ').split():
+        part = part.strip()
+        if not part:
+            continue
+
+        if part.startswith('+'):
+            result.append((part[1:], 1))
+        elif part.startswith('-'):
+            result.append((part[1:], 0))
+        elif '=' in part:
+            tag, val = part.split('=', 1)
+            result.append((tag, int(val)))
+        else:
+            result.append((part, 1))
+
+    return result
 
 
 def main():

@@ -25,11 +25,14 @@ typf-render-opixa = { workspace = true, optional = true }
 typf-render-cg = { workspace = true, optional = true }
 typf-render-skia = { workspace = true, optional = true }
 typf-render-zeno = { workspace = true, optional = true }
+typf-os = { workspace = true, optional = true }
+typf-os-mac = { workspace = true, optional = true }
+typf-os-win = { workspace = true, optional = true }
 typf-export = { workspace = true }
 typf-export-svg = { path = "../../crates/typf-export-svg", optional = true }
 
 [features]
-default = ["shaping-hb", "export-png", "export-svg", "render-json", "render-opixa", "render-cg", "render-skia", "render-zeno", "shaping-ct", "shaping-icu-hb"]
+default = ["shaping-hb", "export-png", "export-svg", "render-json", "render-opixa", "render-cg", "render-skia", "render-zeno", "shaping-ct", "shaping-icu-hb", "linra-mac"]
 shaping-hb = ["typf-shape-hb", "typf/shaping-hb"]
 shaping-ct = ["typf-shape-ct", "typf/shaping-ct"]
 shaping-icu-hb = ["typf-shape-icu-hb", "typf/shaping-icu-hb"]
@@ -40,3 +43,6 @@ render-skia = ["typf-render-skia", "typf/render-skia"]
 render-zeno = ["typf-render-zeno", "typf/render-zeno"]
 export-png = ["typf/export-png"]
 export-svg = ["typf/export-svg", "typf-export-svg"]
+linra = ["typf-os"]
+linra-mac = ["linra", "typf-os-mac"]
+linra-win = ["linra", "typf-os-win"]

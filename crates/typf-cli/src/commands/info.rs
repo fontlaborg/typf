@@ -51,8 +51,8 @@ fn print_shapers() {
 }
 
 fn print_renderers() {
-    println!("Renderers:");
-    println!("  opixa              - Opixa (pure Rust, monochrome/grayscale)");
+    println!("Renderers (traditional - separate shaping step):");
+    println!("  opixa             - Opixa (pure Rust, monochrome/grayscale)");
 
     #[cfg(feature = "render-skia")]
     println!("  skia              - TinySkia (cross-platform, antialiased)");
@@ -65,6 +65,18 @@ fn print_renderers() {
 
     #[cfg(all(target_os = "windows", feature = "render-win"))]
     println!("  win               - Windows GDI+ (Windows native)");
+
+    println!();
+    println!("Linra Renderers (single-pass shaping+rendering):");
+
+    #[cfg(feature = "linra-mac")]
+    println!("  linra-mac         - CoreText CTLineDraw (macOS, optimal performance)");
+
+    #[cfg(feature = "linra-win")]
+    println!("  linra-win         - DirectWrite DrawTextLayout (Windows, optimal performance)");
+
+    #[cfg(not(any(feature = "linra-mac", feature = "linra-win")))]
+    println!("  (none available - build with --features linra-mac or linra-win)");
 }
 
 fn print_formats() {

@@ -76,10 +76,12 @@ pub struct RenderArgs {
 
     // Shaper and Renderer Options
     /// Shaping backend: auto, none, hb, icu-hb, mac, win
+    /// (ignored when using linra renderer)
     #[arg(long = "shaper", default_value = "auto")]
     pub shaper: String,
 
-    /// Rendering backend: auto, opixa, skia, zeno, mac, win, json
+    /// Rendering backend: auto, opixa, skia, zeno, mac, win, json, linra-mac, linra-win
+    /// Linra backends (linra-mac, linra-win) perform shaping AND rendering in one pass
     #[arg(long = "renderer", default_value = "auto")]
     pub renderer: String,
 

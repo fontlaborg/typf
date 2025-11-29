@@ -1,6 +1,7 @@
 //! Render command implementation
 //!
 //! Handles text rendering with full pipeline control.
+//! Supports both traditional (shaper+renderer) and linra (single-pass) modes.
 
 use crate::cli::{OutputFormat, RenderArgs};
 use std::fs::File;
@@ -12,7 +13,9 @@ use typf_core::{
     types::Direction,
     Color, RenderParams, ShapingParams,
 };
-use typf_export::PnmExporter;
+#[cfg(feature = "linra")]
+use typf_core::linra::{LinraRenderParams, LinraRenderer};
+use typf_export::{PngExporter, PnmExporter};
 use typf_export_svg::SvgExporter;
 use typf_fontdb::Font;
 use typf_render_opixa::OpixaRenderer;
@@ -52,6 +55,21 @@ impl FontRef for StubFont {
 }
 
 pub fn run(args: &RenderArgs) -> Result<()> {
+    // Check if using linra (single-pass) renderer
+    if is_linra_renderer(&args.renderer) {
+        #[cfg(feature = "linra")]
+        return run_linra(args);
+
+        #[cfg(not(feature = "linra"))]
+        return Err(TypfError::Other(format!(
+            "Linra renderer '{}' requested but linra feature is not enabled. \
+             Build with --features linra-mac or linra-win",
+            args.renderer
+        )));
+    }
+
+    // Traditional pipeline (shaper + renderer)
+
     // 1. Get input text
     let text = get_input_text(args)?;
 
@@ -69,7 +87,10 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     let foreground = parse_color(&args.foreground)?;
     let background = parse_color(&args.background)?;
 
-    // 4. Create shaping parameters
+    // 4. Parse variable font variations
+    let variations = parse_variations(&args.instance)?;
+
+    // 5. Create shaping parameters
     let shaping_params = ShapingParams {
         size: font_size,
         direction,
@@ -80,17 +101,17 @@ pub fn run(args: &RenderArgs) -> Result<()> {
             Some(args.script.clone())
         },
         features: parse_features(&args.features)?,
-        variations: Vec::new(), // TODO: Parse from instance
+        variations: variations.clone(),
         letter_spacing: 0.0,
     };
 
-    // 5. Create rendering parameters
+    // 6. Create rendering parameters
     let render_params = RenderParams {
         foreground,
         background: Some(background),
         padding: args.margin,
         antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
-        variations: Vec::new(),
+        variations,
     };
 
     // 6. Select backends
@@ -307,6 +328,60 @@ fn parse_features(features_str: &Option<String>) -> Result<Vec<(String, u32)>> {
     Ok(result)
 }
 
+/// Parse variable font instance specification
+///
+/// Supports formats:
+/// - "wght=700,wdth=100" - Axis values
+/// - "wght:700 wdth:100" - Alternative separator
+/// - "Bold" - Named instance (not yet supported, returns empty)
+fn parse_variations(instance_str: &Option<String>) -> Result<Vec<(String, f32)>> {
+    let Some(instance) = instance_str else {
+        return Ok(Vec::new());
+    };
+
+    let instance = instance.trim();
+    if instance.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut result = Vec::new();
+
+    // Split by comma or space
+    for part in instance.split([',', ' ']) {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+
+        // Try axis=value or axis:value format
+        let (tag, value) = if let Some(pos) = part.find('=') {
+            (&part[..pos], &part[pos + 1..])
+        } else if let Some(pos) = part.find(':') {
+            (&part[..pos], &part[pos + 1..])
+        } else {
+            // Named instance - skip for now (would need font parsing)
+            continue;
+        };
+
+        let tag = tag.trim();
+        if tag.len() != 4 {
+            return Err(TypfError::Other(format!(
+                "Invalid axis tag '{}': must be exactly 4 characters",
+                tag
+            )));
+        }
+
+        let val: f32 = value
+            .trim()
+            .parse()
+            .map_err(|_| TypfError::Other(format!("Invalid axis value: {}", part)))?;
+
+        result.push((tag.to_string(), val));
+    }
+
+    Ok(result)
+}
+
 fn select_shaper(shaper_name: &str) -> Result<Arc<dyn Shaper + Send + Sync>> {
     match shaper_name {
         "auto" | "none" => Ok(Arc::new(NoneShaper::new())),
@@ -341,15 +416,129 @@ fn select_renderer(renderer_name: &str) -> Result<Arc<dyn Renderer + Send + Sync
     }
 }
 
+/// Check if the renderer name refers to a linra (single-pass) renderer
+fn is_linra_renderer(renderer_name: &str) -> bool {
+    matches!(renderer_name, "linra" | "linra-mac" | "linra-win" | "linra-os")
+}
+
+/// Select and create a linra renderer based on name
+#[cfg(feature = "linra")]
+fn select_linra_renderer(renderer_name: &str) -> Result<Arc<dyn LinraRenderer>> {
+    match renderer_name {
+        #[cfg(feature = "linra-mac")]
+        "linra" | "linra-mac" | "linra-os" => {
+            Ok(Arc::new(typf_os_mac::CoreTextLinraRenderer::new()))
+        }
+
+        #[cfg(all(feature = "linra-win", target_os = "windows"))]
+        "linra" | "linra-win" | "linra-os" => {
+            typf_os_win::DirectWriteLinraRenderer::new()
+                .map(|r| Arc::new(r) as Arc<dyn LinraRenderer>)
+        }
+
+        _ => Err(TypfError::Other(format!(
+            "Unknown or unavailable linra renderer: {}. \
+             Available: linra-mac (macOS), linra-win (Windows)",
+            renderer_name
+        ))),
+    }
+}
+
+/// Render using the linra (single-pass) pipeline
+#[cfg(feature = "linra")]
+fn run_linra(args: &RenderArgs) -> Result<()> {
+    // 1. Get input text
+    let text = get_input_text(args)?;
+
+    if !args.quiet {
+        eprintln!("TYPF v{} (linra mode)", env!("CARGO_PKG_VERSION"));
+        eprintln!("Rendering text with single-pass pipeline...");
+    }
+
+    // 2. Load font
+    let font: Arc<dyn FontRef> = load_font(args)?;
+
+    // 3. Parse rendering parameters
+    let font_size = parse_font_size(&args.font_size)?;
+    let direction = parse_direction(&args.direction)?;
+    let foreground = parse_color(&args.foreground)?;
+    let background = parse_color(&args.background)?;
+
+    // 4. Parse variable font variations
+    let variations = parse_variations(&args.instance)?;
+
+    // 5. Create linra parameters (combines shaping + rendering params)
+    let linra_params = LinraRenderParams {
+        size: font_size,
+        direction,
+        foreground,
+        background: Some(background),
+        padding: args.margin,
+        variations,
+        features: parse_features(&args.features)?,
+        language: args.language.clone(),
+        script: if args.script == "auto" {
+            None
+        } else {
+            Some(args.script.clone())
+        },
+        antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
+        letter_spacing: 0.0,
+    };
+
+    // 5. Select linra renderer
+    let linra_renderer = select_linra_renderer(&args.renderer)?;
+
+    if args.verbose {
+        eprintln!("Using linra renderer: {}", linra_renderer.name());
+    }
+
+    // 6. Handle SVG export separately (linra doesn't support vector output)
+    if matches!(args.format, OutputFormat::Svg) {
+        return Err(TypfError::Other(
+            "SVG export not supported with linra renderers. Use traditional renderer (e.g., opixa) instead.".into()
+        ));
+    }
+
+    // 7. Render text (single-pass: shaping + rendering combined)
+    if args.verbose {
+        eprintln!("Rendering with linra backend...");
+    }
+    let rendered = linra_renderer.render_text(&text, font, &linra_params)?;
+
+    // 8. Export to requested format
+    if args.verbose {
+        eprintln!("Exporting to {} format...", args.format.as_str());
+    }
+    let exporter = create_exporter(args.format)?;
+    let exported = exporter.export(&rendered)?;
+
+    // 9. Write output
+    write_output(args, &exported)?;
+
+    if !args.quiet {
+        if let Some(ref path) = args.output_file {
+            eprintln!("✓ Successfully rendered to {}", path.display());
+        } else {
+            eprintln!("✓ Successfully rendered to stdout");
+        }
+        eprintln!("  Format: {}", args.format.as_str().to_uppercase());
+        eprintln!("  Size: {} bytes", exported.len());
+        eprintln!("  Mode: linra (single-pass)");
+    }
+
+    Ok(())
+}
+
 fn create_exporter(format: OutputFormat) -> Result<Arc<dyn typf_core::traits::Exporter>> {
     match format {
         OutputFormat::Ppm => Ok(Arc::new(PnmExporter::ppm())),
         OutputFormat::Pgm => Ok(Arc::new(PnmExporter::pgm())),
         OutputFormat::Pbm => Ok(Arc::new(PnmExporter::new(typf_export::PnmFormat::Pbm))),
-        OutputFormat::Png | OutputFormat::Png1 | OutputFormat::Png4 | OutputFormat::Png8 => {
-            // For now, use PGM as placeholder
-            // TODO: Implement PNG exporter
-            Ok(Arc::new(PnmExporter::pgm()))
+        OutputFormat::Png | OutputFormat::Png8 => Ok(Arc::new(PngExporter::new())),
+        OutputFormat::Png1 | OutputFormat::Png4 => {
+            // PNG1 and PNG4 not yet supported - fall back to PNG8
+            Ok(Arc::new(PngExporter::new()))
         },
         OutputFormat::Svg => Err(TypfError::Other("SVG export handled separately".into())),
     }

@@ -7,6 +7,18 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
+### Added
+- **Linra Integration**: Exposed single-pass shaping+rendering (linra) to Rust and Python CLIs
+  - New `--renderer linra-mac` and `--renderer linra-win` options in Rust CLI
+  - New `TypfLinra` class in Python bindings with `render_text()` method
+  - `__linra_available__` module attribute for feature detection
+  - Updated `info` command to display available linra renderers
+- **PNG Export**: Added `PngExporter` to CLI render command (replaces PGM placeholder)
+- **Variable Font Instance Parsing**: New `--instance` flag for axis variations
+  - Supports formats: `wght=700,wdth=100` and `wght:700 wdth:100`
+  - Connected to both traditional and linra rendering pipelines
+- **HarfBuzz as Default**: Changed default features to include `shaping-hb` for CLI
+
 ### Fixed
 - **Memory Leak in FontDatabase** (Critical - Issue #450)
   - Added path-based deduplication to prevent duplicate font loading

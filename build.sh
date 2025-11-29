@@ -10,9 +10,9 @@ cargo build --release --workspace --exclude typf-py
 
 echo ""
 echo "Installing typf-cli with all available features..."
-# On macOS, build with CoreText, CoreGraphics, and linra renderer support
+# On macOS, build with CoreText and CoreGraphics support
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  cargo install --path crates/typf-cli --features "shaping-hb,shaping-mac,shaping-icu-hb,render-mac,render-skia,render-zeno,linra-os-mac"
+  cargo install --path crates/typf-cli --features "shaping-hb,shaping-mac,shaping-icu-hb,render-mac,render-skia,render-zeno"
 else
   cargo install --path crates/typf-cli --features "shaping-hb,shaping-icu-hb,render-skia,render-zeno"
 fi

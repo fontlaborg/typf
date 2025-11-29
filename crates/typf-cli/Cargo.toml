@@ -23,6 +23,9 @@ typf-render-opixa = { workspace = true }
 typf-render-cg = { workspace = true, optional = true }
 typf-render-skia = { workspace = true, optional = true }
 typf-render-zeno = { workspace = true, optional = true }
+typf-os = { workspace = true, optional = true }
+typf-os-mac = { workspace = true, optional = true }
+typf-os-win = { workspace = true, optional = true }
 typf-export = { workspace = true }
 typf-export-svg = { path = "../typf-export-svg" }
 clap = { version = "4.5", features = ["derive", "string"] }
@@ -34,7 +37,7 @@ rustyline = { version = "14.0", optional = true }
 colored = { version = "2.1", optional = true }
 
 [features]
-default = []
+default = ["shaping-hb"]
 shaping-hb = ["dep:typf-shape-hb", "typf/shaping-hb"]
 shaping-ct = ["dep:typf-shape-ct", "typf/shaping-ct"]
 shaping-icu-hb = ["dep:typf-shape-icu-hb", "shaping-hb", "typf/shaping-icu-hb"]
@@ -45,4 +48,7 @@ render-skia = ["dep:typf-render-skia", "typf/render-skia"]
 render-zeno = ["dep:typf-render-zeno", "typf/render-zeno"]
 render-mac = ["render-cg"]
 render-win = []
+linra = ["dep:typf-os"]
+linra-mac = ["linra", "dep:typf-os-mac"]
+linra-win = ["linra", "dep:typf-os-win"]
 repl = ["dep:rustyline", "dep:colored"]

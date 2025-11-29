@@ -1,1 +1,6 @@
-
+- [x] Report the recent changes into CHANGELOG.md and then clean up WORK.md
+- [x] Add PNG export to Rust and Python CLI
+- [ ] Add vector SVG export to Rust and Python CLI for all supported backends
+- [x] Make sure that I can pass user-specified OpenType Layout feature specs in the Rust and Python CLI, and that all backends correctly apply these features alongside the built-in features
+- [x] Make sure that I can pass variable instance specs (axis coords or name of the predefined instance) in the Rust and Python CLI, and that all backends correctly select the instance
+- [ ] Make linra the default backends for the Rust and Python CLI

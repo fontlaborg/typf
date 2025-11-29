@@ -15,6 +15,8 @@ use typf_core::{
     types::{BitmapData, Direction, RenderOutput},
     Color, RenderParams, ShapingParams,
 };
+#[cfg(feature = "linra")]
+use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_export::PnmExporter;
 use typf_fontdb::Font;
 
@@ -238,6 +240,128 @@ impl Typf {
     }
 }
 
+/// Linra text renderer - single-pass shaping AND rendering
+///
+/// This class provides maximum performance by using platform-native APIs
+/// that shape and render text in a single operation. Available on macOS
+/// (CoreText) and Windows (DirectWrite).
+#[cfg(feature = "linra")]
+#[pyclass]
+struct TypfLinra {
+    renderer: Arc<dyn LinraRenderer>,
+}
+
+#[cfg(feature = "linra")]
+#[pymethods]
+impl TypfLinra {
+    /// Creates a new linra renderer
+    ///
+    /// Available renderers:
+    /// - "coretext" / "mac" - CoreText CTLineDraw (macOS only)
+    /// - "directwrite" / "win" - DirectWrite DrawTextLayout (Windows only)
+    #[new]
+    #[pyo3(signature = (renderer="auto"))]
+    fn new(renderer: &str) -> PyResult<Self> {
+        let renderer: Arc<dyn LinraRenderer> = match renderer {
+            #[cfg(feature = "linra-mac")]
+            "auto" | "coretext" | "ct" | "mac" | "linra-mac" => {
+                Arc::new(typf_os_mac::CoreTextLinraRenderer::new())
+            }
+
+            #[cfg(all(feature = "linra-win", target_os = "windows"))]
+            "auto" | "directwrite" | "dw" | "win" | "linra-win" => {
+                typf_os_win::DirectWriteLinraRenderer::new()
+                    .map(|r| Arc::new(r) as Arc<dyn LinraRenderer>)
+                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to create DirectWrite renderer: {:?}", e)))?
+            }
+
+            _ => {
+                return Err(PyValueError::new_err(format!(
+                    "Unknown linra renderer: {}. Available: coretext/mac (macOS), directwrite/win (Windows)",
+                    renderer
+                )))
+            }
+        };
+
+        Ok(Self { renderer })
+    }
+
+    /// Render text using linra (single-pass shaping + rendering)
+    ///
+    /// This is faster than the traditional shaper+renderer pipeline because
+    /// the platform API handles everything in one optimized call.
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10, features=None, language=None, script=None))]
+    fn render_text(
+        &self,
+        py: Python,
+        text: &str,
+        font_path: &str,
+        size: f32,
+        color: Option<(u8, u8, u8, u8)>,
+        background: Option<(u8, u8, u8, u8)>,
+        padding: u32,
+        features: Option<Vec<(String, u32)>>,
+        language: Option<String>,
+        script: Option<String>,
+    ) -> PyResult<PyObject> {
+        // Load font
+        let font = Font::from_file(font_path)
+            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
+        let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
+
+        // Parse colors
+        let foreground = color
+            .map(|(r, g, b, a)| Color::rgba(r, g, b, a))
+            .unwrap_or(Color::rgba(0, 0, 0, 255));
+        let background = background.map(|(r, g, b, a)| Color::rgba(r, g, b, a));
+
+        // Create linra parameters
+        let params = LinraRenderParams {
+            size,
+            direction: Direction::LeftToRight,
+            foreground,
+            background,
+            padding,
+            variations: Vec::new(),
+            features: features.unwrap_or_default(),
+            language,
+            script,
+            antialias: true,
+            letter_spacing: 0.0,
+        };
+
+        // Render using linra (single-pass)
+        let rendered = self
+            .renderer
+            .render_text(text, font_arc, &params)
+            .map_err(|e| PyRuntimeError::new_err(format!("Linra rendering failed: {:?}", e)))?;
+
+        // Package result
+        match rendered {
+            RenderOutput::Bitmap(bitmap) => {
+                let result = PyDict::new_bound(py);
+                result.set_item("width", bitmap.width)?;
+                result.set_item("height", bitmap.height)?;
+                result.set_item("format", format!("{:?}", bitmap.format))?;
+                result.set_item("data", PyBytes::new_bound(py, &bitmap.data))?;
+                Ok(result.into())
+            }
+            _ => Err(PyValueError::new_err("Unexpected render output format")),
+        }
+    }
+
+    /// Get the renderer name
+    fn get_renderer(&self) -> String {
+        self.renderer.name().to_string()
+    }
+
+    /// Clear internal caches
+    fn clear_cache(&self) {
+        self.renderer.clear_cache();
+    }
+}
+
 /// Load a font and get information about it
 #[pyclass]
 struct FontInfo {
@@ -407,8 +531,11 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
 fn typf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Typf>()?;
     m.add_class::<FontInfo>()?;
+    #[cfg(feature = "linra")]
+    m.add_class::<TypfLinra>()?;
     m.add_function(wrap_pyfunction!(export_image, m)?)?;
     m.add_function(wrap_pyfunction!(render_simple, m)?)?;
     m.add("__version__", "2.0.0-dev")?;
+    m.add("__linra_available__", cfg!(feature = "linra"))?;
     Ok(())
 }
