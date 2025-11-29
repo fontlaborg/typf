@@ -28,24 +28,13 @@ use core_graphics::{
     geometry::{CGPoint, CGSize},
 };
 use core_text::{
-    font::{new_from_CGFont, new_from_descriptor, CTFont},
-    font_descriptor::CTFontDescriptor,
+    font::{new_from_CGFont, new_from_CGFont_with_variations, CTFont},
     line::CTLine,
     run::{CTRun, CTRunRef},
     string_attributes::{kCTFontAttributeName, kCTKernAttributeName, kCTLigatureAttributeName},
 };
 use lru::LruCache;
 use parking_lot::RwLock;
-
-// CoreText needs these for variable font support
-#[link(name = "CoreText", kind = "framework")]
-extern "C" {
-    static kCTFontVariationAttribute: core_foundation::string::CFStringRef;
-
-    fn CTFontDescriptorCreateWithAttributes(
-        attributes: core_foundation::dictionary::CFDictionaryRef,
-    ) -> core_text::font_descriptor::CTFontDescriptorRef;
-}
 
 /// How we identify fonts in our cache
 type FontCacheKey = String;
@@ -187,9 +176,6 @@ impl CoreTextShaper {
             ))
         })?;
 
-        // Create base CTFont from CGFont
-        let mut ct_font = new_from_CGFont(&cg_font, params.size as f64);
-
         // Apply variable font coordinates if specified
         if !params.variations.is_empty() {
             log::debug!(
@@ -197,55 +183,28 @@ impl CoreTextShaper {
                 params.variations.len()
             );
 
-            // Convert variations to CoreFoundation format
-            let mut var_dict_entries = Vec::new();
-            for (tag, value) in &params.variations {
-                if tag.len() == 4 {
-                    // Convert 4-character tag string to CFNumber key
-                    let tag_num = u32::from_be_bytes([
-                        tag.as_bytes()[0],
-                        tag.as_bytes()[1],
-                        tag.as_bytes()[2],
-                        tag.as_bytes()[3],
-                    ]);
-                    let tag_cf = CFNumber::from(tag_num as i64);
-                    let value_cf = CFNumber::from(*value as f64);
-                    var_dict_entries.push((tag_cf, value_cf));
-                }
-            }
+            // Convert variations to CFDictionary<CFString, CFNumber>
+            let var_pairs: Vec<(CFString, CFNumber)> = params
+                .variations
+                .iter()
+                .filter(|(tag, _)| tag.len() == 4)
+                .map(|(tag, value)| (CFString::new(tag), CFNumber::from(*value as f64)))
+                .collect();
 
-            if !var_dict_entries.is_empty() {
-                // Create variation dictionary - pairs of (tag_number, value)
-                let var_pairs: Vec<_> = var_dict_entries
-                    .iter()
-                    .map(|(k, v)| (k.as_CFType(), v.as_CFType()))
-                    .collect();
+            if !var_pairs.is_empty() {
+                let var_dict: CFDictionary<CFString, CFNumber> =
+                    CFDictionary::from_CFType_pairs(&var_pairs);
 
-                let var_dict = CFDictionary::from_CFType_pairs(&var_pairs);
-
-                // Create font descriptor with variation attributes
-                // SAFETY: kCTFontVariationAttribute is a valid CoreText constant
-                let desc_pairs = vec![(
-                    unsafe { CFString::wrap_under_get_rule(kCTFontVariationAttribute).as_CFType() },
-                    var_dict.as_CFType(),
-                )];
-
-                let desc_attrs = CFDictionary::from_CFType_pairs(&desc_pairs);
-
-                // Create CTFontDescriptor with variation attributes using FFI
-                let descriptor = unsafe {
-                    use core_foundation::base::TCFType;
-                    let desc_ref =
-                        CTFontDescriptorCreateWithAttributes(desc_attrs.as_concrete_TypeRef());
-                    CTFontDescriptor::wrap_under_create_rule(desc_ref)
-                };
-
-                // Create new CTFont with variation coordinates applied
-                ct_font = new_from_descriptor(&descriptor, params.size as f64);
+                return Ok(new_from_CGFont_with_variations(
+                    &cg_font,
+                    params.size as f64,
+                    &var_dict,
+                ));
             }
         }
 
-        Ok(ct_font)
+        // No variations or no valid axis tags - use base CGFont
+        Ok(new_from_CGFont(&cg_font, params.size as f64))
     }
 
     /// Create attributed string with font and features
@@ -525,6 +484,47 @@ mod tests {
         assert!(shaper.supports_script("Arab"));
         assert!(shaper.supports_script("Deva"));
         assert!(shaper.supports_script("Hans"));
+    }
+
+    #[test]
+    fn test_variations_preserve_font_identity() {
+        use std::fs;
+        use std::path::Path;
+
+        // Locate Archivo variable font used across the test suite
+        let font_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../../runs/assets/candidates/Archivo[wdth,wght].ttf");
+
+        if !font_path.exists() {
+            eprintln!("skipped: Archivo variable font not found at {:?}", font_path);
+            return;
+        }
+
+        let data = fs::read(&font_path).expect("failed to read Archivo variable font");
+
+        let mut base_params = ShapingParams::default();
+        base_params.size = 32.0;
+
+        // Base font without variations
+        let base = CoreTextShaper::create_ct_font_from_data(&data, &base_params)
+            .expect("failed to create base CTFont");
+
+        // Apply variations that previously triggered descriptor-based lookup
+        let mut var_params = base_params.clone();
+        var_params.variations = vec![
+            ("wght".to_string(), 900.0),
+            ("wdth".to_string(), 100.0),
+        ];
+
+        let with_vars = CoreTextShaper::create_ct_font_from_data(&data, &var_params)
+            .expect("failed to create CTFont with variations");
+
+        // The font identity must stay the same; losing it would swap in a system font
+        assert_eq!(
+            base.postscript_name(),
+            with_vars.postscript_name(),
+            "Applying variations must not change the underlying font",
+        );
     }
 
     #[test]
