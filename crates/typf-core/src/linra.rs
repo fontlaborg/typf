@@ -102,6 +102,7 @@ impl LinraRenderParams {
             padding: self.padding,
             antialias: self.antialias,
             variations: self.variations.clone(),
+            color_palette: 0, // TODO: add color_palette to LinraRenderParams
         }
     }
 }

@@ -80,7 +80,7 @@ fn main() {
         background: Some(Color::white()),
         padding: 0,
         antialias: true,
-        variations: Vec::new(),
+        ..Default::default()
     };
 
     let renderer = OpixaRenderer::default();

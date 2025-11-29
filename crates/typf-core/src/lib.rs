@@ -240,6 +240,8 @@ pub struct RenderParams {
     /// Variable font variations like [("wght", 700.0), ("wdth", 100.0)]
     /// Variable fonts need specific coordinates to render correctly
     pub variations: Vec<(String, f32)>,
+    /// CPAL color palette index for COLR color glyphs (0 = default palette)
+    pub color_palette: u16,
 }
 
 impl Default for RenderParams {
@@ -250,6 +252,7 @@ impl Default for RenderParams {
             padding: 0,
             antialias: true,
             variations: Vec::new(),
+            color_palette: 0,
         }
     }
 }

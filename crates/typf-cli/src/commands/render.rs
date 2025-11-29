@@ -153,6 +153,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         padding: args.margin,
         antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
         variations,
+        color_palette: args.color_palette as u16,
     };
 
     // 6. Select backends

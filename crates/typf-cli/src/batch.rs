@@ -166,7 +166,7 @@ where
         background: Some(Color::white()),
         padding: 10,
         antialias: true,
-        variations: Vec::new(),
+        ..Default::default()
     };
 
     let components = PipelineComponents {

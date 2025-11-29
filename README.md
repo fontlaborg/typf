@@ -88,6 +88,32 @@ The linra renderer bypasses the intermediate glyph extraction step, allowing Cor
 | **JSON** | Smallest | N/A | Analysis, debug |
 | **PGM/PPM** | Large | Yes/No | Testing, legacy |
 
+### Font Feature Support Matrix
+
+| Feature | none | harfbuzz | icu-hb | coretext |
+|---------|------|----------|--------|----------|
+| OpenType Layout (GPOS/GSUB) | ❌ | ✅ | ✅ | ✅ |
+| OpenType Variations (fvar) | ✅ | ✅ | ✅ | ✅ |
+| Complex scripts (Arabic, Devanagari) | ❌ | ✅ | ✅ | ✅ |
+| Emoji (segmentation) | ❌ | ⚠️ | ✅ | ✅ |
+
+### Glyph Format Support
+
+| Format | opixa | skia | zeno | coregraphics | svg |
+|--------|-------|------|------|--------------|-----|
+| TrueType outlines (glyf) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CFF outlines (CFF ) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CFF2 outlines (CFF2) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Variable fonts (gvar) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| COLR v0 (layered colors) | ❌ | ❌ | ❌ | ⚠️ | ❌ |
+| COLR v1 (gradients) | ❌ | ❌ | ❌ | ⚠️ | ❌ |
+| SVG glyphs (SVG table) | ❌ | ❌ | ❌ | ⚠️ | ❌ |
+| Bitmap glyphs (CBDT/sbix) | ❌ | ❌ | ❌ | ✅ | ❌ |
+
+**Legend:** ✅ Full support | ⚠️ Partial/via OS | ❌ Not supported (planned)
+
+> **Note:** COLR v0/v1 and SVG glyph support is planned for future releases using skrifa's ColorPainter API.
+
 ## Build options
 
 ```bash

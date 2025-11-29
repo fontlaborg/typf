@@ -72,7 +72,7 @@ fn test_full_pipeline() {
         background: Some(Color::white()),
         padding: 5,
         antialias: true,
-        variations: Vec::new(),
+        ..Default::default()
     };
 
     // Create renderer
@@ -232,7 +232,7 @@ fn test_pipeline_with_colors() {
             background: bg,
             padding: 10, // Add padding so we can test background
             antialias: false,
-            variations: Vec::new(),
+            ..Default::default()
         };
 
         let rendered = renderer

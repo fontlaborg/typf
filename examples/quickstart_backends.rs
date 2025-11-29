@@ -137,7 +137,7 @@ fn render_with_backends(
         background: Some(Color::rgba(255, 255, 255, 255)),
         padding: 10,
         antialias: true,
-        variations: Vec::new(),
+        ..Default::default()
     };
     let rendered = renderer.render(&shaped, font, &render_params)?;
 

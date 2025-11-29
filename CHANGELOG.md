@@ -8,6 +8,13 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 ## [Unreleased]
 
 ### Added
+- **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts
+  - COLR v0/v1 support with full gradient rendering (linear, radial)
+  - SVG table glyph rendering via resvg (gzip decompression included)
+  - Bitmap glyph support (sbix, CBDT/CBLC) with size selection
+  - Unified `render_glyph()` API that auto-selects best rendering method
+  - 31 tests covering all color font formats
+  - Feature flags: `colr` (default), `svg`, `bitmap`
 - **SVG Renderer Backend**: New `typf-render-svg` crate as a proper Renderer
   - Implements `Renderer` trait returning `RenderOutput::Vector`
   - Extracts glyph outlines from fonts using skrifa
