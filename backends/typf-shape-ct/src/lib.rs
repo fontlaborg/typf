@@ -83,16 +83,34 @@ impl CoreTextShaper {
 
     /// Makes a unique key for caching fonts with their settings
     fn font_cache_key(font: &Arc<dyn FontRef>, params: &ShapingParams) -> String {
-        // Create a simple hash from first 32 bytes of font data
-        let font_hash = font
-            .data()
-            .get(..32)
-            .map(|bytes| {
-                bytes
-                    .iter()
-                    .fold(0u64, |acc, &b| acc.wrapping_mul(31).wrapping_add(b as u64))
-            })
-            .unwrap_or(0);
+        // Create a robust hash using font length + samples from start, middle, and end.
+        // Just using first 32 bytes was broken: many fonts have identical headers,
+        // causing cache collisions that returned wrong glyph IDs for different fonts.
+        let data = font.data();
+        let len = data.len();
+
+        // Hash: length XOR samples from beginning, middle, and end
+        let mut font_hash = len as u64;
+
+        // Sample first 64 bytes
+        for (i, &b) in data.iter().take(64).enumerate() {
+            font_hash = font_hash.wrapping_mul(31).wrapping_add(b as u64).wrapping_add(i as u64);
+        }
+
+        // Sample 64 bytes from middle
+        if len > 128 {
+            let mid = len / 2;
+            for (i, &b) in data[mid..].iter().take(64).enumerate() {
+                font_hash = font_hash.wrapping_mul(37).wrapping_add(b as u64).wrapping_add(i as u64);
+            }
+        }
+
+        // Sample last 64 bytes
+        if len > 64 {
+            for (i, &b) in data[len.saturating_sub(64)..].iter().enumerate() {
+                font_hash = font_hash.wrapping_mul(41).wrapping_add(b as u64).wrapping_add(i as u64);
+            }
+        }
 
         // Include variations in cache key - critical for variable fonts!
         let var_key = if params.variations.is_empty() {
