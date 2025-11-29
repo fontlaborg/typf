@@ -286,12 +286,12 @@ impl Renderer for OrgeRenderer {
                         }
                     }
                     Some(r)
-                }
+                },
                 Err(e) => {
                     log::warn!("Failed to create rasterizer: {}", e);
                     // Test compatibility: stub fonts shouldn't break everything
                     None
-                }
+                },
             }
         } else {
             None
@@ -306,17 +306,14 @@ impl Renderer for OrgeRenderer {
             };
 
             // Render with our configured rasterizer (variations already applied)
-            let glyph_bitmap = match rast.render_glyph(
-                glyph.id,
-                FillRule::NonZeroWinding,
-                DropoutMode::None,
-            ) {
-                Ok(bitmap) => bitmap,
-                Err(e) => {
-                    log::warn!("Glyph {} refused to render: {}", glyph.id, e);
-                    continue; // Skip problematic glyphs without breaking everything
-                }
-            };
+            let glyph_bitmap =
+                match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
+                    Ok(bitmap) => bitmap,
+                    Err(e) => {
+                        log::warn!("Glyph {} refused to render: {}", glyph.id, e);
+                        continue; // Skip problematic glyphs without breaking everything
+                    },
+                };
 
             // Position each glyph with mathematical precision
             let x = (glyph.x + padding) as i32;

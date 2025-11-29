@@ -1,16 +1,15 @@
-use std::sync::Arc;
+use read_fonts::TableProvider;
+use skrifa::{FontRef as SkrifaFontRef, MetadataProvider};
 use std::fs;
+use std::sync::Arc;
 use typf_core::{
     traits::{FontRef, Renderer},
     types::{Direction, PositionedGlyph, ShapingResult},
     Color, RenderParams,
 };
 use typf_render_orge::OrgeRenderer;
-use skrifa::{MetadataProvider, FontRef as SkrifaFontRef};
-use read_fonts::TableProvider;
 
 struct SimpleFont {
-    
     data: Vec<u8>,
 }
 
@@ -45,7 +44,8 @@ impl FontRef for SimpleFont {
 
 fn main() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let font_path = std::path::Path::new(manifest_dir).join("../../typf-tester/fonts/NotoSans-Regular.ttf");
+    let font_path =
+        std::path::Path::new(manifest_dir).join("../../typf-tester/fonts/NotoSans-Regular.ttf");
 
     let font = Arc::new(SimpleFont::new(font_path.to_str().unwrap()));
 

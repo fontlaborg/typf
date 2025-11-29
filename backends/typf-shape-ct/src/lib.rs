@@ -217,7 +217,8 @@ impl CoreTextShaper {
                 // Create CTFontDescriptor with variation attributes using FFI
                 let descriptor = unsafe {
                     use core_foundation::base::TCFType;
-                    let desc_ref = CTFontDescriptorCreateWithAttributes(desc_attrs.as_concrete_TypeRef());
+                    let desc_ref =
+                        CTFontDescriptorCreateWithAttributes(desc_attrs.as_concrete_TypeRef());
                     CTFontDescriptor::wrap_under_create_rule(desc_ref)
                 };
 

@@ -84,7 +84,7 @@ pub fn run(args: &BatchArgs) -> Result<()> {
                 eprintln!("Error parsing job {}: {}", line_num + 1, e);
                 error_count += 1;
                 continue;
-            }
+            },
         };
 
         // Determine output file
@@ -108,11 +108,11 @@ pub fn run(args: &BatchArgs) -> Result<()> {
                 if !args.quiet && !args.verbose {
                     eprint!(".");
                 }
-            }
+            },
             Err(e) => {
                 eprintln!("\nError processing job {}: {}", job_count, e);
                 error_count += 1;
-            }
+            },
         }
     }
 
@@ -126,10 +126,7 @@ pub fn run(args: &BatchArgs) -> Result<()> {
     }
 
     if error_count > 0 {
-        Err(TypfError::Other(format!(
-            "{} jobs failed",
-            error_count
-        )))
+        Err(TypfError::Other(format!("{} jobs failed", error_count)))
     } else {
         Ok(())
     }
@@ -140,8 +137,8 @@ fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<(
     // For now, this is a simplified version
     // In practice, you would construct proper RenderArgs and call render::run()
 
-    use crate::commands::render;
     use crate::cli::{OutputFormat, RenderArgs};
+    use crate::commands::render;
 
     let format = match job.format.as_deref() {
         Some("png") => OutputFormat::Png,
@@ -165,13 +162,22 @@ fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<(
         language: job.language.clone(),
         script: "auto".to_string(),
         features: None,
-        font_size: job.size.map(|s| s.to_string()).unwrap_or_else(|| "200".to_string()),
+        font_size: job
+            .size
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "200".to_string()),
         line_height: 120,
         width_height: "none".to_string(),
         margin: 10,
         font_optical_sizing: "auto".to_string(),
-        foreground: job.foreground.clone().unwrap_or_else(|| "000000FF".to_string()),
-        background: job.background.clone().unwrap_or_else(|| "FFFFFF00".to_string()),
+        foreground: job
+            .foreground
+            .clone()
+            .unwrap_or_else(|| "000000FF".to_string()),
+        background: job
+            .background
+            .clone()
+            .unwrap_or_else(|| "FFFFFF00".to_string()),
         color_palette: 0,
         output_file: Some(output_file.to_path_buf()),
         format,

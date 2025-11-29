@@ -269,9 +269,7 @@ fn parse_color(color_str: &str) -> Result<Color> {
             .map_err(|_| TypfError::Other("Invalid color format".into()))?;
         (r, g, b, a)
     } else {
-        return Err(TypfError::Other(
-            "Color must be in RRGGBB or RRGGBBAA format".into(),
-        ));
+        return Err(TypfError::Other("Color must be in RRGGBB or RRGGBBAA format".into()));
     };
 
     Ok(Color::rgba(r, g, b, a))
@@ -322,10 +320,7 @@ fn select_shaper(shaper_name: &str) -> Result<Arc<dyn Shaper + Send + Sync>> {
         #[cfg(feature = "shaping-icu-hb")]
         "icu-hb" | "icu-harfbuzz" => Ok(Arc::new(typf_shape_icu_hb::IcuHarfBuzzShaper::new())),
 
-        _ => Err(TypfError::Other(format!(
-            "Unknown or unavailable shaper: {}",
-            shaper_name
-        ))),
+        _ => Err(TypfError::Other(format!("Unknown or unavailable shaper: {}", shaper_name))),
     }
 }
 
@@ -342,10 +337,7 @@ fn select_renderer(renderer_name: &str) -> Result<Arc<dyn Renderer + Send + Sync
         #[cfg(feature = "render-zeno")]
         "zeno" => Ok(Arc::new(typf_render_zeno::ZenoRenderer::new())),
 
-        _ => Err(TypfError::Other(format!(
-            "Unknown or unavailable renderer: {}",
-            renderer_name
-        ))),
+        _ => Err(TypfError::Other(format!("Unknown or unavailable renderer: {}", renderer_name))),
     }
 }
 
@@ -354,17 +346,12 @@ fn create_exporter(format: OutputFormat) -> Result<Arc<dyn typf_core::traits::Ex
         OutputFormat::Ppm => Ok(Arc::new(PnmExporter::ppm())),
         OutputFormat::Pgm => Ok(Arc::new(PnmExporter::pgm())),
         OutputFormat::Pbm => Ok(Arc::new(PnmExporter::new(typf_export::PnmFormat::Pbm))),
-        OutputFormat::Png
-        | OutputFormat::Png1
-        | OutputFormat::Png4
-        | OutputFormat::Png8 => {
+        OutputFormat::Png | OutputFormat::Png1 | OutputFormat::Png4 | OutputFormat::Png8 => {
             // For now, use PGM as placeholder
             // TODO: Implement PNG exporter
             Ok(Arc::new(PnmExporter::pgm()))
-        }
-        OutputFormat::Svg => Err(TypfError::Other(
-            "SVG export handled separately".into(),
-        )),
+        },
+        OutputFormat::Svg => Err(TypfError::Other("SVG export handled separately".into())),
     }
 }
 

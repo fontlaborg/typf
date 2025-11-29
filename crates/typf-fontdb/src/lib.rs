@@ -4,8 +4,9 @@
 //! your text can wear the right glyphs. Without fonts, text is just
 //! invisible characters floating in digital space.
 
+use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use read_fonts::{FontRef as ReadFontRef, TableProvider};
@@ -115,6 +116,9 @@ impl TypfFontRef for Font {
 /// Your font library: keeps track of all loaded fonts
 pub struct FontDatabase {
     fonts: Vec<Arc<Font>>,
+    /// Cache to prevent loading the same font file multiple times.
+    /// Maps canonical paths to their loaded fonts.
+    path_cache: HashMap<PathBuf, Arc<Font>>,
     default_font: Option<Arc<Font>>,
 }
 
@@ -123,13 +127,27 @@ impl FontDatabase {
     pub fn new() -> Self {
         Self {
             fonts: Vec::new(),
+            path_cache: HashMap::new(),
             default_font: None,
         }
     }
 
-    /// Loads a font file and remembers it for future use
+    /// Loads a font file and remembers it for future use.
+    /// If the same path was already loaded, returns the cached font.
     pub fn load_font(&mut self, path: impl AsRef<Path>) -> Result<Arc<Font>> {
+        let path = path.as_ref();
+
+        // Try to canonicalize the path for reliable deduplication
+        let cache_key = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+
+        // Return cached font if already loaded
+        if let Some(font) = self.path_cache.get(&cache_key) {
+            return Ok(font.clone());
+        }
+
+        // Load and cache the font
         let font = Arc::new(Font::from_file(path)?);
+        self.path_cache.insert(cache_key, font.clone());
         self.fonts.push(font.clone());
 
         // First font loaded becomes the default
@@ -167,6 +185,20 @@ impl FontDatabase {
     pub fn find_font(&self, _name: &str) -> Option<Arc<Font>> {
         self.default_font.clone()
     }
+
+    /// Clears all loaded fonts from the database.
+    /// Note: This drops the Arc references, but any leaked font data
+    /// (from Box::leak) cannot be reclaimed.
+    pub fn clear(&mut self) {
+        self.fonts.clear();
+        self.path_cache.clear();
+        self.default_font = None;
+    }
+
+    /// Returns the number of fonts currently loaded.
+    pub fn font_count(&self) -> usize {
+        self.fonts.len()
+    }
 }
 
 impl Default for FontDatabase {
@@ -184,6 +216,7 @@ mod tests {
         let db = FontDatabase::new();
         assert!(db.default_font().is_none());
         assert_eq!(db.fonts().len(), 0);
+        assert_eq!(db.font_count(), 0);
     }
 
     #[test]
@@ -193,5 +226,14 @@ mod tests {
         let result = Font::from_data(data);
         // This will fail with invalid data, which is expected
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_clear_database() {
+        let mut db = FontDatabase::new();
+        // After clear, database should be empty
+        db.clear();
+        assert!(db.default_font().is_none());
+        assert_eq!(db.font_count(), 0);
     }
 }

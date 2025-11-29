@@ -4,7 +4,6 @@
 ///! with minimal code. Perfect for getting started with TypF.
 ///!
 ///! Run with: cargo run --example quickstart_backends --features shaping-hb,render-skia,render-zeno
-
 use std::sync::Arc;
 use typf_core::{
     traits::{FontRef, Renderer, Shaper},

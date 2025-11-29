@@ -49,15 +49,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Configure how text gets shaped
     let shaping_params = ShapingParams {
-        size: 20.0,          // 20-point type
+        size: 20.0, // 20-point type
         ..Default::default()
     };
 
     // Configure how glyphs get rendered
     let render_params = RenderParams {
-        foreground: Color::rgba(0, 0, 255, 255),     // Blue text
+        foreground: Color::rgba(0, 0, 255, 255), // Blue text
         background: Some(Color::rgba(255, 255, 200, 255)), // Creamy background
-        padding: 15,                                   // Generous border
+        padding: 15,                             // Generous border
         ..Default::default()
     };
 

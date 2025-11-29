@@ -50,21 +50,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Stage 1: Shape the text - convert characters to positioned glyphs
     let shaping_params = ShapingParams {
-        size: 24.0,          // 24-point text
+        size: 24.0, // 24-point text
         ..Default::default()
     };
 
     // Stage 2: Render the glyphs - turn them into pixels
     let render_params = RenderParams {
-        foreground: Color::black(),      // Black text on...
+        foreground: Color::black(),       // Black text on...
         background: Some(Color::white()), // ...white background
         padding: 10,                      // 10-pixel border
         ..Default::default()
     };
 
     // Build our pipeline: shape → render → export
-    let shaper = NoneShaper::new();      // Handles character-to-glyph conversion
-    let renderer = OrgeRenderer::new();  // Rasterizes glyphs to bitmap
+    let shaper = NoneShaper::new(); // Handles character-to-glyph conversion
+    let renderer = OrgeRenderer::new(); // Rasterizes glyphs to bitmap
     let exporter = PnmExporter::new(PnmFormat::Ppm); // Saves as PPM image
 
     // Execute the complete pipeline

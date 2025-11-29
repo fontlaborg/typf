@@ -34,7 +34,7 @@ pub struct JsonOutput {
     pub direction: String,        // Text direction that influenced shaping
     pub script: Option<String>,   // Script detection result (when available)
     pub language: Option<String>, // Language context (when available)
-    pub advance: f32,              // Total width of the shaped text
+    pub advance: f32,             // Total width of the shaped text
 }
 
 /// The renderer that turns shaping results into structured data

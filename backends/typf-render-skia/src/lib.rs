@@ -308,11 +308,11 @@ impl Renderer for SkiaRenderer {
 
 /// A rendered glyph with everything needed for proper positioning
 struct GlyphBitmap {
-    width: u32,      // Pixel width of the glyph bitmap
-    height: u32,     // Pixel height of the glyph bitmap
-    data: Vec<u8>,   // Grayscale alpha values for each pixel
-    bearing_x: i32,  // Horizontal offset from origin to left edge
-    bearing_y: i32,  // Vertical offset from baseline to top edge
+    width: u32,     // Pixel width of the glyph bitmap
+    height: u32,    // Pixel height of the glyph bitmap
+    data: Vec<u8>,  // Grayscale alpha values for each pixel
+    bearing_x: i32, // Horizontal offset from origin to left edge
+    bearing_y: i32, // Vertical offset from baseline to top edge
 }
 
 /// Bridge between skrifa's outline commands and kurbo's path format

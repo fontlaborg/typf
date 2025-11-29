@@ -26,7 +26,7 @@ use typf_fontdb::Font;
 /// Pick your shaper, pick your renderer, and start rendering beautiful text.
 #[pyclass]
 struct Typf {
-    shaper: Arc<dyn Shaper + Send + Sync>,     // How we transform text to glyphs
+    shaper: Arc<dyn Shaper + Send + Sync>, // How we transform text to glyphs
     renderer: Arc<dyn Renderer + Send + Sync>, // How we turn glyphs into images
 }
 

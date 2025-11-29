@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // The PNM family: three formats, one simple approach
     let formats = [
-        (PnmFormat::Ppm, "examples/output/test.ppm", "PPM (color)"),     // 3 bytes/pixel: RGB
+        (PnmFormat::Ppm, "examples/output/test.ppm", "PPM (color)"), // 3 bytes/pixel: RGB
         (PnmFormat::Pgm, "examples/output/test.pgm", "PGM (grayscale)"), // 1 byte/pixel: intensity
         (PnmFormat::Pbm, "examples/output/test.pbm", "PBM (black/white)"), // 1 bit/pixel: binary
     ];

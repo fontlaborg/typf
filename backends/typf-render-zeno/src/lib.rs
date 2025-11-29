@@ -281,11 +281,11 @@ impl Renderer for ZenoRenderer {
 
 /// A rendered glyph complete with positioning for perfect layout
 struct GlyphBitmap {
-    width: u32,      // Width of the glyph bitmap in pixels
-    height: u32,     // Height of the glyph bitmap in pixels
-    data: Vec<u8>,   // Alpha coverage values for each pixel
-    bearing_x: i32,  // Horizontal offset from origin to left edge
-    bearing_y: i32,  // Vertical offset from baseline to top edge
+    width: u32,     // Width of the glyph bitmap in pixels
+    height: u32,    // Height of the glyph bitmap in pixels
+    data: Vec<u8>,  // Alpha coverage values for each pixel
+    bearing_x: i32, // Horizontal offset from origin to left edge
+    bearing_y: i32, // Vertical offset from baseline to top edge
 }
 
 /// Dual-output path builder that feeds two masters at once

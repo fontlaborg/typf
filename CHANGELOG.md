@@ -7,6 +7,15 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
+### Fixed
+- **Memory Leak in FontDatabase** (Critical - Issue #450)
+  - Added path-based deduplication to prevent duplicate font loading
+  - New `path_cache: HashMap<PathBuf, Arc<Font>>` tracks loaded fonts by path
+  - Canonicalized paths ensure reliable deduplication
+  - Added `clear()` method to reset database state
+  - Added `font_count()` method for diagnostics
+  - Impact: Prevents unbounded memory growth when same font is loaded repeatedly
+
 ### Added
 - **Backend Documentation**: Comprehensive comparison tables for shapers, renderers, and export formats in README.md
 - **Quickstart Example**: New `examples/quickstart_backends.rs` demonstrating all major backend combinations with conditional compilation

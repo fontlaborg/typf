@@ -10,26 +10,26 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use typf_core::{
-    traits::{Shaper, Renderer},
+    traits::{Renderer, Shaper},
     types::Direction,
-    ShapingParams, RenderParams, TypfError, Color,
+    Color, RenderParams, ShapingParams, TypfError,
 };
 use typf_fontdb::Font;
-use typf_shape_none::NoneShaper;
 use typf_render_orge::OrgeRenderer;
+use typf_shape_none::NoneShaper;
 
-#[cfg(feature = "shaping-hb")]
-use typf_shape_hb::HarfBuzzShaper;
-#[cfg(feature = "shaping-ct")]
-use typf_shape_ct::CoreTextShaper;
-#[cfg(feature = "shaping-icu-hb")]
-use typf_shape_icu_hb::IcuHarfBuzzShaper;
+#[cfg(feature = "render-cg")]
+use typf_render_cg::CoreGraphicsRenderer;
 #[cfg(feature = "render-skia")]
 use typf_render_skia::SkiaRenderer;
 #[cfg(feature = "render-zeno")]
 use typf_render_zeno::ZenoRenderer;
-#[cfg(feature = "render-cg")]
-use typf_render_cg::CoreGraphicsRenderer;
+#[cfg(feature = "shaping-ct")]
+use typf_shape_ct::CoreTextShaper;
+#[cfg(feature = "shaping-hb")]
+use typf_shape_hb::HarfBuzzShaper;
+#[cfg(feature = "shaping-icu-hb")]
+use typf_shape_icu_hb::IcuHarfBuzzShaper;
 
 /// Benchmark configuration for different intensity levels
 #[derive(Debug, Clone)]
@@ -165,31 +165,37 @@ impl BenchmarkRunner {
         let font_dir = Path::new(input_dir);
 
         if !font_dir.exists() {
-            return Err(TypfError::FontLoad(
-                typf_core::error::FontLoadError::FileNotFound(input_dir.to_string()),
-            ));
+            return Err(TypfError::FontLoad(typf_core::error::FontLoadError::FileNotFound(
+                input_dir.to_string(),
+            )));
         }
 
         // Discover font files
-        for entry in fs::read_dir(font_dir).map_err(|_| {
-            TypfError::FontLoad(typf_core::error::FontLoadError::InvalidData)
-        })? {
-            let entry = entry.map_err(|_| {
-                TypfError::FontLoad(typf_core::error::FontLoadError::InvalidData)
-            })?;
+        for entry in fs::read_dir(font_dir)
+            .map_err(|_| TypfError::FontLoad(typf_core::error::FontLoadError::InvalidData))?
+        {
+            let entry = entry
+                .map_err(|_| TypfError::FontLoad(typf_core::error::FontLoadError::InvalidData))?;
             let path = entry.path();
 
             if let Some(extension) = path.extension() {
                 if let Some(ext_str) = extension.to_str() {
-                    if matches!(ext_str.to_lowercase().as_str(), "ttf" | "otf" | "ttc" | "woff" | "woff2") {
+                    if matches!(
+                        ext_str.to_lowercase().as_str(),
+                        "ttf" | "otf" | "ttc" | "woff" | "woff2"
+                    ) {
                         match Font::from_file(&path) {
                             Ok(font) => {
                                 println!("{}", format!("Loaded font: {}", path.display()).green());
                                 fonts.push(Arc::new(font));
-                            }
+                            },
                             Err(e) => {
-                                eprintln!("{}", format!("Warning: Failed to load {}: {}", path.display(), e).yellow());
-                            }
+                                eprintln!(
+                                    "{}",
+                                    format!("Warning: Failed to load {}: {}", path.display(), e)
+                                        .yellow()
+                                );
+                            },
                         }
                     }
                 }
@@ -197,17 +203,12 @@ impl BenchmarkRunner {
         }
 
         if fonts.is_empty() {
-            return Err(TypfError::FontLoad(
-                typf_core::error::FontLoadError::FileNotFound(
-                    "No valid font files found".to_string(),
-                ),
-            ));
+            return Err(TypfError::FontLoad(typf_core::error::FontLoadError::FileNotFound(
+                "No valid font files found".to_string(),
+            )));
         }
 
-        println!(
-            "{}",
-            format!("Loaded {} fonts for benchmarking", fonts.len()).cyan()
-        );
+        println!("{}", format!("Loaded {} fonts for benchmarking", fonts.len()).cyan());
 
         Ok(Self { fonts, config })
     }
@@ -343,10 +344,7 @@ impl BenchmarkRunner {
         let shapers = self.get_shapers();
         let renderers = self.get_renderers();
 
-        println!(
-            "\n{}",
-            "Starting comprehensive benchmark suite...".bold().cyan()
-        );
+        println!("\n{}", "Starting comprehensive benchmark suite...".bold().cyan());
         println!(
             "{} shapers × {} renderers × {} fonts × {} sizes × {} texts × {} lengths = {} combinations",
             shapers.len(),
@@ -395,13 +393,13 @@ impl BenchmarkRunner {
                                         std::io::Write::flush(&mut std::io::stdout()).unwrap();
 
                                         total_combinations += 1;
-                                    }
+                                    },
                                     Err(e) => {
                                         eprintln!(
                                             "{}",
                                             format!("Error in combination: {}", e).red()
                                         );
-                                    }
+                                    },
                                 }
                             }
                         }
@@ -413,7 +411,9 @@ impl BenchmarkRunner {
         println!("{}", "─".repeat(80));
         println!(
             "{}",
-            format!("Completed {} benchmark combinations", total_combinations).bold().green()
+            format!("Completed {} benchmark combinations", total_combinations)
+                .bold()
+                .green()
         );
 
         Ok(())
@@ -434,15 +434,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let config = BenchmarkConfig::get(args.level);
 
-    println!(
-        "{}",
-        "TYPF Comprehensive Benchmark Tool".bold().cyan()
-    );
-    println!(
-        "Input directory: {} | Level: {}",
-        args.input_dir,
-        args.level
-    );
+    println!("{}", "TYPF Comprehensive Benchmark Tool".bold().cyan());
+    println!("Input directory: {} | Level: {}", args.input_dir, args.level);
 
     let runner = BenchmarkRunner::new(&args.input_dir, config)?;
     runner.run_benchmarks()?;

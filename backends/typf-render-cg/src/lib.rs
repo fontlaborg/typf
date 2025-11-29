@@ -206,9 +206,10 @@ impl Renderer for CoreGraphicsRenderer {
         // CoreText requires a positive, finite font size
         let font_size = shaped.advance_height as f64;
         if !font_size.is_finite() || font_size <= 0.0 {
-            return Err(TypfError::RenderingFailed(RenderError::BackendError(
-                format!("Invalid font size: {}. Font size must be positive and finite.", font_size),
-            )));
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(format!(
+                "Invalid font size: {}. Font size must be positive and finite.",
+                font_size
+            ))));
         }
 
         // Create CGFont and CTFont
