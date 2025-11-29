@@ -19,7 +19,7 @@ pub struct SkiaRenderer {
 
 ## Performance
 
-| Text Size | vs Orge Renderer | Memory | Quality |
+| Text Size | vs Opixa Renderer | Memory | Quality |
 |-----------|------------------|---------|---------|
 | Small (12pt) | 2x faster | +50% | Better anti-aliasing |
 | Medium (24pt) | 3x faster | +40% | Superior subpixel |
@@ -241,13 +241,13 @@ println!("Draw calls: {}", debug_info.draw_calls);
 println!("GPU memory: {} MB", debug_info.gpu_memory_mb);
 ```
 
-## Migration from Orge
+## Migration from Opixa
 
 Switching to Skia is straightforward:
 
 ```rust
-// Before - Orge renderer
-let mut renderer = OrgeRenderer::new(width, height)?;
+// Before - Opixa renderer
+let mut renderer = OpixaRenderer::new(width, height)?;
 let bitmap = renderer.rasterize(&shaped_text)?;
 
 // After - Skia renderer

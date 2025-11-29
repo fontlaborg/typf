@@ -13,7 +13,7 @@ use typf_core::{
     types::{BitmapData, BitmapFormat, Direction, RenderOutput, ShapingParams, ShapingResult},
 };
 use typf_export::{JsonExporter, PngExporter, PnmExporter, SvgExporter};
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_hb::HarfBuzzShaper;
 use typf_shape_none::NoneShaper;
 

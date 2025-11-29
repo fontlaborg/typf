@@ -20,7 +20,7 @@ Input → Unicode → Fonts → Shape → Render → Export
 
 Mix and match backends:
 - **Shapers**: HarfBuzz, CoreText, DirectWrite, or None
-- **Renderers**: Skia, Orge, Zeno, CoreGraphics, or JSON
+- **Renderers**: Skia, Opixa, Zeno, CoreGraphics, or JSON
 - **Exports**: PNG, SVG, PNM, or structured data
 
 ## Why you need it

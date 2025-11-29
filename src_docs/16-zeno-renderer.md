@@ -35,7 +35,7 @@ Skip Zeno for:
 
 ## Performance Profile
 
-| Task | Skia | Orge | Zeno |
+| Task | Skia | Opixa | Zeno |
 |------|------|------|------|
 | Small text (12pt) | 0.8ms | 0.3ms | 1.2ms |
 | Medium text (24pt) | 1.5ms | 0.7ms | 2.1ms |
@@ -341,12 +341,12 @@ fn test_svg_export() {
 
 ## Migration
 
-### From Orge Renderer
+### From Opixa Renderer
 
 ```rust
-// Before - Orge (raster only)
-let orge = OrgeRenderer::new(width, height)?;
-let bitmap = orge.render(text, &font)?;
+// Before - Opixa (raster only)
+let opixa = OpixaRenderer::new(width, height)?;
+let bitmap = opixa.render(text, &font)?;
 
 // After - Zeno (vector + raster)
 let zeno = ZenoRenderer::new(width, height)?;

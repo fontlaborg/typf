@@ -111,7 +111,7 @@ impl Pipeline {
 /// // Quick start with defaults
 /// let pipeline = Pipeline::builder()
 ///     .shaper(Arc::new(HarfBuzzShaper::new()))
-///     .renderer(Arc::new(OrgeRenderer::new()))
+///     .renderer(Arc::new(OpixaRenderer::new()))
 ///     .exporter(Arc::new(PnmExporter::new(PnmFormat::Ppm)))
 ///     .build()?;
 ///

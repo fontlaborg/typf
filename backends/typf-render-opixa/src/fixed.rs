@@ -17,7 +17,7 @@ use std::ops::{Add, Neg, Sub};
 /// # The Precision Dance
 ///
 /// ```rust
-/// use typf_render_orge::fixed::F26Dot6;
+/// use typf_render_opixa::fixed::F26Dot6;
 ///
 /// let x = F26Dot6::from_int(5);      // Exactly 5.0
 /// let y = F26Dot6::from_float(5.5); // 5 + 32/64 = 5.5

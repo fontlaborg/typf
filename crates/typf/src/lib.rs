@@ -12,7 +12,7 @@
 //!
 //! - **Swap any stage** - Need a different shaper? Just plug it in
 //! - **Blazing fast** - SIMD and multi-level caching keep you responsive
-//! - **Pick your backends** - HarfBuzz, CoreText, Skia, Orge - you choose
+//! - **Pick your backends** - HarfBuzz, CoreText, Skia, Opixa - you choose
 //! - **Memory safe** - All the performance, none of the unsafety
 //!
 //! ## Start Rendering
@@ -30,7 +30,7 @@
 //!
 //! ## Build What You Need
 //!
-//! - `minimal` - Just the essentials: NoneShaper + OrgeRenderer
+//! - `minimal` - Just the essentials: NoneShaper + OpixaRenderer
 //! - `unicode` - Script detection, bidi, segmentation
 //! - `fontdb` - System font discovery and caching
 //! - `export-pnm` - PPM, PGM, PBM output formats
@@ -70,8 +70,8 @@ pub use typf_shape_icu_hb as shape_icu_hb;
 #[cfg(feature = "render-json")]
 pub use typf_render_json as render_json;
 
-#[cfg(feature = "render-orge")]
-pub use typf_render_orge as render_orge;
+#[cfg(feature = "render-opixa")]
+pub use typf_render_opixa as render_opixa;
 
 #[cfg(feature = "render-cg")]
 pub use typf_render_cg as render_cg;

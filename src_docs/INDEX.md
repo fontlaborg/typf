@@ -48,7 +48,7 @@ Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font load
 ## Rendering Pixels
 - [13 - Skia](13-skia-renderer.md) - Hardware-accelerated rendering
 - [14 - Platform Renderers](15-platform-renderers.md) - CoreGraphics and Direct2D
-- [15 - Orge](14-orge-renderer.md) - Pure Rust foundation
+- [15 - Opixa](14-opixa-renderer.md) - Pure Rust foundation
 - [16 - Zeno](16-zeno-renderer.md) - Vector quality output
 
 ## Using TYPF

@@ -1257,14 +1257,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../14-orge-renderer/" class="md-nav__link">
+      <a href="../14-opixa-renderer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Orge Renderer
+    Opixa Renderer
   
 
     
@@ -2212,7 +2212,7 @@
 <h3 id="simd-acceleration">SIMD Acceleration<a class="headerlink" href="#simd-acceleration" title="Permanent link">&para;</a></h3>
 <div class="language-rust highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="cp">#[cfg(target_arch = </span><span class="s">&quot;x86_64&quot;</span><span class="cp">)]</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">SimdRenderer</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">rasterizer</span><span class="p">:</span><span class="w"> </span><span class="nc">OrgeRasterizer</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">rasterizer</span><span class="p">:</span><span class="w"> </span><span class="nc">OpixaRasterizer</span><span class="p">,</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="c1">// SSE4.1, AVX2 support</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="p">}</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>

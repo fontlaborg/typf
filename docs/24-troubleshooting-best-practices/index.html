@@ -953,14 +953,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../14-orge-renderer/" class="md-nav__link">
+      <a href="../14-opixa-renderer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Orge Renderer
+    Opixa Renderer
   
 
     
@@ -2342,8 +2342,8 @@
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">fn</span><span class="w"> </span><span class="nf">choose_best_renderer</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">RendererBackend</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Skia</span><span class="p">.</span><span class="n">is_available</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Skia</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Orge</span><span class="p">.</span><span class="n">is_available</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Orge</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Opixa</span><span class="p">.</span><span class="n">is_available</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Opixa</span>
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="fm">panic!</span><span class="p">(</span><span class="s">&quot;No renderer available&quot;</span><span class="p">);</span>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="p">}</span>
@@ -2353,8 +2353,8 @@
 </span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="k">match</span><span class="w"> </span><span class="n">pipeline</span><span class="p">.</span><span class="n">set_renderer</span><span class="p">(</span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Skia</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="nb">Ok</span><span class="p">(</span><span class="n">_</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Using Skia renderer&quot;</span><span class="p">),</span>
 </span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="nb">Err</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Skia not available, falling back to Orge: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="n">pipeline</span><span class="p">.</span><span class="n">set_renderer</span><span class="p">(</span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Orge</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Skia not available, falling back to Opixa: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="n">pipeline</span><span class="p">.</span><span class="n">set_renderer</span><span class="p">(</span><span class="n">RendererBackend</span><span class="p">::</span><span class="n">Opixa</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
 </span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="p">}</span>
 </span></code></pre></div></p>

@@ -11,7 +11,7 @@ with zero compromise on speed or quality.
 from typfpy import Typf
 
 # Create your rendering pipeline
-typf = Typf(shaper="harfbuzz", renderer="orge")
+typf = Typf(shaper="harfbuzz", renderer="opixa")
 
 # Render beautiful text
 result = typf.render_text("Hello, World!", "font.ttf", size=48)

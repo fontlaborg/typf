@@ -52,7 +52,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - `CoreText` - Native macOS shaping with caching
 
 **Rendering Backends** (5)
-- `Orge` - Pure Rust rasterization with SIMD
+- `Opixa` - Pure Rust rasterization with SIMD
 - `Skia` - Anti-aliased rendering via tiny-skia
 - `Zeno` - Pure Rust 2D rasterization with 256x anti-aliasing
 - `CoreGraphics` - Native macOS rendering
@@ -110,7 +110,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 ### Fixed
 - **Rendering**: Fixed baseline positioning (BASELINE_RATIO 0.75)
 - **Rendering**: Fixed Y-coordinate collapse in Zeno renderer
-- **Rendering**: Fixed descender cropping in Orge, Skia, Zeno
+- **Rendering**: Fixed descender cropping in Opixa, Skia, Zeno
 - **Build**: Removed dead code warnings in legacy REPL/batch modules
 
 ## [Future Roadmap]

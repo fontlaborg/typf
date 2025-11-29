@@ -1,6 +1,6 @@
-//! Orge Renderer: where mathematical curves become beautiful pixels
+//! Opixa Renderer: where mathematical curves become beautiful pixels
 //!
-//! Fonts store perfect vectors, but screens demand imperfect pixels. Orge bridges
+//! Fonts store perfect vectors, but screens demand imperfect pixels. Opixa bridges
 //! this gap with surgical precision—no hinting artifacts, no blurry compromises,
 //! just crisp text that honors the font designer's original vision. This is
 //! pure Rust proving it can dance with C in the high-stakes world of typography.
@@ -66,16 +66,16 @@ pub mod parallel;
 
 /// Your artisan glyph crafter: precision in every pixel
 ///
-/// This isn't just another rasterizer—Orge treats every glyph as a masterpiece.
+/// This isn't just another rasterizer—Opixa treats every glyph as a masterpiece.
 /// We use scan conversion algorithms that respect font geometry while
 /// producing the smoothest text possible without grid fitting artifacts.
-pub struct OrgeRenderer {
+pub struct OpixaRenderer {
     /// Guard against memory bombs with reasonable size limits
     /// 8K prepares us for future high-DPI displays without going mad
     max_size: u32,
 }
 
-impl OrgeRenderer {
+impl OpixaRenderer {
     /// Ready your pixel artist for the transformation to come
     pub fn new() -> Self {
         Self {
@@ -203,15 +203,15 @@ impl OrgeRenderer {
     }
 }
 
-impl Default for OrgeRenderer {
+impl Default for OpixaRenderer {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Renderer for OrgeRenderer {
+impl Renderer for OpixaRenderer {
     fn name(&self) -> &'static str {
-        "orge"
+        "opixa"
     }
 
     fn render(
@@ -220,7 +220,7 @@ impl Renderer for OrgeRenderer {
         font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
-        log::debug!("OrgeRenderer: Rendering {} glyphs", shaped.glyphs.len());
+        log::debug!("OpixaRenderer: Rendering {} glyphs", shaped.glyphs.len());
 
         // Extract raw font bytes for our rasterizer to analyze
         let font_data = font.data();
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_basic_rendering() {
-        let renderer = OrgeRenderer::new();
+        let renderer = OpixaRenderer::new();
 
         let shaped = ShapingResult {
             glyphs: vec![
@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_with_background() {
-        let renderer = OrgeRenderer::new();
+        let renderer = OpixaRenderer::new();
 
         let shaped = ShapingResult {
             glyphs: vec![],

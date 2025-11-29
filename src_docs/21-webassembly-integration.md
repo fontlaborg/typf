@@ -65,7 +65,7 @@ const typf = await Typf.create();
 // With specific backends
 const typf = await Typf.create({
   shaper: 'harfbuzz',
-  renderer: 'orge'
+  renderer: 'opixa'
 });
 
 // Preload fonts

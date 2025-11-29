@@ -167,7 +167,7 @@ fn show_info() {
     println!("  Version:    {}", env!("CARGO_PKG_VERSION").cyan());
     println!("  Backends:");
     println!("    Shaping:  {}", "none, harfbuzz (if compiled)".dimmed());
-    println!("    Rendering: {}", "orge (if compiled)".dimmed());
+    println!("    Rendering: {}", "opixa (if compiled)".dimmed());
     println!("  Formats:   {}", "PNG, SVG, PNM, JSON".dimmed());
 }
 

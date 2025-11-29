@@ -37,7 +37,7 @@ Main class for text rendering operations.
 class Typf:
     def __init__(self, 
                  shaper: str = "harfbuzz",
-                 renderer: str = "orge",
+                 renderer: str = "opixa",
                  font_db: Optional[FontDatabase] = None):
         """Initialize renderer with backends."""
         
@@ -189,7 +189,7 @@ icu_renderer = typf.Typf(shaper="icu-harfbuzz")
 
 ```python
 print(backends['renderers'])  
-# ['orge', 'skia', 'coregraphics', 'directwrite', 'zeno']
+# ['opixa', 'skia', 'coregraphics', 'directwrite', 'zeno']
 
 # Use specific renderer
 skia_renderer = typf.Typf(renderer="skia")
@@ -202,10 +202,10 @@ zeno_renderer = typf.Typf(renderer="zeno")
 |----------|--------|----------|
 | Web graphics | harfbuzz | skia |
 | Print production | icu-harfbuzz | zeno |
-| Simple text | none | orge |
+| Simple text | none | opixa |
 | macOS apps | coretext | coregraphics |
 | Windows apps | directwrite | directwrite |
-| Cross-platform | harfbuzz | orge |
+| Cross-platform | harfbuzz | opixa |
 
 ## Color and Formatting
 

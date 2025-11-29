@@ -21,7 +21,7 @@ Make TypF fast through strategic optimization techniques.
 | JSON Export | 15,506-22,661 ops/sec | Data only | Analysis, debug |
 | CoreGraphics | 3,805-4,583 ops/sec | High quality | macOS best |
 | Zeno | 3,048-3,675 ops/sec | High | Vector quality |
-| Orge | 1,959-2,302 ops/sec | Medium | Pure Rust, SIMD |
+| Opixa | 1,959-2,302 ops/sec | Medium | Pure Rust, SIMD |
 | Skia | 1,611-1,829 ops/sec | High quality | Cross-platform |
 
 ## Quick Wins
@@ -265,7 +265,7 @@ fn choose_renderer(output_format: OutputFormat) -> RendererBackend {
         OutputFormat::PNG => RendererBackend::Skia, // Best quality
         OutputFormat::SVG => RendererBackend::Zeno, // Vector output
         OutputFormat::PDF => RendererBackend::Skia, // Print quality
-        OutputFormat::Debug => RendererBackend::Orge, // Fastest
+        OutputFormat::Debug => RendererBackend::Opixa, // Fastest
     }
 }
 ```

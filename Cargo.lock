@@ -621,6 +621,12 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foldhash"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
+
+[[package]]
+name = "foldhash"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
@@ -746,13 +752,24 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
+version = "0.15.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
+dependencies = [
+ "allocator-api2",
+ "equivalent",
+ "foldhash 0.1.5",
+]
+
+[[package]]
+name = "hashbrown"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5419bdc4f6a9207fbeba6d11b604d481addf78ecd10c11ad51e76c2f6482748d"
 dependencies = [
  "allocator-api2",
  "equivalent",
- "foldhash",
+ "foldhash 0.2.0",
 ]
 
 [[package]]
@@ -1029,11 +1046,20 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lru"
+version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "234cf4f4a04dc1f57e24b96cc0cd600cf2af460d4161ac5ecdd0af8e1f3b2a38"
+dependencies = [
+ "hashbrown 0.15.5",
+]
+
+[[package]]
+name = "lru"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96051b46fc183dc9cd4a223960ef37b9af631b55191852a8274bfef064cda20f"
 dependencies = [
- "hashbrown",
+ "hashbrown 0.16.0",
 ]
 
 [[package]]
@@ -1813,7 +1839,7 @@ dependencies = [
  "typf-input",
  "typf-render-cg",
  "typf-render-json",
- "typf-render-orge",
+ "typf-render-opixa",
  "typf-render-skia",
  "typf-render-zeno",
  "typf-shape-ct",
@@ -1836,8 +1862,9 @@ dependencies = [
  "typf-core",
  "typf-export",
  "typf-fontdb",
+ "typf-os-mac",
  "typf-render-cg",
- "typf-render-orge",
+ "typf-render-opixa",
  "typf-render-skia",
  "typf-render-zeno",
  "typf-shape-ct",
@@ -1863,7 +1890,7 @@ dependencies = [
  "typf-export-svg",
  "typf-fontdb",
  "typf-render-cg",
- "typf-render-orge",
+ "typf-render-opixa",
  "typf-render-skia",
  "typf-render-zeno",
  "typf-shape-ct",
@@ -1878,7 +1905,7 @@ version = "2.0.0"
 dependencies = [
  "icu_properties",
  "log",
- "lru",
+ "lru 0.16.2",
  "parking_lot",
  "thiserror",
 ]
@@ -1919,6 +1946,41 @@ name = "typf-input"
 version = "2.0.0"
 
 [[package]]
+name = "typf-os"
+version = "2.0.0"
+dependencies = [
+ "typf-core",
+ "typf-os-mac",
+ "typf-os-win",
+]
+
+[[package]]
+name = "typf-os-mac"
+version = "2.0.0"
+dependencies = [
+ "core-foundation 0.10.1",
+ "core-graphics 0.24.0",
+ "core-text 21.0.0",
+ "env_logger",
+ "foreign-types 0.5.0",
+ "log",
+ "lru 0.12.5",
+ "parking_lot",
+ "typf-core",
+]
+
+[[package]]
+name = "typf-os-win"
+version = "2.0.0"
+dependencies = [
+ "log",
+ "lru 0.16.2",
+ "parking_lot",
+ "typf-core",
+ "windows",
+]
+
+[[package]]
 name = "typf-py"
 version = "2.0.0"
 dependencies = [
@@ -1930,7 +1992,7 @@ dependencies = [
  "typf-fontdb",
  "typf-render-cg",
  "typf-render-json",
- "typf-render-orge",
+ "typf-render-opixa",
  "typf-render-skia",
  "typf-render-zeno",
  "typf-shape-ct",
@@ -1965,7 +2027,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "typf-render-orge"
+name = "typf-render-opixa"
 version = "2.0.0"
 dependencies = [
  "log",
@@ -2011,7 +2073,7 @@ dependencies = [
  "env_logger",
  "foreign-types 0.5.0",
  "log",
- "lru",
+ "lru 0.16.2",
  "objc2",
  "objc2-foundation",
  "parking_lot",
@@ -2037,7 +2099,7 @@ dependencies = [
  "env_logger",
  "harfbuzz_rs",
  "log",
- "lru",
+ "lru 0.16.2",
  "parking_lot",
  "thiserror",
  "typf-core",
@@ -2214,10 +2276,74 @@ dependencies = [
 ]
 
 [[package]]
+name = "windows"
+version = "0.58.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd04d41d93c4992d421894c18c8b43496aa748dd4c081bac0dc93eb0489272b6"
+dependencies = [
+ "windows-core",
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-core"
+version = "0.58.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ba6d44ec8c2591c134257ce647b7ea6b20335bf6379a27dac5f1641fcf59f99"
+dependencies = [
+ "windows-implement",
+ "windows-interface",
+ "windows-result",
+ "windows-strings",
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-implement"
+version = "0.58.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bbd5b46c938e506ecbce286b6628a02171d56153ba733b6c741fc627ec9579b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "windows-interface"
+version = "0.58.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "053c4c462dc91d3b1504c6fe5a726dd15e216ba718e84a0e46a88fbe5ded3515"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "windows-link"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+
+[[package]]
+name = "windows-result"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d1043d8214f791817bab27572aaa8af63732e11bf84aa21a45a78d6c317ae0e"
+dependencies = [
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-strings"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd9b125c486025df0eabcb585e62173c6c9eddcec5d117d3b6e8c30e2ee4d10"
+dependencies = [
+ "windows-result",
+ "windows-targets",
+]
 
 [[package]]
 name = "windows-sys"

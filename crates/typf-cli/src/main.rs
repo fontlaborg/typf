@@ -1,6 +1,6 @@
 //! TYPF CLI - Professional text rendering from the command line
 //!
-//! A unified command-line interface for text shaping and rendering
+//! A linra command-line interface for text shaping and rendering
 //! with support for multiple backends and output formats.
 
 mod cli;

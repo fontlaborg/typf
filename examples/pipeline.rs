@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use typf_core::{traits::FontRef, Color, Pipeline, RenderParams, ShapingParams};
 use typf_export::PnmExporter;
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
 /// Demo font with variable glyph spacing based on font size
@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Assemble our processing pipeline: shape → render → export
     let pipeline = Pipeline::builder()
         .shaper(Arc::new(NoneShaper::new()))      // Text shaping stage
-        .renderer(Arc::new(OrgeRenderer::new()))  // Rasterization stage
+        .renderer(Arc::new(OpixaRenderer::new()))  // Rasterization stage
         .exporter(Arc::new(PnmExporter::ppm()))   // File export stage
         .build()?;
 

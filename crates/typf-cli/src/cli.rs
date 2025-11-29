@@ -1,7 +1,7 @@
 //! CLI argument definitions using Clap v4
 //!
 //! This module defines the command-line interface structure
-//! following the unified TYPF CLI specification.
+//! following the linra TYPF CLI specification.
 
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
@@ -79,7 +79,7 @@ pub struct RenderArgs {
     #[arg(long = "shaper", default_value = "auto")]
     pub shaper: String,
 
-    /// Rendering backend: auto, orge, skia, zeno, mac, win, json
+    /// Rendering backend: auto, opixa, skia, zeno, mac, win, json
     #[arg(long = "renderer", default_value = "auto")]
     pub renderer: String,
 

@@ -16,7 +16,7 @@ use std::sync::Arc;
 use typf::{Color, Pipeline, RenderParams, ShapingParams};
 use typf_core::traits::{FontRef, Renderer, Shaper};
 use typf_export::{PnmExporter, PnmFormat};
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
 /// Consistent test font for all benchmarks
@@ -85,7 +85,7 @@ fn bench_shaping(c: &mut Criterion) {
 fn bench_rendering(c: &mut Criterion) {
     let font = Arc::new(BenchFont);
     let shaper = NoneShaper::new();
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
 
     // Shape test data once to isolate rendering performance
     let shaped_short = shaper
@@ -129,7 +129,7 @@ fn bench_full_pipeline(c: &mut Criterion) {
     // Build a complete pipeline with all stages
     let pipeline = Pipeline::builder()
         .shaper(Arc::new(NoneShaper::new()))
-        .renderer(Arc::new(OrgeRenderer::new()))
+        .renderer(Arc::new(OpixaRenderer::new()))
         .exporter(Arc::new(PnmExporter::ppm()))
         .build()
         .unwrap();

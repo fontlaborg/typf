@@ -211,7 +211,7 @@ impl Renderer for ZenoRenderer {
             }
         }
 
-        // Use advance_height as the font size (same as Orge/Skia renderers)
+        // Use advance_height as the font size (same as Opixa/Skia renderers)
         let glyph_size = shaped.advance_height;
 
         // Calculate baseline position using proper font metrics approximation

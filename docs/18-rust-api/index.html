@@ -955,14 +955,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../14-orge-renderer/" class="md-nav__link">
+      <a href="../14-opixa-renderer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Orge Renderer
+    Opixa Renderer
   
 
     
@@ -2406,7 +2406,7 @@
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">// Build a rendering pipeline</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PipelineBuilder</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="p">.</span><span class="n">with_shaper</span><span class="p">(</span><span class="s">&quot;harfbuzz&quot;</span><span class="p">)</span><span class="o">?</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">.</span><span class="n">with_renderer</span><span class="p">(</span><span class="s">&quot;orge&quot;</span><span class="p">)</span><span class="o">?</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">.</span><span class="n">with_renderer</span><span class="p">(</span><span class="s">&quot;opixa&quot;</span><span class="p">)</span><span class="o">?</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">();</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1">// Render text</span>
@@ -2780,7 +2780,7 @@
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">[dependencies.typf]</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">features</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="s2">&quot;shaping-harfbuzz&quot;</span><span class="p">,</span><span class="w">     </span><span class="c1"># HarfBuzz text shaping</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="s2">&quot;render-orge&quot;</span><span class="p">,</span><span class="w">          </span><span class="c1"># Orge rasterizer</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="s2">&quot;render-opixa&quot;</span><span class="p">,</span><span class="w">          </span><span class="c1"># Opixa rasterizer</span>
 </span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="s2">&quot;render-skia&quot;</span><span class="p">,</span><span class="w">          </span><span class="c1"># Skia renderer</span>
 </span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">    </span><span class="s2">&quot;export-png&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1"># PNG export</span>
 </span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">    </span><span class="s2">&quot;export-svg&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1"># SVG export</span>
@@ -2793,7 +2793,7 @@
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">[dependencies.typf]</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="n">features</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="s2">&quot;shaping-none&quot;</span><span class="p">,</span><span class="w">         </span><span class="c1"># No shaping (identity only)</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="s2">&quot;render-orge&quot;</span><span class="p">,</span><span class="w">          </span><span class="c1"># Basic rasterizer</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="s2">&quot;render-opixa&quot;</span><span class="p">,</span><span class="w">          </span><span class="c1"># Basic rasterizer</span>
 </span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="s2">&quot;export-pnm&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1"># PNM export for testing</span>
 </span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="p">]</span>
 </span></code></pre></div>

@@ -8,7 +8,7 @@ use typf_core::{
     Color, RenderParams, ShapingParams,
 };
 use typf_export::{PnmExporter, PnmFormat};
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
 /// Mock font for testing
@@ -76,7 +76,7 @@ fn test_full_pipeline() {
     };
 
     // Create renderer
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
 
     // Render to bitmap
     let rendered = renderer
@@ -120,7 +120,7 @@ fn test_pipeline_with_different_formats() {
     let shaper = NoneShaper::new();
     let shaped = shaper.shape(text, font.clone(), &shaping_params).unwrap();
 
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
     let rendered = renderer.render(&shaped, font, &render_params).unwrap();
 
     // Test different export formats
@@ -161,7 +161,7 @@ fn test_empty_text() {
     assert_eq!(shaped.advance_width, 0.0);
 
     // Rendering empty text should still produce a valid (though small) bitmap
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
     let rendered = renderer.render(&shaped, font, &render_params).unwrap();
 
     match rendered {
@@ -194,7 +194,7 @@ fn test_large_text() {
 
     assert_eq!(shaped.glyphs.len(), text.len());
 
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
     let rendered = renderer.render(&shaped, font, &render_params).unwrap();
 
     match rendered {
@@ -224,7 +224,7 @@ fn test_pipeline_with_colors() {
     let shaper = NoneShaper::new();
     let shaped = shaper.shape(text, font.clone(), &shaping_params).unwrap();
 
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
 
     for (fg, bg) in test_cases {
         let render_params = RenderParams {

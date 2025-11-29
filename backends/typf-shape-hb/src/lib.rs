@@ -17,8 +17,8 @@ use typf_core::{
     ShapingParams,
 };
 
-pub mod cache;
-pub use cache::ShapingCache;
+// Re-export shared shaping cache from typf-core
+pub use typf_core::shaping_cache::{CacheStats, ShapingCache, ShapingCacheKey, SharedShapingCache};
 
 /// Professional text shaping powered by HarfBuzz
 pub struct HarfBuzzShaper;

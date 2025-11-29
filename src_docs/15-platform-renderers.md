@@ -77,7 +77,7 @@ pub fn create_platform_renderer() -> Result<Box<dyn Renderer>> {
     return Ok(Box::new(DirectWriteRenderer::new()?));
     
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    return Ok(Box::new(OrgeRenderer::new(width, height)?));
+    return Ok(Box::new(OpixaRenderer::new(width, height)?));
 }
 ```
 
@@ -255,10 +255,10 @@ fn test_platform_consistency() {
     let dw_result = directwrite_renderer.render(text, &font);
     
     // Compare with software fallback
-    let orge_result = orge_renderer.render(text, &font);
+    let opixa_result = opixa_renderer.render(text, &font);
     
     // Results should be visually similar
-    assert!(images_similar(&cg_result, &orge_result));
+    assert!(images_similar(&cg_result, &opixa_result));
 }
 ```
 
@@ -267,8 +267,8 @@ fn test_platform_consistency() {
 Switch from software rendering:
 
 ```rust
-// Before - Orge renderer
-let mut renderer = OrgeRenderer::new(width, height)?;
+// Before - Opixa renderer
+let mut renderer = OpixaRenderer::new(width, height)?;
 
 // After - Platform renderer
 #[cfg(target_os = "macos")]
@@ -287,7 +287,7 @@ fn benchmark_renderers() {
     
     // Test software renderer
     let software_time = benchmark(|| {
-        orge_renderer.render(text, &font)
+        opixa_renderer.render(text, &font)
     }, iterations);
     
     // Test platform renderer

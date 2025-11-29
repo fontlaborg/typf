@@ -1,0 +1,24 @@
+[package]
+name = "typf-os-win"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Single-pass text rendering using Windows DirectWrite"
+
+[dependencies]
+typf-core = { workspace = true }
+log = { workspace = true }
+parking_lot = { workspace = true }
+lru = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Imaging",
+    "Win32_System_Com",
+] }

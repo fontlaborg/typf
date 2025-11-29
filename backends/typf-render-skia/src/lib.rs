@@ -233,7 +233,7 @@ impl Renderer for SkiaRenderer {
             }
         }
 
-        // Use advance_height as the font size (same as Orge renderer)
+        // Use advance_height as the font size (same as Opixa renderer)
         let glyph_size = shaped.advance_height;
 
         // Calculate baseline position using proper font metrics approximation

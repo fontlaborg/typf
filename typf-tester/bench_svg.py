@@ -52,7 +52,7 @@ class SVGBenchmark:
         self.iterations = 500  # More iterations for statistical significance
 
         # Renderers that support both PNG and SVG
-        self.renderers = ["coregraphics", "orge", "skia", "zeno"]
+        self.renderers = ["coregraphics", "opixa", "skia", "zeno"]
 
     def benchmark_format(self, renderer: str, format: str) -> Optional[BenchmarkResult]:
         """Benchmark a specific renderer and format combination."""

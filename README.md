@@ -46,7 +46,7 @@ That's it. Your text is rendered.
 | Fastest data | `none + JSON` | 25K ops/sec | Glyph data only |
 | Complex scripts | `harfbuzz + zeno` | 3K ops/sec | 247 grayscales |
 | macOS best | `coretext + coregraphics` | 4K ops/sec | 254 levels |
-| Pure Rust | `harfbuzz + orge` | 2K ops/sec | 25 levels (mono) |
+| Pure Rust | `harfbuzz + opixa` | 2K ops/sec | 25 levels (mono) |
 
 ## Backend comparison
 
@@ -63,11 +63,21 @@ That's it. Your text is rendered.
 
 | Backend | Anti-alias | Color | Output | Performance | Platform |
 |---------|------------|-------|--------|-------------|----------|
-| **orge** | Monochrome | No | Bitmap | 2K ops/sec | All (pure Rust) |
+| **opixa** | Monochrome | No | Bitmap | 2K ops/sec | All (pure Rust) |
 | **skia** | 256 levels | No | Bitmap | 3.5K ops/sec | All |
 | **zeno** | 256 levels | No | Bitmap | 3K ops/sec | All (pure Rust) |
 | **coregraphics** | 256 levels | Yes (sbix/COLR) | Bitmap | 4K ops/sec | macOS only |
 | **json** | N/A | N/A | JSON data | 25K ops/sec | All |
+
+### Linra Renderers (Single-Pass)
+
+For maximum performance, linra renderers combine shaping and rendering in a single OS call:
+
+| Backend | Speed vs Separate | Platform | Use Case |
+|---------|------------------|----------|----------|
+| **coretext-linra** | 2.52x faster | macOS only | High-throughput rendering |
+
+The linra renderer bypasses the intermediate glyph extraction step, allowing CoreText to optimize the entire pipeline internally.
 
 ### Export Formats
 
@@ -94,7 +104,7 @@ cargo build --release --features export-svg
 
 ## CLI usage
 
-The unified CLI supports both Rust (`typf`) and Python (`typfpy`) with identical syntax.
+The linra CLI supports both Rust (`typf`) and Python (`typfpy`) with identical syntax.
 
 **Show available backends:**
 ```bash
@@ -198,7 +208,7 @@ Tests all backend combos on your hardware. Results go to `output/`.
 - ✅ 6-stage pipeline
 - ✅ 4 shapers, 5 renderers (20 combinations)
 - ✅ PNM, PNG, SVG, JSON export
-- ✅ Unified CLI (Rust + Python)
+- ✅ Linra CLI (Rust + Python)
 - ✅ Python bindings (PyO3)
 - ✅ Linux, macOS, Windows, WASM
 - ✅ 446 total tests passing (206 unit + 240 integration)

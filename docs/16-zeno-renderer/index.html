@@ -957,14 +957,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../14-orge-renderer/" class="md-nav__link">
+      <a href="../14-opixa-renderer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Orge Renderer
+    Opixa Renderer
   
 
     
@@ -1475,10 +1475,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#from-orge-renderer" class="md-nav__link">
+  <a href="#from-opixa-renderer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        From Orge Renderer
+        From Opixa Renderer
       
     </span>
   </a>
@@ -2369,10 +2369,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#from-orge-renderer" class="md-nav__link">
+  <a href="#from-opixa-renderer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        From Orge Renderer
+        From Opixa Renderer
       
     </span>
   </a>
@@ -2506,7 +2506,7 @@
 <tr>
 <th>Task</th>
 <th>Skia</th>
-<th>Orge</th>
+<th>Opixa</th>
 <th>Zeno</th>
 </tr>
 </thead>
@@ -2764,10 +2764,10 @@
 </span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="p">}</span>
 </span></code></pre></div>
 <h2 id="migration">Migration<a class="headerlink" href="#migration" title="Permanent link">&para;</a></h2>
-<h3 id="from-orge-renderer">From Orge Renderer<a class="headerlink" href="#from-orge-renderer" title="Permanent link">&para;</a></h3>
-<div class="language-rust highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1">// Before - Orge (raster only)</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">orge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OrgeRenderer</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">bitmap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">orge</span><span class="p">.</span><span class="n">render</span><span class="p">(</span><span class="n">text</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">font</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<h3 id="from-opixa-renderer">From Opixa Renderer<a class="headerlink" href="#from-opixa-renderer" title="Permanent link">&para;</a></h3>
+<div class="language-rust highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1">// Before - Opixa (raster only)</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">opixa</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OpixaRenderer</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">bitmap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">opixa</span><span class="p">.</span><span class="n">render</span><span class="p">(</span><span class="n">text</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">font</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
 </span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>
 </span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="c1">// After - Zeno (vector + raster)</span>
 </span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="kd">let</span><span class="w"> </span><span class="n">zeno</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ZenoRenderer</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>

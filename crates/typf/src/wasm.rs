@@ -18,7 +18,7 @@ pub fn init_panic_hook() {
 pub struct WasmRenderer {
     #[cfg(feature = "shaping-none")]
     shaper: Box<dyn Shaper>,
-    #[cfg(feature = "render-orge")]
+    #[cfg(feature = "render-opixa")]
     renderer: Box<dyn Renderer>,
 }
 
@@ -27,17 +27,17 @@ impl WasmRenderer {
     /// Ready to render with the minimal, web-friendly backends
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<WasmRenderer, JsValue> {
-        #[cfg(not(all(feature = "shaping-none", feature = "render-orge")))]
-        return Err(JsValue::from_str("WASM needs shaping-none and render-orge features"));
+        #[cfg(not(all(feature = "shaping-none", feature = "render-opixa")))]
+        return Err(JsValue::from_str("WASM needs shaping-none and render-opixa features"));
 
-        #[cfg(all(feature = "shaping-none", feature = "render-orge"))]
+        #[cfg(all(feature = "shaping-none", feature = "render-opixa"))]
         {
-            use crate::render_orge::OrgeRenderer;
+            use crate::render_opixa::OpixaRenderer;
             use crate::shape_none::NoneShaper;
 
             Ok(WasmRenderer {
                 shaper: Box::new(NoneShaper::new()),
-                renderer: Box::new(OrgeRenderer::new()),
+                renderer: Box::new(OpixaRenderer::new()),
             })
         }
     }
@@ -53,10 +53,10 @@ impl WasmRenderer {
         _width: Option<u32>,
         _height: Option<u32>,
     ) -> Result<Vec<u8>, JsValue> {
-        #[cfg(not(all(feature = "shaping-none", feature = "render-orge")))]
+        #[cfg(not(all(feature = "shaping-none", feature = "render-opixa")))]
         return Err(JsValue::from_str("Rendering not available in this build"));
 
-        #[cfg(all(feature = "shaping-none", feature = "render-orge"))]
+        #[cfg(all(feature = "shaping-none", feature = "render-opixa"))]
         {
             // TODO: Replace with real font loading
             struct MockFont {

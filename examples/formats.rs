@@ -11,7 +11,7 @@ use typf_core::{
     RenderParams, ShapingParams,
 };
 use typf_export::{PngExporter, PnmExporter, PnmFormat, SvgExporter};
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
 /// A font that handles basic ASCII characters gracefully
@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let shaper = NoneShaper::new();
     let shaped = shaper.shape(text, font.clone(), &ShapingParams::default())?;
 
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
     let rendered = renderer.render(&shaped, font, &RenderParams::default())?;
 
     // The PNM family: three formats, one simple approach

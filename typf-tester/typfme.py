@@ -151,7 +151,7 @@ class TypfTester:
         # Rendering backends (5):
         renderers = [
             "json",  # JSON output (for analysis/debugging)
-            "orge",  # Pure Rust bitmap rasterizer
+            "opixa",  # Pure Rust bitmap rasterizer
             "coregraphics",  # macOS CoreGraphics (native)
             "skia",  # tiny-skia rendering
             "zeno",  # Zeno rendering

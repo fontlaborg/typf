@@ -105,7 +105,7 @@ def main():
     print("-" * 80)
 
     try:
-        engine = typf.Typf(shaper="harfbuzz", renderer="orge")
+        engine = typf.Typf(shaper="harfbuzz", renderer="opixa")
 
         # SVG export has no practical width limits
         svg_output = engine.render_to_svg(

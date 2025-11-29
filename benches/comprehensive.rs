@@ -21,7 +21,7 @@ use typf_fontdb::Font;
 use typf_shape_none::NoneShaper;
 #[cfg(feature = "shaping-hb")]
 use typf_shape_hb::HarfBuzzShaper;
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_export::PnmExporter;
 use typf_core::traits::{Shaper, Renderer, Exporter};
 
@@ -97,7 +97,7 @@ fn bench_shaping(c: &mut Criterion) {
 /// Test rendering speed - how fast glyphs become pixels
 ///
 /// Rendering transforms positioned glyphs into actual bitmap data. This benchmark
-/// measures performance scaling with glyph count using the OrgeRenderer. We use
+/// measures performance scaling with glyph count using the OpixaRenderer. We use
 /// synthetic glyph data to isolate rendering performance from shaping time.
 fn bench_rendering(c: &mut Criterion) {
     let mut group = c.benchmark_group("rendering");
@@ -109,7 +109,7 @@ fn bench_rendering(c: &mut Criterion) {
         ("1000_glyphs", 1000), // Long documents
     ];
 
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
 
     struct MockFont;
     impl typf_core::traits::FontRef for MockFont {
@@ -227,7 +227,7 @@ fn bench_cache(c: &mut Criterion) {
 /// show 4x+ speedup on large buffers.
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 fn bench_simd_blending(c: &mut Criterion) {
-    use typf_render_orge::simd;
+    use typf_render_opixa::simd;
 
     let mut group = c.benchmark_group("simd_blending");
 
@@ -294,7 +294,7 @@ fn bench_pipeline(c: &mut Criterion) {
     };
 
     let shaper = Arc::new(NoneShaper::new());
-    let renderer = Arc::new(OrgeRenderer::new());
+    let renderer = Arc::new(OpixaRenderer::new());
     let exporter = Arc::new(PnmExporter::ppm());
 
     // Real-world text samples

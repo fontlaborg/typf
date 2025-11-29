@@ -1,32 +1,43 @@
-//! Shaping result caching for ICU-HarfBuzz
+//! Backend-agnostic shaping cache
 //!
-//! Caches shaped text results to avoid expensive reshaping operations.
+//! Shared cache implementation for text shaping results. Used by HarfBuzz-based
+//! shapers to avoid expensive reshaping operations.
+//!
+//! This module was extracted from duplicated code in typf-shape-hb and
+//! typf-shape-icu-hb to provide a single source of truth.
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
-use typf_core::cache::MultiLevelCache;
-use typf_core::types::ShapingResult;
+
+use crate::cache::MultiLevelCache;
+use crate::types::ShapingResult;
 
 /// Key for caching shaping results
+///
+/// Uniquely identifies a shaping operation by its inputs:
+/// text content, font identity, size, locale settings, and OpenType features.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ShapingCacheKey {
     /// Text content
     pub text: String,
-    /// Font identifier (could be font path or hash)
+    /// Font identifier (hash of font data)
     pub font_id: u64,
-    /// Font size in points
-    pub size: u32, // Store as u32 (size * 100) for hash stability
-    /// Language code
+    /// Font size in points (stored as u32: size * 100 for hash stability)
+    pub size: u32,
+    /// Language code (e.g., "en", "ar", "zh")
     pub language: Option<String>,
-    /// Script tag
+    /// Script tag (e.g., "latn", "arab", "hans")
     pub script: Option<String>,
-    /// Enabled features
+    /// Enabled OpenType features with their values
     pub features: Vec<(String, u32)>,
 }
 
 impl ShapingCacheKey {
-    /// Create a new cache key
+    /// Create a new cache key from shaping inputs
+    ///
+    /// The font data is hashed to create a stable identifier that doesn't
+    /// require keeping the full font data in memory for cache lookups.
     pub fn new(
         text: impl Into<String>,
         font_data: &[u8],
@@ -51,45 +62,65 @@ impl ShapingCacheKey {
     }
 }
 
-/// Cache for ICU-HarfBuzz shaping results
+/// Cache for shaping results
+///
+/// Uses a two-level cache (L1 hot cache + L2 LRU cache) for optimal
+/// performance across different access patterns.
 pub struct ShapingCache {
     cache: MultiLevelCache<ShapingCacheKey, ShapingResult>,
 }
 
 impl ShapingCache {
-    /// Create a new shaping cache
+    /// Create a new shaping cache with default capacities
+    ///
+    /// L1 (hot cache): 100 entries for frequently accessed results
+    /// L2 (LRU cache): 500 entries for less frequent access
     pub fn new() -> Self {
         Self {
-            cache: MultiLevelCache::new(100, 500), // L1: 100, L2: 500
+            cache: MultiLevelCache::new(100, 500),
+        }
+    }
+
+    /// Create a shaping cache with custom capacities
+    pub fn with_capacity(l1_size: usize, l2_size: usize) -> Self {
+        Self {
+            cache: MultiLevelCache::new(l1_size, l2_size),
         }
     }
 
     /// Get a cached shaping result
+    ///
+    /// Returns `Some(result)` if the key exists in either cache level,
+    /// `None` if not found.
     pub fn get(&self, key: &ShapingCacheKey) -> Option<ShapingResult> {
         self.cache.get(key)
     }
 
     /// Insert a shaping result into the cache
+    ///
+    /// The result is stored in both L1 and L2 caches for maximum availability.
     pub fn insert(&self, key: ShapingCacheKey, result: ShapingResult) {
         self.cache.insert(key, result);
     }
 
-    /// Get cache size
-    pub fn size(&self) -> usize {
-        // We don't expose size in the current implementation
-        // Return a placeholder
-        0
+    /// Get the current cache hit rate (0.0 to 1.0)
+    pub fn hit_rate(&self) -> f64 {
+        self.cache.hit_rate()
     }
 
     /// Get cache statistics
     pub fn stats(&self) -> CacheStats {
-        // For now, return basic stats
-        // In a full implementation, we would expose the internal metrics
+        let metrics = self.cache.metrics();
+        let total = metrics.l1_hits + metrics.l2_hits + metrics.misses;
         CacheStats {
-            hits: 0,
-            misses: 0,
-            evictions: 0,
-            hit_rate: 0.0,
+            hits: (metrics.l1_hits + metrics.l2_hits) as usize,
+            misses: metrics.misses as usize,
+            evictions: 0, // Not tracked in current implementation
+            hit_rate: if total > 0 {
+                (metrics.l1_hits + metrics.l2_hits) as f64 / total as f64
+            } else {
+                0.0
+            },
         }
     }
 }
@@ -109,13 +140,13 @@ pub struct CacheStats {
     pub hit_rate: f64,
 }
 
-/// Thread-safe shaping cache
+/// Thread-safe shaping cache wrapper
 pub type SharedShapingCache = Arc<RwLock<ShapingCache>>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use typf_core::types::{Direction, PositionedGlyph};
+    use crate::types::{Direction, PositionedGlyph};
 
     #[test]
     fn test_cache_key_creation() {
@@ -190,29 +221,8 @@ mod tests {
         cache.get(&key);
 
         let stats = cache.stats();
-        // Stats are placeholder for now
+        // Stats track hits and misses
         assert!(stats.hit_rate >= 0.0);
-    }
-
-    #[test]
-    fn test_cache_clear() {
-        let cache = ShapingCache::new();
-
-        let key = ShapingCacheKey::new("Text", b"font", 16.0, None, None, vec![]);
-        let result = ShapingResult {
-            glyphs: vec![],
-            advance_width: 0.0,
-            advance_height: 16.0,
-            direction: Direction::LeftToRight,
-        };
-
-        cache.insert(key.clone(), result);
-        assert!(cache.get(&key).is_some());
-
-        // Note: clear() not implemented in current cache
-        // Test that we can check size instead
-        let _size = cache.size();
-        // Size is usize, always >= 0, so just verify it's callable
     }
 
     #[test]

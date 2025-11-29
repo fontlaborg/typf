@@ -725,10 +725,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#orge-renderer" class="md-nav__link">
+  <a href="#opixa-renderer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Orge Renderer
+        Opixa Renderer
       
     </span>
   </a>
@@ -1195,14 +1195,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../14-orge-renderer/" class="md-nav__link">
+      <a href="../14-opixa-renderer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Orge Renderer
+    Opixa Renderer
   
 
     
@@ -1803,10 +1803,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#orge-renderer" class="md-nav__link">
+  <a href="#opixa-renderer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Orge Renderer
+        Opixa Renderer
       
     </span>
   </a>
@@ -2085,14 +2085,14 @@
 <p><strong>Use when:</strong> You're on macOS and want native performance.</p>
 <p><strong>Features:</strong> Seamless macOS font integration, optimal performance.</p>
 <h2 id="rendering-backends">Rendering Backends<a class="headerlink" href="#rendering-backends" title="Permanent link">&para;</a></h2>
-<h3 id="orge-renderer">Orge Renderer<a class="headerlink" href="#orge-renderer" title="Permanent link">&para;</a></h3>
+<h3 id="opixa-renderer">Opixa Renderer<a class="headerlink" href="#opixa-renderer" title="Permanent link">&para;</a></h3>
 <p>Pure Rust rasterizer. No external dependencies.</p>
-<div class="language-rust highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">OrgeRenderer</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">rasterizer</span><span class="p">:</span><span class="w"> </span><span class="nc">OrgeRasterizer</span><span class="p">,</span>
+<div class="language-rust highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">OpixaRenderer</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">rasterizer</span><span class="p">:</span><span class="w"> </span><span class="nc">OpixaRasterizer</span><span class="p">,</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">scan_converter</span><span class="p">:</span><span class="w"> </span><span class="nc">ScanConverter</span><span class="p">,</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">}</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">impl</span><span class="w"> </span><span class="n">Renderer</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">OrgeRenderer</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">impl</span><span class="w"> </span><span class="n">Renderer</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">OpixaRenderer</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">glyphs</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="n">Glyph</span><span class="p">],</span><span class="w"> </span><span class="n">options</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="nc">RenderOptions</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">RenderOutput</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="c1">// Convert glyphs to outlines</span>
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">outlines</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Outline</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">glyphs</span><span class="p">.</span><span class="n">iter</span><span class="p">()</span>
@@ -2188,7 +2188,7 @@
 </span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
 </span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">Pipeline</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
 </span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">shaper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">registry</span><span class="p">.</span><span class="n">create_shaper</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">shaper_name</span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">&quot;none&quot;</span><span class="p">))</span><span class="o">?</span><span class="p">;</span>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">renderer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">registry</span><span class="p">.</span><span class="n">create_renderer</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">renderer_name</span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">&quot;orge&quot;</span><span class="p">))</span><span class="o">?</span><span class="p">;</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">renderer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">registry</span><span class="p">.</span><span class="n">create_renderer</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">renderer_name</span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">&quot;opixa&quot;</span><span class="p">))</span><span class="o">?</span><span class="p">;</span>
 </span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">exporter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">registry</span><span class="p">.</span><span class="n">create_exporter</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">exporter_name</span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">&quot;pnm&quot;</span><span class="p">))</span><span class="o">?</span><span class="p">;</span>
 </span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
 </span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">        </span><span class="nb">Ok</span><span class="p">(</span><span class="n">Pipeline</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">shaper</span><span class="p">,</span><span class="w"> </span><span class="n">renderer</span><span class="p">,</span><span class="w"> </span><span class="n">exporter</span><span class="p">))</span>
@@ -2207,7 +2207,7 @@
 </span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="k">fn</span><span class="w"> </span><span class="nf">default_shaper</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kp">&amp;</span><span class="o">&#39;</span><span class="nb">static</span><span class="w"> </span><span class="kt">str</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;harfbuzz&quot;</span><span class="w"> </span><span class="p">}</span>
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
 </span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="k">fn</span><span class="w"> </span><span class="nf">default_renderer</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kp">&amp;</span><span class="o">&#39;</span><span class="nb">static</span><span class="w"> </span><span class="kt">str</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">gpu_available</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;skia&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;orge&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">gpu_available</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;skia&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;opixa&quot;</span><span class="w"> </span><span class="p">}</span>
 </span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="p">}</span>
 </span></code></pre></div>
 <h2 id="backend-combinations">Backend Combinations<a class="headerlink" href="#backend-combinations" title="Permanent link">&para;</a></h2>
@@ -2247,7 +2247,7 @@
 <tr>
 <td>Pure Rust</td>
 <td>harfbuzz</td>
-<td>orge</td>
+<td>opixa</td>
 <td>pnm</td>
 <td>2K ops/sec</td>
 </tr>
@@ -2308,7 +2308,7 @@
 <td>macOS only</td>
 </tr>
 <tr>
-<td>Orge</td>
+<td>Opixa</td>
 <td>Low</td>
 <td>2K ops/sec</td>
 <td>Medium</td>

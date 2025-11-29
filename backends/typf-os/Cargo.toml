@@ -1,0 +1,21 @@
+[package]
+name = "typf-os"
+version = "2.0.0"
+edition = "2021"
+description = "Platform-native linra text rendering dispatcher"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fontlaborg/typf"
+keywords = ["font", "text", "rendering", "platform"]
+categories = ["graphics", "text-processing"]
+
+[dependencies]
+typf-core = { path = "../../crates/typf-core" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+typf-os-mac = { path = "../typf-os-mac" }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+typf-os-win = { path = "../typf-os-win" }
+
+[features]
+default = []

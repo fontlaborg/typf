@@ -46,7 +46,7 @@ TypF plugs different engines into each stage:
 - Skia (vectors)
 - CoreGraphics (macOS)
 - Direct2D (Windows)
-- Orge (pure Rust)
+- Opixa (pure Rust)
 - Zeno (GPU)
 - JSON (data export)
 

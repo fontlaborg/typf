@@ -85,7 +85,7 @@ Verify your rendering pipeline works:
 ```rust
 fn test_rendering_pipeline() {
     let shaper = NoneShaper;
-    let renderer = OrgeRenderer::new();
+    let renderer = OpixaRenderer::new();
     let font = load_test_font();
     
     // Simple predictable case

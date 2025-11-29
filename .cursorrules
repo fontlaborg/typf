@@ -37,15 +37,15 @@
 - `Cargo.toml` – Declares all workspace members plus `[workspace.metadata.features]` (`minimal`, `default`, `full`, backend toggles) that every crate references.
 - `crates/typf-core/` – Owns `Pipeline`, `PipelineBuilder`, `context`, `traits`, and shared `types::{RenderOutput, ShapingResult, BitmapData}` used by every UI/binding.
 - `crates/typf/` – Public API + prelude; re-exports `typf-core` and gates stage crates (`typf-input`, `typf-unicode`, `typf-fontdb`, `typf-export`).
-- `backends/` – Concrete stage implementations (`typf-shape-none`, `typf-shape-hb`, `typf-render-orge`) wired to feature flags; the rest of the directories are scaffolding for future backends.
-- `crates/typf-cli/` – Minimal CLI wiring `NoneShaper`, `OrgeRenderer`, and `PnmExporter` around a `StubFont` for smoke and regression tests.
+- `backends/` – Concrete stage implementations (`typf-shape-none`, `typf-shape-hb`, `typf-render-opixa`) wired to feature flags; the rest of the directories are scaffolding for future backends.
+- `crates/typf-cli/` – Minimal CLI wiring `NoneShaper`, `OpixaRenderer`, and `PnmExporter` around a `StubFont` for smoke and regression tests.
 - `bindings/python/` – PyO3 crate + `pyproject.toml`, exporting `Typf`, `FontInfo`, `render_simple`, and `export_image` via maturin/wheels.
 - `PLAN/`, `docs/`, `examples/`, `external/`, `old-typf/` – Architecture plans, sample data, and migration references; cite them when copying patterns.
 
 ### 3.2. Rust Implementation Notes (Repo Reality)
 1. **MUST** keep stage data flowing through `typf_core::context::PipelineContext`; do not let `typf-cli` or bindings bypass the builder with ad-hoc globals.
 2. **MUST** reuse the `Arc<Font>` handles returned by `typf-fontdb::FontDatabase`; cloning font bytes defeats the `Box::leak` strategy inside `typf-fontdb::Font` and leaks memory twice.
-3. **SHOULD** register new shapers/renderers via the existing `Arc<dyn Shaper + Send + Sync>` contracts (see `backends/typf-shape-none/src/lib.rs` and `backends/typf-render-orge/src/lib.rs`) so CLI + Python reflections (`get_shaper`, `get_renderer`) continue to work.
+3. **SHOULD** register new shapers/renderers via the existing `Arc<dyn Shaper + Send + Sync>` contracts (see `backends/typf-shape-none/src/lib.rs` and `backends/typf-render-opixa/src/lib.rs`) so CLI + Python reflections (`get_shaper`, `get_renderer`) continue to work.
 4. **MUST** update both the root `[workspace.metadata.features]` and each crate’s `Cargo.toml` before relying on a new backend/flag; CI builds (minimal/default/full) will fail fast otherwise.
 5. **SHOULD** keep exporter logic centralized in `crates/typf-export`; CLI and bindings both call `PnmExporter`, so add new formats there first.
 
@@ -519,7 +519,7 @@ When implementing TypF, reference the old-typf codebase strategically:
 - Extract backend trait implementations into separate crates per v2.0 design
 
 **Stage 5: Rendering (REFACTOR & ENHANCE)**
-- `old-typf/backends/typf-orge/src/` – Orge rasterization pipeline
+- `old-typf/backends/typf-opixa/src/` – Opixa rasterization pipeline
 - `old-typf/backends/typf-skiahb/src/renderer.rs` – Skia rendering
 - `old-typf/crates/typf-render/src/output.rs` – Export format handling (PNG, SVG, JSON)
 - `old-typf/crates/typf-render/src/svg.rs` – SVG export patterns
@@ -571,7 +571,7 @@ For each stage (PLAN/01-06):
 - **Workspace Discipline (MUST)**: Keep the multi-crate layout from `/Users/adam/Developer/llm/2511/typf-v2b` intact—`typf`, `typf-core`, `typf-input`, `typf-unicode`, `typf-fontdb`, `typf-export`, per-backend crates, bindings, and `typf-cli`. Never collapse crates “for convenience”; feature gating depends on this split.
 - **Six-Stage Pipeline Fidelity (MUST)**: Preserve the pipeline contracts defined in PLAN/00–04: Input → Unicode → Font Selection → Shaping → Rendering → Export. Every new feature must declare which stage it touches and add targeted tests (unit + integration) before code changes.
 - **Backend Traits & Registry (MUST)**: Extend `Stage`, `Shaper`, `Renderer`, `Exporter`, and `FusedEngine` via minimal, well-documented methods. Register new implementations through the backend registry so feature flags (`shaping-*`, `render-*`) remain authoritative.
-- **Selective Builds (MUST)**: Any new dependency or backend must wire through Cargo features consistent with PLAN/05 (`minimal`, `auto-backend`, `full`, platform overrides). Tests must cover the `minimal` feature set (NoneShaper + OrgeRenderer + PNM) plus at least one full build.
+- **Selective Builds (MUST)**: Any new dependency or backend must wire through Cargo features consistent with PLAN/05 (`minimal`, `auto-backend`, `full`, platform overrides). Tests must cover the `minimal` feature set (NoneShaper + OpixaRenderer + PNM) plus at least one full build.
 - **Error Honesty (MUST)**: Emit explicit `TypfError::FeatureNotCompiled`, `TypfError::UnsupportedBackendCombination`, etc. Silent fallbacks are forbidden—match PLAN/02 + PLAN/04 guidance.
 - **Font Stack (MUST)**: Use `read-fonts`, `skrifa`, `fontdb`, `memmap2`, `dashmap`, `lru` exactly as specified in PLAN/03. Reintroducing `ttf-parser`, `rustybuzz`, `fontdue`, or `font-kit` violates the architectural plan.
 - **Performance Hooks (SHOULD)**: When touching rendering/shaping hot paths, keep SIMD backends, multi-level caches, and profiling hooks (PLAN/06). Default to scalar code but guard SIMD with `cfg` + runtime detection; update benchmarks when changing loops.
@@ -590,7 +590,7 @@ For each stage (PLAN/01-06):
 ## 16. XII. PROJECT-SPECIFIC GUARDRAILS
 
 - **Scope Sentence**: “Deliver a six-stage, dual-backend text pipeline with selective builds and first-class Python bindings.” Reject work that does not move this needle.
-- **Minimal Example Baseline (MUST)**: Keep the NoneShaper → OrgeRenderer → PNM path compiling and tested; treat regressions here as release blockers.
+- **Minimal Example Baseline (MUST)**: Keep the NoneShaper → OpixaRenderer → PNM path compiling and tested; treat regressions here as release blockers.
 - **Platform Fused Paths (SHOULD)**: When working on CoreText/DirectWrite, favor fused execution paths when shaping/rendering selections match; document fallbacks when they diverge.
 - **Cache & SIMD Metrics (SHOULD)**: Update performance dashboards/benchmarks when touching cache eviction, glyph data layout, or SIMD code. Expect >10 GB/s blending and <50 ns L1 hits per PLAN/06; otherwise open a risk note in `WORK.md`.
 - **Roadmap Alignment (MUST)**: Any new initiative must map to the Phase/Milestone matrix in PLAN/09 with checklist updates in `TODO.md`. If phases change, revise both documents immediately.
@@ -615,6 +615,6 @@ For each stage (PLAN/01-06):
 - [ ] ./PLAN/08.md 
 - [ ] ./PLAN/09.md 
 
-- [ ] If you work on the 'orge' backend (the pure-Rast monochrome/grayscale rasterizer), consult the reference implementation in @./external/rasterization_reference/ ('orge' is the Rust port thereof)
+- [ ] If you work on the 'opixa' backend (the pure-Rast monochrome/grayscale rasterizer), consult the reference implementation in @./external/rasterization_reference/ ('opixa' is the Rust port thereof)
 - [ ] @./external/ contains source code snapshots for various Rust libraries of interest which we use
 - [ ] @./old-typf/ contains the old implementation which we are refactoring into the current 'typf' v2 

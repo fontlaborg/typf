@@ -35,7 +35,7 @@ nav = [
   ]},
   {"Rendering Backends" = [
     "13-skia-renderer.md",
-    "14-orge-renderer.md",
+    "14-opixa-renderer.md",
     "15-platform-renderers.md",
     "16-zeno-renderer.md"
   ]},

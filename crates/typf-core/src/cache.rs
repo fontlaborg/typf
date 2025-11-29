@@ -114,7 +114,7 @@ impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
     }
 }
 
-/// The marathon runner: bigger, smart about what to forget
+/// The marathon runner: bigger, smart about what to fopixat
 pub struct L2Cache<K: Hash + Eq + Clone, V: Clone> {
     cache: Arc<RwLock<LruCache<K, CachedValue<V>>>>,
     capacity: NonZeroUsize,

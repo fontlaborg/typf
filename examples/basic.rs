@@ -11,7 +11,7 @@ use typf_core::{
     Color, RenderParams, ShapingParams,
 };
 use typf_export::{PnmExporter, PnmFormat};
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
 /// A bare-bones font that maps ASCII characters to glyph IDs
@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Build our pipeline: shape → render → export
     let shaper = NoneShaper::new(); // Handles character-to-glyph conversion
-    let renderer = OrgeRenderer::new(); // Rasterizes glyphs to bitmap
+    let renderer = OpixaRenderer::new(); // Rasterizes glyphs to bitmap
     let exporter = PnmExporter::new(PnmFormat::Ppm); // Saves as PPM image
 
     // Execute the complete pipeline

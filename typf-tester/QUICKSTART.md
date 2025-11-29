@@ -126,7 +126,7 @@ typf-tester/
 
 | Backend | Avg Time (ms) | Ops/sec | Success |
 |---------|---------------|---------|---------|
-| HARFBUZZ + ORGE | 1.096 | 2471 | 100% |
+| HARFBUZZ + OPIXA | 1.096 | 2471 | 100% |
 ```
 
 **Interpretation:**
@@ -232,7 +232,7 @@ cat output/scaling_benchmark.json | jq '.results[] | {text, char_count, us_per_c
 ### Rendering Performance (~1100µs)
 
 **Slow** (rendering IS the bottleneck):
-- Orge renderer: ~1122µs (37x slower than shaping)
+- Opixa renderer: ~1122µs (37x slower than shaping)
 
 **What this means:**
 - Rendering dominates total time (97%)

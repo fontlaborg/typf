@@ -119,16 +119,16 @@ impl Shaper for CoreTextShaper {
 
 ## Rendering Backends
 
-### Orge Renderer
+### Opixa Renderer
 Pure Rust rasterizer. No external dependencies.
 
 ```rust
-pub struct OrgeRenderer {
-    rasterizer: OrgeRasterizer,
+pub struct OpixaRenderer {
+    rasterizer: OpixaRasterizer,
     scan_converter: ScanConverter,
 }
 
-impl Renderer for OrgeRenderer {
+impl Renderer for OpixaRenderer {
     fn render(&self, glyphs: &[Glyph], options: &RenderOptions) -> Result<RenderOutput> {
         // Convert glyphs to outlines
         let outlines: Vec<Outline> = glyphs.iter()
@@ -239,7 +239,7 @@ impl PipelineBuilder {
     
     pub fn build(self) -> Result<Pipeline> {
         let shaper = self.registry.create_shaper(self.shaper_name.unwrap_or("none"))?;
-        let renderer = self.registry.create_renderer(self.renderer_name.unwrap_or("orge"))?;
+        let renderer = self.registry.create_renderer(self.renderer_name.unwrap_or("opixa"))?;
         let exporter = self.registry.create_exporter(self.exporter_name.unwrap_or("pnm"))?;
         
         Ok(Pipeline::new(shaper, renderer, exporter))
@@ -262,7 +262,7 @@ fn default_shaper() -> &'static str { "directwrite" }
 fn default_shaper() -> &'static str { "harfbuzz" }
 
 fn default_renderer() -> &'static str {
-    if gpu_available() { "skia" } else { "orge" }
+    if gpu_available() { "skia" } else { "opixa" }
 }
 ```
 
@@ -275,7 +275,7 @@ Common combinations:
 | Fastest data | none | json | json | 25K ops/sec |
 | Complex scripts | harfbuzz | zeno | png | 3K ops/sec |
 | macOS best | mac | mac | png | 4K ops/sec |
-| Pure Rust | harfbuzz | orge | pnm | 2K ops/sec |
+| Pure Rust | harfbuzz | opixa | pnm | 2K ops/sec |
 | Web rendering | harfbuzz | skia | svg | 3.5K ops/sec |
 | Mobile apps | mac | skia | png | 4K ops/sec |
 
@@ -287,7 +287,7 @@ Common combinations:
 | HarfBuzz | Medium | 4K ops/sec | High | All |
 | ICU-HarfBuzz | Medium | 3.5K ops/sec | High | All |
 | CoreText (mac) | Medium | 4.5K ops/sec | High | macOS only |
-| Orge | Low | 2K ops/sec | Medium | All |
+| Opixa | Low | 2K ops/sec | Medium | All |
 | Skia | High | 3.5K ops/sec | High | All |
 | Zeno | Medium | 3K ops/sec | High | All |
 | CoreGraphics (mac) | High | 4K ops/sec | High | macOS only |

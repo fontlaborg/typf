@@ -15,7 +15,7 @@ use typf_core::{
     Color, RenderParams, ShapingParams, TypfError,
 };
 use typf_fontdb::Font;
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
 #[cfg(feature = "render-cg")]
@@ -31,6 +31,12 @@ use typf_shape_hb::HarfBuzzShaper;
 #[cfg(feature = "shaping-icu-hb")]
 use typf_shape_icu_hb::IcuHarfBuzzShaper;
 
+// Linra renderer (single-pass shaping+rendering)
+#[cfg(all(feature = "linra-os-mac", target_os = "macos"))]
+use typf_core::linra::{LinraRenderParams, LinraRenderer};
+#[cfg(all(feature = "linra-os-mac", target_os = "macos"))]
+use typf_os_mac::CoreTextLinraRenderer;
+
 /// Benchmark configuration for different intensity levels
 #[derive(Debug, Clone)]
 struct BenchmarkConfig {
@@ -45,6 +51,17 @@ struct BenchmarkConfig {
 impl BenchmarkConfig {
     fn get(level: u8) -> Self {
         match level {
+            // Level 0: Ultra-quick sanity check (< 10 seconds)
+            0 => Self {
+                font_sizes: vec![24.0],
+                sample_texts: vec![
+                    "Hello World",
+                    "The quick brown fox",
+                ],
+                text_lengths: vec![20],
+                render_sizes: vec![(200, 100)],
+                iterations_per_combo: 5,
+            },
             1 => Self {
                 font_sizes: vec![12.0, 16.0, 24.0, 36.0, 48.0],
                 sample_texts: vec![
@@ -235,7 +252,7 @@ impl BenchmarkRunner {
     fn get_renderers(&self) -> Vec<Arc<dyn Renderer>> {
         let mut renderers: Vec<Arc<dyn Renderer>> = Vec::new();
 
-        renderers.push(Arc::new(OrgeRenderer::new()));
+        renderers.push(Arc::new(OpixaRenderer::new()));
 
         #[cfg(feature = "render-skia")]
         renderers.push(Arc::new(SkiaRenderer::new()));
@@ -418,6 +435,83 @@ impl BenchmarkRunner {
 
         Ok(())
     }
+
+    /// Run linra renderer benchmarks (single-pass shaping+rendering)
+    #[cfg(all(feature = "linra-os-mac", target_os = "macos"))]
+    fn run_linra_benchmarks(&self) -> Result<(), TypfError> {
+        use typf_core::types::Direction;
+
+        println!("\n{}", "Linra Renderer Benchmark (CoreText single-pass):".bold().cyan());
+        println!("{}", "─".repeat(80));
+
+        let linra = CoreTextLinraRenderer::new();
+        let mut total_combinations = 0;
+
+        for font in &self.fonts {
+            for &font_size in &self.config.font_sizes {
+                for sample_text in &self.config.sample_texts {
+                    for &target_length in &self.config.text_lengths {
+                        let text = self.generate_text_sample(sample_text, target_length);
+                        let iterations = self.config.iterations_per_combo;
+
+                        // Build params
+                        let params = LinraRenderParams {
+                            size: font_size,
+                            direction: Direction::LeftToRight,
+                            foreground: Color::black(),
+                            background: Some(Color::white()),
+                            ..Default::default()
+                        };
+
+                        // Warmup
+                        for _ in 0..3 {
+                            let _ = linra.render_text(&text, font.clone(), &params);
+                        }
+
+                        // Benchmark
+                        let start_time = std::time::Instant::now();
+                        for _ in 0..iterations {
+                            let _ = linra.render_text(&text, font.clone(), &params);
+                        }
+                        let elapsed = start_time.elapsed();
+                        let ns_per_op = elapsed.as_nanos() as f64 / iterations as f64;
+
+                        let text_sample = if text.len() > 20 {
+                            let chars: Vec<char> = text.chars().take(17).collect();
+                            format!("{}...", chars.into_iter().collect::<String>())
+                        } else {
+                            text.to_string()
+                        };
+
+                        println!(
+                            "{}",
+                            format!(
+                                "U: {:12} |              | Size: {:6.1} | Text: {:20} | Length: {:4} | ns/op: {:10.1}",
+                                "linra-mac",
+                                font_size,
+                                text_sample,
+                                text.len(),
+                                ns_per_op
+                            ).bright_blue()
+                        );
+                        std::io::Write::flush(&mut std::io::stdout()).unwrap();
+
+                        total_combinations += 1;
+                    }
+                }
+            }
+        }
+
+        println!("{}", "─".repeat(80));
+        println!(
+            "{}",
+            format!("Completed {} linra benchmark combinations", total_combinations)
+                .bold()
+                .green()
+        );
+
+        Ok(())
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -426,9 +520,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    // Validate level parameter
-    if args.level < 1 || args.level > 5 {
-        eprintln!("Error: Level must be between 1 and 5 (got {})", args.level);
+    // Validate level parameter (0-5, 0 = ultra-quick)
+    if args.level > 5 {
+        eprintln!("Error: Level must be between 0 and 5 (got {})", args.level);
         std::process::exit(1);
     }
 
@@ -439,6 +533,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let runner = BenchmarkRunner::new(&args.input_dir, config)?;
     runner.run_benchmarks()?;
+
+    // Run linra renderer benchmark if available
+    #[cfg(all(feature = "linra-os-mac", target_os = "macos"))]
+    {
+        runner.run_linra_benchmarks()?;
+    }
 
     Ok(())
 }

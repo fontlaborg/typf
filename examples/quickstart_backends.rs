@@ -10,7 +10,7 @@ use typf_core::{
     RenderParams, ShapingParams,
 };
 use typf_export::PnmExporter;
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
 // Stub font for demonstration
@@ -42,25 +42,25 @@ fn main() -> typf::error::Result<()> {
     let text = "Hello, World!";
     let font = Arc::new(StubFont) as Arc<dyn FontRef>;
 
-    // 1. Basic: None + Orge (always available)
-    println!("1. Basic rendering (none + orge)...");
+    // 1. Basic: None + Opixa (always available)
+    println!("1. Basic rendering (none + opixa)...");
     render_with_backends(
         text,
         font.clone(),
         Arc::new(NoneShaper::new()),
-        Arc::new(OrgeRenderer::new()),
+        Arc::new(OpixaRenderer::new()),
         "output_basic.ppm",
     )?;
 
     // 2. HarfBuzz (if available)
     #[cfg(feature = "shaping-hb")]
     {
-        println!("2. HarfBuzz shaping (hb + orge)...");
+        println!("2. HarfBuzz shaping (hb + opixa)...");
         render_with_backends(
             text,
             font.clone(),
             Arc::new(typf_shape_hb::HarfBuzzShaper::new()),
-            Arc::new(OrgeRenderer::new()),
+            Arc::new(OpixaRenderer::new()),
             "output_harfbuzz.ppm",
         )?;
     }

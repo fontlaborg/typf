@@ -312,7 +312,7 @@ typf/
 ├── backends/
 │   ├── typf-shape-none/    # Minimal shaper
 │   ├── typf-shape-hb/      # HarfBuzz shaper
-│   └── typf-render-orge/   # Orge renderer
+│   └── typf-render-opixa/   # Opixa renderer
 ├── bindings/
 │   └── python/         # Python bindings (PyO3)
 ├── examples/           # Usage examples
@@ -342,7 +342,7 @@ typf/
 ### High Priority
 
 - **Platform Backends**: CoreText (macOS), DirectWrite (Windows)
-- **Orge Renderer**: Add anti-aliasing
+- **Opixa Renderer**: Add anti-aliasing
 - **Documentation**: API docs, user guides
 - **Testing**: More coverage, property-based tests
 

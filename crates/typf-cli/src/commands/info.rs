@@ -52,7 +52,7 @@ fn print_shapers() {
 
 fn print_renderers() {
     println!("Renderers:");
-    println!("  orge              - Orge (pure Rust, monochrome/grayscale)");
+    println!("  opixa              - Opixa (pure Rust, monochrome/grayscale)");
 
     #[cfg(feature = "render-skia")]
     println!("  skia              - TinySkia (cross-platform, antialiased)");

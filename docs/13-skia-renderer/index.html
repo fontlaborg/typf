@@ -16,7 +16,7 @@
         <link rel="prev" href="../12-none-shaper/">
       
       
-        <link rel="next" href="../14-orge-renderer/">
+        <link rel="next" href="../14-opixa-renderer/">
       
       
         
@@ -1250,10 +1250,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#migration-from-orge" class="md-nav__link">
+  <a href="#migration-from-opixa" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration from Orge
+        Migration from Opixa
       
     </span>
   </a>
@@ -1276,14 +1276,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../14-orge-renderer/" class="md-nav__link">
+      <a href="../14-opixa-renderer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Orge Renderer
+    Opixa Renderer
   
 
     
@@ -2071,10 +2071,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#migration-from-orge" class="md-nav__link">
+  <a href="#migration-from-opixa" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration from Orge
+        Migration from Opixa
       
     </span>
   </a>
@@ -2180,7 +2180,7 @@
 <thead>
 <tr>
 <th>Text Size</th>
-<th>vs Orge Renderer</th>
+<th>vs Opixa Renderer</th>
 <th>Memory</th>
 <th>Quality</th>
 </tr>
@@ -2388,10 +2388,10 @@
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Draw calls: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">debug_info</span><span class="p">.</span><span class="n">draw_calls</span><span class="p">);</span>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;GPU memory: {} MB&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">debug_info</span><span class="p">.</span><span class="n">gpu_memory_mb</span><span class="p">);</span>
 </span></code></pre></div>
-<h2 id="migration-from-orge">Migration from Orge<a class="headerlink" href="#migration-from-orge" title="Permanent link">&para;</a></h2>
+<h2 id="migration-from-opixa">Migration from Opixa<a class="headerlink" href="#migration-from-opixa" title="Permanent link">&para;</a></h2>
 <p>Switching to Skia is straightforward:</p>
-<div class="language-rust highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">// Before - Orge renderer</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">renderer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OrgeRenderer</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<div class="language-rust highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">// Before - Opixa renderer</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">renderer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OpixaRenderer</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">bitmap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">renderer</span><span class="p">.</span><span class="n">rasterize</span><span class="p">(</span><span class="o">&amp;</span><span class="n">shaped_text</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
 </span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c1">// After - Skia renderer</span>
@@ -2456,13 +2456,13 @@
         
         
           
-          <a href="../14-orge-renderer/" class="md-footer__link md-footer__link--next" aria-label="Next: Orge Renderer">
+          <a href="../14-opixa-renderer/" class="md-footer__link md-footer__link--next" aria-label="Next: Opixa Renderer">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Orge Renderer
+                Opixa Renderer
               </div>
             </div>
             <div class="md-footer__button md-icon">

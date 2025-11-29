@@ -1,4 +1,4 @@
-Based on an in-depth analysis of your project files and modern rasterization techniques, this document provides a specific and actionable specification to radically increase the performance of the `typf-render-orge` rasterizer. The recommendations are structured in phases, starting with foundational improvements and progressing to more advanced parallelization, balancing impact against implementation complexity.[1]
+Based on an in-depth analysis of your project files and modern rasterization techniques, this document provides a specific and actionable specification to radically increase the performance of the `typf-render-opixa` rasterizer. The recommendations are structured in phases, starting with foundational improvements and progressing to more advanced parallelization, balancing impact against implementation complexity.[1]
 
 ### Phase 1: Foundational Optimizations
 
@@ -52,12 +52,12 @@ With a solid foundation, this phase introduces multi-level parallelism to levera
 
 ### Phase 4: High-Level Caching Strategy
 
-While the reference C code includes a complex cache manager (`cachemgr.c`), the `orge` rasterizer itself should remain a pure, stateless computational kernel. Caching should be the responsibility of the application that *uses* the rasterizer.[4][3]
+While the reference C code includes a complex cache manager (`cachemgr.c`), the `opixa` rasterizer itself should remain a pure, stateless computational kernel. Caching should be the responsibility of the application that *uses* the rasterizer.[4][3]
 
 *   **4.1. Glyph Bitmap Cache**: Implement an application-level LRU cache (using the `lru` crate) to store the final rendered glyph bitmaps. Before requesting a rasterization, check the cache for an existing bitmap. The key should be a struct containing the glyph ID, transformation details, and size.[2]
 *   **4.2. Outline Cache**: For maximum performance, implement a secondary cache for storing the pre-processed and scaled glyph outlines (the SoA `Edges` struct from step 2.2). This avoids re-calculating the flattened path if a glyph is needed again with a minor change like a subpixel shift.[2]
 
-[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/a00866e0-6112-4b04-bff0-fc3462000b60/llms-orge.txt)
+[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/a00866e0-6112-4b04-bff0-fc3462000b60/llms-opixa.txt)
 [2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/58339bd7-baaf-4230-9995-5369d680f5d3/pplx2.md)
 [3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/6044127f-d143-4c8f-b903-192c2e14d592/pplx1.md)
 [4](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/e0fb27bf-08e4-4d4c-a482-f58e22d14b47/llms-raster.txt)

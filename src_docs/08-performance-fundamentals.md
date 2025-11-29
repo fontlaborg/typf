@@ -118,7 +118,7 @@ Rasterization is the next bottleneck.
 ```rust
 #[cfg(target_arch = "x86_64")]
 pub struct SimdRenderer {
-    rasterizer: OrgeRasterizer,
+    rasterizer: OpixaRasterizer,
     // SSE4.1, AVX2 support
 }
 

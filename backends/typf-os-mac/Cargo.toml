@@ -1,0 +1,27 @@
+[package]
+name = "typf-os-mac"
+version = "2.0.0"
+edition = "2021"
+description = "Single-pass text rendering using macOS CoreText"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fontlaborg/typf"
+keywords = ["font", "text", "rendering", "coretext", "macos"]
+categories = ["graphics", "text-processing"]
+
+[dependencies]
+typf-core = { path = "../../crates/typf-core" }
+log = "0.4"
+lru = "0.12"
+parking_lot = "0.12"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-graphics = "0.24"
+core-text = "21"
+foreign-types = "0.5"
+
+[dev-dependencies]
+env_logger = "0.11"
+
+[features]
+default = []

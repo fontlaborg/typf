@@ -10,18 +10,18 @@ cargo build --release --workspace --exclude typf-py
 
 echo ""
 echo "Installing typf-cli with all available features..."
-# On macOS, build with CoreText and CoreGraphics support
+# On macOS, build with CoreText, CoreGraphics, and linra renderer support
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  cargo install --path crates/typf-cli --features "shaping-hb,shaping-mac,shaping-icu-hb,render-mac,render-skia,render-zeno"
+  cargo install --path crates/typf-cli --features "shaping-hb,shaping-mac,shaping-icu-hb,render-mac,render-skia,render-zeno,linra-os-mac"
 else
   cargo install --path crates/typf-cli --features "shaping-hb,shaping-icu-hb,render-skia,render-zeno"
 fi
 
 echo ""
 echo "Installing typf-bench with all available features..."
-# On macOS, build with CoreText and CoreGraphics support
+# On macOS, build with CoreText, CoreGraphics, and linra renderer support
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  cargo install --path crates/typf-bench --features "shaping-hb,shaping-mac,shaping-icu-hb,render-mac,render-skia,render-zeno"
+  cargo install --path crates/typf-bench --features "shaping-hb,shaping-mac,shaping-icu-hb,render-mac,render-skia,render-zeno,linra-os-mac"
 else
   cargo install --path crates/typf-bench --features "shaping-hb,shaping-icu-hb,render-skia,render-zeno"
 fi
@@ -80,15 +80,13 @@ fi
 
 # Run benchmark if fonts are available
 if [ -n "$(ls -A test-fonts/ 2>/dev/null)" ]; then
-  echo "Running comprehensive benchmarks (Level 1)..."
-  typf-bench -i test-fonts -l 1 >typf-bench-level1.log 2>&1
-  echo "Benchmark results saved to typf-bench-level1.log"
+  echo "Running quick benchmark (Level 0 - ~10 seconds)..."
+  typf-bench -i test-fonts -l 0 2>&1 | tee typf-bench-quick.log
   echo ""
-  echo "Sample benchmark results:"
-  head -20 typf-bench-level1.log 2>/dev/null || echo "No benchmark output available"
+  echo "For comprehensive benchmarks, run: typf-bench -i test-fonts -l 1"
 else
   echo "No fonts found in test-fonts/ directory. Skipping benchmarks."
-  echo "Add .ttf/.otf fonts to test-fonts/ and run: typf-bench -i test-fonts -l 1"
+  echo "Add .ttf/.otf fonts to test-fonts/ and run: typf-bench -i test-fonts -l 0"
 fi
 
 echo ""

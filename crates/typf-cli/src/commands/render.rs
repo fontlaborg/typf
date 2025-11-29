@@ -15,7 +15,7 @@ use typf_core::{
 use typf_export::PnmExporter;
 use typf_export_svg::SvgExporter;
 use typf_fontdb::Font;
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
 /// Minimal stub font for demonstration
@@ -326,7 +326,7 @@ fn select_shaper(shaper_name: &str) -> Result<Arc<dyn Shaper + Send + Sync>> {
 
 fn select_renderer(renderer_name: &str) -> Result<Arc<dyn Renderer + Send + Sync>> {
     match renderer_name {
-        "auto" | "orge" => Ok(Arc::new(OrgeRenderer::new())),
+        "auto" | "opixa" => Ok(Arc::new(OpixaRenderer::new())),
 
         #[cfg(feature = "render-cg")]
         "cg" | "coregraphics" | "mac" => Ok(Arc::new(typf_render_cg::CoreGraphicsRenderer::new())),

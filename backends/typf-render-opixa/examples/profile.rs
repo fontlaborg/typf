@@ -7,7 +7,7 @@ use typf_core::{
     types::{Direction, PositionedGlyph, ShapingResult},
     Color, RenderParams,
 };
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 
 struct SimpleFont {
     data: Vec<u8>,
@@ -83,7 +83,7 @@ fn main() {
         variations: Vec::new(),
     };
 
-    let renderer = OrgeRenderer::default();
+    let renderer = OpixaRenderer::default();
 
     println!("Profiling rendering of {} glyphs...", shaped.glyphs.len());
 

@@ -290,7 +290,7 @@ fn process_job(job: &Job) -> JobResult {
         Color, RenderParams, ShapingParams,
     };
     use typf_export::PnmExporter;
-    use typf_render_orge::OrgeRenderer;
+    use typf_render_opixa::OpixaRenderer;
     use typf_shape_none::NoneShaper;
 
     let start = Instant::now();
@@ -404,7 +404,7 @@ fn process_job(job: &Job) -> JobResult {
         variations: Vec::new(),
     };
 
-    let renderer = Arc::new(OrgeRenderer::new());
+    let renderer = Arc::new(OpixaRenderer::new());
     let rendered = match renderer.render(&shaped, font.clone(), &render_params) {
         Ok(rendered) => rendered,
         Err(e) => {

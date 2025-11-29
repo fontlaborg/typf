@@ -31,7 +31,7 @@ with open("output.png", "wb") as f:
     f.write(png_data)
 
 # Advanced usage with real fonts
-engine = typf.Typf(shaper="harfbuzz", renderer="orge")
+engine = typf.Typf(shaper="harfbuzz", renderer="opixa")
 image = engine.render_text(
     "Typography is beautiful",
     font_path="/System/Library/Fonts/Helvetica.ttc",
@@ -66,7 +66,7 @@ typf render "مرحبا" output.png --font=/path/to/arabic.ttf --size=64
 typf render "Red Text" output.png --color="255,0,0,255" --background="255,255,255,255"
 
 # Choose shaper and renderer
-typf render "Text" output.svg --shaper=harfbuzz --renderer=orge --format=svg
+typf render "Text" output.svg --shaper=harfbuzz --renderer=opixa --format=svg
 
 # Get version info
 typf version
@@ -96,12 +96,12 @@ typf shape "Complex text" --font=/path/to/font.ttf --features="liga=1,kern=1"
 Main rendering engine.
 
 ```python
-engine = typf.Typf(shaper="harfbuzz", renderer="orge")
+engine = typf.Typf(shaper="harfbuzz", renderer="opixa")
 ```
 
 **Parameters:**
 - `shaper` (str): Shaping backend - "none" or "harfbuzz" (default: "harfbuzz")
-- `renderer` (str): Rendering backend - "orge" (default: "orge")
+- `renderer` (str): Rendering backend - "opixa" (default: "opixa")
 
 **Methods:**
 
@@ -223,7 +223,7 @@ typf render TEXT OUTPUT [OPTIONS]
 - `--font` - Path to font file (optional)
 - `--size` - Font size in points (default: 48.0)
 - `--shaper` - Shaping backend: "none" or "harfbuzz" (default: "harfbuzz")
-- `--renderer` - Rendering backend: "orge" (default: "orge")
+- `--renderer` - Rendering backend: "opixa" (default: "opixa")
 - `--format` - Output format (inferred from extension if not specified)
 - `--color` - Foreground color as "R,G,B,A" (default: "0,0,0,255")
 - `--background` - Background color as "R,G,B,A" (optional)

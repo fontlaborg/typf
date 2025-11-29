@@ -15,7 +15,7 @@ font_path = sys.argv[1]
 text = sys.argv[2]
 
 # Create TYPF instance with HarfBuzz shaper
-engine = typf.Typf(shaper="harfbuzz", renderer="orge")
+engine = typf.Typf(shaper="harfbuzz", renderer="opixa")
 
 # Render text with custom colors
 image_data = engine.render_text(

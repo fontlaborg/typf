@@ -36,9 +36,9 @@ impl Typf {
     ///
     /// Choose your weapons:
     /// - Shapers: "none" (debug), "harfbuzz" (professional), "coretext" (macOS), "icu-hb" (Unicode perfect)
-    /// - Renderers: "orge" (pure Rust), "json" (data), "coregraphics" (macOS), "skia" (pro), "zeno" (pure Rust)
+    /// - Renderers: "opixa" (pure Rust), "json" (data), "coregraphics" (macOS), "skia" (pro), "zeno" (pure Rust)
     #[new]
-    #[pyo3(signature = (shaper="harfbuzz", renderer="orge"))]
+    #[pyo3(signature = (shaper="harfbuzz", renderer="opixa"))]
     fn new(shaper: &str, renderer: &str) -> PyResult<Self> {
         // Find and create the requested text shaper
         let shaper: Arc<dyn Shaper + Send + Sync> = match shaper {
@@ -61,7 +61,7 @@ impl Typf {
         let renderer: Arc<dyn Renderer + Send + Sync> = match renderer {
             #[cfg(feature = "render-json")]
             "json" => Arc::new(typf_render_json::JsonRenderer::new()),
-            "orge" => Arc::new(typf_render_orge::OrgeRenderer::new()),
+            "opixa" => Arc::new(typf_render_opixa::OpixaRenderer::new()),
             #[cfg(feature = "render-cg")]
             "coregraphics" | "cg" | "mac" => Arc::new(typf_render_cg::CoreGraphicsRenderer::new()),
             #[cfg(feature = "render-skia")]
@@ -70,7 +70,7 @@ impl Typf {
             "zeno" => Arc::new(typf_render_zeno::ZenoRenderer::new()),
             _ => {
                 return Err(PyValueError::new_err(format!(
-                    "Unknown renderer: {}. Available: json, orge, coregraphics, skia, zeno",
+                    "Unknown renderer: {}. Available: json, opixa, coregraphics, skia, zeno",
                     renderer
                 )))
             },
@@ -359,7 +359,7 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
         }
     }
 
-    let typf = Typf::new("none", "orge")?;
+    let typf = Typf::new("none", "opixa")?;
     let font = Arc::new(StubFont { size }) as Arc<dyn FontRef>;
 
     let shaping_params = ShapingParams {

@@ -80,8 +80,8 @@ Output files are saved to `typf-tester/output/` with naming pattern:
 - `render-{shaper}-{renderer}-{text_name}.{format}`
 
 Example:
-- `render-harfbuzz-orge-simple_latin.png`
-- `render-none-orge-arabic.svg`
+- `render-harfbuzz-opixa-simple_latin.png`
+- `render-none-opixa-arabic.svg`
 
 ### Compare Command
 
@@ -169,7 +169,7 @@ Three fonts are included for testing:
 
 ### Rendering Backends
 
-- **orge** - Pure Rust monochrome/grayscale rasterizer
+- **opixa** - Pure Rust monochrome/grayscale rasterizer
 
 ### Export Formats
 
@@ -257,8 +257,8 @@ From comprehensive testing on macOS (M-series):
 ```
 Backend           Avg Time (ms)   Ops/sec   Success
 -------------------------------------------------
-HARFBUZZ + ORGE      1.096         2,471     100%
-NONE + ORGE          1.116         2,413     100%
+HARFBUZZ + OPIXA      1.096         2,471     100%
+NONE + OPIXA          1.116         2,413     100%
 ```
 
 **Performance by Text Type:**
@@ -316,7 +316,7 @@ Renderer        Avg Time    Ops/sec
 json            0.051ms     19603/s     ████████████████████
 coregraphics    0.712ms      1404/s     ███
 zeno            1.139ms      1318/s     ██
-orge            1.738ms      1432/s     █
+opixa            1.738ms      1432/s     █
 skia            1.615ms      1251/s     █
 
 🏆 Fastest: JSON renderer (19,603 ops/sec)
@@ -345,15 +345,15 @@ QUALITY INSIGHTS
    → 254.0 unique gray levels
    → 81.80% smoothness score
 
-🎨 Smoothest Rendering: Orge
+🎨 Smoothest Rendering: Opixa
    → 98.21% smoothness score
 
-💾 Most Efficient Compression: Orge
+💾 Most Efficient Compression: Opixa
    → 4.27 KB average file size
 
 📊 Cross-Shaper Consistency:
    CoreGraphics    ✓ Consistent (Δ 0.094% coverage)
-   Orge            ⚠ Variance detected (Δ 0.371%)
+   Opixa            ⚠ Variance detected (Δ 0.371%)
 ```
 
 **Requirements:** `pip install pillow`
@@ -368,7 +368,7 @@ python typf-tester/bench_svg.py
 
 **Features:**
 - 500 iterations per test for statistical significance
-- Tests all renderers (CoreGraphics, Orge, Skia, Zeno)
+- Tests all renderers (CoreGraphics, Opixa, Skia, Zeno)
 - Compares speed and file size trade-offs
 - Automated performance insights
 
@@ -381,7 +381,7 @@ PERFORMANCE COMPARISON: SVG vs PNG
 Renderer      PNG (ms)  SVG (ms)  Speedup     PNG Size  SVG Size  Ratio
 ------------------------------------------------------------------------
 coregraphics  4.444     0.198     SVG 22.4x   9.76 KB   16.49 KB  1.69x
-orge          4.680     0.199     SVG 23.5x   4.29 KB   16.49 KB  3.85x
+opixa          4.680     0.199     SVG 23.5x   4.29 KB   16.49 KB  3.85x
 skia          4.987     0.202     SVG 24.7x   5.12 KB   16.49 KB  3.22x
 zeno          4.692     0.208     SVG 22.6x   8.95 KB   16.49 KB  1.84x
 
@@ -429,7 +429,7 @@ diff-harfbuzz-latn.png:
 ┌─────────────────────────────────────────┐
 │ Comparison: harfbuzz shaper, latn text  │
 ├──────────────────┬──────────────────────┤
-│ coregraphics     │ orge                 │
+│ coregraphics     │ opixa                 │
 │ (710×88)         │ (710×88)             │
 ├──────────────────┼──────────────────────┤
 │ skia             │ zeno                 │
@@ -457,11 +457,11 @@ python typf-tester/visual_diff.py --analyze
 **Example Output:**
 ```
 🔬 Analyzing pixel differences for harfbuzz + latn
-   coregraphics vs orge: MSE=3324.73, PSNR=12.91 dB, MaxDiff=255.0
+   coregraphics vs opixa: MSE=3324.73, PSNR=12.91 dB, MaxDiff=255.0
    coregraphics vs skia: MSE=3148.94, PSNR=13.15 dB, MaxDiff=255.0
-   orge vs skia: MSE=2062.38, PSNR=14.99 dB, MaxDiff=255.0
-   ✅ Saved heatmap: heatmap-harfbuzz-coregraphics-vs-orge-latn.png
-   ✅ Saved heatmap: heatmap-harfbuzz-orge-vs-skia-latn.png
+   opixa vs skia: MSE=2062.38, PSNR=14.99 dB, MaxDiff=255.0
+   ✅ Saved heatmap: heatmap-harfbuzz-coregraphics-vs-opixa-latn.png
+   ✅ Saved heatmap: heatmap-harfbuzz-opixa-vs-skia-latn.png
 ```
 
 **Interpreting Metrics:**
@@ -480,18 +480,18 @@ python typf-tester/visual_diff.py --analyze
 
 **Requirements:** `pip install pillow numpy`
 
-### `unified_report.py` - Comprehensive Analysis Report
+### `linra_report.py` - Comprehensive Analysis Report
 
-Combines performance benchmarks, pixel-level quality analysis, and visual comparisons into a single unified report.
+Combines performance benchmarks, pixel-level quality analysis, and visual comparisons into a single linra report.
 
 ```bash
 # Generate combined markdown + JSON reports
-python typf-tester/unified_report.py
+python typf-tester/linra_report.py
 ```
 
 **Outputs:**
-- `output/unified_analysis.md` - Human-readable markdown report
-- `output/unified_analysis.json` - Machine-readable data for further processing
+- `output/linra_analysis.md` - Human-readable markdown report
+- `output/linra_analysis.json` - Machine-readable data for further processing
 
 **Report Sections:**
 1. **Performance Benchmarks** - Fastest configurations, ops/sec, timing data

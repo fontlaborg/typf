@@ -10,7 +10,7 @@ use typf::{Pipeline, PipelineBuilder};
 // Build a rendering pipeline
 let mut pipeline = PipelineBuilder::new()
     .with_shaper("harfbuzz")?
-    .with_renderer("orge")?
+    .with_renderer("opixa")?
     .build();
 
 // Render text
@@ -459,7 +459,7 @@ Control what gets compiled:
 [dependencies.typf]
 features = [
     "shaping-harfbuzz",     # HarfBuzz text shaping
-    "render-orge",          # Orge rasterizer
+    "render-opixa",          # Opixa rasterizer
     "render-skia",          # Skia renderer
     "export-png",           # PNG export
     "export-svg",           # SVG export
@@ -475,7 +475,7 @@ Minimal build:
 [dependencies.typf]
 features = [
     "shaping-none",         # No shaping (identity only)
-    "render-orge",          # Basic rasterizer
+    "render-opixa",          # Basic rasterizer
     "export-pnm",           # PNM export for testing
 ]
 ```

@@ -1,7 +1,7 @@
 //! Backend Comparison Example
 //!
 //! This example demonstrates the differences between TYPF's three rendering backends:
-//! - Orge: Pure Rust grayscale rasterizer (minimal dependencies)
+//! - Opixa: Pure Rust grayscale rasterizer (minimal dependencies)
 //! - Skia: High-quality anti-aliased rendering (tiny-skia)
 //! - Zeno: Pure Rust 256x anti-aliased rendering
 //!
@@ -20,7 +20,7 @@ use typf_core::{
 };
 
 // Import all three renderers
-use typf_render_orge::OrgeRenderer;
+use typf_render_opixa::OpixaRenderer;
 use typf_render_skia::SkiaRenderer;
 use typf_render_zeno::ZenoRenderer;
 
@@ -84,14 +84,14 @@ fn main() {
 
     println!("Text: 2 glyphs, 1000px width, 64px height\n");
 
-    // 1. Orge Renderer
-    println!("1. Orge Renderer (Pure Rust Grayscale)");
+    // 1. Opixa Renderer
+    println!("1. Opixa Renderer (Pure Rust Grayscale)");
     println!("   - Minimal dependencies");
     println!("   - Grayscale anti-aliasing via oversampling");
     println!("   - Best for embedded systems or minimal builds");
 
-    let orge = OrgeRenderer::default();
-    match orge.render(&shaped, font.clone(), &params) {
+    let opixa = OpixaRenderer::default();
+    match opixa.render(&shaped, font.clone(), &params) {
         Ok(RenderOutput::Bitmap(bitmap)) => {
             println!("   ✓ Rendered: {}x{} {:?}", bitmap.width, bitmap.height, bitmap.format);
             println!("   ✓ Size: {} bytes\n", bitmap.data.len());
@@ -134,7 +134,7 @@ fn main() {
     println!("=== Comparison Summary ===\n");
     println!("Backend  | Quality      | Dependencies | Use Case");
     println!("---------|--------------|--------------|------------------");
-    println!("Orge     | Good         | Minimal      | Embedded, minimal");
+    println!("Opixa     | Good         | Minimal      | Embedded, minimal");
     println!("Skia     | Excellent    | tiny-skia    | Desktop, quality");
     println!("Zeno     | Excellent    | Pure Rust    | Cross-platform");
     println!();

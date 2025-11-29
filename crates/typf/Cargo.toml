@@ -20,7 +20,7 @@ typf-shape-icu-hb = { workspace = true, optional = true }
 
 # Rendering backends
 typf-render-json = { workspace = true, optional = true }
-typf-render-orge = { workspace = true, optional = true }
+typf-render-opixa = { workspace = true, optional = true }
 typf-render-cg = { workspace = true, optional = true }
 typf-render-skia = { workspace = true, optional = true }
 typf-render-zeno = { workspace = true, optional = true }
@@ -35,7 +35,7 @@ console_error_panic_hook = { version = "0.1", optional = true }
 default = ["minimal", "unicode", "fontdb", "export-pnm"]
 
 # Minimal configuration (no external dependencies)
-minimal = ["shaping-none", "render-orge"]
+minimal = ["shaping-none", "render-opixa"]
 
 # Component features
 unicode = ["dep:typf-unicode"]
@@ -58,7 +58,7 @@ shaping-win = []  # Future: ["dep:typf-shape-win"] - requires Windows
 
 # Rendering backends
 render-json = ["dep:typf-render-json"]
-render-orge = ["dep:typf-render-orge"]
+render-opixa = ["dep:typf-render-opixa"]
 render-cg = ["dep:typf-render-cg"]
 render-skia = ["dep:typf-render-skia"]
 render-zeno = ["dep:typf-render-zeno"]
@@ -77,12 +77,12 @@ full = [
     "unicode", "fontdb", "input",
     "export-pnm",
     "shaping-none", "shaping-hb", "shaping-ct", "shaping-icu-hb",
-    "render-json", "render-orge", "render-cg", "render-skia", "render-zeno",
+    "render-json", "render-opixa", "render-cg", "render-skia", "render-zeno",
 ]
 
 [dev-dependencies]
 typf-shape-none = { workspace = true }
-typf-render-orge = { workspace = true }
+typf-render-opixa = { workspace = true }
 typf-export = { workspace = true }
 criterion = "0.5"
 

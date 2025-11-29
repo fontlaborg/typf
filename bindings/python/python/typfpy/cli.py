@@ -1,7 +1,7 @@
 """
 TYPF Command Line Interface - Beautiful text from your terminal
 
-Unified CLI using Click for consistent interface with Rust CLI.
+Linra CLI using Click for consistent interface with Rust CLI.
 """
 
 import sys
@@ -34,7 +34,7 @@ def detect_available_shapers():
 
     for shaper_id, shaper_name, description in test_backends:
         try:
-            Typf(shaper=shaper_name, renderer="orge")
+            Typf(shaper=shaper_name, renderer="opixa")
             shapers.append((shaper_id, description))
         except ValueError:
             # Backend not available
@@ -48,7 +48,7 @@ def detect_available_renderers():
     renderers = []
 
     # Always available
-    renderers.append(("orge", "Orge (pure Rust, monochrome/grayscale)"))
+    renderers.append(("opixa", "Opixa (pure Rust, monochrome/grayscale)"))
 
     # Try to create each backend to see if it's available
     test_backends = [
@@ -126,7 +126,7 @@ def info(shapers: bool, renderers: bool, formats: bool):
 @click.option("-t", "--text-arg", "text_opt", help="Input text (alternative to positional argument)")
 @click.option("-T", "--text-file", type=click.Path(exists=True), help="Read input text from file")
 @click.option("--shaper", default="auto", help="Shaping backend: auto, none, hb, icu-hb, mac, win")
-@click.option("--renderer", default="auto", help="Rendering backend: auto, orge, skia, zeno, mac, win, json")
+@click.option("--renderer", default="auto", help="Rendering backend: auto, opixa, skia, zeno, mac, win, json")
 @click.option("-d", "--direction", default="auto", help="Text direction: auto, ltr, rtl, ttb, btt")
 @click.option("-l", "--language", help="Language tag (BCP 47), e.g., en, ar, zh-Hans")
 @click.option("-S", "--script", default="auto", help="Script tag (ISO 15924), e.g., Latn, Arab, Hans")
@@ -191,7 +191,7 @@ def render(
 
         # 4. Create TYPF instance
         typf = Typf(shaper=shaper if shaper != "auto" else "hb",
-                    renderer=renderer if renderer != "auto" else "orge")
+                    renderer=renderer if renderer != "auto" else "opixa")
 
         # 5. Render the text
         if font_file:

@@ -85,8 +85,8 @@ let options = RenderOptions {
 fn choose_best_renderer() -> RendererBackend {
     if RendererBackend::Skia.is_available() {
         RendererBackend::Skia
-    } else if RendererBackend::Orge.is_available() {
-        RendererBackend::Orge
+    } else if RendererBackend::Opixa.is_available() {
+        RendererBackend::Opixa
     } else {
         panic!("No renderer available");
     }
@@ -96,8 +96,8 @@ fn choose_best_renderer() -> RendererBackend {
 match pipeline.set_renderer(RendererBackend::Skia) {
     Ok(_) => println!("Using Skia renderer"),
     Err(e) => {
-        println!("Skia not available, falling back to Orge: {}", e);
-        pipeline.set_renderer(RendererBackend::Orge)?;
+        println!("Skia not available, falling back to Opixa: {}", e);
+        pipeline.set_renderer(RendererBackend::Opixa)?;
     }
 }
 ```

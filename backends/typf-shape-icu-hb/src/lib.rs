@@ -16,8 +16,8 @@ use typf_core::{
 };
 use unicode_normalization::UnicodeNormalization;
 
-pub mod cache;
-pub use cache::ShapingCache;
+// Re-export shared shaping cache from typf-core
+pub use typf_core::shaping_cache::{CacheStats, ShapingCache, ShapingCacheKey, SharedShapingCache};
 
 /// ICU preprocessing + HarfBuzz shaping for bulletproof Unicode support
 ///

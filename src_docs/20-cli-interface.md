@@ -61,7 +61,7 @@ Options:
   -w, --width <WIDTH>         Image width [default: auto]
   -h, --height <HEIGHT>       Image height [default: auto]
       --shaper <SHAPER>       Text shaper backend [none|hb|icu-hb|mac]
-      --renderer <RENDERER>   Rendering backend [orge|skia|zeno|json|mac|cg]
+      --renderer <RENDERER>   Rendering backend [opixa|skia|zeno|json|mac|cg]
       --format <FORMAT>       Output format [png|svg|pnm|json]
   -c, --color <COLOR>         Text color (RRGGBBAA hex) [default: 000000FF]
   -b, --background <COLOR>    Background color (RRGGBBAA hex) [default: 00000000]
@@ -150,7 +150,7 @@ width = 800
 height = 600
 format = "png"
 shaper = "harfbuzz"
-renderer = "orge"
+renderer = "opixa"
 
 [colors]
 text = "0,0,0,255"
@@ -193,7 +193,7 @@ Shapers:
 - directwrite  Windows DirectWrite (Windows only)
 
 Renderers:
-- orge          Pure Rust rasterizer
+- opixa          Pure Rust rasterizer
 - skia          Skia graphics library
 - coregraphics macOS CoreGraphics (macOS only)
 - directwrite  Windows DirectWrite (Windows only)

@@ -1,8 +1,8 @@
-# Orge Renderer
+# Opixa Renderer
 
-Orge rasterizes glyph outlines with pure Rust. Simple, fast, and dependency-free - the foundation of TYPF's minimal build.
+Opixa rasterizes glyph outlines with pure Rust. Simple, fast, and dependency-free - the foundation of TYPF's minimal build.
 
-## What Orge Does
+## What Opixa Does
 
 - Converts bezier curves to pixels
 - Handles anti-aliasing and grayscale
@@ -10,7 +10,7 @@ Orge rasterizes glyph outlines with pure Rust. Simple, fast, and dependency-free
 - No external dependencies
 
 ```rust
-pub struct OrgeRenderer {
+pub struct OpixaRenderer {
     rasterizer: Rasterizer,
     scan_converter: ScanConverter,
     grayscale_filter: GrayscaleFilter,
@@ -25,7 +25,7 @@ pub struct OrgeRenderer {
 | Medium (24pt) | 2x CPU | 100KB | Better |
 | Large (48pt) | 3x CPU | 200KB | Excellent |
 
-## When to Use Orge
+## When to Use Opixa
 
 - **Minimal builds** - No heavy dependencies
 - **Embedded systems** - Small binary size  
@@ -37,7 +37,7 @@ pub struct OrgeRenderer {
 ### Rust
 
 ```rust
-let mut renderer = OrgeRenderer::new(width, height)?;
+let mut renderer = OpixaRenderer::new(width, height)?;
 let bitmap = renderer.rasterize(&shaped_text, &font)?;
 ```
 
@@ -46,13 +46,13 @@ let bitmap = renderer.rasterize(&shaped_text, &font)?;
 ```python
 import typf
 
-renderer = typf.Typf(renderer="orge")
+renderer = typf.Typf(renderer="opixa")
 result = renderer.render_text("Hello", "font.ttf")
 ```
 
 ## Rasterization Pipeline
 
-Orge processes glyphs in three stages:
+Opixa processes glyphs in three stages:
 
 ```
 Outlines → Fill Coverage → Grayscale → Bitmap
@@ -87,14 +87,14 @@ renderer.set_aa_mode(AntiAliasingMode::Grayscale)?;
 
 ## Memory Management
 
-Orge handles memory efficiently:
+Opixa handles memory efficiently:
 
 ```rust
 // Reuse buffers for better performance
 renderer.reuse_buffers(true);
 
 // Pool for multi-threaded rendering
-let pool = OrgeRenderPool::new(4);
+let pool = OpixaRenderPool::new(4);
 ```
 
 ## Configuration
@@ -103,14 +103,14 @@ Minimal dependencies required:
 
 ```toml
 [dependencies.typf]
-features = ["render-orge"]  # Always enabled in minimal build
+features = ["render-opixa"]  # Always enabled in minimal build
 ```
 
 ## Error Handling
 
 ```rust
 #[derive(Debug, thiserror::Error)]
-pub enum OrgeRendererError {
+pub enum OpixaRendererError {
     #[error("Buffer allocation failed: {size} bytes")]
     BufferAlloc { size: usize },
     
@@ -180,7 +180,7 @@ println!("Render time: {} μs", stats.render_time_us);
 
 ## Benchmarks
 
-Orge performance on different platforms:
+Opixa performance on different platforms:
 
 | Platform | Glyphs/sec | Memory/Glyph |
 |----------|------------|--------------|
@@ -190,7 +190,7 @@ Orge performance on different platforms:
 
 ## Memory Layout
 
-Orge uses efficient memory layout:
+Opixa uses efficient memory layout:
 
 ```rust
 #[repr(C)]
@@ -247,11 +247,11 @@ std::fs::write("output.raw", raw);
 
 ## Migration Pattern
 
-Start with Orge, upgrade when needed:
+Start with Opixa, upgrade when needed:
 
 ```rust
-// Phase 1: Prototype with Orge
-let mut renderer = Box::new(OrgeRenderer::new(width, height)?);
+// Phase 1: Prototype with Opixa
+let mut renderer = Box::new(OpixaRenderer::new(width, height)?);
 
 // Phase 2: Test rendering pipeline
 let result = render_text_with_pipeline(renderer.as_mut(), text, font)?;
@@ -264,12 +264,12 @@ if needs_high_quality() {
 
 ## Testing
 
-Test Orge rendering consistency:
+Test Opixa rendering consistency:
 
 ```rust
 #[test]
 fn test_rendering_consistency() {
-    let renderer = OrgeRenderer::new(100, 100).unwrap();
+    let renderer = OpixaRenderer::new(100, 100).unwrap();
     let text = "Test";
     
     let result1 = renderer.rasterize(text, &font);
@@ -281,4 +281,4 @@ fn test_rendering_consistency() {
 
 ---
 
-Orge provides solid text rendering with minimal dependencies. Use it for embedded systems, minimal builds, or when you need predictable, lightweight rasterization.
+Opixa provides solid text rendering with minimal dependencies. Use it for embedded systems, minimal builds, or when you need predictable, lightweight rasterization.
