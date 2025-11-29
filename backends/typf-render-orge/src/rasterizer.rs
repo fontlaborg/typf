@@ -72,47 +72,23 @@ impl<'a> GlyphRasterizer<'a> {
     /// exactly which variation you want—weight, width, slant, or custom axes.
     /// All subsequent renderings will use this beautiful new shape.
     pub fn set_variations(&mut self, variations: &[(String, f32)]) -> Result<(), String> {
-        use read_fonts::types::Tag;
-
         if variations.is_empty() {
             self.location = skrifa::instance::Location::default();
             return Ok(());
         }
 
+        // Use AxisCollection::location() which properly handles user-space
+        // coordinates including axis variation remapping (avar table).
+        // This is the recommended API instead of manually calling axis.normalize().
         let axes = self.font.axes();
 
-        // Create a Location with space for all axes
-        let axis_count = axes.len();
-        let mut location = skrifa::instance::Location::new(axis_count);
-        let coords_mut = location.coords_mut();
+        // Convert (String, f32) tuples to (&str, f32) for skrifa's location API
+        let settings: Vec<(&str, f32)> = variations
+            .iter()
+            .map(|(tag, value)| (tag.as_str(), *value))
+            .collect();
 
-        // Map variation tags to axis indices and set values
-        for (index, axis) in axes.iter().enumerate() {
-            let axis_tag = axis.tag();
-
-            // Check if we have a variation for this axis
-            let mut found = false;
-            for (tag_str, value) in variations {
-                if tag_str.len() == 4 {
-                    let bytes = tag_str.as_bytes();
-                    let tag = Tag::new(&[bytes[0], bytes[1], bytes[2], bytes[3]]);
-
-                    if tag == axis_tag {
-                        // Normalize and set this coordinate
-                        coords_mut[index] = axis.normalize(*value);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-
-            // If no variation specified, use default (already set to 0.0)
-            if !found {
-                // coords_mut[index] is already NormalizedCoord::default()
-            }
-        }
-
-        self.location = location;
+        self.location = axes.location(settings);
         Ok(())
     }
 
