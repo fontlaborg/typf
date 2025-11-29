@@ -15,10 +15,11 @@ use typf_core::{
     Color, RenderParams,
 };
 
-use core_foundation::base::{TCFType, TCFTypeRef};
+use core_foundation::base::{CFType, TCFType, TCFTypeRef};
 use core_foundation::dictionary::CFDictionary;
 use core_foundation::number::CFNumber;
 use core_foundation::string::CFString;
+use core_graphics::base::CGFloat;
 use core_graphics::{
     color_space::CGColorSpace,
     context::{CGContext, CGTextDrawingMode},
@@ -27,6 +28,9 @@ use core_graphics::{
     geometry::{CGPoint, CGRect, CGSize},
 };
 use core_text::font::CTFont;
+use core_text::font_descriptor::kCTFontVariationAttribute;
+use foreign_types::ForeignType;
+use std::ptr;
 
 /// Bridge between our font bytes and CoreGraphics' data expectations
 ///
@@ -126,11 +130,31 @@ impl CoreGraphicsRenderer {
         )
     }
 
+    /// Convert a 4-character axis tag to its numeric identifier.
+    /// Example: "wght" -> 2003265652 (0x77676874)
+    fn tag_to_axis_id(tag: &str) -> Option<i64> {
+        if tag.len() != 4 {
+            return None;
+        }
+        let bytes = tag.as_bytes();
+        Some(
+            ((bytes[0] as i64) << 24)
+                | ((bytes[1] as i64) << 16)
+                | ((bytes[2] as i64) << 8)
+                | (bytes[3] as i64),
+        )
+    }
+
     /// Creates a CTFont from font data with optional variation coordinates applied.
     ///
     /// For variable fonts, this applies the specified axis values to produce
     /// the correct glyph outlines. Without this, variable fonts would always
     /// render at their default axis values regardless of shaping parameters.
+    ///
+    /// IMPORTANT: CoreText's variation dictionary requires axis identifiers as
+    /// CFNumber keys (32-bit integers), NOT string tags. The core-text crate's
+    /// `new_from_CGFont_with_variations` incorrectly uses CFString keys which
+    /// CoreText silently ignores. We must call the raw API directly.
     fn create_ct_font_with_variations(
         data: &[u8],
         font_size: f64,
@@ -139,40 +163,68 @@ impl CoreGraphicsRenderer {
         // Create CGFont from raw data - this keeps our loaded font data
         let cg_font = Self::create_cg_font(data)?;
 
-        // Apply variation coordinates if specified, using new_from_CGFont_with_variations
-        // which properly preserves the CGFont (our font data) while applying variations
+        // Apply variation coordinates if specified
         if !variations.is_empty() {
             log::debug!(
                 "CoreGraphicsRenderer: Applying {} variation coordinates",
                 variations.len()
             );
 
-            // Convert variations to CFDictionary<CFString, CFNumber> format
-            // Keys are axis tags as strings (e.g., "wght", "wdth")
-            // Values are axis values as numbers
-            let var_pairs: Vec<(CFString, CFNumber)> = variations
+            // CoreText's variation dictionary requires:
+            // - Keys: CFNumber representing axis identifier (32-bit integer from 4-char tag)
+            // - Values: CFNumber representing axis value
+            // Example: "wght" tag becomes axis ID 2003265652 (0x77676874)
+            let var_pairs: Vec<(CFNumber, CFNumber)> = variations
                 .iter()
-                .filter(|(tag, _)| tag.len() == 4)
-                .map(|(tag, value)| {
-                    (CFString::new(tag), CFNumber::from(*value as f64))
+                .filter_map(|(tag, value)| {
+                    Self::tag_to_axis_id(tag).map(|axis_id| {
+                        log::debug!(
+                            "CoreGraphicsRenderer: axis '{}' -> id {} = {}",
+                            tag,
+                            axis_id,
+                            value
+                        );
+                        (CFNumber::from(axis_id), CFNumber::from(*value as f64))
+                    })
                 })
                 .collect();
 
             if !var_pairs.is_empty() {
-                // Create typed dictionary directly from pairs
-                let var_dict: CFDictionary<CFString, CFNumber> =
+                // Create variation dictionary with CFNumber keys (axis IDs as integers)
+                let var_dict: CFDictionary<CFNumber, CFNumber> =
                     CFDictionary::from_CFType_pairs(&var_pairs);
 
-                // Use new_from_CGFont_with_variations which:
-                // 1. Keeps our CGFont (loaded from data) as the font source
-                // 2. Applies variation coordinates via font descriptor
-                // This avoids the system font lookup bug that occurred when
-                // using new_from_descriptor which lost the CGFont reference.
-                return Ok(core_text::font::new_from_CGFont_with_variations(
-                    &cg_font,
-                    font_size,
-                    &var_dict,
-                ));
+                // Create font descriptor with variations attribute
+                // We must use raw CoreText API because the core-text crate's
+                // new_from_CGFont_with_variations incorrectly expects CFString keys
+                unsafe {
+                    let var_key = CFString::wrap_under_get_rule(kCTFontVariationAttribute);
+                    let var_val = CFType::wrap_under_get_rule(var_dict.as_CFTypeRef());
+                    let attrs: CFDictionary<CFString, CFType> =
+                        CFDictionary::from_CFType_pairs(&[(var_key, var_val)]);
+
+                    let desc = core_text::font_descriptor::new_from_attributes(&attrs);
+
+                    // Link to CoreText's CTFontCreateWithGraphicsFont
+                    #[link(name = "CoreText", kind = "framework")]
+                    extern "C" {
+                        fn CTFontCreateWithGraphicsFont(
+                            graphicsFont: core_graphics::sys::CGFontRef,
+                            size: CGFloat,
+                            matrix: *const core_graphics::geometry::CGAffineTransform,
+                            attributes: core_text::font_descriptor::CTFontDescriptorRef,
+                        ) -> core_text::font::CTFontRef;
+                    }
+
+                    let font_ref = CTFontCreateWithGraphicsFont(
+                        cg_font.as_ptr(),
+                        font_size as CGFloat,
+                        ptr::null(),
+                        desc.as_concrete_TypeRef(),
+                    );
+
+                    return Ok(CTFont::wrap_under_create_rule(font_ref));
+                }
             }
         }
 

@@ -14,11 +14,12 @@ lru = { workspace = true }
 
 # macOS-specific dependencies
 [target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = "0.9"
-core-text = "20.1"
-core-graphics = "0.23"
-objc2 = "0.5"
-objc2-foundation = { version = "0.2", features = ["NSString", "NSAttributedString", "NSDictionary"] }
+core-foundation = "0.10"
+core-text = "21.0"
+core-graphics = "0.24"
+foreign-types = "0.5"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSAttributedString", "NSDictionary"] }
 
 [dev-dependencies]
 env_logger = "0.11"
