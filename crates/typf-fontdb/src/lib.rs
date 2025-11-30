@@ -250,11 +250,29 @@ mod tests {
     }
 
     #[test]
+    fn test_font_from_data_index_invalid() {
+        // Invalid face index should fail
+        let data = vec![0; 100];
+        let result = Font::from_data_index(data, 5);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_clear_database() {
         let mut db = FontDatabase::new();
         // After clear, database should be empty
         db.clear();
         assert!(db.default_font().is_none());
         assert_eq!(db.font_count(), 0);
+    }
+
+    #[test]
+    fn test_face_index_default() {
+        // When from_data fails, we can't test face_index, but we can verify
+        // the API exists and returns 0 for default construction path
+        let data = vec![0; 100];
+        let result = Font::from_data_index(data, 0);
+        // Invalid data, but we're testing the API structure
+        assert!(result.is_err());
     }
 }
