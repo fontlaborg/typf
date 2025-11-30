@@ -6,7 +6,8 @@ This document describes how to release a new version of typf.
 
 - Rust toolchain (stable)
 - `cargo-edit` installed: `cargo install cargo-edit`
-- `maturin` installed: `pip install maturin`
+- `uv` for Python environment: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- `maturin` installed: `uv tool install maturin` or `uvx maturin`
 - Repository secrets configured in GitHub:
   - `CRATES_IO_TOKEN` - API token for crates.io
   - `PYPI_API_TOKEN` - API token for PyPI (or trusted publisher configured)

@@ -58,12 +58,14 @@ impl SvgRenderer {
         font: &Arc<dyn FontRef>,
         glyph_id: u32,
         scale: f32,
+        location: &skrifa::instance::Location,
     ) -> Result<GlyphPath> {
         let font_data = font.data();
         let font_ref = skrifa::FontRef::new(font_data).map_err(|_| RenderError::InvalidFont)?;
 
         let outlines = font_ref.outline_glyphs();
-        let glyph_id = skrifa::GlyphId::from(glyph_id as u16);
+        // Use GlyphId::new to support full u32 range (>65k glyph IDs)
+        let glyph_id = skrifa::GlyphId::new(glyph_id);
 
         let glyph = match outlines.get(glyph_id) {
             Some(g) => g,
@@ -79,8 +81,8 @@ impl SvgRenderer {
         let mut path_builder = SvgPathBuilder::new(scale);
 
         let size = skrifa::instance::Size::new(font.units_per_em() as f32);
-        let location = skrifa::instance::LocationRef::default();
-        let settings = skrifa::outline::DrawSettings::unhinted(size, location);
+        // Use provided location for variable font support
+        let settings = skrifa::outline::DrawSettings::unhinted(size, location.coords());
 
         glyph
             .draw(settings, &mut path_builder)
@@ -88,6 +90,30 @@ impl SvgRenderer {
 
         let (path, min_y, max_y) = path_builder.finish_with_bounds();
         Ok(GlyphPath { path, min_y, max_y })
+    }
+
+    /// Build variation location from params
+    fn build_location(
+        font: &Arc<dyn FontRef>,
+        variations: &[(String, f32)],
+    ) -> skrifa::instance::Location {
+        if variations.is_empty() {
+            return skrifa::instance::Location::default();
+        }
+
+        let font_data = font.data();
+        let font_ref = match skrifa::FontRef::new(font_data) {
+            Ok(f) => f,
+            Err(_) => return skrifa::instance::Location::default(),
+        };
+
+        let axes = font_ref.axes();
+        let settings: Vec<(&str, f32)> = variations
+            .iter()
+            .map(|(tag, value)| (tag.as_str(), *value))
+            .collect();
+
+        axes.location(settings)
     }
 }
 
@@ -125,6 +151,9 @@ impl Renderer for SvgRenderer {
         let foreground = params.foreground;
         let scale = shaped.advance_height / font.units_per_em() as f32;
 
+        // Build variable font location from params.variations
+        let location = Self::build_location(&font, &params.variations);
+
         // Phase 1: Extract all glyph paths and compute actual bounds
         // min_y/max_y are in SVG coordinates relative to baseline (y=0)
         let mut extracted_glyphs: Vec<ExtractedGlyph> = Vec::new();
@@ -132,7 +161,7 @@ impl Renderer for SvgRenderer {
         let mut max_y: f32 = 0.0; // Above baseline (negative in SVG coords, but we track magnitude)
 
         for glyph in &shaped.glyphs {
-            let glyph_path = self.extract_glyph_path_with_bounds(&font, glyph.id, scale)?;
+            let glyph_path = self.extract_glyph_path_with_bounds(&font, glyph.id, scale, &location)?;
 
             if glyph_path.path.is_empty() {
                 continue; // Skip glyphs with no outline (e.g., space)

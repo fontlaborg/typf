@@ -263,10 +263,11 @@ Fix: Use smaller fonts, line wrapping, or SVG (no width limit).
 
 ## Learn more
 
+- [Architecture](ARCHITECTURE.md) - Pipeline, backends, and data flow
 - [Documentation](src_docs/) - 24 chapters
-- [Examples](examples/README.md) - Working code samples  
+- [Examples](examples/README.md) - Working code samples
 - [Contributing](CONTRIBUTING.md) - Development setup
-- [PLAN.md](PLAN.md) - Roadmap and architecture
+- [PLAN.md](PLAN.md) - Roadmap
 
 ## License
 

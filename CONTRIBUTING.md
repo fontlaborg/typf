@@ -37,10 +37,10 @@ cargo run --example harfbuzz --features shaping-hb
 
 ### 1. Read Documentation
 
-- `README.md` - What Typf does
-- `ARCHITECTURE.md` - How it works
-- `PLAN.md` - What we're building
-- `PLAN/00.md` - Technical details
+- `README.md` - What Typf does and quick start
+- `ARCHITECTURE.md` - Pipeline design and backend details
+- `PLAN.md` - Roadmap and current priorities
+- `TODO.md` - Active task list
 
 ### 2. Check Issues
 
@@ -335,7 +335,53 @@ typf/
 3. Add feature flag: `{stage}-{name}`
 4. Update backend registry
 5. Add comprehensive tests
-6. Document in `PLAN/02.md`
+6. Document in `ARCHITECTURE.md`
+
+### Caching Guidelines
+
+Typf uses caching at multiple levels. When adding or modifying backends:
+
+#### Shaping Cache
+
+Shapers can use the optional `ShapingCache` from `typf-core`:
+
+```rust
+use typf_core::shaping_cache::ShapingCache;
+
+// Create shared cache (Arc-wrapped for thread-safety)
+let cache = ShapingCache::new(1000); // capacity
+
+// Check cache before shaping
+let key = cache.key(text, font_id, &params);
+if let Some(result) = cache.get(&key) {
+    return Ok(result);
+}
+
+// Shape and cache result
+let result = expensive_shaping_operation(text, font, &params)?;
+cache.insert(key, result.clone());
+```
+
+Cache keys include: text, font ID, size, features, variations, language, script.
+
+#### When to Cache
+
+- ✅ Shaped glyph results (text → positioned glyphs)
+- ✅ Font file parsing (expensive, often repeated)
+- ❌ Rendered bitmaps (too large, rarely reused)
+- ❌ Exported files (final output, not reused)
+
+#### Cache Statistics
+
+Shapers should expose cache stats for debugging:
+
+```rust
+pub fn cache_stats(&self) -> Option<CacheStats> {
+    self.cache.as_ref().map(|c| c.stats())
+}
+```
+
+The CLI's `--shaping-cache-stats` flag displays hit/miss ratios.
 
 ## Contribution Areas
 

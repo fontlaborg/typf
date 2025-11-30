@@ -6,13 +6,16 @@
 - [x] P0: Remove silent stub-font fallback in CLI; require font file with explicit errors on missing fonts (Python `render_simple` is explicit opt-in).
 - [x] P1: Integrate `ShapingCache` into HarfBuzz and ICU shapers; surface cache configuration in CLI/params and expose hit stats.
 - [x] P1: Use ascent/descent/bbox for canvas sizing in Skia, Zeno, and SVG to avoid clipping; add tall-glyph regressions.
-- [ ] P1: Extend vector renderer/exporters for glyph IDs > 65k and propagate variations/CPAL colors into SVG output.
+- [~] P1: Extend vector renderer/exporters for glyph IDs > 65k and propagate variations/CPAL colors into SVG output.
+  - [x] Glyph IDs > 65k support in all renderers (SVG, Zeno, Skia, Opixa)
+  - [x] Variable font variations propagated into SVG, Zeno, and Skia renderers
+  - [ ] CPAL color palette support in SVG (requires ColorPainter implementation)
 - [x] P1: Reduce memory leakage and improve face selection/error typing in `typf-fontdb` (no `Box::leak`, honor TTC index, proper units).
-- [ ] P2: Add backend integration tests with small fonts (bitmap hashes, SVG snapshots, JSON schema for JSON renderer).
+- [x] P2: Add backend integration tests with small fonts (bitmap hashes, SVG snapshots, JSON schema for JSON renderer).
 - [x] P2: Add workspace lint/test CI (`fmt`, `clippy -D warnings`, `cargo test --workspace --all-features`) with feature matrix.
 - [x] P2: Add CLI smoke tests for `info`, `render`, and `batch` commands using temp outputs and bad-input failures.
-- [ ] P3: Write `ARCHITECTURE.md` explaining pipeline/backends and link from README.
-- [ ] P3: Expand CONTRIBUTING with release flow, cache guidance, backend addition steps; create `RELEASING.md`; add version policy to README.
+- [x] P3: Write `ARCHITECTURE.md` explaining pipeline/backends and link from README.
+- [x] P3: Expand CONTRIBUTING with release flow, cache guidance, backend addition steps; create `RELEASING.md`; add version policy to README.
 - [ ] P3: Migrate Python workflow docs/scripts/CI to `uv` (`uv venv`, `uv pip`, `uv run`, `uvx`) and add CONTRIBUTING guardrails.
 - [ ] Phase5: Implement Skia renderer SVG output mode.
 - [ ] Phase5: Implement Zeno renderer SVG output mode.

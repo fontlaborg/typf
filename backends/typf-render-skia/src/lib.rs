@@ -50,6 +50,7 @@ impl SkiaRenderer {
         font: &Arc<dyn FontRef>,
         glyph_id: u32,
         font_size: f32,
+        location: &skrifa::instance::Location,
     ) -> Result<GlyphBitmap> {
         use kurbo::{BezPath, PathEl};
         use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Transform};
@@ -60,7 +61,8 @@ impl SkiaRenderer {
 
         // Navigate to the outline glyph collection
         let outlines = font_ref.outline_glyphs();
-        let glyph_id = skrifa::GlyphId::from(glyph_id as u16);
+        // Use GlyphId::new to support full u32 range (>65k glyph IDs)
+        let glyph_id = skrifa::GlyphId::new(glyph_id);
 
         // Find the specific glyph we need to render
         let glyph = outlines
@@ -78,8 +80,8 @@ impl SkiaRenderer {
 
         // Request unhinted outlines at the exact size we need
         let size = skrifa::instance::Size::new(font_size);
-        let location = skrifa::instance::LocationRef::default();
-        let settings = skrifa::outline::DrawSettings::unhinted(size, location);
+        // Use provided location for variable font support
+        let settings = skrifa::outline::DrawSettings::unhinted(size, location.coords());
 
         // Trace the glyph outline into our kurbo path
         glyph
@@ -187,6 +189,30 @@ impl Default for SkiaRenderer {
     }
 }
 
+/// Build variation location from params
+fn build_location(
+    font: &Arc<dyn FontRef>,
+    variations: &[(String, f32)],
+) -> skrifa::instance::Location {
+    if variations.is_empty() {
+        return skrifa::instance::Location::default();
+    }
+
+    let font_data = font.data();
+    let font_ref = match skrifa::FontRef::new(font_data) {
+        Ok(f) => f,
+        Err(_) => return skrifa::instance::Location::default(),
+    };
+
+    let axes = font_ref.axes();
+    let settings: Vec<(&str, f32)> = variations
+        .iter()
+        .map(|(tag, value)| (tag.as_str(), *value))
+        .collect();
+
+    axes.location(settings)
+}
+
 impl Renderer for SkiaRenderer {
     fn name(&self) -> &'static str {
         "skia"
@@ -201,6 +227,9 @@ impl Renderer for SkiaRenderer {
         let padding = params.padding as f32;
         let glyph_size = shaped.advance_height;
 
+        // Build variable font location from params.variations
+        let location = build_location(&font, &params.variations);
+
         // Phase 1: Render all glyphs first to get accurate bounds
         // This ensures we don't clip tall glyphs (emoji, Thai marks, Arabic diacritics)
         let mut rendered_glyphs: Vec<(RenderedGlyph, f32, f32)> = Vec::new();
@@ -208,7 +237,7 @@ impl Renderer for SkiaRenderer {
         let mut max_y: f32 = 0.0; // Relative to baseline
 
         for glyph in shaped.glyphs.iter() {
-            match self.render_glyph(&font, glyph.id, glyph_size) {
+            match self.render_glyph(&font, glyph.id, glyph_size, &location) {
                 Ok(bitmap) => {
                     // bearing_y is distance from baseline to top of glyph (positive = above baseline)
                     // glyph top relative to baseline = glyph.y + bearing_y

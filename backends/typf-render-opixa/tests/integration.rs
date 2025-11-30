@@ -206,8 +206,10 @@ fn test_opixa_bitmap_hash_stability() {
 #[test]
 fn test_opixa_supports_format() {
     let renderer = OpixaRenderer::new();
-    assert!(renderer.supports_format("png"));
-    assert!(renderer.supports_format("PNG"));
     assert!(renderer.supports_format("bitmap"));
+    assert!(renderer.supports_format("rgba"));
+    assert!(renderer.supports_format("rgb"));
+    assert!(renderer.supports_format("gray"));
     assert!(!renderer.supports_format("svg")); // Raster renderer doesn't support SVG
+    assert!(!renderer.supports_format("png")); // PNG encoding is done by exporter, not renderer
 }

@@ -21,7 +21,7 @@ pub fn encode_bitmap_to_png(bitmap: &BitmapData) -> Result<Vec<u8>> {
         BitmapFormat::Rgba8 => (bitmap.width * bitmap.height * 4) as usize,
         BitmapFormat::Rgb8 => (bitmap.width * bitmap.height * 3) as usize,
         BitmapFormat::Gray8 => (bitmap.width * bitmap.height) as usize,
-        BitmapFormat::Gray1 => ((bitmap.width * bitmap.height + 7) / 8) as usize,
+        BitmapFormat::Gray1 => (bitmap.width * bitmap.height).div_ceil(8) as usize,
     };
 
     if bitmap.data.len() < expected_size {

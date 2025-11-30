@@ -129,8 +129,8 @@ impl<'a> GlyphRasterizer<'a> {
     ) -> Result<GlyphBitmap, String> {
         // Note: Scaling is handled by DrawSettings, which uses self.size directly
 
-        // Get glyph outlines
-        let skrifa_gid = SkrifaGlyphId::from(glyph_id as u16);
+        // Get glyph outlines - use GlyphId::new for full u32 range (>65k glyph IDs)
+        let skrifa_gid = SkrifaGlyphId::new(glyph_id);
         let outline_glyphs = self.font.outline_glyphs();
 
         let glyph = outline_glyphs
