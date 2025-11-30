@@ -1,21 +1,21 @@
 [package]
 name = "typf-render-skia"
 version.workspace = true
-edition.workspace = true
 authors.workspace = true
-license.workspace = true
+edition.workspace = true
+description = "Skia rendering backend for Typf"
 repository.workspace = true
-description = "Skia rendering backend for TYPF"
-
-[dependencies]
-typf-core = { workspace = true }
-tiny-skia = "0.11"
-kurbo = "0.11"
-skrifa = "0.39"
-read-fonts = "0.36"
-thiserror.workspace = true
-log.workspace = true
+license.workspace = true
 
 [[test]]
 name = "integration"
 path = "tests/integration.rs"
+
+[dependencies]
+kurbo = "0.11"
+log.workspace = true
+read-fonts = "0.36"
+skrifa = "0.39"
+thiserror.workspace = true
+tiny-skia = "0.11"
+typf-core = { workspace = true }

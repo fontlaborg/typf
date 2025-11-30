@@ -1,11 +1,11 @@
-# TypF Python Bindings
+# Typf Python Bindings
 
 High-performance text rendering for Python applications.
 
 ## Installation
 
 ```bash
-pip install typf
+pip install typfpy
 ```
 
 Or install from source with maturin:
@@ -20,18 +20,18 @@ maturin develop --release
 ### Python API
 
 ```python
-import typf
+from typfpy import Typf, render_simple, export_image
 
 # Simple text rendering (no font file needed)
-image = typf.render_simple("Hello, TYPF!", size=48)
+image = render_simple("Hello, Typf!", size=48)
 
 # Export to PNG
-png_data = typf.export_image(image, format="png")
+png_data = export_image(image, format="png")
 with open("output.png", "wb") as f:
     f.write(png_data)
 
 # Advanced usage with real fonts
-engine = typf.Typf(shaper="harfbuzz", renderer="opixa")
+engine = Typf(shaper="harfbuzz", renderer="opixa")
 image = engine.render_text(
     "Typography is beautiful",
     font_path="/System/Library/Fonts/Helvetica.ttc",
@@ -46,36 +46,36 @@ print(f"Size: {image['width']}x{image['height']}")
 print(f"Format: {image['format']}")
 
 # Export to multiple formats
-png_data = typf.export_image(image, format="png")
-svg_data = typf.export_image(image, format="svg")
-ppm_data = typf.export_image(image, format="ppm")
+png_data = export_image(image, format="png")
+svg_data = export_image(image, format="svg")
+ppm_data = export_image(image, format="ppm")
 ```
 
 ### Command Line Interface
 
-The Fire-based CLI provides a powerful command-line interface:
+The Click-based CLI provides a powerful command-line interface:
 
 ```bash
 # Render text to PNG
-typf render "Hello World" output.png
+typfpy render "Hello World" -o output.png
 
 # Specify font and size
-typf render "مرحبا" output.png --font=/path/to/arabic.ttf --size=64
+typfpy render "مرحبا" -f /path/to/arabic.ttf -s 64 -o output.png
 
-# Custom colors (R,G,B,A)
-typf render "Red Text" output.png --color="255,0,0,255" --background="255,255,255,255"
+# Custom colors (RRGGBBAA hex)
+typfpy render "Red Text" -c FF0000FF -b FFFFFFFF -o output.png
 
-# Choose shaper and renderer
-typf render "Text" output.svg --shaper=harfbuzz --renderer=opixa --format=svg
+# Choose renderer (linra-mac for best performance on macOS)
+typfpy render "Text" --renderer=linra-mac -O svg -o output.svg
 
-# Get version info
-typf version
+# Get system info and available backends
+typfpy info
 
-# Get system info
-typf info
+# Show available shapers
+typfpy info --shapers
 
-# Shape text (JSON output)
-typf shape "Complex text" --font=/path/to/font.ttf --features="liga=1,kern=1"
+# Show available renderers
+typfpy info --renderers
 ```
 
 ## Features
@@ -87,16 +87,17 @@ typf shape "Complex text" --font=/path/to/font.ttf --features="liga=1,kern=1"
 - ✅ Thread-safe for concurrent rendering
 - ✅ Complex script support (Arabic, Hebrew, Devanagari, Thai, CJK)
 - ✅ OpenType features (ligatures, kerning, small caps, etc.)
-- ✅ Fire-based CLI for command-line usage
+- ✅ Click-based CLI for command-line usage
 
 ## API Reference
 
-### `typf.Typf`
+### `typfpy.Typf`
 
 Main rendering engine.
 
 ```python
-engine = typf.Typf(shaper="harfbuzz", renderer="opixa")
+from typfpy import Typf
+engine = Typf(shaper="harfbuzz", renderer="opixa")
 ```
 
 **Parameters:**
@@ -139,12 +140,13 @@ Get current shaper name.
 
 Get current renderer name.
 
-### `typf.FontInfo`
+### `typfpy.FontInfo`
 
 Font information and metrics.
 
 ```python
-font = typf.FontInfo("/path/to/font.ttf")
+from typfpy import FontInfo
+font = FontInfo("/path/to/font.ttf")
 ```
 
 **Attributes:**
@@ -159,7 +161,8 @@ Get glyph ID for a character.
 
 **Example:**
 ```python
-font = typf.FontInfo("/System/Library/Fonts/Arial.ttf")
+from typfpy import FontInfo
+font = FontInfo("/System/Library/Fonts/Arial.ttf")
 print(f"Units per em: {font.units_per_em}")
 glyph_id = font.glyph_id('A')
 print(f"Glyph ID for 'A': {glyph_id}")
@@ -167,7 +170,7 @@ print(f"Glyph ID for 'A': {glyph_id}")
 
 ### Module Functions
 
-#### `typf.render_simple(text, size=16.0)` → dict
+#### `typfpy.render_simple(text, size=16.0)` → dict
 
 Simple rendering with stub font (no font file needed).
 
@@ -179,10 +182,11 @@ Simple rendering with stub font (no font file needed).
 
 **Example:**
 ```python
-image = typf.render_simple("Quick test", size=48)
+from typfpy import render_simple
+image = render_simple("Quick test", size=48)
 ```
 
-#### `typf.export_image(image_data, format="ppm")` → bytes
+#### `typfpy.export_image(image_data, format="ppm")` → bytes
 
 Export image to various formats.
 
@@ -194,9 +198,10 @@ Export image to various formats.
 
 **Example:**
 ```python
-image = typf.render_simple("Test")
-png_bytes = typf.export_image(image, format="png")
-svg_bytes = typf.export_image(image, format="svg")
+from typfpy import render_simple, export_image
+image = render_simple("Test")
+png_bytes = export_image(image, format="png")
+svg_bytes = export_image(image, format="svg")
 
 with open("output.png", "wb") as f:
     f.write(png_bytes)
@@ -208,51 +213,42 @@ See the `examples/` directory for complete examples:
 
 - `simple_render.py` - Basic rendering with stub font
 - `render_with_font.py` - Rendering with real font files
+- `long_text_handling.py` - Strategies for long text (SVG, line wrapping)
 
 ## CLI Commands
 
-### `typf render`
+### `typfpy render`
 
 Render text to an image file.
 
 ```bash
-typf render TEXT OUTPUT [OPTIONS]
+typfpy render [TEXT] [OPTIONS]
 ```
 
 **Options:**
-- `--font` - Path to font file (optional)
-- `--size` - Font size in points (default: 48.0)
-- `--shaper` - Shaping backend: "none" or "harfbuzz" (default: "harfbuzz")
-- `--renderer` - Rendering backend: "opixa" (default: "opixa")
-- `--format` - Output format (inferred from extension if not specified)
-- `--color` - Foreground color as "R,G,B,A" (default: "0,0,0,255")
-- `--background` - Background color as "R,G,B,A" (optional)
-- `--padding` - Padding in pixels (default: 10)
+- `-f, --font-file` - Path to font file (.ttf, .otf, .ttc, .otc)
+- `-s, --font-size` - Font size in pixels (default: 200)
+- `--shaper` - Shaping backend: auto, none, hb, icu-hb, mac (default: auto)
+- `--renderer` - Rendering backend: auto, opixa, linra-mac, linra-win (default: auto)
+- `-O, --format` - Output format: pbm, png1, pgm, png4, png8, png, svg (default: png)
+- `-c, --foreground` - Text color as RRGGBB or RRGGBBAA (default: 000000FF)
+- `-b, --background` - Background color as RRGGBB or RRGGBBAA (default: FFFFFF00)
+- `-m, --margin` - Margin in pixels (default: 10)
+- `-o, --output-file` - Output file path (stdout if omitted)
+- `-q, --quiet` - Silent mode
 
-### `typf shape`
+### `typfpy info`
 
-Shape text and output glyph positioning.
+Display Typf version and available backends.
 
 ```bash
-typf shape TEXT [OPTIONS]
+typfpy info [OPTIONS]
 ```
 
 **Options:**
-- `--font` - Path to font file
-- `--size` - Font size in points (default: 48.0)
-- `--shaper` - Shaping backend (default: "harfbuzz")
-- `--features` - OpenType features as "key=value,key=value"
-- `--language` - Language tag (e.g., "ar", "en")
-- `--script` - Script tag (e.g., "arab", "latn")
-- `--output` - Output file path (stdout if not specified)
-
-### `typf info`
-
-Display TypF version and configuration.
-
-### `typf version`
-
-Display version information.
+- `--shapers` - List available shaping backends
+- `--renderers` - List available rendering backends
+- `--formats` - List available output formats
 
 ## Development
 
@@ -284,7 +280,7 @@ pytest
 
 ## Performance
 
-TypF achieves industry-leading performance through:
+Typf achieves industry-leading performance through:
 
 - SIMD-optimized blending (10GB/s+ throughput)
 - Multi-level caching (L1 < 50ns access)

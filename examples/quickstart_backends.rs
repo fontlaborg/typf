@@ -1,7 +1,7 @@
 ///! Quick start example demonstrating all major backends
 ///!
 ///! This example shows how to use different shaping and rendering backends
-///! with minimal code. Perfect for getting started with TypF.
+///! with minimal code. Perfect for getting started with Typf.
 ///!
 ///! Run with: cargo run --example quickstart_backends --features shaping-hb,render-skia,render-zeno
 use std::sync::Arc;
@@ -36,7 +36,7 @@ impl FontRef for StubFont {
 }
 
 fn main() -> typf::error::Result<()> {
-    println!("TypF Backend Quickstart");
+    println!("Typf Backend Quickstart");
     println!("=======================\n");
 
     let text = "Hello, World!";

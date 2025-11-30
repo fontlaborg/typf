@@ -146,7 +146,7 @@ fn bench_full_pipeline(c: &mut Criterion) {
 
     // Complete pipeline for short text - common UI scenarios
     c.bench_function("full_pipeline_short", |b| {
-        let text = "Hello TYPF!";
+        let text = "Hello Typf!";
         b.iter(|| {
             pipeline
                 .process(black_box(text), font.clone(), &shaping_params, &render_params)
@@ -156,7 +156,7 @@ fn bench_full_pipeline(c: &mut Criterion) {
 
     // Complete pipeline for paragraph text - body content
     c.bench_function("full_pipeline_paragraph", |b| {
-        let text = "The quick brown fox jumps over the lazy dog. This is a test of the TYPF text rendering pipeline. ".repeat(3);
+        let text = "The quick brown fox jumps over the lazy dog. This is a test of the Typf text rendering pipeline. ".repeat(3);
         b.iter(|| {
             pipeline.process(
                 black_box(&text),

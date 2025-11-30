@@ -1,4 +1,4 @@
-//! TYPF Core: Six stages from text to pixels
+//! Typf Core: Six stages from text to pixels
 //!
 //! Text enters as characters, exits as rendered images. This crate holds the pipeline
 //! that makes that transformation possible through six distinct stages.

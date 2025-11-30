@@ -1,4 +1,4 @@
-//! Where fonts come to life: database and loading for TYPF
+//! Where fonts come to life: database and loading for Typf
 //!
 //! The third stage of the pipeline. Finds, loads, and manages fonts so
 //! your text can wear the right glyphs. Without fonts, text is just

@@ -227,7 +227,7 @@ Risk: WASM builds may have different security characteristics.
 
 ## Security Limitations
 
-1. **No sandboxing**: TypF runs in the same process as the caller
+1. **No sandboxing**: Typf runs in the same process as the caller
    - Use OS-level sandboxing for untrusted input
 
 2. **No font signature verification**: We don't verify font authenticity
@@ -450,14 +450,14 @@ let typf = Typf::with_config(config);
 
 ## Attribution
 
-We credit security researchers who help keep TypF safe in:
+We credit security researchers who help keep Typf safe in:
 
 - Security advisories
 - CHANGELOG.md
 - Release notes
 - Hall of Fame (if you prefer)
 
-Thanks for helping keep TypF secure!
+Thanks for helping keep Typf secure!
 
 ---
 

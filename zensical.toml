@@ -1,7 +1,7 @@
 [project]
-site_name = "TypF"
+site_name = "Typf"
 site_url = "https://fontlab.org/typf/"
-site_description = "TypF: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings"
+site_description = "Typf: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings"
 # Build configuration - source and output directories
 docs_dir = "./src_docs"
 site_dir = "./docs"
@@ -11,48 +11,45 @@ repo_url = "https://github.com/fontlaborg/typf"
 edit_uri = "https://github.com/fontlaborg/typf/edit/main/src_docs/"
 # Copyright
 copyright = "Copyright &copy; 2025 Fontlab Ltd"
-
-# Navigation - TYPF v2.0 Comprehensive Documentation
+# Navigation - Typf v2.0 Comprehensive Documentation
 nav = [
   "index.md",
-  {"Getting Started" = [
+  { "Getting Started" = [
     "01-introduction.md",
     "02-quick-start.md",
     "03-architecture-overview.md",
     "04-installation.md"
-  ]},
-  {"Core Concepts" = [
+  ] },
+  { "Core Concepts" = [
     "05-six-stage-pipeline.md",
     "06-backend-architecture.md",
     "07-memory-management.md",
     "08-performance-fundamentals.md"
-  ]},
-  {"Shaping Backends" = [
+  ] },
+  { "Shaping Backends" = [
     "09-harfbuzz-shaping.md",
     "10-platform-shapers.md",
     "11-icu-harfbuzz-composition.md",
     "12-none-shaper.md"
-  ]},
-  {"Rendering Backends" = [
+  ] },
+  { "Rendering Backends" = [
     "13-skia-renderer.md",
     "14-opixa-renderer.md",
     "15-platform-renderers.md",
     "16-zeno-renderer.md"
-  ]},
-  {"Output & Export" = [
-    "17-export-formats.md"
-  ]},
-  {"API Reference" = [
+  ] },
+  { "Output & Export" = ["17-export-formats.md"] },
+  { "API Reference" = [
     "18-rust-api.md",
     "19-python-api.md",
     "20-cli-interface.md"
-  ]},
-  {"Advanced Topics" = [
+  ] },
+  { "Advanced Topics" = [
     "21-webassembly-integration.md",
     "22-performance-optimization.md",
     "23-deployment-integration.md",
     "24-troubleshooting-best-practices.md"
-  ]}
+  ] }
 ]
 
 # Theme configuration - NO TABS
@@ -124,26 +121,26 @@ default = "default"
 
 # Markdown extensions configuration
 [project.markdown_extensions]
-abbr = {}
-admonition = {}
-attr_list = {}
-def_list = {}
-footnotes = {}
-md_in_html = {}
+abbr = {  }
+admonition = {  }
+attr_list = {  }
+def_list = {  }
+footnotes = {  }
+md_in_html = {  }
 
 [project.markdown_extensions.toc]
 permalink = true
 
 [project.markdown_extensions.pymdownx]
-caret = {}
-details = {}
-emoji = {}
-inlinehilite = {}
-keys = {}
-mark = {}
-smartsymbols = {}
-snippets = {}
-tilde = {}
+caret = {  }
+details = {  }
+emoji = {  }
+inlinehilite = {  }
+keys = {  }
+mark = {  }
+smartsymbols = {  }
+snippets = {  }
+tilde = {  }
 
 [project.markdown_extensions.pymdownx.arithmatex]
 generic = true
@@ -170,5 +167,5 @@ custom_checkbox = true
 
 # Plugins configuration (zensical equivalents)
 [project.plugins]
-search = {}
-tags = {}
+search = {  }
+tags = {  }

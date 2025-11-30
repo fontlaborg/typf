@@ -1,4 +1,4 @@
-//! Break the pipeline to make it stronger - fuzz TYPF's core architecture
+//! Break the pipeline to make it stronger - fuzz Typf's core architecture
 //!
 //! This fuzzer tests the entire six-stage pipeline for robustness. By using
 //! minimal mock implementations, we isolate the pipeline logic itself - the

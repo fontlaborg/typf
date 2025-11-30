@@ -1,13 +1,13 @@
 [package]
 name = "typf-render-svg"
 version.workspace = true
-edition.workspace = true
 authors.workspace = true
-license.workspace = true
+edition.workspace = true
+description = "SVG vector renderer for Typf - extracts glyph outlines as SVG paths"
 repository.workspace = true
-description = "SVG vector renderer for TYPF - extracts glyph outlines as SVG paths"
+license.workspace = true
 
 [dependencies]
-typf-core = { workspace = true }
-skrifa = { workspace = true }
 log = { workspace = true }
+skrifa = { workspace = true }
+typf-core = { workspace = true }

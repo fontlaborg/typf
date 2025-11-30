@@ -1,6 +1,6 @@
-//! Input parsing and validation for TYPF text processing
+//! Input parsing and validation for Typf text processing
 //!
-//! The first stage of the TYPF pipeline. Takes raw text and transforms
+//! The first stage of the Typf pipeline. Takes raw text and transforms
 //! it into structured data the rest of the pipeline can work with.
 
 /// Simple addition function for demonstration

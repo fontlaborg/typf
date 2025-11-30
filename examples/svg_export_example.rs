@@ -16,7 +16,7 @@ use typf_export_svg::SvgExporter;
 
 /// Demonstrate SVG vector export from glyph outlines
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== TYPF SVG Export Example ===\n");
+    println!("=== Typf SVG Export Example ===\n");
 
     // Simulate a shaped "Hello" - in real usage, a shaper creates this
     let shaped = ShapingResult {

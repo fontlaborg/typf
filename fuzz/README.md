@@ -1,6 +1,6 @@
-# Fuzz Testing - Crash TypF Before Your Users Do
+# Fuzz Testing - Crash Typf Before Your Users Do
 
-Fuzzing throws random, malformed data at your code to find panics, crashes, and security vulnerabilities that normal testing misses. TypF handles complex Unicode text, font files, and rendering pipelines - perfect candidates for fuzzing to ensure robustness.
+Fuzzing throws random, malformed data at your code to find panics, crashes, and security vulnerabilities that normal testing misses. Typf handles complex Unicode text, font files, and rendering pipelines - perfect candidates for fuzzing to ensure robustness.
 
 ## 🚀 Quick Start
 
@@ -40,7 +40,7 @@ cargo fuzz run fuzz_unicode_process
 **Why it matters**: HarfBuzz is complex C++ code that processes untrusted text - a perfect fuzzing target.
 
 ### `fuzz_pipeline` - Architecture Robustness
-**Goal**: Test TYPF's pipeline framework with minimal backends to isolate architectural bugs.
+**Goal**: Test Typf's pipeline framework with minimal backends to isolate architectural bugs.
 
 **What gets tested:**
 - Pipeline builder pattern stability
@@ -57,7 +57,7 @@ cargo fuzz run fuzz_unicode_process
 # Install cargo-fuzz (one-time setup)
 cargo install cargo-fuzz
 
-# TYPF's fuzz targets are already initialized
+# Typf's fuzz targets are already initialized
 cd fuzz
 ```
 

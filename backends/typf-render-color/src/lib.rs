@@ -1,5 +1,5 @@
 #![warn(missing_docs)]
-//! Color glyph renderer for TYPF
+//! Color glyph renderer for Typf
 //!
 //! This crate provides rendering support for:
 //! - COLR v0 and v1 color glyphs using skrifa's ColorPainter API

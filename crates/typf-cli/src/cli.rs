@@ -1,12 +1,12 @@
 //! CLI argument definitions using Clap v4
 //!
 //! This module defines the command-line interface structure
-//! following the linra TYPF CLI specification.
+//! following the linra Typf CLI specification.
 
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
-/// TYPF - Professional text rendering from the command line
+/// Typf - Professional text rendering from the command line
 #[derive(Parser, Debug)]
 #[command(name = "typf")]
 #[command(version, about, long_about = None)]

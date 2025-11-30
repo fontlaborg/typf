@@ -1,8 +1,8 @@
 """
-TYPF - Professional text rendering, now in Python
+Typf - Professional text rendering, now in Python
 
 Where Rust performance meets Python elegance. This package brings
-TYPF's world-class text shaping and rendering to your Python projects
+Typf's world-class text shaping and rendering to your Python projects
 with zero compromise on speed or quality.
 
 ## Quick Start

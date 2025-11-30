@@ -1,6 +1,6 @@
-# TypF Examples - From Text to Beautiful Output
+# Typf Examples - From Text to Beautiful Output
 
-This is your playground for exploring TYPF's text rendering capabilities. Each example starts with raw text and shows how different shapers, renderers, and exporters transform it into final output. Start simple, then explore complex scripts, variable fonts, and vector graphics.
+This is your playground for exploring Typf's text rendering capabilities. Each example starts with raw text and shows how different shapers, renderers, and exporters transform it into final output. Start simple, then explore complex scripts, variable fonts, and vector graphics.
 
 ## 1. Quick Start
 
@@ -13,7 +13,7 @@ cargo run --example basic
 ## 2. Example Gallery
 
 ### 2.1. **basic** - First Steps in Text Rendering
-The "Hello, World!" of TypF - see text transform into pixels through the complete pipeline.
+The "Hello, World!" of Typf - see text transform into pixels through the complete pipeline.
 
 ```bash
 cargo run --example basic
@@ -30,7 +30,7 @@ cargo run --example basic
 ---
 
 ### 2.2. **formats** - One Text, Five Formats
-Shape and render once, export everywhere. Compare file sizes and quality across TYPF's export formats.
+Shape and render once, export everywhere. Compare file sizes and quality across Typf's export formats.
 
 ```bash
 cargo run --example formats
@@ -108,7 +108,7 @@ All examples work with the default feature set when building with `cargo run --e
 
 ### 5.1. Text Used
 
-- **basic**: "Hello, TYPF!"
+- **basic**: "Hello, Typf!"
 - **formats**: "Format Test"
 - **harfbuzz**: "Complex Text with لغة"
 - **pipeline**: "Pipeline Example"
@@ -198,7 +198,7 @@ cargo run --example svg_export_example --features shaping-hb,export-svg
 ---
 
 ### 6.6. **all_formats** - The Complete Export Tour
-One text sample rendered through every format TypF offers - compare quality, file size, and use cases.
+One text sample rendered through every format Typf offers - compare quality, file size, and use cases.
 
 ```bash
 cargo run --example all_formats --features full

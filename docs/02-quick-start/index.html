@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="TypF: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings">
+        <meta name="description" content="Typf: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings">
       
       
       
@@ -27,7 +27,7 @@
     
     
       
-        <title>Quick Start - TypF</title>
+        <title>Quick Start - Typf</title>
       
     
     
@@ -128,7 +128,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="https://fontlab.org/typf/" title="TypF" class="md-header__button md-logo" aria-label="TypF" data-md-component="logo">
+    <a href="https://fontlab.org/typf/" title="Typf" class="md-header__button md-logo" aria-label="Typf" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -142,7 +142,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            TypF
+            Typf
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -247,13 +247,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="https://fontlab.org/typf/" title="TypF" class="md-nav__button md-logo" aria-label="TypF" data-md-component="logo">
+    <a href="https://fontlab.org/typf/" title="Typf" class="md-nav__button md-logo" aria-label="Typf" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
 
     </a>
-    TypF
+    Typf
   </label>
   
     <div class="md-nav__source">
@@ -1731,7 +1731,7 @@
 
 
 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
-<p>Get TypF running in five minutes.</p>
+<p>Get Typf running in five minutes.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/fontlaborg/typf.git
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>typf
@@ -1746,9 +1746,12 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>typfpy<span class="w"> </span>render<span class="w"> </span><span class="s2">&quot;Hello, 世界!&quot;</span><span class="w"> </span>-f<span class="w"> </span>/System/Library/Fonts/Arial.ttf<span class="w"> </span>-o<span class="w"> </span>hello.png
 </span></code></pre></div></p>
 <p>Python API:
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">typf</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">typf</span><span class="o">.</span><span class="n">render_text</span><span class="p">(</span><span class="s2">&quot;Hello, 世界!&quot;</span><span class="p">,</span> <span class="s2">&quot;/System/Library/Fonts/Arial.ttf&quot;</span><span class="p">)</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;hello.png&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typfpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Typf</span><span class="p">,</span> <span class="n">export_image</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">typf</span> <span class="o">=</span> <span class="n">Typf</span><span class="p">(</span><span class="n">shaper</span><span class="o">=</span><span class="s2">&quot;harfbuzz&quot;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s2">&quot;opixa&quot;</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">image</span> <span class="o">=</span> <span class="n">typf</span><span class="o">.</span><span class="n">render_text</span><span class="p">(</span><span class="s2">&quot;Hello, 世界!&quot;</span><span class="p">,</span> <span class="s2">&quot;/System/Library/Fonts/Arial.ttf&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">48</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;hello.png&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">export_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;png&quot;</span><span class="p">))</span>
 </span></code></pre></div></p>
 <h2 id="choose-your-backends">Choose Your Backends<a class="headerlink" href="#choose-your-backends" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># See what&#39;s available</span>

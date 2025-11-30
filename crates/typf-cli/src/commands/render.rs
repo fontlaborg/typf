@@ -120,7 +120,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     let text = get_input_text(args)?;
 
     if !args.quiet {
-        eprintln!("TYPF v{}", env!("CARGO_PKG_VERSION"));
+        eprintln!("Typf v{}", env!("CARGO_PKG_VERSION"));
         eprintln!("Rendering text...");
     }
 
@@ -528,7 +528,7 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
     let text = get_input_text(args)?;
 
     if !args.quiet {
-        eprintln!("TYPF v{} (linra mode)", env!("CARGO_PKG_VERSION"));
+        eprintln!("Typf v{} (linra mode)", env!("CARGO_PKG_VERSION"));
         eprintln!("Rendering text with single-pass pipeline...");
     }
 

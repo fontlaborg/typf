@@ -1,4 +1,4 @@
-//! One text, five formats - TYPF's export versatility unleashed
+//! One text, five formats - Typf's export versatility unleashed
 //!
 //! Watch the same text transform into PNG for web, SVG for vectors, PNM for simplicity,
 //! and JSON for data. Each format serves a different purpose, from production-ready
@@ -18,10 +18,10 @@ use typf_shape_hb::HarfBuzzShaper;
 use typf_shape_none::NoneShaper;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("TYPF v2.0 - All Export Formats Demo");
+    println!("Typf v2.0 - All Export Formats Demo");
     println!("====================================\n");
 
-    let text = "Hello, TYPF!";          // Simple Latin script
+    let text = "Hello, Typf!";          // Simple Latin script
     let complex_text = "مرحبا";         // Arabic: "Hello" - tests complex shaping
 
     fs::create_dir_all("examples/output")?; // Ensure we have somewhere to write

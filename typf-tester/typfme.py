@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""TYPF v2.0 Backend Testing & Benchmarking Tool
+"""Typf v2.0 Backend Testing & Benchmarking Tool
 
-A comprehensive tool to test, render, and benchmark all TYPF backend combinations
+A comprehensive tool to test, render, and benchmark all Typf backend combinations
 with multiple sample texts, font sizes, and output formats.
 
 Backends tested:
@@ -90,7 +90,7 @@ class BenchResult:
 
 
 class TypfTester:
-    """TYPF v2.0 comprehensive testing and benchmarking tool"""
+    """Typf v2.0 comprehensive testing and benchmarking tool"""
 
     def __init__(self):
         self.base_dir = Path(__file__).parent
@@ -164,7 +164,7 @@ class TypfTester:
         """Detect which backend combinations are available"""
         backends = []
 
-        # Define ALL possible shaping and rendering backends (TYPF v2.0 complete matrix!)
+        # Define ALL possible shaping and rendering backends (Typf v2.0 complete matrix!)
         # Shaping backends (4):
         shapers = [
             "none",  # Simple LTR advancement
@@ -282,7 +282,7 @@ class TypfTester:
             python typfme.py render --backend=none     # Only 'none' shaper
             python typfme.py render --format=svg       # Only SVG output
         """
-        print("TYPF v2.0 Backend Rendering Test")
+        print("Typf v2.0 Backend Rendering Test")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 
@@ -394,7 +394,7 @@ class TypfTester:
             python typfme.py bench --iterations=1000    # More iterations
             python typfme.py bench --detailed=True      # Full detailed report
         """
-        print("TYPF v2.0 Comprehensive Backend Benchmark")
+        print("Typf v2.0 Comprehensive Backend Benchmark")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 
@@ -654,7 +654,7 @@ class TypfTester:
         # Generate compact Markdown summary table
         md_path = self.output_dir / "benchmark_summary.md"
         md_lines = []
-        md_lines.append("# TYPF Benchmark Summary\n")
+        md_lines.append("# Typf Benchmark Summary\n")
         md_lines.append(f"**Date**: {time.strftime('%Y-%m-%d %H:%M:%S')}  ")
         md_lines.append(f"**Iterations**: {iterations}  ")
         md_lines.append(
@@ -726,7 +726,7 @@ class TypfTester:
             python typfme.py bench-shaping --iterations=10000   # More iterations
             python typfme.py bench-shaping --detailed=True      # Full detailed report
         """
-        print("TYPF v2.0 Shaping-Only Performance Benchmark")
+        print("Typf v2.0 Shaping-Only Performance Benchmark")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 
@@ -903,7 +903,7 @@ class TypfTester:
             python typfme.py bench-rendering --iterations=500    # More iterations
             python typfme.py bench-rendering --detailed=True     # Full detailed report
         """
-        print("TYPF v2.0 Rendering-Only Performance Benchmark")
+        print("Typf v2.0 Rendering-Only Performance Benchmark")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 
@@ -1112,7 +1112,7 @@ class TypfTester:
             python typfme.py bench-scaling --iterations=100     # More iterations
             python typfme.py bench-scaling --detailed=True      # Full detailed report
         """
-        print("TYPF v2.0 Text Length Scaling Benchmark")
+        print("Typf v2.0 Text Length Scaling Benchmark")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 
@@ -1300,7 +1300,7 @@ class TypfTester:
 
         Renders the same text with all available backends for visual comparison.
         """
-        print("TYPF v2.0 Backend Comparison")
+        print("Typf v2.0 Backend Comparison")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 
@@ -1355,12 +1355,12 @@ class TypfTester:
 
     def info(self):
         """Display information about available backends and fonts"""
-        print("TYPF v2.0 Testing Environment")
+        print("Typf v2.0 Testing Environment")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 
         # Version and capabilities
-        print(f"TYPF Version: {typf.__version__}")
+        print(f"Typf Version: {typf.__version__}")
         print(f"Python Version: {sys.version.split()[0]}")
         print(f"Base Directory: {self.base_dir}")
         print(f"Output Directory: {self.output_dir}\n")
@@ -1454,7 +1454,7 @@ class TypfTester:
             size: Font size in pixels (default: 48)
             iterations: Number of renders per sample (default: 1)
         """
-        print("TYPF v2.0 Linra (OS) Rendering Test")
+        print("Typf v2.0 Linra (OS) Rendering Test")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 
@@ -1550,7 +1550,7 @@ class TypfTester:
             iterations: Number of iterations per test (default: 100)
             warmup: Warmup iterations before timing (default: 10)
         """
-        print("TYPF v2.0 Linra (OS) Benchmark")
+        print("Typf v2.0 Linra (OS) Benchmark")
         print("=" * 80)
         print("Community project by FontLab https://www.fontlab.org/\n")
 

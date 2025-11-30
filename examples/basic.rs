@@ -1,6 +1,6 @@
-//! Watch TYPF turn text into pixels - the simplest possible way
+//! Watch Typf turn text into pixels - the simplest possible way
 //!
-//! This example shows TYPF's six-stage pipeline in action: text goes in,
+//! This example shows Typf's six-stage pipeline in action: text goes in,
 //! gets shaped, rendered, and exported as an image. No complex setup required.
 
 use std::fs;
@@ -43,7 +43,7 @@ impl FontRef for StubFont {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let text = "Hello, TYPF!"; // The raw string we'll transform
+    let text = "Hello, Typf!"; // The raw string we'll transform
 
     // In production, you'd load a real font file here
     let font = Arc::new(StubFont);

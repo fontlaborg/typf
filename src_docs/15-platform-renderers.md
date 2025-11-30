@@ -66,7 +66,7 @@ result = renderer.render_text("Hello World", "Segoe UI.ttf")
 
 ## Automatic Selection
 
-TypF picks the right renderer for your platform:
+Typf picks the right renderer for your platform:
 
 ```rust
 pub fn create_platform_renderer() -> Result<Box<dyn Renderer>> {

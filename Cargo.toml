@@ -1,187 +1,165 @@
 [workspace]
-members = [
-    # Core crates
-    "crates/typf",
-    "crates/typf-core",
-    "crates/typf-input",
-    "crates/typf-unicode",
-    "crates/typf-fontdb",
-    "crates/typf-export",
-    "crates/typf-export-svg",
-
-    # Shaping backends
-    "backends/typf-shape-none",
-    "backends/typf-shape-hb",
-    "backends/typf-shape-ct",
-    "backends/typf-shape-icu-hb",
-    # "backends/typf-shape-mac",     # Same as ct
-    # "backends/typf-shape-win",     # Windows DirectWrite (needs Windows)
-
-    # Rendering backends
-    "backends/typf-render-json",
-    "backends/typf-render-opixa",
-    "backends/typf-render-svg",
-    "backends/typf-render-cg",
-    "backends/typf-render-skia",
-    "backends/typf-render-zeno",
-    "backends/typf-render-color",
-    # "backends/typf-render-mac",    # Same as cg
-    # "backends/typf-render-win",    # Windows Direct2D (needs Windows)
-
-    # Linra OS backends (single-pass shaping+rendering)
-    "backends/typf-os-mac",
-    "backends/typf-os-win",
-    "backends/typf-os",
-
-    # CLI
-    "crates/typf-cli",
-    "crates/typf-bench",
-
-    # Bindings
-    "bindings/python",
-]
 resolver = "2"
+members = [
+  "backends/typf-os",
+  # "backends/typf-render-mac",    # Same as cg
+  # "backends/typf-render-win",    # Windows Direct2D (needs Windows)
+  # Linra OS backends (single-pass shaping+rendering)
+  "backends/typf-os-mac",
+  "backends/typf-os-win",
+  "backends/typf-render-cg",
+  "backends/typf-render-color",
+  # "backends/typf-shape-mac",     # Same as ct
+  # "backends/typf-shape-win",     # Windows DirectWrite (needs Windows)
+  # Rendering backends
+  "backends/typf-render-json",
+  "backends/typf-render-opixa",
+  "backends/typf-render-skia",
+  "backends/typf-render-svg",
+  "backends/typf-render-zeno",
+  "backends/typf-shape-ct",
+  "backends/typf-shape-hb",
+  "backends/typf-shape-icu-hb",
+  # Shaping backends
+  "backends/typf-shape-none",
+  # Bindings
+  "bindings/python",
+  # Core crates
+  "crates/typf",
+  "crates/typf-bench",
+  # CLI
+  "crates/typf-cli",
+  "crates/typf-core",
+  "crates/typf-export",
+  "crates/typf-export-svg",
+  "crates/typf-fontdb",
+  "crates/typf-input",
+  "crates/typf-unicode",
+]
 
 [workspace.package]
 version = "2.0.0"
-authors = ["TYPF Contributors"]
+authors = ["Typf Contributors"]
 edition = "2021"
 rust-version = "1.75"
-license = "EVALUATION LICENSE"
 repository = "https://github.com/typf/typf"
+license = "EVALUATION LICENSE"
 
 [workspace.dependencies]
+anyhow = "1.0"
+env_logger = "0.11"
+flate2 = "1.0"
+# Shaping dependencies
+harfbuzz_rs = "2.0"
+# ICU dependencies (for icu-hb shaping)
+icu = "2.1"
+icu_properties = "2.1"
+icu_segmenter = "2.1"
+kurbo = "0.11"
+log = "0.4"
+lru = "0.16"
+# Caching and concurrency
+parking_lot = "0.12"
+# Bitmap glyph rendering (PNG decode)
+png = "0.17"
+rayon = "1.10"
+# External dependencies
+read-fonts = "0.36"
+# SVG glyph rendering
+resvg = "0.45"
+skrifa = "0.39"
+thiserror = "2.0"
+# Rendering dependencies
+tiny-skia = "0.11"
 # Internal crates
 typf = { path = "crates/typf" }
-typf-core = { path = "crates/typf-core" }
-typf-input = { path = "crates/typf-input" }
-typf-unicode = { path = "crates/typf-unicode" }
-typf-fontdb = { path = "crates/typf-fontdb" }
-typf-export = { path = "crates/typf-export" }
 typf-bench = { path = "crates/typf-bench" }
-
-# Shaping backends
-typf-shape-none = { path = "backends/typf-shape-none" }
-typf-shape-hb = { path = "backends/typf-shape-hb" }
-typf-shape-ct = { path = "backends/typf-shape-ct" }
-typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb" }
-
-# Rendering backends
-typf-render-json = { path = "backends/typf-render-json" }
-typf-render-opixa = { path = "backends/typf-render-opixa" }
-typf-render-svg = { path = "backends/typf-render-svg" }
-typf-render-cg = { path = "backends/typf-render-cg" }
-typf-render-skia = { path = "backends/typf-render-skia" }
-typf-render-zeno = { path = "backends/typf-render-zeno" }
-typf-render-color = { path = "backends/typf-render-color" }
-
+typf-core = { path = "crates/typf-core" }
+typf-export = { path = "crates/typf-export" }
+typf-fontdb = { path = "crates/typf-fontdb" }
+typf-input = { path = "crates/typf-input" }
+typf-os = { path = "backends/typf-os" }
 # Linra OS backends
 typf-os-mac = { path = "backends/typf-os-mac" }
 typf-os-win = { path = "backends/typf-os-win" }
-typf-os = { path = "backends/typf-os" }
-
-# External dependencies
-read-fonts = "0.36"
-skrifa = "0.39"
-thiserror = "2.0"
-anyhow = "1.0"
-log = "0.4"
-env_logger = "0.11"
-
-# Shaping dependencies
-harfbuzz_rs = "2.0"
-
-# Caching and concurrency
-parking_lot = "0.12"
-lru = "0.16"
-rayon = "1.10"
-
-# Rendering dependencies
-tiny-skia = "0.11"
-kurbo = "0.11"
-zeno = "0.3"
-
-# SVG glyph rendering
-resvg = "0.45"
+typf-render-cg = { path = "backends/typf-render-cg" }
+typf-render-color = { path = "backends/typf-render-color" }
+# Rendering backends
+typf-render-json = { path = "backends/typf-render-json" }
+typf-render-opixa = { path = "backends/typf-render-opixa" }
+typf-render-skia = { path = "backends/typf-render-skia" }
+typf-render-svg = { path = "backends/typf-render-svg" }
+typf-render-zeno = { path = "backends/typf-render-zeno" }
+typf-shape-ct = { path = "backends/typf-shape-ct" }
+typf-shape-hb = { path = "backends/typf-shape-hb" }
+typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb" }
+# Shaping backends
+typf-shape-none = { path = "backends/typf-shape-none" }
+typf-unicode = { path = "crates/typf-unicode" }
 usvg = "0.45"
-flate2 = "1.0"
-
-# Bitmap glyph rendering (PNG decode)
-png = "0.17"
-
-# ICU dependencies (for icu-hb shaping)
-icu = "2.1"
-icu_segmenter = "2.1"
-icu_properties = "2.1"
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true
-
-[profile.release-with-debug]
-inherits = "release"
-strip = false
-debug = true
-
-[profile.bench]
-inherits = "release"
-lto = false
-
-[profile.minimal]
-inherits = "release"
-opt-level = "z"  # Optimize for size
+zeno = "0.3"
 
 # Feature flags for the workspace
 # These are referenced by individual crates
 [workspace.metadata.features]
 # Minimal build with no external dependencies
 minimal = ["shaping-none", "render-opixa", "export-pnm"]
-
 # Default build with common features
 default = ["minimal", "unicode", "fontdb"]
-
 # Full build with all features
 full = [
-    "default",
-    "shaping-hb",
-    "shaping-icu-hb",
-    "render-skia",
-    "render-zeno",
-    "export-png",
-    "export-svg",
-    "export-pdf",
-    "simd",
-    "parallel",
+  "default",
+  "shaping-hb",
+  "shaping-icu-hb",
+  "render-skia",
+  "render-zeno",
+  "export-png",
+  "export-svg",
+  "export-pdf",
+  "simd",
+  "parallel",
 ]
-
 # Shaping backends
 shaping-none = []
 shaping-hb = []
 shaping-icu-hb = ["shaping-hb"]
 shaping-mac = []
 shaping-win = []
-
 # Rendering backends
 render-opixa = []
 render-skia = []
 render-zeno = []
 render-mac = []
 render-win = []
-
 # Export formats
 export-pnm = []
 export-png = []
 export-svg = []
 export-pdf = []
 export-json = []
-
 # Optional features
 unicode = []
 fontdb = []
 simd = []
 parallel = []
-
 # Platform-specific auto-selection
 auto-backend = []
+
+[profile.bench]
+inherits = "release"
+lto = false
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+codegen-units = 1
+
+[profile.minimal]
+inherits = "release"
+opt-level = "z"  # Optimize for size
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false

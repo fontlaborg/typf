@@ -45,7 +45,7 @@ struct BatchJob {
 
 pub fn run(args: &BatchArgs) -> Result<()> {
     if !args.quiet {
-        eprintln!("TYPF Batch Processor v{}", env!("CARGO_PKG_VERSION"));
+        eprintln!("Typf Batch Processor v{}", env!("CARGO_PKG_VERSION"));
         eprintln!();
     }
 

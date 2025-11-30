@@ -1,4 +1,4 @@
-//! CoreGraphics Renderer - Apple's own text rendering muscle, now in TYPF
+//! CoreGraphics Renderer - Apple's own text rendering muscle, now in Typf
 //!
 //! When you're on macOS, why settle for less? This renderer taps directly
 //! into CoreGraphics, the same engine that powers macOS's text rendering.
@@ -61,7 +61,7 @@ impl CoreGraphicsRenderer {
 
     /// Turns raw font bytes into a CoreGraphics-ready font object
     ///
-    /// This is where we bridge TYPF's font loading with CoreGraphics' expectations.
+    /// This is where we bridge Typf's font loading with CoreGraphics' expectations.
     /// The data provider pattern ensures the font data stays alive as long as
     /// CoreGraphics needs it.
     fn create_cg_font(data: &[u8]) -> Result<CGFont> {
@@ -120,7 +120,7 @@ impl CoreGraphicsRenderer {
         (width, height)
     }
 
-    /// Convert TYPF's Color type to CoreGraphics' normalized float format
+    /// Convert Typf's Color type to CoreGraphics' normalized float format
     fn color_to_rgb(color: &Color) -> (f64, f64, f64, f64) {
         (
             color.r as f64 / 255.0,

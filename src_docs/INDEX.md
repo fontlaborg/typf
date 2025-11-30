@@ -1,8 +1,8 @@
-# TypF Documentation
+# Typf Documentation
 
-TypF turns text into pixels, fast. 
+Typf turns text into pixels, fast. 
 
-> Note: TypF is a community project by [FontLab](https://www.fontlab.org/) and is currently published under an [evaluation license](https://github.com/fontlaborg/typf/blob/main/LICENSE).
+> Note: Typf is a community project by [FontLab](https://www.fontlab.org/) and is currently published under an [evaluation license](https://github.com/fontlaborg/typf/blob/main/LICENSE).
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ python -m typf render --text "Hello 世界" --font font.ttf
 
 ## What This Is
 
-TypF turns text into pixels, fast. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.
+Typf turns text into pixels, fast. Six stages: Input → Unicode → Font → Shape → Render → Export. Each stage has multiple backends. You pick what works for your system.
 
 Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font loading.
 
@@ -28,7 +28,7 @@ Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font load
 # Documentation
 
 ## Getting Started
-- [01 - Introduction](01-introduction.md) - Why TypF exists
+- [01 - Introduction](01-introduction.md) - Why Typf exists
 - [02 - Quick Start](02-quick-start.md) - Running in minutes
 - [03 - Architecture](03-architecture-overview.md) - How it works
 - [04 - Installation](04-installation.md) - Setup details
@@ -51,7 +51,7 @@ Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font load
 - [15 - Opixa](14-opixa-renderer.md) - Pure Rust foundation
 - [16 - Zeno](16-zeno-renderer.md) - Vector quality output
 
-## Using TYPF
+## Using Typf
 - [17 - Rust API](18-rust-api.md) - The core Rust library
 - [18 - Python API](19-python-api.md) - Python bindings
 - [19 - CLI](20-cli-interface.md) - Command-line tools
@@ -67,13 +67,13 @@ Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font load
 
 ## How to Read This
 
-New to TYPF? Start with Getting Started.
+New to Typf? Start with Getting Started.
 
 Understanding core concepts? Read Core System.
 
 Need specific backend info? Jump to Shaping or Rendering sections.
 
-Building applications? Check the Using TypF section.
+Building applications? Check the Using Typf section.
 
 Deploying to production? Read the Production section.
 
@@ -91,4 +91,4 @@ Stuck? Check the relevant chapter first. Each section has troubleshooting exampl
 
 ---
 
-TypF: Fast text rendering that works.
+Typf: Fast text rendering that works.

@@ -1,6 +1,6 @@
 //! Backend Comparison Example
 //!
-//! This example demonstrates the differences between TYPF's three rendering backends:
+//! This example demonstrates the differences between Typf's three rendering backends:
 //! - Opixa: Pure Rust grayscale rasterizer (minimal dependencies)
 //! - Skia: High-quality anti-aliased rendering (tiny-skia)
 //! - Zeno: Pure Rust 256x anti-aliased rendering
@@ -48,7 +48,7 @@ impl FontRef for DemoFont {
 }
 
 fn main() {
-    println!("=== TYPF Backend Comparison ===\n");
+    println!("=== Typf Backend Comparison ===\n");
 
     // Create a simple shaping result
     let shaped = ShapingResult {

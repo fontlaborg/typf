@@ -1,8 +1,8 @@
-# TYPF Roadmap
+# Typf Roadmap
 
 ## Vision
 
-TYPF aims to be the most complete Rust text rendering library, supporting all major font formats and glyph types with multiple backend options.
+Typf aims to be the most complete Rust text rendering library, supporting all major font formats and glyph types with multiple backend options.
 
 ---
 

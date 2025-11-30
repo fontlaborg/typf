@@ -9,7 +9,7 @@ pub fn run(args: &InfoArgs) -> Result<()> {
     // If no specific flags, show all info
     let show_all = !args.shapers && !args.renderers && !args.formats;
 
-    println!("TYPF v{}", env!("CARGO_PKG_VERSION"));
+    println!("Typf v{}", env!("CARGO_PKG_VERSION"));
     println!();
 
     if show_all || args.shapers {

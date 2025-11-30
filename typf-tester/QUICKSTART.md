@@ -1,8 +1,8 @@
-# TypF Tester - Quick Start Guide
+# Typf Tester - Quick Start Guide
 
 **Community project by FontLab** - https://www.fontlab.org/
 
-A comprehensive testing and benchmarking tool for TypF text shaping and rendering backends.
+A comprehensive testing and benchmarking tool for Typf text shaping and rendering backends.
 
 ## 5-Minute Quick Start
 
@@ -40,7 +40,7 @@ python typfme.py bench --iterations=50
 cat output/benchmark_summary.md
 ```
 
-That's it! You're now testing TypF backends.
+That's it! You're now testing Typf backends.
 
 ---
 
@@ -148,7 +148,7 @@ cd ../bindings/python
 maturin develop --release --features shaping-hb,export-png,export-svg
 
 # Verify
-python -c "import typf; print(typf.__version__)"
+python -c "import typfpy; print(typfpy.__version__)"
 ```
 
 ### "Font not found" Warnings
@@ -162,7 +162,7 @@ cp /path/to/your/font.ttf fonts/
 
 ### All Backends Show "✗ Not available"
 
-1. Check Python bindings are built: `python -c "import typf; print(dir(typf))"`
+1. Check Python bindings are built: `python -c "import typfpy; print(dir(typfpy))"`
 2. Rebuild if needed (see above)
 3. Verify with: `python typfme.py info`
 

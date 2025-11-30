@@ -1,9 +1,9 @@
 #!/bin/bash
-# Build TYPF for WebAssembly
+# Build Typf for WebAssembly
 
 set -e
 
-echo "Building TYPF for WebAssembly..."
+echo "Building Typf for WebAssembly..."
 
 # Install wasm-pack if not present
 if ! command -v wasm-pack &> /dev/null; then
@@ -31,7 +31,7 @@ cat > ../../pkg/example.html << 'EOF'
 <html>
 <head>
     <meta charset="utf-8">
-    <title>TYPF WASM Example</title>
+    <title>Typf WASM Example</title>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         #canvas { border: 1px solid #ccc; }
@@ -40,7 +40,7 @@ cat > ../../pkg/example.html << 'EOF'
     </style>
 </head>
 <body>
-    <h1>TYPF WebAssembly Demo</h1>
+    <h1>Typf WebAssembly Demo</h1>
 
     <div id="controls">
         <input type="text" id="text" value="Hello WASM!" placeholder="Enter text...">

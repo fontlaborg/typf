@@ -9,7 +9,7 @@ tags:
 
 # Quick Start
 
-Get TypF running in five minutes.
+Get Typf running in five minutes.
 
 ## Install
 
@@ -35,9 +35,12 @@ typfpy render "Hello, 世界!" -f /System/Library/Fonts/Arial.ttf -o hello.png
 
 Python API:
 ```python
-import typf
-result = typf.render_text("Hello, 世界!", "/System/Library/Fonts/Arial.ttf")
-result.save("hello.png")
+from typfpy import Typf, export_image
+
+typf = Typf(shaper="harfbuzz", renderer="opixa")
+image = typf.render_text("Hello, 世界!", "/System/Library/Fonts/Arial.ttf", size=48)
+with open("hello.png", "wb") as f:
+    f.write(export_image(image, format="png"))
 ```
 
 ## Choose Your Backends

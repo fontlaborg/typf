@@ -1,4 +1,4 @@
-//! TYPF meets the web: Text rendering in your browser
+//! Typf meets the web: Text rendering in your browser
 //!
 //! JavaScript calls, Rust speed. Perfect for canvas rendering,
 //! text measurement, and dynamic typography on the web.
@@ -109,7 +109,7 @@ impl WasmRenderer {
         }
     }
 
-    /// Which version of TYPF are you running?
+    /// Which version of Typf are you running?
     #[wasm_bindgen]
     pub fn version(&self) -> String {
         env!("CARGO_PKG_VERSION").to_string()

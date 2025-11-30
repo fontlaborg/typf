@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Benchmark comparison script for TYPF
+# Benchmark comparison script for Typf
 # Compares performance between two git commits
 
 set -e
@@ -67,7 +67,7 @@ fi
 BASELINE=$1
 CURRENT=$2
 
-echo -e "${BLUE}=== TYPF Benchmark Comparison ===${NC}"
+echo -e "${BLUE}=== Typf Benchmark Comparison ===${NC}"
 echo -e "Baseline: ${YELLOW}$BASELINE${NC}"
 echo -e "Current:  ${YELLOW}$CURRENT${NC}"
 echo
@@ -83,25 +83,25 @@ CURRENT_RESULTS="$TEMP_DIR/current.txt"
 run_benchmarks() {
     local commit=$1
     local output_file=$2
-    
+
     echo -e "${BLUE}Running benchmarks for $commit...${NC}"
-    
+
     # Checkout commit (save current state)
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     STASH_RESULT=$(git stash push -m "bench-compare temp stash" 2>&1)
-    
+
     git checkout "$commit" --quiet 2>/dev/null || {
         echo -e "${RED}Error: Could not checkout $commit${NC}"
         exit 1
     }
-    
+
     # Run benchmarks
     if [ "$VERBOSE" = true ]; then
         cargo bench --workspace --all-features 2>&1 | tee "$output_file"
     else
         cargo bench --workspace --all-features > "$output_file" 2>&1
     fi
-    
+
     # Restore previous state
     git checkout "$CURRENT_BRANCH" --quiet
     if [[ "$STASH_RESULT" != "No local changes to save" ]]; then
@@ -125,11 +125,11 @@ echo
 compare_benchmarks() {
     local baseline=$1
     local current=$2
-    
+
     # Look for "time:" patterns in criterion output
     grep -E "time:\s+\[" "$baseline" > "$TEMP_DIR/baseline_times.txt" 2>/dev/null || true
     grep -E "time:\s+\[" "$current" > "$TEMP_DIR/current_times.txt" 2>/dev/null || true
-    
+
     if [ ! -s "$TEMP_DIR/baseline_times.txt" ] || [ ! -s "$TEMP_DIR/current_times.txt" ]; then
         echo -e "${YELLOW}No benchmark timing data found${NC}"
         echo "This might happen if:"
@@ -138,10 +138,10 @@ compare_benchmarks() {
         echo "  - Build failed"
         return
     fi
-    
+
     echo -e "${GREEN}Performance Changes:${NC}"
     echo "------------------------------------------------------------"
-    
+
     # Parse and compare (simplified - real implementation would be more robust)
     python3 << 'PYTHON' 2>/dev/null || echo "Python not available for detailed comparison"
 import re
@@ -154,7 +154,7 @@ def parse_time(line):
         # Convert to nanoseconds
         value = float(match.group(2))
         unit = match.group(3)
-        
+
         units = {'ns': 1, 'µs': 1000, 'us': 1000, 'ms': 1000000, 's': 1000000000}
         return value * units.get(unit, 1)
     return None
@@ -164,14 +164,14 @@ try:
         baseline_lines = f.readlines()
     with open('$TEMP_DIR/current_times.txt') as f:
         current_lines = f.readlines()
-    
+
     for i, (baseline, current) in enumerate(zip(baseline_lines, current_lines)):
         baseline_time = parse_time(baseline)
         current_time = parse_time(current)
-        
+
         if baseline_time and current_time:
             change = ((current_time - baseline_time) / baseline_time) * 100
-            
+
             if abs(change) < 1:
                 status = "✓ Same"
                 color = ""
@@ -181,12 +181,12 @@ try:
             else:
                 status = f"↓ {change:.1f}% slower"
                 color = "\033[0;31m"  # Red
-            
+
             print(f"Benchmark {i+1}: {color}{status}\033[0m")
 except Exception as e:
     print(f"Error comparing: {e}", file=sys.stderr)
 PYTHON
-    
+
     echo "------------------------------------------------------------"
 }
 
@@ -195,7 +195,7 @@ compare_benchmarks "$BASELINE_RESULTS" "$CURRENT_RESULTS"
 # Save to file if requested
 if [ -n "$OUTPUT_FILE" ]; then
     {
-        echo "TYPF Benchmark Comparison"
+        echo "Typf Benchmark Comparison"
         echo "Baseline: $BASELINE"
         echo "Current: $CURRENT"
         echo "Date: $(date)"
@@ -206,7 +206,7 @@ if [ -n "$OUTPUT_FILE" ]; then
         echo "=== Current Results ==="
         cat "$CURRENT_RESULTS"
     } > "$OUTPUT_FILE"
-    
+
     echo
     echo -e "${GREEN}Results saved to: $OUTPUT_FILE${NC}"
 fi

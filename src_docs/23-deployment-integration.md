@@ -1,13 +1,13 @@
 # Deployment & Integration
 
-Deploy TypF in production environments and integrate with existing systems.
+Deploy Typf in production environments and integrate with existing systems.
 
 ## Production Deployment
 
 ### Server Architecture
 
 ```rust
-// Production service with TYPF
+// Production service with Typf
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
@@ -100,9 +100,9 @@ spec:
             memory: "1Gi"
             cpu: "1000m"
         env:
-        - name: TYPF_FONT_CACHE_SIZE
+        - name: Typf_FONT_CACHE_SIZE
           value: "500MB"
-        - name: TYPF_MAX_CONCURRENT
+        - name: Typf_MAX_CONCURRENT
           value: "100"
         volumeMounts:
         - name: fonts
@@ -197,9 +197,9 @@ from fastapi.responses import Response
 import base64
 import typf
 
-app = FastAPI(title="TypF Render Service")
+app = FastAPI(title="Typf Render Service")
 
-# Initialize TypF once
+# Initialize Typf once
 typf_instance = typf.Typf()
 typf_instance.load_font("Roboto-Regular.ttf")
 
@@ -540,8 +540,8 @@ services:
           memory: 1G
           cpus: '1.0'
     environment:
-      - TYPF_REDIS_URL=redis://redis:6379
-      - TYPF_FONT_CACHE_SIZE=200MB
+      - Typf_REDIS_URL=redis://redis:6379
+      - Typf_FONT_CACHE_SIZE=200MB
     depends_on:
       - redis
       - postgres
@@ -719,7 +719,7 @@ impl AppConfig {
         let config = Config::builder()
             .add_source(File::with_name("config/default"))
             .add_source(File::with_name("config/production").required(false))
-            .add_source(Environment::with_prefix("TYPF"))
+            .add_source(Environment::with_prefix("Typf"))
             .build()?;
         
         config.try_deserialize()
@@ -735,4 +735,4 @@ impl AppConfig {
 
 ---
 
-Deploy TypF as a scalable web service with proper monitoring, caching, and security. Use container orchestration for production scaling and implement comprehensive observability to maintain performance.
+Deploy Typf as a scalable web service with proper monitoring, caching, and security. Use container orchestration for production scaling and implement comprehensive observability to maintain performance.

@@ -8,9 +8,9 @@ tags:
 
 Your text breaks. Arabic renders backwards, Hindi characters collide, Thai glyphs disappear.
 
-TypF fixes this.
+Typf fixes this.
 
-## What TypF does
+## What Typf does
 
 Takes broken text and makes it right. Processes Unicode strings through six stages:
 
@@ -27,7 +27,7 @@ Mix and match backends:
 
 **HarfBuzz** shapes text but can't render it. **Skia** renders everything but weighs 10MB. **Platform APIs** lock you to one OS.
 
-TypF gives you the right tool for the job. Use only what you need.
+Typf gives you the right tool for the job. Use only what you need.
 
 ## Performance
 
@@ -45,4 +45,4 @@ TypF gives you the right tool for the job. Use only what you need.
 
 ## Next
 
-[Quick Start](02-quick-start.md) - Get TypF running in 5 minutes
+[Quick Start](02-quick-start.md) - Get Typf running in 5 minutes

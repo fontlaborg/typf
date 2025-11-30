@@ -1,6 +1,6 @@
 # CLI Interface
 
-TYPF's command-line interface provides fast text rendering from the terminal.
+Typf's command-line interface provides fast text rendering from the terminal.
 
 ## Basic Usage
 
@@ -164,10 +164,10 @@ parallel_jobs = 4
 ### Environment Variables
 
 ```bash
-export TYPF_FONT=~/fonts/MyFont.ttf
-export TYPF_SIZE=24
-export TYPF_OUTPUT_DIR=./output
-export TYPF_CONFIG=~/my-typf-config.toml
+export Typf_FONT=~/fonts/MyFont.ttf
+export Typf_SIZE=24
+export Typf_OUTPUT_DIR=./output
+export Typf_CONFIG=~/my-typf-config.toml
 ```
 
 ### Command Precedence
@@ -393,7 +393,7 @@ clean:
 
 ## Migration from v1.x
 
-If you're upgrading from TYPF v1.x, the CLI has changed significantly:
+If you're upgrading from Typf v1.x, the CLI has changed significantly:
 
 ### Command Structure Changes
 

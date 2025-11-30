@@ -9,7 +9,7 @@ tags:
 
 # Installation
 
-Install TypF and start rendering text.
+Install Typf and start rendering text.
 
 ## Quick Install
 
@@ -129,9 +129,9 @@ cargo build --release --features "shaping-hb,render-skia,export-png,export-svg"
 Set defaults via environment:
 
 ```bash
-export TYPF_SHAPER=harfbuzz
-export TYPF_RENDERER=skia
-export TYPF_CACHE_DIR=$HOME/.typf/cache
+export Typf_SHAPER=harfbuzz
+export Typf_RENDERER=skia
+export Typf_CACHE_DIR=$HOME/.typf/cache
 ```
 
 Or create `~/.typf/config.toml`:
@@ -229,4 +229,4 @@ cargo build --release --features shaping-hb,render-skia
 
 ---
 
-TypF is installed. Start rendering text.
+Typf is installed. Start rendering text.

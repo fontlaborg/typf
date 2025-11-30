@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quick visual comparison tool for TYPF renderer outputs.
+"""Quick visual comparison tool for Typf renderer outputs.
 
 Opens all PNG outputs for a given shaper-text combination side-by-side for visual inspection.
 """

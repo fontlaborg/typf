@@ -1,5 +1,5 @@
 #!/bin/bash
-# Memory profiling script for TYPF
+# Memory profiling script for Typf
 # Uses Valgrind (massif) and heaptrack for memory analysis
 # Usage: ./scripts/profile-memory.sh [target]
 
@@ -11,7 +11,7 @@ PROFILE_DIR="target/profile"
 # Create profile directory
 mkdir -p "$PROFILE_DIR"
 
-echo "=== TYPF Memory Profiling ==="
+echo "=== Typf Memory Profiling ==="
 echo "Target: $TARGET"
 echo ""
 

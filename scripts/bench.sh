@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Simple benchmark runner for TYPF
+# Simple benchmark runner for Typf
 
 set -e
 
-echo "Running TYPF benchmarks..."
+echo "Running Typf benchmarks..."
 echo
 
 # Run all benchmarks

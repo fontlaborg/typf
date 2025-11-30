@@ -1,4 +1,4 @@
-//! Where rendered text leaves the building: export formats for TYPF
+//! Where rendered text leaves the building: export formats for Typf
 //!
 //! The final stage of the pipeline. Turns your carefully rendered glyphs
 //! into files, streams, or whatever format your application needs.

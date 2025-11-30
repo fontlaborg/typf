@@ -4,7 +4,7 @@ use thiserror::Error;
 
 pub type Result<T, E = TypfError> = std::result::Result<T, E>;
 
-/// Every failure in TYPF has a story to tell
+/// Every failure in Typf has a story to tell
 #[derive(Debug, Error)]
 pub enum TypfError {
     #[error("Feature not implemented: {0}")]

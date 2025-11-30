@@ -1,6 +1,6 @@
-//! TYPF Benchmark Tool - Comprehensive performance testing
+//! Typf Benchmark Tool - Comprehensive performance testing
 //!
-//! This tool performs extensive benchmarking of all compiled TYPF backends
+//! This tool performs extensive benchmarking of all compiled Typf backends
 //! across various fonts, sizes, texts, and parameter combinations. Results
 //! are output progressively to ensure crash recovery.
 
@@ -140,7 +140,7 @@ impl BenchmarkConfig {
 /// Command line arguments
 #[derive(Parser)]
 #[command(name = "typf-bench")]
-#[command(about = "Comprehensive TYPF benchmarking tool")]
+#[command(about = "Comprehensive Typf benchmarking tool")]
 struct Args {
     /// Directory containing font files (.ttf, .otf)
     #[arg(short = 'i', long = "input_dir")]
@@ -533,7 +533,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let config = BenchmarkConfig::get(args.level);
 
-    println!("{}", "TYPF Comprehensive Benchmark Tool".bold().cyan());
+    println!("{}", "Typf Comprehensive Benchmark Tool".bold().cyan());
     println!("Input directory: {} | Level: {}", args.input_dir, args.level);
 
     let runner = BenchmarkRunner::new(&args.input_dir, config)?;

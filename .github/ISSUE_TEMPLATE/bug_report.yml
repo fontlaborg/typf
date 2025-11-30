@@ -80,8 +80,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: TYPF Version
-      description: Output of `cargo tree | grep typf` or Python `import typf; print(typf.__version__)`
+      label: Typf Version
+      description: Output of `cargo tree | grep typf` or Python `import typfpy; print(typfpy.__version__)`
       placeholder: "2.0.0-dev"
     validations:
       required: true

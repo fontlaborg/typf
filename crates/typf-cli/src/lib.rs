@@ -1,6 +1,6 @@
-//! Command-line interface for TYPF text rendering
+//! Command-line interface for Typf text rendering
 //!
-//! This crate provides the CLI that turns TYPF's powerful pipeline
+//! This crate provides the CLI that turns Typf's powerful pipeline
 //! into commands you can run from your terminal or script.
 
 /// Simple addition function for demonstration

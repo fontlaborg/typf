@@ -1,6 +1,6 @@
 # Python API
 
-TYPF's Python bindings bring high-performance text rendering to Python with the same speed as the Rust implementation.
+Typf's Python bindings bring high-performance text rendering to Python with the same speed as the Rust implementation.
 
 ## Quick Start
 
@@ -327,7 +327,7 @@ def render_batch(texts: List[str], font_path: str) -> List[typf.RenderResult]:
     return results
 
 # Usage
-texts = ["Hello", "World", "TYPF", "Python"]
+texts = ["Hello", "World", "Typf", "Python"]
 results = render_batch(texts, "Roboto-Regular.ttf")
 ```
 
@@ -358,7 +358,7 @@ def parallel_render(texts: List[str], font_path: str, workers: int = 4):
 try:
     result = renderer.render_text("Hello", "nonexistent.ttf")
 except typf.TypfError as e:
-    print(f"TypF error: {e}")
+    print(f"Typf error: {e}")
     
 # Specific error types
 try:

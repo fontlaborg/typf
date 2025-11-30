@@ -1,6 +1,6 @@
-# Contributing to TYPF
+# Contributing to Typf
 
-How to contribute code, documentation, and improvements to TYPF.
+How to contribute code, documentation, and improvements to Typf.
 
 ## Code of Conduct
 
@@ -37,7 +37,7 @@ cargo run --example harfbuzz --features shaping-hb
 
 ### 1. Read Documentation
 
-- `README.md` - What TypF does
+- `README.md` - What Typf does
 - `ARCHITECTURE.md` - How it works
 - `PLAN.md` - What we're building
 - `PLAN/00.md` - Technical details

@@ -15,7 +15,7 @@ use typf_core::{
 
 /// Individual glyph data that matches HarfBuzz's JSON output format
 ///
-/// Use this to compare TYPF's output with HarfBuzz reference implementations
+/// Use this to compare Typf's output with HarfBuzz reference implementations
 /// or to feed glyph data into custom rendering pipelines.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HbGlyphInfo {
@@ -86,7 +86,7 @@ impl Renderer for JsonRenderer {
         _font: Arc<dyn FontRef>,
         _params: &RenderParams,
     ) -> Result<RenderOutput> {
-        // Transform TYPF's PositionedGlyph into HarfBuzz-compatible format
+        // Transform Typf's PositionedGlyph into HarfBuzz-compatible format
         let glyphs: Vec<HbGlyphInfo> = shaped
             .glyphs
             .iter()
@@ -98,7 +98,7 @@ impl Renderer for JsonRenderer {
                     g: g.id,
                     cl: g.cluster as usize,
                     ax: (g.advance * scale) as i32,
-                    ay: 0, // TYPF doesn't yet support vertical advances
+                    ay: 0, // Typf doesn't yet support vertical advances
                     dx: (g.x * scale) as i32,
                     dy: (g.y * scale) as i32,
                 }

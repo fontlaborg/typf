@@ -5,7 +5,7 @@
 //! access through variation axes. Think of it as morphing between different
 //! font styles in real-time.
 //!
-//! This example shows how TYPF exposes that power through variation parameters.
+//! This example shows how Typf exposes that power through variation parameters.
 
 use std::sync::Arc;
 use typf_core::{

@@ -1,6 +1,6 @@
-//! TYPF: Text becomes art through six carefully crafted stages
+//! Typf: Text becomes art through six carefully crafted stages
 //!
-//! Every character tells a story. TYPF tells it through:
+//! Every character tells a story. Typf tells it through:
 //! 1. Input parsing - Raw text finds structure
 //! 2. Unicode processing - Scripts normalize, language emerges
 //! 3. Font selection - The right font finds each character
@@ -8,7 +8,7 @@
 //! 5. Glyph rendering - Positions become pixels or paths
 //! 6. Export - The final format emerges
 //!
-//! ## Why TYPF?
+//! ## Why Typf?
 //!
 //! - **Swap any stage** - Need a different shaper? Just plug it in
 //! - **Blazing fast** - SIMD and multi-level caching keep you responsive

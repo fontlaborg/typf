@@ -9,7 +9,7 @@ tags:
 
 # Memory Management
 
-Fast text rendering needs smart memory use. Here's how TypF handles it.
+Fast text rendering needs smart memory use. Here's how Typf handles it.
 
 ## Font Data Strategy
 

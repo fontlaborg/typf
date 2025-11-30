@@ -1,48 +1,60 @@
 [package]
 name = "typf-py"
 version.workspace = true
-edition.workspace = true
 authors.workspace = true
-license.workspace = true
+edition.workspace = true
+description = "Python bindings for Typf text rendering pipeline"
 repository.workspace = true
-description = "Python bindings for TYPF text rendering pipeline"
+license.workspace = true
 
 [lib]
-name = "typf"
 crate-type = ["cdylib"]
+name = "typf"
 
 [dependencies]
 pyo3 = { version = "0.22", features = ["extension-module"] }
 typf = { workspace = true, features = ["default"] }
 typf-core = { workspace = true }
+typf-export = { workspace = true }
+typf-export-svg = { path = "../../crates/typf-export-svg", optional = true }
 typf-fontdb = { workspace = true }
-typf-shape-none = { workspace = true }
-typf-shape-hb = { workspace = true, optional = true }
-typf-shape-ct = { workspace = true, optional = true }
-typf-shape-icu-hb = { workspace = true, optional = true }
-typf-render-json = { workspace = true, optional = true }
-typf-render-opixa = { workspace = true, optional = true }
-typf-render-cg = { workspace = true, optional = true }
-typf-render-skia = { workspace = true, optional = true }
-typf-render-zeno = { workspace = true, optional = true }
 typf-os = { workspace = true, optional = true }
 typf-os-mac = { workspace = true, optional = true }
 typf-os-win = { workspace = true, optional = true }
-typf-export = { workspace = true }
-typf-export-svg = { path = "../../crates/typf-export-svg", optional = true }
+typf-render-cg = { workspace = true, optional = true }
+typf-render-json = { workspace = true, optional = true }
+typf-render-opixa = { workspace = true, optional = true }
+typf-render-skia = { workspace = true, optional = true }
+typf-render-zeno = { workspace = true, optional = true }
+typf-shape-ct = { workspace = true, optional = true }
+typf-shape-hb = { workspace = true, optional = true }
+typf-shape-icu-hb = { workspace = true, optional = true }
+typf-shape-none = { workspace = true }
 
 [features]
-default = ["shaping-hb", "export-png", "export-svg", "render-json", "render-opixa", "render-cg", "render-skia", "render-zeno", "shaping-ct", "shaping-icu-hb", "linra-mac"]
-shaping-hb = ["typf-shape-hb", "typf/shaping-hb"]
-shaping-ct = ["typf-shape-ct", "typf/shaping-ct"]
-shaping-icu-hb = ["typf-shape-icu-hb", "typf/shaping-icu-hb"]
-render-json = ["typf-render-json", "typf/render-json"]
-render-opixa = ["typf-render-opixa", "typf/render-opixa"]
-render-cg = ["typf-render-cg", "typf/render-cg"]
-render-skia = ["typf-render-skia", "typf/render-skia"]
-render-zeno = ["typf-render-zeno", "typf/render-zeno"]
+default = [
+  "export-png",
+  "export-svg",
+  "linra-mac",
+  "render-cg",
+  "render-json",
+  "render-opixa",
+  "render-skia",
+  "render-zeno",
+  "shaping-ct",
+  "shaping-hb",
+  "shaping-icu-hb"
+]
 export-png = ["typf/export-png"]
-export-svg = ["typf/export-svg", "typf-export-svg"]
+export-svg = ["typf-export-svg", "typf/export-svg"]
 linra = ["typf-os"]
 linra-mac = ["linra", "typf-os-mac"]
 linra-win = ["linra", "typf-os-win"]
+render-cg = ["typf-render-cg", "typf/render-cg"]
+render-json = ["typf-render-json", "typf/render-json"]
+render-opixa = ["typf-render-opixa", "typf/render-opixa"]
+render-skia = ["typf-render-skia", "typf/render-skia"]
+render-zeno = ["typf-render-zeno", "typf/render-zeno"]
+shaping-ct = ["typf-shape-ct", "typf/shaping-ct"]
+shaping-hb = ["typf-shape-hb", "typf/shaping-hb"]
+shaping-icu-hb = ["typf-shape-icu-hb", "typf/shaping-icu-hb"]

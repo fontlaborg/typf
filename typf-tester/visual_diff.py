@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Visual Diff Tool for TYPF Renderers
+Visual Diff Tool for Typf Renderers
 
 Creates side-by-side comparisons of PNG outputs from different renderers
 to help identify visual differences and quality issues.
@@ -362,7 +362,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Visual diff tool for TYPF renders with pixel-level analysis"
+        description="Visual diff tool for Typf renders with pixel-level analysis"
     )
     parser.add_argument(
         "--shaper",

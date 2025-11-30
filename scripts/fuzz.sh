@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fuzz testing script for TYPF
+# Fuzz testing script for Typf
 # Usage: ./scripts/fuzz.sh [target] [duration_seconds]
 
 set -e
@@ -7,7 +7,7 @@ set -e
 TARGET="${1:-fuzz_unicode_process}"
 DURATION="${2:-60}"
 
-echo "=== TYPF Fuzz Testing ==="
+echo "=== Typf Fuzz Testing ==="
 echo "Target: $TARGET"
 echo "Duration: ${DURATION}s"
 echo ""

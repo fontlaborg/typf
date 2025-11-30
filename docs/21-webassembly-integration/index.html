@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="TypF: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings">
+        <meta name="description" content="Typf: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings">
       
       
       
@@ -27,7 +27,7 @@
     
     
       
-        <title>WebAssembly Integration - TypF</title>
+        <title>WebAssembly Integration - Typf</title>
       
     
     
@@ -128,7 +128,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="https://fontlab.org/typf/" title="TypF" class="md-header__button md-logo" aria-label="TypF" data-md-component="logo">
+    <a href="https://fontlab.org/typf/" title="Typf" class="md-header__button md-logo" aria-label="Typf" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -142,7 +142,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            TypF
+            Typf
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -247,13 +247,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="https://fontlab.org/typf/" title="TypF" class="md-nav__button md-logo" aria-label="TypF" data-md-component="logo">
+    <a href="https://fontlab.org/typf/" title="Typf" class="md-nav__button md-logo" aria-label="Typf" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
 
     </a>
-    TypF
+    Typf
   </label>
   
     <div class="md-nav__source">
@@ -2609,11 +2609,11 @@
 
 
 <h1 id="webassembly-integration">WebAssembly Integration<a class="headerlink" href="#webassembly-integration" title="Permanent link">&para;</a></h1>
-<p>Run TypF in browsers and JavaScript environments with WebAssembly.</p>
+<p>Run Typf in browsers and JavaScript environments with WebAssembly.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="language-javascript highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Typf</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@typf/wasm&#39;</span><span class="p">;</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">// Initialize TYPF</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">// Initialize Typf</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">typf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Typf</span><span class="p">.</span><span class="nx">create</span><span class="p">();</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1">// Render text</span>
@@ -3186,7 +3186,7 @@
 </span><span id="__span-25-13"><a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="sb">`Memory delta: </span><span class="si">${</span><span class="nx">memAfter</span><span class="p">.</span><span class="nx">used</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">memBefore</span><span class="p">.</span><span class="nx">used</span><span class="si">}</span><span class="sb"> bytes`</span><span class="p">);</span>
 </span></code></pre></div>
 <hr />
-<p>WebAssembly brings TYPF's text rendering to browsers with near-native performance. Use it for dynamic typography tools, real-time text effects, and font-intensive web applications.</p>
+<p>WebAssembly brings Typf's text rendering to browsers with near-native performance. Use it for dynamic typography tools, real-time text effects, and font-intensive web applications.</p>
 
 
 

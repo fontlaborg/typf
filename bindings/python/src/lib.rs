@@ -1,4 +1,4 @@
-//! Python bindings - TYPF's power, packaged for Python developers
+//! Python bindings - Typf's power, packaged for Python developers
 //!
 //! This is where Rust meets Python: high-performance text shaping and rendering
 //! that feels native in Python code. We handle the complexity of font loading,
@@ -22,7 +22,7 @@ use typf_fontdb::Font;
 
 // Note: Skia and Zeno renderers not yet available in workspace
 
-/// The main TYPF interface that Python developers will love
+/// The main Typf interface that Python developers will love
 ///
 /// This class hides all the Rust complexity behind a simple Python interface.
 /// Pick your shaper, pick your renderer, and start rendering beautiful text.
@@ -34,7 +34,7 @@ struct Typf {
 
 #[pymethods]
 impl Typf {
-    /// Creates your TYPF rendering pipeline
+    /// Creates your Typf rendering pipeline
     ///
     /// Choose your weapons:
     /// - Shapers: "none" (debug), "harfbuzz" (professional), "coretext" (macOS), "icu-hb" (Unicode perfect)
@@ -522,7 +522,7 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
     }
 }
 
-/// Brings TYPF's power into the Python ecosystem
+/// Brings Typf's power into the Python ecosystem
 ///
 /// This is the bridge that makes all our Rust magic available to Python.
 /// We expose classes, functions, and version info so Python developers

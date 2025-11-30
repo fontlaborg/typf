@@ -1,4 +1,4 @@
-//! Where text becomes understandable: Unicode processing for TYPF
+//! Where text becomes understandable: Unicode processing for Typf
 //!
 //! The second stage of the pipeline transforms raw strings into structured
 //! runs that understand direction, scripts, and boundaries. Without this stage,

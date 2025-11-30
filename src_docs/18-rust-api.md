@@ -1,6 +1,6 @@
 # Rust API
 
-TYPF's Rust API provides high-performance text rendering with zero-copy operations and compile-time safety.
+Typf's Rust API provides high-performance text rendering with zero-copy operations and compile-time safety.
 
 ## Quick Start
 
@@ -391,7 +391,7 @@ Render multiple texts concurrently.
 use rayon::prelude::*;
 
 // Parallel batch rendering
-let texts = vec!["Hello", "World", "TYPF"];
+let texts = vec!["Hello", "World", "Typf"];
 let results: Vec<Result<RenderOutput>> = texts
     .par_iter()
     .map(|text| pipeline.render_text(text, "font.ttf"))
@@ -500,7 +500,7 @@ fn main() -> Result<()> {
     };
     
     let result = pipeline.render_with_options(
-        "Hello TYPF!", 
+        "Hello Typf!", 
         "Roboto-Regular.ttf",
         &options
     )?;

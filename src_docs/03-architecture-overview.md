@@ -9,7 +9,7 @@ tags:
 
 # Architecture Overview
 
-TypF turns text into pixels through six stages.
+Typf turns text into pixels through six stages.
 
 ## The Pipeline
 
@@ -33,7 +33,7 @@ Each stage does one job:
 
 ## Backends
 
-TypF plugs different engines into each stage:
+Typf plugs different engines into each stage:
 
 **Shaping Backends:**
 - HarfBuzz (cross-platform)

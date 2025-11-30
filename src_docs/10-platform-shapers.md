@@ -70,7 +70,7 @@ result = renderer.render_text("مرحبا بالعالم", "Arial.ttf")
 
 ## Automatic Selection
 
-TypF picks the right shaper for your platform:
+Typf picks the right shaper for your platform:
 
 ```rust
 pub fn create_platform_shaper() -> Result<Box<dyn Shaper>> {
@@ -163,4 +163,4 @@ Switching from HarfBuzz to platform shapers:
 
 ---
 
-Platform shapers give you better performance and native features while keeping TYPF's cross-platform compatibility.
+Platform shapers give you better performance and native features while keeping Typf's cross-platform compatibility.

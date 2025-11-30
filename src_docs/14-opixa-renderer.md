@@ -1,6 +1,6 @@
 # Opixa Renderer
 
-Opixa rasterizes glyph outlines with pure Rust. Simple, fast, and dependency-free - the foundation of TYPF's minimal build.
+Opixa rasterizes glyph outlines with pure Rust. Simple, fast, and dependency-free - the foundation of Typf's minimal build.
 
 ## What Opixa Does
 

@@ -3,18 +3,18 @@ name = "typf-shape-icu-hb"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
+description = "ICU + HarfBuzz shaping backend for Typf"
 repository.workspace = true
-description = "ICU + HarfBuzz shaping backend for TYPF"
+license.workspace = true
 
 [dependencies]
-typf-core = { workspace = true }
 harfbuzz_rs = { workspace = true }
-unicode-normalization = "0.1"
-thiserror = { workspace = true }
 log = { workspace = true }
-parking_lot = { workspace = true }
 lru = { workspace = true }
+parking_lot = { workspace = true }
+thiserror = { workspace = true }
+typf-core = { workspace = true }
+unicode-normalization = "0.1"
 
 [dev-dependencies]
 env_logger = "0.11"

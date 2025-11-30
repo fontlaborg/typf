@@ -1,4 +1,4 @@
-//! SVG export support for TYPF
+//! SVG export support for Typf
 //!
 //! This module provides SVG vector output from shaped text.
 //!

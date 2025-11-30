@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SVG vs PNG Benchmark Tool for TYPF
+SVG vs PNG Benchmark Tool for Typf
 
 Compares performance and file sizes between SVG vector output
 and PNG bitmap output across all renderers.
@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "bindings" / "python"))
 try:
     import typf
 except ImportError:
-    print("❌ TYPF not available. Build with: cd bindings/python && maturin develop")
+    print("❌ Typf not available. Build with: cd bindings/python && maturin develop")
     sys.exit(1)
 
 
@@ -138,7 +138,7 @@ class SVGBenchmark:
     def run(self):
         """Run comprehensive SVG vs PNG benchmark."""
         print("=" * 100)
-        print("TYPF SVG vs PNG BENCHMARK")
+        print("Typf SVG vs PNG BENCHMARK")
         print("=" * 100)
         print(f"Text: {self.sample_text}")
         print(f"Font: {self.font_path.name}")

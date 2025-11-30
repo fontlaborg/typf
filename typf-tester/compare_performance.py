@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Performance Comparison Tool for TYPF Renderers
+Performance Comparison Tool for Typf Renderers
 
 Analyzes benchmark data and creates visual comparisons of renderer performance.
 """

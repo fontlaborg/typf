@@ -1,4 +1,4 @@
-//! Push TYPF to its limits - find bottlenecks before your users do
+//! Push Typf to its limits - find bottlenecks before your users do
 //!
 //! This benchmark suite measures every part of the rendering pipeline under stress.
 //! We test text shaping speeds, rendering throughput, cache efficiency, and SIMD
@@ -25,7 +25,7 @@ use typf_render_opixa::OpixaRenderer;
 use typf_export::PnmExporter;
 use typf_core::traits::{Shaper, Renderer, Exporter};
 
-/// Measure how fast TYPF converts characters to positioned glyphs
+/// Measure how fast Typf converts characters to positioned glyphs
 ///
 /// Shaping is the computational heart of text rendering. We test both the simple
 /// NoneShaper and the professional HarfBuzz shaper across different text lengths

@@ -1,13 +1,13 @@
 # WebAssembly Integration
 
-Run TypF in browsers and JavaScript environments with WebAssembly.
+Run Typf in browsers and JavaScript environments with WebAssembly.
 
 ## Quick Start
 
 ```javascript
 import { Typf } from '@typf/wasm';
 
-// Initialize TYPF
+// Initialize Typf
 const typf = await Typf.create();
 
 // Render text
@@ -668,4 +668,4 @@ console.log(`Memory delta: ${memAfter.used - memBefore.used} bytes`);
 
 ---
 
-WebAssembly brings TYPF's text rendering to browsers with near-native performance. Use it for dynamic typography tools, real-time text effects, and font-intensive web applications.
+WebAssembly brings Typf's text rendering to browsers with near-native performance. Use it for dynamic typography tools, real-time text effects, and font-intensive web applications.

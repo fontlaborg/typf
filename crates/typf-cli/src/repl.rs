@@ -1,4 +1,4 @@
-//! Interactive text rendering: explore TYPF in real-time
+//! Interactive text rendering: explore Typf in real-time
 //!
 //! Perfect for experimenting with fonts, testing text samples,
 //! and understanding how the pipeline works step by step.
@@ -14,7 +14,7 @@ use rustyline::DefaultEditor;
 
 #[cfg(feature = "repl")]
 pub fn run_repl() -> Result<(), Box<dyn std::error::Error>> {
-    println!("{}", "TYPF Interactive REPL v2.0".bold().cyan());
+    println!("{}", "Typf Interactive REPL v2.0".bold().cyan());
     println!("{}", "Type 'help' for commands, 'exit' to quit".dimmed());
     println!();
 
@@ -163,7 +163,7 @@ fn show_status(context: &ReplContext) {
 
 #[cfg(feature = "repl")]
 fn show_info() {
-    println!("{}", "TYPF System Information:".bold().underline());
+    println!("{}", "Typf System Information:".bold().underline());
     println!("  Version:    {}", env!("CARGO_PKG_VERSION").cyan());
     println!("  Backends:");
     println!("    Shaping:  {}", "none, harfbuzz (if compiled)".dimmed());

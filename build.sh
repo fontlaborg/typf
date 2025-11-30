@@ -1,11 +1,11 @@
 #!/bin/bash
-# Build script for TYPF v2.0
+# Build script for Typf v2.0
 # Community project by FontLab https://www.fontlab.org/
 
 cd "$(dirname "$0")"
 set -e
 
-echo "Building TYPF v2.0 workspace (excluding Python bindings)..."
+echo "Building Typf v2.0 workspace (excluding Python bindings)..."
 cargo build --release --workspace --exclude typf-py
 
 echo ""
@@ -57,14 +57,14 @@ echo "Building comprehensive documentation..."
 echo ""
 zensical build
 
-echo "Running TYPF tester..."
+echo "Running Typf tester..."
 echo ""
 python typf-tester/typfme.py render
 echo ""
 python typf-tester/typfme.py bench
 
 echo ""
-echo "Running TYPF benchmark tool..."
+echo "Running Typf benchmark tool..."
 echo ""
 # Create a simple font directory for testing if none exists
 if [ ! -d "benchmark-fonts" ]; then

@@ -3,31 +3,29 @@ name = "typf-render-color"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license.workspace = true
+description = "Color glyph renderer for Typf (COLR v0/v1, SVG, sbix/CBDT bitmap)"
 repository.workspace = true
-description = "Color glyph renderer for TYPF (COLR v0/v1, SVG, sbix/CBDT bitmap)"
-keywords = ["font", "color", "emoji", "opentype", "colr"]
+license.workspace = true
+keywords = ["color", "colr", "emoji", "font", "opentype"]
 categories = ["graphics", "rendering", "text-processing"]
+
+[dependencies]
+flate2 = { workspace = true, optional = true }
+log = { workspace = true }
+# Bitmap glyph support (optional)
+png = { workspace = true, optional = true }
+# SVG glyph support (optional)
+resvg = { workspace = true, optional = true }
+skrifa = { workspace = true }
+tiny-skia = { workspace = true }
+typf-core = { workspace = true }
+usvg = { workspace = true, optional = true }
 
 [features]
 default = ["colr"]
+# Bitmap glyph support for sbix (Apple) and CBDT/CBLC (Google) tables
+bitmap = ["dep:png"]
 # COLR v0/v1 layered color glyphs with gradients and compositing
 colr = []
 # SVG table glyph rendering via resvg (handles gzip compression)
-svg = ["dep:resvg", "dep:usvg", "dep:flate2"]
-# Bitmap glyph support for sbix (Apple) and CBDT/CBLC (Google) tables
-bitmap = ["dep:png"]
-
-[dependencies]
-typf-core = { workspace = true }
-skrifa = { workspace = true }
-tiny-skia = { workspace = true }
-log = { workspace = true }
-
-# SVG glyph support (optional)
-resvg = { workspace = true, optional = true }
-usvg = { workspace = true, optional = true }
-flate2 = { workspace = true, optional = true }
-
-# Bitmap glyph support (optional)
-png = { workspace = true, optional = true }
+svg = ["dep:flate2", "dep:resvg", "dep:usvg"]

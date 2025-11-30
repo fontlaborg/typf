@@ -25,7 +25,7 @@ fn main() {
         include a broad range, covering all aspects of letter design and application, both \
         mechanical (typesetting, type design, and typefaces) and manual (handwriting and calligraphy).";
 
-    println!("TYPF Long Text Handling Examples");
+    println!("Typf Long Text Handling Examples");
     println!("{}", "=".repeat(80));
     println!("\nText length: {} characters\n", long_text.len());
 

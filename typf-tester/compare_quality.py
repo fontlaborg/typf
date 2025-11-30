@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Renderer Quality Comparison Tool for TYPF
+Renderer Quality Comparison Tool for Typf
 
 Analyzes PNG outputs to compare rendering quality across different backends.
 Provides metrics for:

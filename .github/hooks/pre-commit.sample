@@ -1,5 +1,5 @@
 #!/bin/sh
-# TYPF pre-commit hook
+# Typf pre-commit hook
 # To install: cp .github/hooks/pre-commit.sample .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 
 set -e

@@ -7,7 +7,7 @@ use typf_fontdb::Font;
 use typf_shape_hb::HarfBuzzShaper;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("TYPF HarfBuzz Example");
+    println!("Typf HarfBuzz Example");
     println!("=====================");
 
     // Load a font
@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let test_texts = [
         "Hello, World!",
         "Typography is fun!",
-        "TYPF with HarfBuzz",
+        "Typf with HarfBuzz",
         "1234567890",
         "kerning: AV Ta We",
     ];

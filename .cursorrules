@@ -2,12 +2,12 @@
 
 ## 1. Quick-Start Checklist
 
-- We’ve created ./typf-tester/typfme.py that uses a test font and into @./typf-tester/ folder it’s supposed to output a renderings using ALL shaping and render backends, as both PNG and SVG. 
+- We’ve created ./typf-tester/typfme.py that uses a test font and into @./typf-tester/ folder it’s supposed to output a renderings using ALL shaping and render backends, as both PNG and SVG.
 - Make sure that 'typfme.py' supports ALL shaping and render backends. Make sure the Python bindings support ALL shaping and render background. Make sure that the Rust CLI supports ALL shaping and render backends.
-- The typefme.py tool should also perform benchmarking of all backend combos across many sample texts and font sizes and produce a nice JSON report and an extremely compact Markdown table into the @./typf-tester/ folder.  
-- Use the 'typfme.py' tool and inspect the outputs to debug and improve the shaping and rendering of all backgrounds. Work in a continuous feedback loop. 
+- The typefme.py tool should also perform benchmarking of all backend combos across many sample texts and font sizes and produce a nice JSON report and an extremely compact Markdown table into the @./typf-tester/ folder.
+- Use the 'typfme.py' tool and inspect the outputs to debug and improve the shaping and rendering of all backgrounds. Work in a continuous feedback loop.
 - You must actually RUN ./build.sh (which at the end runs ./typfme.py) to verify that the changes you make are working
-- Inspect the JSONs, PNGs and SVGs in @./typf-tester/output/ folder to debug & improve. Look at bitmaps AND vectors and JSON data, not just one of them. 
+- Inspect the JSONs, PNGs and SVGs in @./typf-tester/output/ folder to debug & improve. Look at bitmaps AND vectors and JSON data, not just one of them.
 - A common problem with shaping and rendering may be size (scale) mismatch, or that the rendering may be upside down (coordinate system mismatch).
 
 **For every task, follow this baseline:**
@@ -26,10 +26,10 @@
 ## 2. Normative Language Convention
 
 - **MUST** – Hard requirements, no exceptions
-- **SHOULD** – Default behavior; deviate only with clear justification  
+- **SHOULD** – Default behavior; deviate only with clear justification
 - **MAY** – Optional practices or suggestions
 
-## 3. TypF Workspace Snapshot (Rust + Python)
+## 3. Typf Workspace Snapshot (Rust + Python)
 
 **Scope Sentence**: Deliver a six-stage, dual-backend text pipeline with selective builds and first-class PyO3 bindings.
 
@@ -91,7 +91,7 @@ Before ANY response, apply this three-phase thinking:
 - **ALWAYS** challenge incorrect statements immediately with "Actually, that's incorrect because..."
 - **MUST** state confidence explicitly:
   - "I'm certain (>95% confidence)"
-  - "I believe (70-95% confidence)" 
+  - "I believe (70-95% confidence)"
   - "This is an educated guess (<70% confidence)"
 - When <90% confident, **MUST** search before answering
 - LLMs can hallucinate – treat all outputs (including your own) with skepticism
@@ -101,7 +101,7 @@ Before ANY response, apply this three-phase thinking:
 After drafting any solution:
 
 1. Say "Wait, but..." and critique ruthlessly
-2. Check: Did I add unnecessary complexity? Are there untested assumptions? 
+2. Check: Did I add unnecessary complexity? Are there untested assumptions?
 3. Revise based on the critique before delivering
 
 ### 4.4. 1.4 Context Awareness (SHOULD)
@@ -281,7 +281,7 @@ uvx ruff check --fix . && uvx ruff format . && pytest
 - Enable integer overflow checks in debug
 - Validate ALL external input
 - Use `cargo-audit` in CI
-- Prefer safe concurrency primitives (`Arc`, `Mutex`) 
+- Prefer safe concurrency primitives (`Arc`, `Mutex`)
 - Use vetted crypto crates only (`ring`, `rustls`)
 
 ### 7.3. 4.3 Web Development
@@ -291,7 +291,7 @@ uvx ruff check --fix . && uvx ruff format . && pytest
 ##### Toolchain (MUST)
 
 - **Package Manager**: `pnpm` (not npm, not yarn)
-- **Bundler**: `vite` 
+- **Bundler**: `vite`
 - **TypeScript**: `strict: true` in tsconfig.json
 - **Framework**: Next.js (React) or SvelteKit (Svelte)
 - **Styling**: Tailwind CSS
@@ -342,7 +342,7 @@ uvx ruff check --fix . && uvx ruff format . && pytest
 - **PLAN.md** – Detailed future goals and architecture
 - **TODO.md** – Flat task list from PLAN.md with status:
   - `[ ]` Not started
-  - `[x]` Completed  
+  - `[x]` Completed
   - `[~]` In progress
   - `[-]` Blocked
   - `[!]` High priority
@@ -446,7 +446,7 @@ Define scope in ONE sentence. Reject EVERYTHING else.
 ### 11.2. RED LIST – NEVER Add Unless Explicitly Required:
 
 - Analytics/metrics/telemetry
-- Performance monitoring/profiling  
+- Performance monitoring/profiling
 - Production error frameworks
 - Advanced security beyond input validation
 - Health monitoring/diagnostics
@@ -469,7 +469,7 @@ Define scope in ONE sentence. Reject EVERYTHING else.
 ### 11.4. Complexity Limits (MUST)
 
 - Simple utilities: 1-3 commands
-- Standard tools: 4-7 commands  
+- Standard tools: 4-7 commands
 - Over 8 commands: Probably over-engineered
 - Could fit in one file? Keep it in one file
 - Weekend rewrite test: If it takes longer, it's too complex
@@ -496,11 +496,11 @@ When writing documentation or commentary:
 
 ---
 
-## 13. X. TYPF-SPECIFIC REFERENCE MAPPINGS
+## 13. X. Typf-SPECIFIC REFERENCE MAPPINGS
 
-When implementing TypF, reference the old-typf codebase strategically:
+When implementing Typf, reference the old-typf codebase strategically:
 
-### 13.1. Old-TypF Codebase Locations
+### 13.1. Old-Typf Codebase Locations
 
 **Stage 2: Unicode Processing (REUSE AS-IS)**
 - `old-typf/crates/typf-unicode/src/lib.rs` – Complete, production-ready implementation
@@ -537,7 +537,7 @@ When implementing TypF, reference the old-typf codebase strategically:
 4. **Memory Management**: Box::leak() for font data caching (intentional, documented)
 5. **Concurrency**: Arc<T> + DashMap for thread-safe sharing; parking_lot for locks
 
-### 13.3. Old-TypF Dependencies Already in Use
+### 13.3. Old-Typf Dependencies Already in Use
 
 All required dependencies are already proven in old-typf:
 - `read-fonts` + `skrifa` for font parsing (NOT ttf-parser)
@@ -566,7 +566,7 @@ For each stage (PLAN/01-06):
 
 ---
 
-## 14. X. RUST IMPLEMENTATION MANDATES (TypF V2)
+## 14. X. RUST IMPLEMENTATION MANDATES (Typf V2)
 
 - **Workspace Discipline (MUST)**: Keep the multi-crate layout from `/Users/adam/Developer/llm/2511/typf-v2b` intact—`typf`, `typf-core`, `typf-input`, `typf-unicode`, `typf-fontdb`, `typf-export`, per-backend crates, bindings, and `typf-cli`. Never collapse crates “for convenience”; feature gating depends on this split.
 - **Six-Stage Pipeline Fidelity (MUST)**: Preserve the pipeline contracts defined in PLAN/00–04: Input → Unicode → Font Selection → Shaping → Rendering → Export. Every new feature must declare which stage it touches and add targeted tests (unit + integration) before code changes.
@@ -603,18 +603,18 @@ For each stage (PLAN/01-06):
 
 ## 17. Detailed plan reference
 
-- [ ] @./0PLAN.md 
-- [ ] @./PLAN/00.md 
-- [ ] ./PLAN/01.md 
-- [ ] ./PLAN/02.md 
-- [ ] ./PLAN/03.md 
-- [ ] ./PLAN/04.md 
-- [ ] ./PLAN/05.md 
-- [ ] ./PLAN/06.md 
-- [ ] ./PLAN/07.md 
-- [ ] ./PLAN/08.md 
-- [ ] ./PLAN/09.md 
+- [ ] @./0PLAN.md
+- [ ] @./PLAN/00.md
+- [ ] ./PLAN/01.md
+- [ ] ./PLAN/02.md
+- [ ] ./PLAN/03.md
+- [ ] ./PLAN/04.md
+- [ ] ./PLAN/05.md
+- [ ] ./PLAN/06.md
+- [ ] ./PLAN/07.md
+- [ ] ./PLAN/08.md
+- [ ] ./PLAN/09.md
 
 - [ ] If you work on the 'opixa' backend (the pure-Rast monochrome/grayscale rasterizer), consult the reference implementation in @./external/rasterization_reference/ ('opixa' is the Rust port thereof)
 - [ ] @./external/ contains source code snapshots for various Rust libraries of interest which we use
-- [ ] @./old-typf/ contains the old implementation which we are refactoring into the current 'typf' v2 
+- [ ] @./old-typf/ contains the old implementation which we are refactoring into the current 'typf' v2

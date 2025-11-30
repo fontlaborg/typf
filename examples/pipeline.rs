@@ -1,4 +1,4 @@
-//! Build once, render forever - TYPF's pipeline pattern in action
+//! Build once, render forever - Typf's pipeline pattern in action
 //!
 //! The Pipeline builder pattern chains text processing stages into a single,
 //! reusable object. Configure it once, then process any text through it.

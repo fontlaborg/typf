@@ -156,6 +156,6 @@ Related to #
 
 ---
 
-**Thank you for contributing to TYPF!** 🎉
+**Thank you for contributing to Typf!** 🎉
 
 Please ensure you've read [CONTRIBUTING.md](../CONTRIBUTING.md) before submitting.

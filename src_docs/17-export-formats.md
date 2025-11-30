@@ -1,6 +1,6 @@
 # Export Formats
 
-TypF exports rendered text to multiple formats for different use cases.
+Typf exports rendered text to multiple formats for different use cases.
 
 ## Available Formats
 
@@ -202,7 +202,7 @@ let custom_page = PdfOptions {
     version: PdfVersion::V1_7,
     metadata: Some(DocumentMetadata {
         title: "Rendered Text".to_string(),
-        author: "TYPF".to_string(),
+        author: "Typf".to_string(),
         subject: "Text Rendering".to_string(),
     }),
 };

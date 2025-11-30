@@ -1,6 +1,6 @@
 //! One rendering, five exports - see the same text transform into every format
 //!
-//! Shape and render once, export multiple ways. This demonstrates TYPF's flexibility:
+//! Shape and render once, export multiple ways. This demonstrates Typf's flexibility:
 //! PNG for web, SVG for vectors, and the entire PNM family for simple, reliable
 //! image storage that's been working since the 1980s.
 

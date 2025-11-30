@@ -1,5 +1,5 @@
 """
-TYPF Command Line Interface - Beautiful text from your terminal
+Typf Command Line Interface - Beautiful text from your terminal
 
 Linra CLI using Click for consistent interface with Rust CLI.
 """
@@ -21,7 +21,7 @@ try:
         TypfLinra = None
         LINRA_AVAILABLE = False
 except ImportError:
-    print("Error: TYPF extension not built. Run: maturin develop", file=sys.stderr)
+    print("Error: Typf extension not built. Run: maturin develop", file=sys.stderr)
     sys.exit(1)
 
 
@@ -109,7 +109,7 @@ def is_linra_renderer(renderer_name: str) -> bool:
 @click.group()
 @click.version_option(version=__version__, prog_name="typfpy")
 def cli():
-    """TYPF - Professional text rendering from the command line"""
+    """Typf - Professional text rendering from the command line"""
     pass
 
 
@@ -123,7 +123,7 @@ def info(shapers: bool, renderers: bool, formats: bool):
     # If no specific flags, show all info
     show_all = not (shapers or renderers or formats)
 
-    click.echo(f"TYPF v{__version__}")
+    click.echo(f"Typf v{__version__}")
     click.echo()
 
     if show_all or shapers:
@@ -244,10 +244,10 @@ def render(
 
         if not quiet:
             if use_linra:
-                click.echo("TYPF Python CLI (linra mode)", err=True)
+                click.echo("Typf Python CLI (linra mode)", err=True)
                 click.echo("Rendering text with single-pass pipeline...", err=True)
             else:
-                click.echo("TYPF Python CLI", err=True)
+                click.echo("Typf Python CLI", err=True)
                 click.echo("Rendering text...", err=True)
 
         # 2. Parse font size

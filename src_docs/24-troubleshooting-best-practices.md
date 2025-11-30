@@ -1,6 +1,6 @@
 # Troubleshooting & Best Practices
 
-Solve common TypF problems and avoid pitfalls.
+Solve common Typf problems and avoid pitfalls.
 
 ## Common Issues
 

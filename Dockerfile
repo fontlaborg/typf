@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for TYPF builds
+# Multi-stage Dockerfile for Typf builds
 
 # Stage 1: Builder
 FROM rust:1.75-slim-bookworm AS builder
@@ -51,7 +51,7 @@ ENTRYPOINT ["typf"]
 CMD ["--help"]
 
 # Metadata
-LABEL org.opencontainers.image.title="TYPF"
+LABEL org.opencontainers.image.title="Typf"
 LABEL org.opencontainers.image.description="Modular text rendering pipeline"
 LABEL org.opencontainers.image.version="2.0.0-dev"
 LABEL org.opencontainers.image.authors="FontLab"

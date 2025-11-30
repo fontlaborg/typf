@@ -1,4 +1,4 @@
-# TYPF Tester Python Dependencies
+# Typf Tester Python Dependencies
 # Community project by FontLab https://www.fontlab.org/
 
 # CLI framework

@@ -1,4 +1,4 @@
-//! Command implementations for the TYPF CLI
+//! Command implementations for the Typf CLI
 
 pub mod batch;
 pub mod info;

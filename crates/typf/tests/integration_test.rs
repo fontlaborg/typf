@@ -1,4 +1,4 @@
-//! Integration tests for the TYPF pipeline
+//! Integration tests for the Typf pipeline
 
 use std::sync::Arc;
 
@@ -39,7 +39,7 @@ impl FontRef for MockFont {
 #[test]
 fn test_full_pipeline() {
     // Setup
-    let text = "Hello, TYPF!";
+    let text = "Hello, Typf!";
     let font = Arc::new(MockFont);
 
     // Shaping parameters

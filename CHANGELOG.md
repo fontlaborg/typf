@@ -1,6 +1,6 @@
 # Changelog
 
-Changes to TypF.
+Changes to Typf.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0//),
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Example: Handling Long Text with TYPF Python Bindings
+"""Example: Handling Long Text with Typf Python Bindings
 
 This example demonstrates strategies for rendering long text that exceeds
 the bitmap width limit (~10,000 pixels):
@@ -13,10 +13,10 @@ Usage:
     python long_text_handling.py
 
 Requirements:
-    pip install typf
+    pip install typfpy
 """
 
-import typf
+import typfpy as typf
 from pathlib import Path
 
 
@@ -67,7 +67,7 @@ def calculate_adaptive_font_size(char_count: int, target_width: int) -> float:
 
 
 def main():
-    print("TYPF Python Long Text Handling Examples")
+    print("Typf Python Long Text Handling Examples")
     print("=" * 80)
     print(f"\nText length: {len(LONG_TEXT)} characters\n")
 
@@ -126,7 +126,7 @@ def main():
 
     except Exception as e:
         print(f"⚠️  SVG export failed: {e}")
-        print("  (Make sure TYPF was built with export-svg feature)\n")
+        print("  (Make sure Typf was built with export-svg feature)\n")
 
     # Strategy 3: Simple line wrapping
     print("Strategy 3: Line Wrapping for Multi-line Rendering")

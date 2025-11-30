@@ -101,5 +101,5 @@ body:
       options:
         - label: I have searched existing issues to avoid duplicates
           required: true
-        - label: This feature aligns with TYPF's scope and goals
+        - label: This feature aligns with Typf's scope and goals
           required: true
