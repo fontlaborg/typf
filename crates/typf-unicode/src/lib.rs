@@ -130,14 +130,40 @@ impl UnicodeProcessor {
         let bidi_info = BidiInfo::new(text, None);
 
         // Extract the directional information
+        // IMPORTANT: levels is indexed by SCALAR (char) position, not byte position.
+        // The scripts vector from detect_scripts contains byte positions, so we must
+        // convert byte positions to char positions when indexing into levels.
         let levels = bidi_info.levels;
         let mut runs = Vec::new();
 
+        let char_count = text.chars().count();
+
         // For each script segment, decide if it reads RTL or LTR
-        for (script, start, end) in scripts {
-            // Look at the actual characters to determine direction
-            let segment_levels = &levels[start..end];
-            let has_rtl = segment_levels.iter().any(|level| level.is_rtl());
+        for (script, start_byte, end_byte) in scripts {
+            // Convert byte positions to char positions for level indexing
+            let start_char = if start_byte == 0 {
+                0
+            } else {
+                text[..start_byte].chars().count()
+            };
+            let end_char = if end_byte >= text.len() {
+                char_count
+            } else {
+                text[..end_byte].chars().count()
+            };
+
+            // Guard against out of bounds (shouldn't happen with valid input)
+            let start_char = start_char.min(levels.len());
+            let end_char = end_char.min(levels.len()).max(start_char);
+
+            // Look at the actual bidi levels to determine direction
+            let has_rtl = if start_char < end_char && end_char <= levels.len() {
+                levels[start_char..end_char]
+                    .iter()
+                    .any(|level| level.is_rtl())
+            } else {
+                false
+            };
 
             let direction = if has_rtl {
                 Direction::RightToLeft
@@ -146,9 +172,9 @@ impl UnicodeProcessor {
             };
 
             runs.push(TextRun {
-                text: text[start..end].to_string(),
-                start,
-                end,
+                text: text[start_byte..end_byte].to_string(),
+                start: start_byte,
+                end: end_byte,
                 script,
                 language: options.language.clone().unwrap_or_default(),
                 direction,
@@ -409,6 +435,102 @@ mod tests {
         // Should be all RTL
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].direction, Direction::RightToLeft);
+    }
+
+    #[test]
+    fn test_bidi_arabic_latin_emoji() {
+        // Mixed Arabic + Latin + Emoji - tests correct byte-to-char indexing
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            bidi_resolve: true,
+            ..Default::default()
+        };
+
+        // Arabic (RTL) + English (LTR) + Emoji (neutral)
+        let text = "مرحبا Hello 😀";
+        let result = processor.process(text, &options).unwrap();
+
+        // Should have runs with correct directions
+        assert!(!result.is_empty());
+
+        // Arabic part should be RTL
+        let arabic_runs: Vec<_> = result
+            .iter()
+            .filter(|r| r.script == Script::Arabic)
+            .collect();
+        assert!(!arabic_runs.is_empty(), "Should detect Arabic script");
+        for run in arabic_runs {
+            assert_eq!(run.direction, Direction::RightToLeft, "Arabic should be RTL");
+        }
+    }
+
+    #[test]
+    fn test_bidi_hebrew_with_numbers() {
+        // Hebrew with embedded numbers - common real-world case
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            bidi_resolve: true,
+            ..Default::default()
+        };
+
+        // Hebrew with number (numbers are weak RTL in Hebrew context)
+        let text = "שלום 123 עולם";
+        let result = processor.process(text, &options).unwrap();
+
+        // Should have Hebrew runs marked as RTL
+        let hebrew_runs: Vec<_> = result
+            .iter()
+            .filter(|r| r.script == Script::Hebrew)
+            .collect();
+        assert!(!hebrew_runs.is_empty(), "Should detect Hebrew script");
+        for run in hebrew_runs {
+            assert_eq!(run.direction, Direction::RightToLeft, "Hebrew should be RTL");
+        }
+    }
+
+    #[test]
+    fn test_bidi_thai_marks() {
+        // Thai with combining marks - tests multi-byte char handling
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            bidi_resolve: true,
+            ..Default::default()
+        };
+
+        // Thai text with vowel marks and tone marks
+        let text = "สวัสดี"; // "Hello" in Thai (contains combining marks)
+        let result = processor.process(text, &options).unwrap();
+
+        assert!(!result.is_empty());
+        // Thai is LTR
+        assert_eq!(result[0].direction, Direction::LeftToRight);
+        assert_eq!(result[0].script, Script::Thai);
+    }
+
+    #[test]
+    fn test_bidi_multibyte_boundary() {
+        // Test that byte/char boundary handling is correct
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            bidi_resolve: true,
+            ..Default::default()
+        };
+
+        // Mix of single-byte (ASCII) and multi-byte (Arabic) characters
+        // This tests the byte-to-char conversion at boundaries
+        let text = "A مرحبا B";
+        let result = processor.process(text, &options).unwrap();
+
+        // Should not panic and should detect correct directions
+        assert!(!result.is_empty());
+
+        // Find Arabic run and verify it's RTL
+        let has_rtl = result.iter().any(|r| r.direction == Direction::RightToLeft);
+        assert!(has_rtl, "Should detect RTL for Arabic content");
     }
 
     #[test]

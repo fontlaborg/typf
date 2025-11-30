@@ -1,49 +1,22 @@
-# TODO
+# TODO (flat plan)
 
-## Completed
-- [x] Into README describe the 'feature mix' of shapers and renderers (see Font Feature Support Matrix and Glyph Format Support tables)
-- [x] Perform extensive research on the feasibility of adding support for SVG glyphs, COLR v0 and COLR v1 (see WORK.md)
-- [x] Into PLAN write an extensive plan to improve the feature mix (see PLAN.md)
-
-## Color Font Support (P1)
-
-### COLR v0 (Layered Color Glyphs)
-- [x] Create `typf-render-color` backend with skrifa ColorPainter
-- [x] Implement transform stack for glyph transforms
-- [x] Implement clip stack for glyph clipping (uses OutlinePen → tiny-skia Mask)
-- [x] Handle CPAL palette lookups (basic implementation done)
-- [x] Add `--palette` CLI option for palette selection (already existed as `--color-palette`/`-p`, wired to RenderParams)
-- [x] Test with Noto Color Emoji (11 tests passing)
-
-### SVG Glyphs
-- [x] Add resvg/usvg dependencies (workspace + typf-render-color with `svg` feature)
-- [x] Implement SVG table glyph extraction (`svg::get_svg_document`)
-- [x] Handle gzip-compressed SVG documents (auto-detected via magic bytes)
-- [x] Integrate resvg for SVG→bitmap rendering (`svg::render_svg_glyph`)
-- [x] Test with Twemoji SVG (TwitterColorEmoji.subset.ttf)
-
-## Color Font Support (P2)
-
-### COLR v1 (Gradients)
-- [x] Extend ColorPainter for linear gradients
-- [x] Extend ColorPainter for radial gradients
-- [~] Extend ColorPainter for sweep gradients (fallback to solid color, tiny-skia lacks native sweep gradient)
-- [x] Implement all CompositeMode blend modes (28 modes mapped)
-- [x] Variable COLR axis support (`render_color_glyph_with_variations`)
-
-### Bitmap Glyphs
-- [x] Implement sbix bitmap extraction (via skrifa BitmapStrikes)
-- [x] Implement CBDT/CBLC bitmap extraction (via skrifa BitmapStrikes)
-- [x] Automatic size selection algorithm (`glyph_for_size`)
-- [x] Fallback to outline when bitmap unavailable (`render_bitmap_glyph_or_outline`)
-
-## Enhancements (P3)
-
-### SVG Export from Renderers
-- [ ] Skia renderer SVG output mode
-- [ ] Zeno renderer SVG output mode
-- [ ] Gradient preservation in SVG output
-- [ ] Bitmap embedding in SVG for emoji
-
-## Ongoing
-- [ ] For Python, use `uv`, `uv add`, `uv pip`, `uv run python -m`
+- [x] P0: Replace `typf-export` SVG exporter with valid PNG/vector output; add embed/external snapshot tests; fail fast on malformed buffers and Gray1/short-buffer regressions.
+- [x] P0: Fix bidi/script indexing in `crates/typf-unicode` to use scalar positions; mixed RTL/LTR fixtures; CLI `--direction auto` exists (defaults to LTR).
+- [x] P0: Make the default six-stage pipeline functional or deprecate it — documented as pass-through stages; CLI uses `Pipeline.process()` directly.
+- [x] P0: Remove silent stub-font fallback in CLI; require font file with explicit errors on missing fonts (Python `render_simple` is explicit opt-in).
+- [x] P1: Integrate `ShapingCache` into HarfBuzz and ICU shapers; surface cache configuration in CLI/params and expose hit stats.
+- [x] P1: Use ascent/descent/bbox for canvas sizing in Skia, Zeno, and SVG to avoid clipping; add tall-glyph regressions.
+- [ ] P1: Extend vector renderer/exporters for glyph IDs > 65k and propagate variations/CPAL colors into SVG output.
+- [ ] P1: Reduce memory leakage and improve face selection/error typing in `typf-fontdb` (no `Box::leak`, honor TTC index, proper units).
+- [ ] P2: Add backend integration tests with small fonts (bitmap hashes, SVG snapshots, JSON schema for JSON renderer).
+- [ ] P2: Add workspace lint/test CI (`fmt`, `clippy -D warnings`, `cargo test --workspace --all-features`) with feature matrix.
+- [ ] P2: Add CLI smoke tests for `info`, `render`, and `batch` commands using temp outputs and bad-input failures.
+- [ ] P3: Write `ARCHITECTURE.md` explaining pipeline/backends and link from README.
+- [ ] P3: Expand CONTRIBUTING with release flow, cache guidance, backend addition steps; create `RELEASING.md`; add version policy to README.
+- [ ] P3: Migrate Python workflow docs/scripts/CI to `uv` (`uv venv`, `uv pip`, `uv run`, `uvx`) and add CONTRIBUTING guardrails.
+- [ ] Phase5: Implement Skia renderer SVG output mode.
+- [ ] Phase5: Implement Zeno renderer SVG output mode.
+- [ ] Phase5: Preserve gradients and embed bitmaps for SVG output when needed.
+- [ ] Release: Test full release cycle with `./scripts/publish.sh --dry-run`.
+- [ ] Release: Test version propagation with `cargo set-version`.
+- [ ] Release: Confirm wheel version matches git tag in CI.

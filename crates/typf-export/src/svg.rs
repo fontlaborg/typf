@@ -2,6 +2,7 @@
 //!
 //! Exports rendered text to Scalable Vector Graphics format.
 
+use crate::png::encode_bitmap_to_png;
 use typf_core::{
     error::{ExportError, Result},
     traits::Exporter,
@@ -54,8 +55,8 @@ impl SvgExporter {
         ));
 
         if self.embed_image {
-            // Convert bitmap to base64 PNG
-            let png_data = bitmap_to_png(bitmap)?;
+            // Convert bitmap to base64 PNG using proper encoding
+            let png_data = encode_bitmap_to_png(bitmap)?;
             let base64_data = base64_encode(&png_data);
 
             svg.push_str(&format!(
@@ -106,25 +107,6 @@ impl Exporter for SvgExporter {
     fn mime_type(&self) -> &'static str {
         "image/svg+xml"
     }
-}
-
-/// Convert bitmap to PNG format (simplified implementation)
-fn bitmap_to_png(bitmap: &BitmapData) -> Result<Vec<u8>> {
-    // For now, we'll use a simple PPM-to-PNG approach
-    // In production, you'd use a proper PNG encoder like `png` crate
-
-    // Simplified: just return raw RGBA data with PNG-like header
-    // This is a placeholder - real PNG encoding would be more complex
-    let mut png = Vec::new();
-
-    // PNG magic number
-    png.extend_from_slice(&[137, 80, 78, 71, 13, 10, 26, 10]);
-
-    // For now, just return the bitmap data
-    // A real implementation would use the `png` crate
-    png.extend_from_slice(&bitmap.data);
-
-    Ok(png)
 }
 
 /// Simple base64 encoding
@@ -192,6 +174,119 @@ mod tests {
         assert!(svg.contains("<svg"));
         assert!(svg.contains("width=\"10\""));
         assert!(svg.contains("height=\"10\""));
+    }
+
+    #[test]
+    fn test_svg_embedded_png_is_valid() {
+        // Create a small 2x2 RGBA bitmap
+        let bitmap = BitmapData {
+            width: 2,
+            height: 2,
+            format: BitmapFormat::Rgba8,
+            data: vec![
+                255, 0, 0, 255, // Red
+                0, 255, 0, 255, // Green
+                0, 0, 255, 255, // Blue
+                255, 255, 255, 255, // White
+            ],
+        };
+
+        let exporter = SvgExporter::new();
+        let svg_bytes = exporter.export_bitmap(&bitmap).unwrap();
+        let svg = String::from_utf8(svg_bytes).unwrap();
+
+        // Extract base64 data from SVG
+        let start = svg.find("base64,").unwrap() + 7;
+        let end = svg[start..].find('"').unwrap() + start;
+        let base64_data = &svg[start..end];
+
+        // Decode base64 and verify PNG magic bytes
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        let png_data = STANDARD.decode(base64_data).unwrap();
+
+        // PNG signature: 137 80 78 71 13 10 26 10
+        assert_eq!(
+            &png_data[0..8],
+            &[137, 80, 78, 71, 13, 10, 26, 10],
+            "PNG should start with correct magic bytes"
+        );
+
+        // Verify IHDR chunk exists (first chunk after signature)
+        assert_eq!(&png_data[12..16], b"IHDR", "PNG should have IHDR chunk");
+    }
+
+    #[test]
+    fn test_svg_export_gray1_format() {
+        // 8x8 bitmap = 8 bytes for Gray1 format
+        let bitmap = BitmapData {
+            width: 8,
+            height: 8,
+            format: BitmapFormat::Gray1,
+            data: vec![0xAA; 8], // Alternating pattern
+        };
+
+        let exporter = SvgExporter::new();
+        let result = exporter.export_bitmap(&bitmap);
+        assert!(result.is_ok(), "Gray1 export should succeed");
+
+        let svg = String::from_utf8(result.unwrap()).unwrap();
+        assert!(svg.contains("data:image/png;base64,"));
+    }
+
+    #[test]
+    fn test_svg_export_grayscale() {
+        let bitmap = BitmapData {
+            width: 4,
+            height: 4,
+            format: BitmapFormat::Gray8,
+            data: vec![
+                0, 64, 128, 192, 255, 200, 100, 50, 0, 64, 128, 192, 255, 200, 100, 50,
+            ],
+        };
+
+        let exporter = SvgExporter::new();
+        let result = exporter.export_bitmap(&bitmap);
+        assert!(result.is_ok(), "Grayscale export should succeed");
+    }
+
+    #[test]
+    fn test_svg_export_short_buffer_fails() {
+        // Create a bitmap with insufficient data
+        let bitmap = BitmapData {
+            width: 10,
+            height: 10,
+            format: BitmapFormat::Rgba8,
+            data: vec![255u8; 10], // Should be 10*10*4 = 400 bytes
+        };
+
+        let exporter = SvgExporter::new();
+        let result = exporter.export_bitmap(&bitmap);
+        assert!(result.is_err(), "Short buffer should fail");
+
+        let err = result.unwrap_err();
+        let err_msg = format!("{}", err);
+        assert!(
+            err_msg.contains("Buffer too small"),
+            "Error should mention buffer size: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn test_svg_external_image_mode() {
+        let bitmap = BitmapData {
+            width: 10,
+            height: 10,
+            format: BitmapFormat::Rgba8,
+            data: vec![255u8; 10 * 10 * 4],
+        };
+
+        let exporter = SvgExporter::with_external_images();
+        let result = exporter.export_bitmap(&bitmap).unwrap();
+        let svg = String::from_utf8(result).unwrap();
+
+        assert!(svg.contains("xlink:href=\"output.png\""));
+        assert!(!svg.contains("base64"));
     }
 
     #[test]

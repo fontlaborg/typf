@@ -198,18 +198,54 @@ impl Renderer for SkiaRenderer {
         font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
-        // Calculate canvas dimensions
         let padding = params.padding as f32;
+        let glyph_size = shaped.advance_height;
+
+        // Phase 1: Render all glyphs first to get accurate bounds
+        // This ensures we don't clip tall glyphs (emoji, Thai marks, Arabic diacritics)
+        let mut rendered_glyphs: Vec<(RenderedGlyph, f32, f32)> = Vec::new();
+        let mut min_y: f32 = 0.0; // Relative to baseline
+        let mut max_y: f32 = 0.0; // Relative to baseline
+
+        for glyph in shaped.glyphs.iter() {
+            match self.render_glyph(&font, glyph.id, glyph_size) {
+                Ok(bitmap) => {
+                    // bearing_y is distance from baseline to top of glyph (positive = above baseline)
+                    // glyph top relative to baseline = glyph.y + bearing_y
+                    // glyph bottom relative to baseline = glyph.y + bearing_y - height
+                    let glyph_top = glyph.y + bitmap.bearing_y as f32;
+                    let glyph_bottom = glyph.y + bitmap.bearing_y as f32 - bitmap.height as f32;
+
+                    max_y = max_y.max(glyph_top);
+                    min_y = min_y.min(glyph_bottom);
+
+                    rendered_glyphs.push((
+                        RenderedGlyph {
+                            bitmap,
+                            glyph_x: glyph.x,
+                            glyph_y: glyph.y,
+                        },
+                        glyph_top,
+                        glyph_bottom,
+                    ));
+                },
+                Err(e) => {
+                    log::warn!("Skia: Failed to render glyph {}: {:?}", glyph.id, e);
+                },
+            }
+        }
+
+        // Phase 2: Calculate canvas dimensions from actual glyph bounds
         let width = (shaped.advance_width + padding * 2.0).ceil() as u32;
 
-        // Calculate height using font metrics approximation (matching CoreGraphics)
-        // Ascent is approximately 80% of advance_height, descent is 20%
-        let font_height = if shaped.glyphs.is_empty() {
-            16.0 // Default minimum height for empty text
+        // Height is from highest point above baseline to lowest point below
+        // min_y is negative (below baseline), max_y is positive (above baseline)
+        let content_height = if rendered_glyphs.is_empty() {
+            16.0 // Default minimum for empty text
         } else {
-            shaped.advance_height * 1.2 // Add extra space for descenders and diacritics
+            max_y - min_y // Total height = ascent + descent
         };
-        let height = (font_height + padding * 2.0).ceil() as u32;
+        let height = (content_height + padding * 2.0).ceil() as u32;
 
         // Validate dimensions
         if width == 0 || height == 0 {
@@ -233,63 +269,51 @@ impl Renderer for SkiaRenderer {
             }
         }
 
-        // Use advance_height as the font size (same as Opixa renderer)
-        let glyph_size = shaped.advance_height;
+        // Baseline position: padding + distance from top to baseline
+        // max_y is the highest point above baseline, so baseline is at padding + max_y
+        let baseline_y = padding + max_y;
 
-        // Calculate baseline position using proper font metrics approximation
-        // Use 0.75 ratio to match CoreGraphics reference implementation
-        // In top-origin coordinates, baseline should be at padding + ascent
-        let ascent = shaped.advance_height * 0.75;
-        let baseline_y = padding + ascent;
+        // Phase 3: Composite pre-rendered glyphs onto canvas
+        for (rg, _top, _bottom) in rendered_glyphs {
+            let bitmap = &rg.bitmap;
 
-        // Render each glyph
-        for glyph in shaped.glyphs.iter() {
-            match self.render_glyph(&font, glyph.id, glyph_size) {
-                Ok(bitmap) => {
-                    // Position glyph on canvas
-                    // X: glyph.x + padding + bearing_x
-                    // Y: baseline_y + glyph.y - bearing_y (baseline_y already includes padding)
-                    //    (subtract bearing_y to position glyph correctly relative to baseline)
-                    let x = (glyph.x + padding) as i32 + bitmap.bearing_x;
-                    let y = (baseline_y + glyph.y) as i32 - bitmap.bearing_y;
+            // Position glyph on canvas
+            // X: glyph.x + padding + bearing_x
+            // Y: baseline_y + glyph.y - bearing_y (convert from baseline-relative to top-origin)
+            let x = (rg.glyph_x + padding) as i32 + bitmap.bearing_x;
+            let y = (baseline_y + rg.glyph_y) as i32 - bitmap.bearing_y;
 
-                    // Composite glyph onto canvas
-                    for gy in 0..bitmap.height {
-                        for gx in 0..bitmap.width {
-                            let canvas_x = x + gx as i32;
-                            let canvas_y = y + gy as i32;
+            // Composite glyph onto canvas
+            for gy in 0..bitmap.height {
+                for gx in 0..bitmap.width {
+                    let canvas_x = x + gx as i32;
+                    let canvas_y = y + gy as i32;
 
-                            if canvas_x >= 0
-                                && canvas_x < width as i32
-                                && canvas_y >= 0
-                                && canvas_y < height as i32
-                            {
-                                let canvas_idx =
-                                    ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
-                                let glyph_idx = (gy * bitmap.width + gx) as usize;
-                                let alpha = bitmap.data[glyph_idx];
+                    if canvas_x >= 0
+                        && canvas_x < width as i32
+                        && canvas_y >= 0
+                        && canvas_y < height as i32
+                    {
+                        let canvas_idx =
+                            ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
+                        let glyph_idx = (gy * bitmap.width + gx) as usize;
+                        let alpha = bitmap.data[glyph_idx];
 
-                                // Alpha blending (glyph alpha over background)
-                                let fg = &params.foreground;
-                                canvas[canvas_idx] =
-                                    ((canvas[canvas_idx] as u16 * (255 - alpha) as u16
-                                        + fg.r as u16 * alpha as u16)
-                                        / 255) as u8;
-                                canvas[canvas_idx + 1] =
-                                    ((canvas[canvas_idx + 1] as u16 * (255 - alpha) as u16
-                                        + fg.g as u16 * alpha as u16)
-                                        / 255) as u8;
-                                canvas[canvas_idx + 2] =
-                                    ((canvas[canvas_idx + 2] as u16 * (255 - alpha) as u16
-                                        + fg.b as u16 * alpha as u16)
-                                        / 255) as u8;
-                            }
-                        }
+                        // Alpha blending (glyph alpha over background)
+                        let fg = &params.foreground;
+                        canvas[canvas_idx] = ((canvas[canvas_idx] as u16 * (255 - alpha) as u16
+                            + fg.r as u16 * alpha as u16)
+                            / 255) as u8;
+                        canvas[canvas_idx + 1] = ((canvas[canvas_idx + 1] as u16
+                            * (255 - alpha) as u16
+                            + fg.g as u16 * alpha as u16)
+                            / 255) as u8;
+                        canvas[canvas_idx + 2] = ((canvas[canvas_idx + 2] as u16
+                            * (255 - alpha) as u16
+                            + fg.b as u16 * alpha as u16)
+                            / 255) as u8;
                     }
-                },
-                Err(e) => {
-                    log::warn!("Skia: Failed to render glyph {}: {:?}", glyph.id, e);
-                },
+                }
             }
         }
 
@@ -304,6 +328,13 @@ impl Renderer for SkiaRenderer {
     fn supports_format(&self, format: &str) -> bool {
         matches!(format, "bitmap" | "rgba")
     }
+}
+
+/// A rendered glyph ready for compositing
+struct RenderedGlyph {
+    bitmap: GlyphBitmap,
+    glyph_x: f32,
+    glyph_y: f32,
 }
 
 /// A rendered glyph with everything needed for proper positioning

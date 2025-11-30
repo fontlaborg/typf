@@ -27,12 +27,48 @@ pub use typf_core::shaping_cache::{CacheStats, ShapingCache, ShapingCacheKey, Sh
 /// - Script detection (knows Arabic from Thai from Cyrillic)
 /// - Line breaking analysis (where text can safely break)
 /// - Professional OpenType shaping with HarfBuzz
-pub struct IcuHarfBuzzShaper;
+/// - Optional caching of shaping results for performance
+pub struct IcuHarfBuzzShaper {
+    /// Optional shaping cache for performance
+    cache: Option<SharedShapingCache>,
+}
 
 impl IcuHarfBuzzShaper {
     /// Creates a new shaper that's ready for any Unicode challenge
     pub fn new() -> Self {
-        Self
+        Self { cache: None }
+    }
+
+    /// Creates a new shaper with caching enabled
+    ///
+    /// Uses default cache capacities (L1: 100, L2: 500 entries)
+    pub fn with_cache() -> Self {
+        Self {
+            cache: Some(Arc::new(std::sync::RwLock::new(ShapingCache::new()))),
+        }
+    }
+
+    /// Creates a new shaper with a custom cache
+    ///
+    /// Useful for sharing a cache across multiple shapers
+    pub fn with_shared_cache(cache: SharedShapingCache) -> Self {
+        Self { cache: Some(cache) }
+    }
+
+    /// Returns cache statistics if caching is enabled
+    pub fn cache_stats(&self) -> Option<CacheStats> {
+        self.cache
+            .as_ref()
+            .and_then(|c| c.read().ok())
+            .map(|c| c.stats())
+    }
+
+    /// Returns the cache hit rate (0.0 to 1.0) if caching is enabled
+    pub fn cache_hit_rate(&self) -> Option<f64> {
+        self.cache
+            .as_ref()
+            .and_then(|c| c.read().ok())
+            .map(|c| c.hit_rate())
     }
 
     /// Maps our direction enum to HarfBuzz's format
@@ -91,6 +127,30 @@ impl Shaper for IcuHarfBuzzShaper {
 
         // Step 2: Get the font data for HarfBuzz
         let font_data = font.data();
+
+        // Check cache if enabled (use normalized text for key)
+        let cache_key = if self.cache.is_some() {
+            let key = ShapingCacheKey::new(
+                &normalized,
+                font_data,
+                params.size,
+                params.language.clone(),
+                params.script.clone(),
+                params.features.clone(),
+            );
+            // Try to get from cache
+            if let Some(ref cache) = self.cache {
+                if let Ok(cache_guard) = cache.read() {
+                    if let Some(result) = cache_guard.get(&key) {
+                        return Ok(result);
+                    }
+                }
+            }
+            Some(key)
+        } else {
+            None
+        };
+
         if font_data.is_empty() {
             // No font data? Fall back to basic shaping on cleaned text
             let mut glyphs = Vec::new();
@@ -110,12 +170,23 @@ impl Shaper for IcuHarfBuzzShaper {
                 }
             }
 
-            return Ok(ShapingResult {
+            let result = ShapingResult {
                 glyphs,
                 advance_width: x_offset,
                 advance_height: params.size,
                 direction: params.direction,
-            });
+            };
+
+            // Store fallback result in cache if enabled
+            if let Some(key) = cache_key {
+                if let Some(ref cache) = self.cache {
+                    if let Ok(cache_guard) = cache.write() {
+                        cache_guard.insert(key, result.clone());
+                    }
+                }
+            }
+
+            return Ok(result);
         }
 
         // Step 3: Load the font into HarfBuzz
@@ -202,12 +273,31 @@ impl Shaper for IcuHarfBuzzShaper {
             y_offset += y_advance;
         }
 
-        Ok(ShapingResult {
+        let result = ShapingResult {
             glyphs,
             advance_width: x_offset,
             advance_height: params.size,
             direction: params.direction,
-        })
+        };
+
+        // Store in cache if enabled
+        if let Some(key) = cache_key {
+            if let Some(ref cache) = self.cache {
+                if let Ok(cache_guard) = cache.write() {
+                    cache_guard.insert(key, result.clone());
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    fn clear_cache(&self) {
+        if let Some(ref cache) = self.cache {
+            if let Ok(mut cache_guard) = cache.write() {
+                *cache_guard = ShapingCache::new();
+            }
+        }
     }
 }
 
@@ -215,9 +305,103 @@ impl Shaper for IcuHarfBuzzShaper {
 mod tests {
     use super::*;
 
+    struct TestFont {
+        data: Vec<u8>,
+    }
+
+    impl FontRef for TestFont {
+        fn data(&self) -> &[u8] {
+            &self.data
+        }
+
+        fn units_per_em(&self) -> u16 {
+            1000
+        }
+
+        fn glyph_id(&self, ch: char) -> Option<u32> {
+            Some(ch as u32)
+        }
+
+        fn advance_width(&self, _: u32) -> f32 {
+            500.0
+        }
+    }
+
     #[test]
     fn test_icu_harfbuzz_shaper_empty() {
         let shaper = IcuHarfBuzzShaper::new();
         assert_eq!(Stage::name(&shaper), "ICU-HarfBuzz");
+    }
+
+    #[test]
+    fn test_shaper_with_cache() {
+        let shaper = IcuHarfBuzzShaper::with_cache();
+        let font = Arc::new(TestFont { data: vec![] });
+        let params = ShapingParams::default();
+
+        // First shape - cache miss
+        let result1 = shaper.shape("Hello", font.clone(), &params).unwrap();
+        assert_eq!(result1.glyphs.len(), 5);
+
+        // Second shape - should hit cache
+        let result2 = shaper.shape("Hello", font.clone(), &params).unwrap();
+        assert_eq!(result2.glyphs.len(), 5);
+
+        // Check cache hit rate (should be > 0 after second call)
+        let hit_rate = shaper.cache_hit_rate().unwrap();
+        assert!(hit_rate > 0.0, "Cache hit rate should be > 0 after repeat query");
+    }
+
+    #[test]
+    fn test_shaper_without_cache() {
+        let shaper = IcuHarfBuzzShaper::new();
+
+        // Cache stats should be None when caching is disabled
+        assert!(shaper.cache_stats().is_none());
+        assert!(shaper.cache_hit_rate().is_none());
+    }
+
+    #[test]
+    fn test_clear_cache() {
+        let shaper = IcuHarfBuzzShaper::with_cache();
+        let font = Arc::new(TestFont { data: vec![] });
+        let params = ShapingParams::default();
+
+        // Shape text to populate cache
+        shaper.shape("ClearTest", font.clone(), &params).unwrap();
+        shaper.shape("ClearTest", font.clone(), &params).unwrap(); // Hit
+
+        let stats_before = shaper.cache_stats().unwrap();
+        assert!(stats_before.hits >= 1);
+
+        // Clear the cache
+        shaper.clear_cache();
+
+        // Stats should be reset
+        let stats_after = shaper.cache_stats().unwrap();
+        assert_eq!(stats_after.hits, 0);
+        assert_eq!(stats_after.misses, 0);
+    }
+
+    #[test]
+    fn test_normalization_before_caching() {
+        let shaper = IcuHarfBuzzShaper::with_cache();
+        let font = Arc::new(TestFont { data: vec![] });
+        let params = ShapingParams::default();
+
+        // "café" in two forms: NFC (composed) vs NFD (decomposed)
+        let composed = "caf\u{00E9}"; // é as single codepoint
+        let decomposed = "cafe\u{0301}"; // e + combining acute
+
+        // Both should normalize to the same form and hit cache
+        let result1 = shaper.shape(composed, font.clone(), &params).unwrap();
+        let result2 = shaper.shape(decomposed, font.clone(), &params).unwrap();
+
+        // After normalization, both should produce identical results
+        assert_eq!(result1.glyphs.len(), result2.glyphs.len());
+
+        // Second query with either form should hit cache
+        let stats = shaper.cache_stats().unwrap();
+        assert!(stats.hits >= 1, "Second query should hit cache");
     }
 }

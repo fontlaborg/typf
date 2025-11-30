@@ -3,6 +3,12 @@
 //! The third stage of the pipeline. Finds, loads, and manages fonts so
 //! your text can wear the right glyphs. Without fonts, text is just
 //! invisible characters floating in digital space.
+//!
+//! ## Memory Management
+//!
+//! Fonts store their raw data and create `FontRef` on-demand for parsing.
+//! This avoids memory leaks from `Box::leak` and properly supports TTC
+//! font collections with multiple faces.
 
 use std::collections::HashMap;
 use std::fs;
@@ -17,30 +23,39 @@ use typf_core::{
 };
 
 /// A font that's been brought into memory, ready to shape text
+///
+/// Stores the raw font data and creates `FontRef` on-demand for parsing.
+/// For TTC collections, the `face_index` specifies which face to use.
 pub struct Font {
     data: Vec<u8>,
-    font_ref: Option<ReadFontRef<'static>>,
+    face_index: u32,
     units_per_em: u16,
 }
 
 impl Font {
     /// Opens a font file from disk and makes it usable
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
+        Self::from_file_index(path, 0)
+    }
+
+    /// Opens a specific face from a font file (for TTC collections)
+    pub fn from_file_index(path: impl AsRef<Path>, face_index: u32) -> Result<Self> {
         let data = fs::read(path.as_ref())
             .map_err(|_| FontLoadError::FileNotFound(path.as_ref().display().to_string()))?;
 
-        Self::from_data(data)
+        Self::from_data_index(data, face_index)
     }
 
     /// Turns raw font bytes into something we can work with
     pub fn from_data(data: Vec<u8>) -> Result<Self> {
-        // We leak the data intentionally - fonts live for the program's lifetime
-        // This avoids the lifetime gymnastics of font parsing
-        let data_ref: &'static [u8] = Box::leak(data.clone().into_boxed_slice());
+        Self::from_data_index(data, 0)
+    }
 
-        // Parse the font (works for single fonts and TTC collections)
+    /// Turns raw font bytes into a specific face (for TTC collections)
+    pub fn from_data_index(data: Vec<u8>, face_index: u32) -> Result<Self> {
+        // Validate the font data by attempting to parse it
         let font_ref =
-            ReadFontRef::from_index(data_ref, 0).map_err(|_| FontLoadError::InvalidData)?;
+            ReadFontRef::from_index(&data, face_index).map_err(|_| FontLoadError::InvalidData)?;
 
         // Extract the fundamental measurement: units per em
         // This tells us how big the font's grid is
@@ -51,9 +66,14 @@ impl Font {
 
         Ok(Font {
             data,
-            font_ref: Some(font_ref),
+            face_index,
             units_per_em,
         })
+    }
+
+    /// Returns the face index for TTC collections (0 for single fonts)
+    pub fn face_index(&self) -> u32 {
+        self.face_index
     }
 
     /// Finds which glyph draws this character

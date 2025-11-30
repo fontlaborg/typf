@@ -21,39 +21,6 @@ use typf_render_opixa::OpixaRenderer;
 use typf_render_svg::SvgRenderer;
 use typf_shape_none::NoneShaper;
 
-/// Minimal stub font for demonstration
-struct StubFont {
-    units_per_em: u16,
-}
-
-impl StubFont {
-    fn new() -> Self {
-        Self { units_per_em: 1000 }
-    }
-}
-
-impl FontRef for StubFont {
-    fn data(&self) -> &[u8] {
-        &[]
-    }
-
-    fn units_per_em(&self) -> u16 {
-        self.units_per_em
-    }
-
-    fn glyph_id(&self, ch: char) -> Option<u32> {
-        if ch.is_ascii() {
-            Some(ch as u32)
-        } else {
-            Some(0)
-        }
-    }
-
-    fn advance_width(&self, _glyph_id: u32) -> f32 {
-        600.0
-    }
-}
-
 pub fn run(args: &RenderArgs) -> Result<()> {
     // Check if using linra (single-pass) renderer
     // "auto" now defaults to linra if available (unless SVG output requested)
@@ -310,17 +277,19 @@ fn decode_unicode_escapes(text: &str) -> String {
 }
 
 fn load_font(args: &RenderArgs) -> Result<Arc<dyn FontRef>> {
-    if let Some(ref font_path) = args.font_file {
-        if args.verbose {
-            eprintln!("Loading font from {}", font_path.display());
-        }
-        Ok(Arc::new(Font::from_file(font_path)?))
-    } else {
-        if args.verbose {
-            eprintln!("Using stub font (no font file provided)");
-        }
-        Ok(Arc::new(StubFont::new()))
+    let font_path = args.font_file.as_ref().ok_or_else(|| {
+        TypfError::Other(
+            "No font file specified. Use -f/--font-file <path> to provide a font.\n\
+             Example: typf render -f /path/to/font.ttf 'Hello'"
+                .into(),
+        )
+    })?;
+
+    if args.verbose {
+        eprintln!("Loading font from {}", font_path.display());
     }
+
+    Font::from_file(font_path).map(|f| Arc::new(f) as Arc<dyn FontRef>)
 }
 
 fn parse_font_size(size_str: &str) -> Result<f32> {

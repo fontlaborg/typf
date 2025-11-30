@@ -9,6 +9,117 @@ use typf_core::{
     types::{BitmapData, BitmapFormat, RenderOutput},
 };
 
+/// Encode bitmap data to PNG format.
+///
+/// This is the shared implementation used by both `PngExporter` and `SvgExporter`
+/// (for embedded images). Handles all bitmap formats: RGBA8, RGB8, Gray8, Gray1.
+///
+/// Returns a valid PNG with proper IHDR, IDAT, and IEND chunks.
+pub fn encode_bitmap_to_png(bitmap: &BitmapData) -> Result<Vec<u8>> {
+    // Validate buffer size before processing
+    let expected_size = match bitmap.format {
+        BitmapFormat::Rgba8 => (bitmap.width * bitmap.height * 4) as usize,
+        BitmapFormat::Rgb8 => (bitmap.width * bitmap.height * 3) as usize,
+        BitmapFormat::Gray8 => (bitmap.width * bitmap.height) as usize,
+        BitmapFormat::Gray1 => ((bitmap.width * bitmap.height + 7) / 8) as usize,
+    };
+
+    if bitmap.data.len() < expected_size {
+        return Err(ExportError::EncodingFailed(format!(
+            "Buffer too small: expected {} bytes for {}x{} {:?}, got {}",
+            expected_size,
+            bitmap.width,
+            bitmap.height,
+            bitmap.format,
+            bitmap.data.len()
+        ))
+        .into());
+    }
+
+    // Create RGBA image buffer
+    let img: RgbaImage = match bitmap.format {
+        BitmapFormat::Rgba8 => {
+            // Direct RGBA data
+            ImageBuffer::from_raw(bitmap.width, bitmap.height, bitmap.data.clone()).ok_or_else(
+                || {
+                    ExportError::EncodingFailed(
+                        "Failed to create image buffer from RGBA data".into(),
+                    )
+                },
+            )?
+        },
+        BitmapFormat::Rgb8 => {
+            // Convert RGB to RGBA
+            let mut rgba_data = Vec::with_capacity((bitmap.width * bitmap.height * 4) as usize);
+            for chunk in bitmap.data.chunks(3) {
+                if chunk.len() < 3 {
+                    break; // Guard against malformed data
+                }
+                rgba_data.push(chunk[0]); // R
+                rgba_data.push(chunk[1]); // G
+                rgba_data.push(chunk[2]); // B
+                rgba_data.push(255); // A (fully opaque)
+            }
+            ImageBuffer::from_raw(bitmap.width, bitmap.height, rgba_data).ok_or_else(|| {
+                ExportError::EncodingFailed("Failed to create image buffer from RGB data".into())
+            })?
+        },
+        BitmapFormat::Gray8 => {
+            // Convert grayscale to RGBA
+            let mut rgba_data = Vec::with_capacity((bitmap.width * bitmap.height * 4) as usize);
+            for &gray in &bitmap.data {
+                rgba_data.push(gray); // R
+                rgba_data.push(gray); // G
+                rgba_data.push(gray); // B
+                rgba_data.push(255); // A
+            }
+            ImageBuffer::from_raw(bitmap.width, bitmap.height, rgba_data).ok_or_else(|| {
+                ExportError::EncodingFailed(
+                    "Failed to create image buffer from grayscale data".into(),
+                )
+            })?
+        },
+        BitmapFormat::Gray1 => {
+            // Convert 1-bit to RGBA
+            let mut rgba_data = Vec::with_capacity((bitmap.width * bitmap.height * 4) as usize);
+            for y in 0..bitmap.height {
+                for x in 0..bitmap.width {
+                    let byte_idx = ((y * bitmap.width + x) / 8) as usize;
+                    let bit_idx = ((y * bitmap.width + x) % 8) as usize;
+                    if byte_idx >= bitmap.data.len() {
+                        // Guard against out-of-bounds access
+                        rgba_data.extend_from_slice(&[0, 0, 0, 255]);
+                        continue;
+                    }
+                    let bit = (bitmap.data[byte_idx] >> (7 - bit_idx)) & 1;
+                    let value = if bit == 1 { 255 } else { 0 };
+                    rgba_data.push(value); // R
+                    rgba_data.push(value); // G
+                    rgba_data.push(value); // B
+                    rgba_data.push(255); // A
+                }
+            }
+            ImageBuffer::from_raw(bitmap.width, bitmap.height, rgba_data).ok_or_else(|| {
+                ExportError::EncodingFailed("Failed to create image buffer from 1-bit data".into())
+            })?
+        },
+    };
+
+    // Encode to PNG
+    let mut png_data = Vec::new();
+    let encoder = image::codecs::png::PngEncoder::new_with_quality(
+        &mut png_data,
+        image::codecs::png::CompressionType::Default,
+        image::codecs::png::FilterType::Sub,
+    );
+
+    encoder
+        .write_image(img.as_raw(), bitmap.width, bitmap.height, image::ExtendedColorType::Rgba8)
+        .map_err(|e| ExportError::EncodingFailed(format!("PNG encoding failed: {}", e)))?;
+
+    Ok(png_data)
+}
+
 /// PNG exporter for rendering results
 ///
 /// Converts bitmap rendering output to PNG format.
@@ -29,84 +140,7 @@ impl PngExporter {
 
     /// Convert bitmap data to PNG format
     fn export_bitmap(&self, bitmap: &BitmapData) -> Result<Vec<u8>> {
-        // Create RGBA image buffer
-        let img: RgbaImage = match bitmap.format {
-            BitmapFormat::Rgba8 => {
-                // Direct RGBA data
-                ImageBuffer::from_raw(bitmap.width, bitmap.height, bitmap.data.clone()).ok_or_else(
-                    || {
-                        ExportError::EncodingFailed(
-                            "Failed to create image buffer from RGBA data".into(),
-                        )
-                    },
-                )?
-            },
-            BitmapFormat::Rgb8 => {
-                // Convert RGB to RGBA
-                let mut rgba_data = Vec::with_capacity((bitmap.width * bitmap.height * 4) as usize);
-                for chunk in bitmap.data.chunks(3) {
-                    rgba_data.push(chunk[0]); // R
-                    rgba_data.push(chunk[1]); // G
-                    rgba_data.push(chunk[2]); // B
-                    rgba_data.push(255); // A (fully opaque)
-                }
-                ImageBuffer::from_raw(bitmap.width, bitmap.height, rgba_data).ok_or_else(|| {
-                    ExportError::EncodingFailed(
-                        "Failed to create image buffer from RGB data".into(),
-                    )
-                })?
-            },
-            BitmapFormat::Gray8 => {
-                // Convert grayscale to RGBA
-                let mut rgba_data = Vec::with_capacity((bitmap.width * bitmap.height * 4) as usize);
-                for &gray in &bitmap.data {
-                    rgba_data.push(gray); // R
-                    rgba_data.push(gray); // G
-                    rgba_data.push(gray); // B
-                    rgba_data.push(255); // A
-                }
-                ImageBuffer::from_raw(bitmap.width, bitmap.height, rgba_data).ok_or_else(|| {
-                    ExportError::EncodingFailed(
-                        "Failed to create image buffer from grayscale data".into(),
-                    )
-                })?
-            },
-            BitmapFormat::Gray1 => {
-                // Convert 1-bit to RGBA
-                let mut rgba_data = Vec::with_capacity((bitmap.width * bitmap.height * 4) as usize);
-                for y in 0..bitmap.height {
-                    for x in 0..bitmap.width {
-                        let byte_idx = ((y * bitmap.width + x) / 8) as usize;
-                        let bit_idx = ((y * bitmap.width + x) % 8) as usize;
-                        let bit = (bitmap.data[byte_idx] >> (7 - bit_idx)) & 1;
-                        let value = if bit == 1 { 255 } else { 0 };
-                        rgba_data.push(value); // R
-                        rgba_data.push(value); // G
-                        rgba_data.push(value); // B
-                        rgba_data.push(255); // A
-                    }
-                }
-                ImageBuffer::from_raw(bitmap.width, bitmap.height, rgba_data).ok_or_else(|| {
-                    ExportError::EncodingFailed(
-                        "Failed to create image buffer from 1-bit data".into(),
-                    )
-                })?
-            },
-        };
-
-        // Encode to PNG
-        let mut png_data = Vec::new();
-        let encoder = image::codecs::png::PngEncoder::new_with_quality(
-            &mut png_data,
-            image::codecs::png::CompressionType::Default,
-            image::codecs::png::FilterType::Sub,
-        );
-
-        encoder
-            .write_image(img.as_raw(), bitmap.width, bitmap.height, image::ExtendedColorType::Rgba8)
-            .map_err(|e| ExportError::EncodingFailed(format!("PNG encoding failed: {}", e)))?;
-
-        Ok(png_data)
+        encode_bitmap_to_png(bitmap)
     }
 }
 

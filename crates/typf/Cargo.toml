@@ -1,9 +1,11 @@
 [package]
 name = "typf"
-version = "2.0.0"
-authors = ["Typf Contributors"]
-edition = "2021"
-license = "MIT OR Apache-2.0"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [[example]]
 name = "basic"

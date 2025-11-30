@@ -21,12 +21,49 @@ use typf_core::{
 pub use typf_core::shaping_cache::{CacheStats, ShapingCache, ShapingCacheKey, SharedShapingCache};
 
 /// Professional text shaping powered by HarfBuzz
-pub struct HarfBuzzShaper;
+///
+/// Optionally caches shaping results to avoid expensive re-shaping of identical text.
+pub struct HarfBuzzShaper {
+    /// Optional shaping cache for performance
+    cache: Option<SharedShapingCache>,
+}
 
 impl HarfBuzzShaper {
     /// Creates a new HarfBuzz shaper ready to handle any script
     pub fn new() -> Self {
-        Self
+        Self { cache: None }
+    }
+
+    /// Creates a new HarfBuzz shaper with caching enabled
+    ///
+    /// Uses default cache capacities (L1: 100, L2: 500 entries)
+    pub fn with_cache() -> Self {
+        Self {
+            cache: Some(Arc::new(std::sync::RwLock::new(ShapingCache::new()))),
+        }
+    }
+
+    /// Creates a new HarfBuzz shaper with a custom cache
+    ///
+    /// Useful for sharing a cache across multiple shapers
+    pub fn with_shared_cache(cache: SharedShapingCache) -> Self {
+        Self { cache: Some(cache) }
+    }
+
+    /// Returns cache statistics if caching is enabled
+    pub fn cache_stats(&self) -> Option<CacheStats> {
+        self.cache
+            .as_ref()
+            .and_then(|c| c.read().ok())
+            .map(|c| c.stats())
+    }
+
+    /// Returns the cache hit rate (0.0 to 1.0) if caching is enabled
+    pub fn cache_hit_rate(&self) -> Option<f64> {
+        self.cache
+            .as_ref()
+            .and_then(|c| c.read().ok())
+            .map(|c| c.hit_rate())
     }
 
     /// Translates our direction enum to HarfBuzz's format
@@ -82,6 +119,29 @@ impl Shaper for HarfBuzzShaper {
 
         // Try to get the actual font data
         let font_data = font.data();
+
+        // Check cache if enabled
+        let cache_key = if self.cache.is_some() {
+            let key = ShapingCacheKey::new(
+                text,
+                font_data,
+                params.size,
+                params.language.clone(),
+                params.script.clone(),
+                params.features.clone(),
+            );
+            // Try to get from cache
+            if let Some(ref cache) = self.cache {
+                if let Ok(cache_guard) = cache.read() {
+                    if let Some(result) = cache_guard.get(&key) {
+                        return Ok(result);
+                    }
+                }
+            }
+            Some(key)
+        } else {
+            None
+        };
         if font_data.is_empty() {
             // No font data? Fall back to basic shaping
             let mut glyphs = Vec::new();
@@ -101,12 +161,23 @@ impl Shaper for HarfBuzzShaper {
                 }
             }
 
-            return Ok(ShapingResult {
+            let result = ShapingResult {
                 glyphs,
                 advance_width: x_offset,
                 advance_height: params.size,
                 direction: params.direction,
-            });
+            };
+
+            // Store fallback result in cache if enabled
+            if let Some(key) = cache_key {
+                if let Some(ref cache) = self.cache {
+                    if let Ok(cache_guard) = cache.write() {
+                        cache_guard.insert(key, result.clone());
+                    }
+                }
+            }
+
+            return Ok(result);
         }
 
         // Load the font into HarfBuzz
@@ -211,17 +282,36 @@ impl Shaper for HarfBuzzShaper {
         let advance_width = x_offset;
         let advance_height = params.size;
 
-        Ok(ShapingResult {
+        let result = ShapingResult {
             glyphs,
             advance_width,
             advance_height,
             direction: params.direction,
-        })
+        };
+
+        // Store in cache if enabled
+        if let Some(key) = cache_key {
+            if let Some(ref cache) = self.cache {
+                if let Ok(cache_guard) = cache.write() {
+                    cache_guard.insert(key, result.clone());
+                }
+            }
+        }
+
+        Ok(result)
     }
 
     fn supports_script(&self, _script: &str) -> bool {
         // HarfBuzz knows how to shape every script there is
         true
+    }
+
+    fn clear_cache(&self) {
+        if let Some(ref cache) = self.cache {
+            if let Ok(mut cache_guard) = cache.write() {
+                *cache_guard = ShapingCache::new();
+            }
+        }
     }
 }
 
@@ -608,5 +698,138 @@ mod tests {
         assert!(result.glyphs.len() > 0);
         // HarfBuzz handles bidi internally
         assert!(result.advance_width > 0.0);
+    }
+
+    // ===================== CACHE TESTS =====================
+
+    #[test]
+    fn test_shaper_with_cache() {
+        let shaper = HarfBuzzShaper::with_cache();
+        let font = Arc::new(TestFont { data: vec![] });
+        let params = ShapingParams::default();
+
+        // First shape - cache miss
+        let result1 = shaper.shape("Hello", font.clone(), &params).unwrap();
+        assert_eq!(result1.glyphs.len(), 5);
+
+        // Second shape - should hit cache
+        let result2 = shaper.shape("Hello", font.clone(), &params).unwrap();
+        assert_eq!(result2.glyphs.len(), 5);
+
+        // Results should be identical
+        assert_eq!(result1.advance_width, result2.advance_width);
+
+        // Check cache hit rate (should be > 0 after second call)
+        let hit_rate = shaper.cache_hit_rate().unwrap();
+        assert!(hit_rate > 0.0, "Cache hit rate should be > 0 after repeat query");
+    }
+
+    #[test]
+    fn test_shaper_without_cache() {
+        let shaper = HarfBuzzShaper::new();
+
+        // Cache stats should be None when caching is disabled
+        assert!(shaper.cache_stats().is_none());
+        assert!(shaper.cache_hit_rate().is_none());
+    }
+
+    #[test]
+    fn test_cache_stats() {
+        let shaper = HarfBuzzShaper::with_cache();
+        let font = Arc::new(TestFont { data: vec![] });
+        let params = ShapingParams::default();
+
+        // Initial state - no hits or misses
+        let stats = shaper.cache_stats().unwrap();
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 0);
+
+        // First query - miss
+        shaper.shape("Test", font.clone(), &params).unwrap();
+
+        // Second query (same text) - hit
+        shaper.shape("Test", font.clone(), &params).unwrap();
+
+        let stats = shaper.cache_stats().unwrap();
+        assert!(stats.hits >= 1, "Should have at least one hit");
+    }
+
+    #[test]
+    fn test_shared_cache_across_shapers() {
+        use std::sync::RwLock;
+
+        // Create a shared cache
+        let shared_cache: SharedShapingCache = Arc::new(RwLock::new(ShapingCache::new()));
+
+        // Create two shapers sharing the same cache
+        let shaper1 = HarfBuzzShaper::with_shared_cache(shared_cache.clone());
+        let shaper2 = HarfBuzzShaper::with_shared_cache(shared_cache.clone());
+
+        let font = Arc::new(TestFont { data: vec![] });
+        let params = ShapingParams::default();
+
+        // Shape with shaper1
+        let result1 = shaper1.shape("Shared", font.clone(), &params).unwrap();
+
+        // Shape same text with shaper2 - should hit shared cache
+        let result2 = shaper2.shape("Shared", font.clone(), &params).unwrap();
+
+        // Results should be identical
+        assert_eq!(result1.glyphs.len(), result2.glyphs.len());
+        assert_eq!(result1.advance_width, result2.advance_width);
+
+        // Shared cache should have hits
+        let shared_stats = shared_cache.read().unwrap().stats();
+        assert!(shared_stats.hits >= 1, "Shared cache should have at least one hit");
+    }
+
+    #[test]
+    fn test_clear_cache() {
+        let shaper = HarfBuzzShaper::with_cache();
+        let font = Arc::new(TestFont { data: vec![] });
+        let params = ShapingParams::default();
+
+        // Shape text to populate cache
+        shaper.shape("ClearTest", font.clone(), &params).unwrap();
+        shaper.shape("ClearTest", font.clone(), &params).unwrap(); // Hit
+
+        let stats_before = shaper.cache_stats().unwrap();
+        assert!(stats_before.hits >= 1);
+
+        // Clear the cache
+        shaper.clear_cache();
+
+        // Stats should be reset
+        let stats_after = shaper.cache_stats().unwrap();
+        assert_eq!(stats_after.hits, 0);
+        assert_eq!(stats_after.misses, 0);
+    }
+
+    #[test]
+    fn test_cache_different_params() {
+        let shaper = HarfBuzzShaper::with_cache();
+        let font = Arc::new(TestFont { data: vec![] });
+
+        let params1 = ShapingParams {
+            size: 12.0,
+            ..Default::default()
+        };
+
+        let params2 = ShapingParams {
+            size: 24.0,
+            ..Default::default()
+        };
+
+        // Same text, different sizes should be cached separately
+        let result1 = shaper.shape("Size", font.clone(), &params1).unwrap();
+        let result2 = shaper.shape("Size", font.clone(), &params2).unwrap();
+
+        // With fallback shaping (no font data), advance_height reflects size
+        assert_eq!(result1.advance_height, 12.0);
+        assert_eq!(result2.advance_height, 24.0);
+
+        // Both should be cache misses (different cache keys)
+        let stats = shaper.cache_stats().unwrap();
+        assert!(stats.misses >= 2);
     }
 }

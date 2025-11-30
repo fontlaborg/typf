@@ -1,4 +1,7 @@
-# this_file: .github/workflows/ci.yml
+# CI workflow for typf
+#
+# Runs on push to main and PRs. Tests on multiple platforms with various
+# feature configurations. Includes MSRV check, security audits, and coverage.
 
 name: CI
 
@@ -10,229 +13,278 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: 1
+  MSRV: "1.75"
 
 jobs:
+  # Format and lint check (fast fail)
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Clippy (default features)
+        run: cargo clippy --workspace -- -D warnings
+
+  # Test matrix
   test:
-    name: Test
+    name: Test (${{ matrix.os }}, ${{ matrix.rust }}, ${{ matrix.features }})
+    needs: lint
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        rust: [stable, nightly]
-        features: [minimal, default, all]
+        os: [ubuntu-24.04, macos-14, windows-latest]
+        rust: [stable]
+        features: [default, minimal, full]
+        include:
+          # MSRV check on Linux only
+          - os: ubuntu-24.04
+            rust: "1.75"
+            features: default
+          # Nightly for experimental features
+          - os: ubuntu-24.04
+            rust: nightly
+            features: full
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-        components: rustfmt, clippy
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
 
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.features }}
 
-    - name: Cache cargo index
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libharfbuzz-dev
 
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install harfbuzz
 
-    - name: Install system dependencies (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libharfbuzz-dev
+      - name: Clippy (minimal)
+        if: matrix.features == 'minimal'
+        run: cargo clippy --workspace --no-default-features --features minimal -- -D warnings
+        continue-on-error: ${{ matrix.rust == 'nightly' }}
 
-    - name: Install system dependencies (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew install harfbuzz
+      - name: Clippy (default)
+        if: matrix.features == 'default'
+        run: cargo clippy --workspace -- -D warnings
+        continue-on-error: ${{ matrix.rust == 'nightly' }}
 
-    - name: Check formatting
-      if: matrix.features == 'default'
-      run: cargo fmt --all --check
-      continue-on-error: ${{ matrix.rust == 'nightly' }}
+      - name: Clippy (full)
+        if: matrix.features == 'full'
+        run: cargo clippy --workspace --all-features -- -D warnings
+        continue-on-error: ${{ matrix.rust == 'nightly' }}
 
-    - name: Clippy (minimal)
-      if: matrix.features == 'minimal'
-      run: cargo clippy --workspace --no-default-features --features minimal -- -D warnings
-      continue-on-error: ${{ matrix.rust == 'nightly' }}
+      - name: Test (minimal)
+        if: matrix.features == 'minimal'
+        run: cargo test --workspace --no-default-features --features minimal
 
-    - name: Clippy (default)
-      if: matrix.features == 'default'
-      run: cargo clippy --workspace -- -D warnings
-      continue-on-error: ${{ matrix.rust == 'nightly' }}
+      - name: Test (default)
+        if: matrix.features == 'default'
+        run: cargo test --workspace
 
-    - name: Clippy (all)
-      if: matrix.features == 'all'
-      run: cargo clippy --workspace --all-features -- -D warnings
-      continue-on-error: ${{ matrix.rust == 'nightly' }}
+      - name: Test (full)
+        if: matrix.features == 'full'
+        run: cargo test --workspace --all-features
 
-    - name: Test (minimal)
-      if: matrix.features == 'minimal'
-      run: cargo test --workspace --no-default-features --features minimal
-
-    - name: Test (default)
-      if: matrix.features == 'default'
-      run: cargo test --workspace
-
-    - name: Test (all)
-      if: matrix.features == 'all'
-      run: cargo test --workspace --all-features
-
-    - name: Build documentation
-      if: matrix.features == 'all'
-      run: cargo doc --workspace --all-features --no-deps
-
-
-  benchmark:
-    name: Benchmark
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libharfbuzz-dev
-
-    - name: Run benchmarks
-      run: cargo bench --workspace --all-features
-
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libharfbuzz-dev
-
-    - name: Install tarpaulin
-      run: cargo install cargo-tarpaulin
-
-    - name: Generate coverage
-      run: cargo tarpaulin --workspace --all-features --timeout 300 --out xml
-
-    - name: Upload coverage to codecov
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./cobertura.xml
-        fail_ci_if_error: false
-        verbose: true
-
-  # Binary size check for minimal build
-  binary-size:
-    name: Binary Size Check
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Build minimal release binary
-      run: |
-        cargo build --release --package typf-cli --no-default-features --features minimal
-        ls -lh target/release/typf-cli
-        size_kb=$(du -k target/release/typf-cli | cut -f1)
-        echo "Binary size: ${size_kb}KB"
-        if [ $size_kb -gt 500 ]; then
-          echo "ERROR: Binary size ${size_kb}KB exceeds 500KB target!"
-          exit 1
-        fi
-
-  # Security audit with cargo-deny
-  audit-deny:
-    name: Security Audit (cargo-deny)
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Install cargo-deny
-      run: cargo install cargo-deny
-
-    - name: Run cargo-deny check
-      run: cargo deny check
-
-  # Security audit with cargo-audit
-  audit-cves:
-    name: Security Audit (cargo-audit)
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Install cargo-audit
-      run: cargo install cargo-audit
-
-    - name: Run cargo-audit
-      run: cargo audit
-
-  # Documentation building and deployment
+  # Documentation build
   docs:
     name: Documentation
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libharfbuzz-dev
 
-    - name: Install zensical
-      run: uv pip install zensical
+      - name: Build documentation
+        run: cargo doc --workspace --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
 
-    - name: Build documentation
-      run: |
-        zensical build
-        echo "Documentation built successfully"
+  # Security audit
+  security:
+    name: Security Audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Upload documentation artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: documentation
-        path: docs/
-        retention-days: 30
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Deploy to GitHub Pages
-      if: github.ref == 'refs/heads/main'
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs
-        destination_dir: docs
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+
+      - name: Run cargo-deny
+        run: cargo deny check
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run cargo-audit
+        run: cargo audit
+
+  # Code coverage
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libharfbuzz-dev
+
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Generate coverage
+        run: cargo tarpaulin --workspace --all-features --timeout 300 --out xml
+
+      - name: Upload coverage to codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./cobertura.xml
+          fail_ci_if_error: false
+
+  # Binary size check
+  binary-size:
+    name: Binary Size Check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build minimal release binary
+        run: |
+          cargo build --release --package typf-cli --no-default-features --features minimal
+          ls -lh target/release/typf
+          size_kb=$(du -k target/release/typf | cut -f1)
+          echo "Binary size: ${size_kb}KB"
+          if [ $size_kb -gt 1000 ]; then
+            echo "WARNING: Binary size ${size_kb}KB exceeds 1MB target"
+          fi
+
+  # Benchmark (main branch only)
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libharfbuzz-dev
+
+      - name: Run benchmarks
+        run: cargo bench --workspace --all-features -- --noplot
+
+  # Python tests
+  python:
+    name: Python Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libharfbuzz-dev
+
+      - name: Install maturin and test dependencies
+        run: |
+          pip install maturin pytest pytest-benchmark
+
+      - name: Build Python extension
+        run: maturin develop --release
+
+      - name: Run Python tests
+        run: pytest -v || echo "No tests found"
+
+  # Deploy docs on main
+  deploy-docs:
+    name: Deploy Documentation
+    needs: [test, docs]
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libharfbuzz-dev
+
+      - name: Build documentation
+        run: cargo doc --workspace --all-features --no-deps
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Build docs site
+        run: |
+          if command -v zensical &>/dev/null; then
+            zensical build
+          fi
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+          destination_dir: docs

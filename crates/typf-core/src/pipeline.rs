@@ -8,15 +8,27 @@ use crate::{
 };
 use std::sync::Arc;
 
-/// Six stages, one purpose: turn text into rendered output
+/// Pipeline for text rendering: Shape → Render → Export
 ///
-/// The Pipeline orchestrates text's journey through:
-/// 1. Input Parsing - Raw text becomes structured data
-/// 2. Unicode Processing - Scripts normalize, bidi resolves
-/// 3. Font Selection - The right font finds each character
-/// 4. Shaping - Characters transform into positioned glyphs
-/// 5. Rendering - Glyphs become pixels or vectors
-/// 6. Export - Final output emerges as files
+/// The Pipeline provides two methods for processing text:
+///
+/// ## `process()` - Direct Backend Execution (Recommended)
+/// Directly chains the three core backends:
+/// - **Shaping** - Characters transform into positioned glyphs
+/// - **Rendering** - Glyphs become pixels or vectors
+/// - **Export** - Final output emerges as files
+///
+/// ## `execute()` - Stage-Based Execution
+/// Runs through six stages, with the first three being pass-through:
+/// 1. InputParsing - (pass-through, reserved for future use)
+/// 2. UnicodeProcessing - (pass-through, reserved for future use)
+/// 3. FontSelection - (pass-through, reserved for future use)
+/// 4. **Shaping** - Characters transform into positioned glyphs
+/// 5. **Rendering** - Glyphs become pixels or vectors
+/// 6. **Export** - Final output emerges as files
+///
+/// For most use cases, prefer `process()` which is simpler and avoids the
+/// pass-through stage overhead.
 ///
 /// ```ignore
 /// use typf_core::Pipeline;
@@ -196,7 +208,10 @@ impl Default for PipelineBuilder {
 }
 
 // The six stages that make up the default pipeline
+// Note: The first three stages are pass-throughs reserved for future use.
+// All actual processing happens in Shaping, Rendering, and Export stages.
 
+/// Pass-through stage reserved for future input validation.
 struct InputParsingStage;
 impl Stage for InputParsingStage {
     fn name(&self) -> &'static str {
@@ -204,12 +219,13 @@ impl Stage for InputParsingStage {
     }
 
     fn process(&self, context: PipelineContext) -> Result<PipelineContext> {
-        log::trace!("Parsing input");
-        // TODO: Validate and structure the raw input
+        log::trace!("InputParsing: pass-through (reserved for future use)");
         Ok(context)
     }
 }
 
+/// Pass-through stage reserved for future Unicode processing.
+/// For bidi/script handling, use `typf_unicode::UnicodeProcessor` directly.
 struct UnicodeProcessingStage;
 impl Stage for UnicodeProcessingStage {
     fn name(&self) -> &'static str {
@@ -217,12 +233,13 @@ impl Stage for UnicodeProcessingStage {
     }
 
     fn process(&self, context: PipelineContext) -> Result<PipelineContext> {
-        log::trace!("Processing Unicode");
-        // TODO: Normalize text, resolve bidi, segment by script
+        log::trace!("UnicodeProcessing: pass-through (reserved for future use)");
         Ok(context)
     }
 }
 
+/// Pass-through stage reserved for future font selection/fallback.
+/// For font loading, use `typf_fontdb` directly.
 struct FontSelectionStage;
 impl Stage for FontSelectionStage {
     fn name(&self) -> &'static str {
@@ -230,8 +247,7 @@ impl Stage for FontSelectionStage {
     }
 
     fn process(&self, context: PipelineContext) -> Result<PipelineContext> {
-        log::trace!("Selecting font");
-        // TODO: Match characters to fonts, handle fallbacks
+        log::trace!("FontSelection: pass-through (reserved for future use)");
         Ok(context)
     }
 }

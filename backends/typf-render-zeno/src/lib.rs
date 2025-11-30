@@ -176,18 +176,49 @@ impl Renderer for ZenoRenderer {
         font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
-        // Calculate canvas dimensions
         let padding = params.padding as f32;
+        let glyph_size = shaped.advance_height;
+
+        // Phase 1: Render all glyphs first to get accurate bounds
+        // This ensures we don't clip tall glyphs (emoji, Thai marks, Arabic diacritics)
+        let mut rendered_glyphs: Vec<RenderedGlyph> = Vec::new();
+        let mut min_y: f32 = 0.0; // Relative to baseline
+        let mut max_y: f32 = 0.0; // Relative to baseline
+
+        for glyph in &shaped.glyphs {
+            if let Ok(bitmap) = self.render_glyph(&font, glyph.id, glyph_size) {
+                // Skip empty glyphs (like spaces)
+                if bitmap.width == 0 || bitmap.height == 0 {
+                    continue;
+                }
+
+                // bearing_y is distance from baseline to top of glyph (positive = above baseline)
+                // glyph top relative to baseline = glyph.y + bearing_y
+                // glyph bottom relative to baseline = glyph.y + bearing_y - height
+                let glyph_top = glyph.y + bitmap.bearing_y as f32;
+                let glyph_bottom = glyph.y + bitmap.bearing_y as f32 - bitmap.height as f32;
+
+                max_y = max_y.max(glyph_top);
+                min_y = min_y.min(glyph_bottom);
+
+                rendered_glyphs.push(RenderedGlyph {
+                    bitmap,
+                    glyph_x: glyph.x,
+                    glyph_y: glyph.y,
+                });
+            }
+        }
+
+        // Phase 2: Calculate canvas dimensions from actual glyph bounds
         let width = (shaped.advance_width + padding * 2.0).ceil() as u32;
 
-        // Calculate height using font metrics approximation (matching CoreGraphics)
-        // Ascent is approximately 80% of advance_height, descent is 20%
-        let font_height = if shaped.glyphs.is_empty() {
-            16.0 // Default minimum height for empty text
+        // Height is from highest point above baseline to lowest point below
+        let content_height = if rendered_glyphs.is_empty() {
+            16.0 // Default minimum for empty text
         } else {
-            shaped.advance_height * 1.2 // Add extra space for descenders and diacritics
+            max_y - min_y // Total height = ascent + descent
         };
-        let height = (font_height + padding * 2.0).ceil() as u32;
+        let height = (content_height + padding * 2.0).ceil() as u32;
 
         // Validate dimensions
         if width == 0 || height == 0 {
@@ -211,57 +242,51 @@ impl Renderer for ZenoRenderer {
             }
         }
 
-        // Use advance_height as the font size (same as Opixa/Skia renderers)
-        let glyph_size = shaped.advance_height;
+        // Baseline position: padding + distance from top to baseline
+        // max_y is the highest point above baseline, so baseline is at padding + max_y
+        let baseline_y = padding + max_y;
 
-        // Calculate baseline position using proper font metrics approximation
-        // Use 0.75 ratio to match CoreGraphics reference implementation
-        // In top-origin coordinates, baseline should be at padding + ascent
-        let ascent = shaped.advance_height * 0.75;
-        let baseline_y = padding + ascent;
+        // Phase 3: Composite pre-rendered glyphs onto canvas
+        for rg in rendered_glyphs {
+            let bitmap = &rg.bitmap;
 
-        // Render each glyph
-        for glyph in &shaped.glyphs {
-            if let Ok(bitmap) = self.render_glyph(&font, glyph.id, glyph_size) {
-                // Calculate position
-                let x = (padding + glyph.x) as i32 + bitmap.bearing_x;
-                let y = (baseline_y + glyph.y) as i32 - bitmap.bearing_y; // baseline_y already includes padding
+            // Position glyph on canvas
+            let x = (padding + rg.glyph_x) as i32 + bitmap.bearing_x;
+            let y = (baseline_y + rg.glyph_y) as i32 - bitmap.bearing_y;
 
-                // Composite glyph onto canvas
-                for gy in 0..bitmap.height {
-                    for gx in 0..bitmap.width {
-                        let px = x + gx as i32;
-                        let py = y + gy as i32;
+            // Composite glyph onto canvas
+            for gy in 0..bitmap.height {
+                for gx in 0..bitmap.width {
+                    let px = x + gx as i32;
+                    let py = y + gy as i32;
 
-                        // Check bounds
-                        if px < 0 || py < 0 || px >= width as i32 || py >= height as i32 {
-                            continue;
-                        }
-
-                        let coverage = bitmap.data[(gy * bitmap.width + gx) as usize];
-                        if coverage == 0 {
-                            continue;
-                        }
-
-                        let canvas_idx = ((py as u32 * width + px as u32) * 4) as usize;
-
-                        // Alpha blend foreground with coverage
-                        let alpha = (coverage as u32 * params.foreground.a as u32) / 255;
-                        let inv_alpha = 255 - alpha;
-
-                        canvas[canvas_idx] = ((params.foreground.r as u32 * alpha
-                            + canvas[canvas_idx] as u32 * inv_alpha)
-                            / 255) as u8;
-                        canvas[canvas_idx + 1] = ((params.foreground.g as u32 * alpha
-                            + canvas[canvas_idx + 1] as u32 * inv_alpha)
-                            / 255) as u8;
-                        canvas[canvas_idx + 2] = ((params.foreground.b as u32 * alpha
-                            + canvas[canvas_idx + 2] as u32 * inv_alpha)
-                            / 255) as u8;
-                        canvas[canvas_idx + 3] = ((alpha
-                            + canvas[canvas_idx + 3] as u32 * inv_alpha / 255)
-                            .min(255)) as u8;
+                    // Check bounds
+                    if px < 0 || py < 0 || px >= width as i32 || py >= height as i32 {
+                        continue;
                     }
+
+                    let coverage = bitmap.data[(gy * bitmap.width + gx) as usize];
+                    if coverage == 0 {
+                        continue;
+                    }
+
+                    let canvas_idx = ((py as u32 * width + px as u32) * 4) as usize;
+
+                    // Alpha blend foreground with coverage
+                    let alpha = (coverage as u32 * params.foreground.a as u32) / 255;
+                    let inv_alpha = 255 - alpha;
+
+                    canvas[canvas_idx] = ((params.foreground.r as u32 * alpha
+                        + canvas[canvas_idx] as u32 * inv_alpha)
+                        / 255) as u8;
+                    canvas[canvas_idx + 1] = ((params.foreground.g as u32 * alpha
+                        + canvas[canvas_idx + 1] as u32 * inv_alpha)
+                        / 255) as u8;
+                    canvas[canvas_idx + 2] = ((params.foreground.b as u32 * alpha
+                        + canvas[canvas_idx + 2] as u32 * inv_alpha)
+                        / 255) as u8;
+                    canvas[canvas_idx + 3] =
+                        ((alpha + canvas[canvas_idx + 3] as u32 * inv_alpha / 255).min(255)) as u8;
                 }
             }
         }
@@ -277,6 +302,13 @@ impl Renderer for ZenoRenderer {
     fn supports_format(&self, format: &str) -> bool {
         matches!(format, "bitmap" | "rgba")
     }
+}
+
+/// A rendered glyph ready for compositing
+struct RenderedGlyph {
+    bitmap: GlyphBitmap,
+    glyph_x: f32,
+    glyph_y: f32,
 }
 
 /// A rendered glyph complete with positioning for perfect layout

@@ -224,25 +224,88 @@ impl Renderer for OpixaRenderer {
 
         // Extract raw font bytes for our rasterizer to analyze
         let font_data = font.data();
-
-        // Determine how much canvas this text actually needs
         let padding = params.padding as f32;
-        // Empty text still deserves a tiny canvas
+        let glyph_size = shaped.advance_height;
+
+        // Phase 1: Render all glyphs first to get accurate bounds
+        // This ensures we don't clip tall glyphs (emoji, Thai marks, Arabic diacritics)
+        let mut rendered_glyphs: Vec<RenderedGlyph> = Vec::new();
+        let mut min_y: f32 = 0.0; // Relative to baseline
+        let mut max_y: f32 = 0.0; // Relative to baseline
+
+        // Create rasterizer only if we have glyphs
+        let mut rasterizer = if !shaped.glyphs.is_empty() {
+            match rasterizer::GlyphRasterizer::new(font_data, glyph_size) {
+                Ok(mut r) => {
+                    // Apply variable font customizations before any rendering
+                    if !params.variations.is_empty() {
+                        if let Err(e) = r.set_variations(&params.variations) {
+                            log::warn!("Variable font setup failed: {}", e);
+                        }
+                    }
+                    Some(r)
+                },
+                Err(e) => {
+                    log::warn!("Failed to create rasterizer: {}", e);
+                    None
+                },
+            }
+        } else {
+            None
+        };
+
+        // Render each glyph and collect bounds
+        for glyph in &shaped.glyphs {
+            let Some(ref mut rast) = rasterizer else {
+                log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
+                continue;
+            };
+
+            let glyph_bitmap =
+                match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
+                    Ok(bitmap) => bitmap,
+                    Err(e) => {
+                        log::warn!("Glyph {} refused to render: {}", glyph.id, e);
+                        continue;
+                    },
+                };
+
+            // Skip empty glyphs (like spaces)
+            if glyph_bitmap.width == 0 || glyph_bitmap.height == 0 {
+                continue;
+            }
+
+            // `top` is distance from baseline to top of glyph (positive = above baseline)
+            // glyph top relative to baseline = glyph.y + top
+            // glyph bottom relative to baseline = glyph.y + top - height
+            let glyph_top = glyph.y + glyph_bitmap.top as f32;
+            let glyph_bottom = glyph.y + glyph_bitmap.top as f32 - glyph_bitmap.height as f32;
+
+            max_y = max_y.max(glyph_top);
+            min_y = min_y.min(glyph_bottom);
+
+            rendered_glyphs.push(RenderedGlyph {
+                bitmap: glyph_bitmap,
+                glyph_x: glyph.x,
+                glyph_y: glyph.y,
+            });
+        }
+
+        // Phase 2: Calculate canvas dimensions from actual glyph bounds
         let min_width = if shaped.glyphs.is_empty() && shaped.advance_width == 0.0 {
-            1 // Respect the empty—give it one pixel of dignity
+            1
         } else {
             (shaped.advance_width + padding * 2.0).ceil() as u32
         };
-        let width = min_width.max(1); // Never allow zero-width canvases
+        let width = min_width.max(1);
 
-        // Height calculation that matches CoreGraphics behavior
-        // Ascent ≈ 80% of font height, descent ≈ 20%, plus generous padding
-        let font_height = if shaped.glyphs.is_empty() {
-            16.0 // Even empty text deserves some vertical space
+        // Height is from highest point above baseline to lowest point below
+        let content_height = if rendered_glyphs.is_empty() {
+            16.0 // Default minimum for empty text
         } else {
-            shaped.advance_height * 1.2 // Extra room for descenders and accent marks
+            max_y - min_y // Total height = ascent + descent
         };
-        let height = (font_height + padding * 2.0).ceil() as u32;
+        let height = (content_height + padding * 2.0).ceil() as u32;
 
         // Sanity check: prevent impossible canvas sizes
         if width == 0 || height == 0 {
@@ -266,60 +329,16 @@ impl Renderer for OpixaRenderer {
             }
         }
 
-        // Font size comes from shaping, not arbitrary numbers
-        let glyph_size = shaped.advance_height;
+        // Baseline position: padding + distance from top to baseline
+        // max_y is the highest point above baseline, so baseline is at padding + max_y
+        let baseline_y = padding + max_y;
 
-        // Baseline calculation that aligns with professional renderers
-        // The 0.75 ratio isn't magic—it matches CoreGraphics perfectly
-        let ascent = shaped.advance_height * 0.75;
-        let baseline_y = padding + ascent;
+        // Phase 3: Composite pre-rendered glyphs onto canvas
+        for rg in rendered_glyphs {
+            let x = (rg.glyph_x + padding) as i32;
+            let y = (baseline_y + rg.glyph_y) as i32;
 
-        // One rasterizer to rule them all (created only when needed)
-        // This optimization saves font parsing for empty text or test stubs
-        let mut rasterizer = if !shaped.glyphs.is_empty() {
-            match rasterizer::GlyphRasterizer::new(font_data, glyph_size) {
-                Ok(mut r) => {
-                    // Apply variable font customizations before any rendering
-                    if !params.variations.is_empty() {
-                        if let Err(e) = r.set_variations(&params.variations) {
-                            log::warn!("Variable font setup failed: {}", e);
-                        }
-                    }
-                    Some(r)
-                },
-                Err(e) => {
-                    log::warn!("Failed to create rasterizer: {}", e);
-                    // Test compatibility: stub fonts shouldn't break everything
-                    None
-                },
-            }
-        } else {
-            None
-        };
-
-        // Render each glyph
-        for glyph in &shaped.glyphs {
-            // Skip if we don't have a valid rasterizer
-            let Some(ref mut rast) = rasterizer else {
-                log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
-                continue;
-            };
-
-            // Render with our configured rasterizer (variations already applied)
-            let glyph_bitmap =
-                match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
-                    Ok(bitmap) => bitmap,
-                    Err(e) => {
-                        log::warn!("Glyph {} refused to render: {}", glyph.id, e);
-                        continue; // Skip problematic glyphs without breaking everything
-                    },
-                };
-
-            // Position each glyph with mathematical precision
-            let x = (glyph.x + padding) as i32;
-            let y = (baseline_y + glyph.y) as i32;
-
-            self.composite_glyph(&mut canvas, width, &glyph_bitmap, x, y, params.foreground);
+            self.composite_glyph(&mut canvas, width, &rg.bitmap, x, y, params.foreground);
         }
 
         Ok(RenderOutput::Bitmap(BitmapData {
@@ -333,6 +352,13 @@ impl Renderer for OpixaRenderer {
     fn supports_format(&self, format: &str) -> bool {
         matches!(format, "bitmap" | "rgba" | "rgb" | "gray")
     }
+}
+
+/// A rendered glyph ready for compositing
+struct RenderedGlyph {
+    bitmap: rasterizer::GlyphBitmap,
+    glyph_x: f32,
+    glyph_y: f32,
 }
 
 #[cfg(test)]

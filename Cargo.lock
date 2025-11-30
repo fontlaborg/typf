@@ -639,12 +639,6 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foldhash"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
-
-[[package]]
-name = "foldhash"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
@@ -803,24 +797,13 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.15.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
-dependencies = [
- "allocator-api2",
- "equivalent",
- "foldhash 0.1.5",
-]
-
-[[package]]
-name = "hashbrown"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5419bdc4f6a9207fbeba6d11b604d481addf78ecd10c11ad51e76c2f6482748d"
 dependencies = [
  "allocator-api2",
  "equivalent",
- "foldhash 0.2.0",
+ "foldhash",
 ]
 
 [[package]]
@@ -1113,20 +1096,11 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lru"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "234cf4f4a04dc1f57e24b96cc0cd600cf2af460d4161ac5ecdd0af8e1f3b2a38"
-dependencies = [
- "hashbrown 0.15.5",
-]
-
-[[package]]
-name = "lru"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96051b46fc183dc9cd4a223960ef37b9af631b55191852a8274bfef064cda20f"
 dependencies = [
- "hashbrown 0.16.0",
+ "hashbrown",
 ]
 
 [[package]]
@@ -2092,7 +2066,7 @@ version = "2.0.0"
 dependencies = [
  "icu_properties",
  "log",
- "lru 0.16.2",
+ "lru",
  "parking_lot",
  "thiserror",
 ]
@@ -2101,6 +2075,7 @@ dependencies = [
 name = "typf-export"
 version = "2.0.0"
 dependencies = [
+ "base64",
  "image",
  "serde",
  "serde_json",
@@ -2151,7 +2126,7 @@ dependencies = [
  "env_logger",
  "foreign-types 0.5.0",
  "log",
- "lru 0.12.5",
+ "lru",
  "parking_lot",
  "typf-core",
 ]
@@ -2161,7 +2136,7 @@ name = "typf-os-win"
 version = "2.0.0"
 dependencies = [
  "log",
- "lru 0.16.2",
+ "lru",
  "parking_lot",
  "typf-core",
  "windows",
@@ -2286,7 +2261,7 @@ dependencies = [
  "env_logger",
  "foreign-types 0.5.0",
  "log",
- "lru 0.16.2",
+ "lru",
  "objc2",
  "objc2-foundation",
  "parking_lot",
@@ -2312,7 +2287,7 @@ dependencies = [
  "env_logger",
  "harfbuzz_rs",
  "log",
- "lru 0.16.2",
+ "lru",
  "parking_lot",
  "thiserror",
  "typf-core",

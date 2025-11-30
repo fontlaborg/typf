@@ -15,7 +15,7 @@ pub mod png;
 pub mod svg;
 
 pub use json::JsonExporter;
-pub use png::PngExporter;
+pub use png::{encode_bitmap_to_png, PngExporter};
 pub use svg::SvgExporter;
 
 /// Simple bitmap exporter for when you just need to see what happened

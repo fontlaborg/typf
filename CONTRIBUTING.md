@@ -359,6 +359,35 @@ typf/
 - **CLI Enhancements**: REPL mode, rich output
 - **Benchmarks**: Comprehensive benchmark suite
 
+## Releasing
+
+See [RELEASING.md](RELEASING.md) for the complete release process.
+
+### Quick Release
+
+```bash
+# 1. Set version
+./scripts/set-version.sh 2.4.0
+
+# 2. Verify
+./scripts/test.sh
+
+# 3. Commit, tag, push
+git add -A && git commit -m "v2.4.0"
+git tag v2.4.0
+git push origin main --tags
+```
+
+GitHub Actions will build 8 Rust binaries + 40+ Python wheels and publish to crates.io and PyPI.
+
+### Development Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `./scripts/build.sh` | Build workspace + wheel |
+| `./scripts/test.sh` | Run fmt, clippy, tests |
+| `./scripts/publish.sh --dry-run` | Test publishing |
+
 ## Getting Help
 
 - **Questions**: [GitHub Discussions](https://github.com/fontlaborg/typf/discussions)
