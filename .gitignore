@@ -170,6 +170,7 @@ perf.data*
 
 # Build and test artifacts
 output.ppm
+**/examples/*.ppm
 test_output.txt
 typf-tester/output/*.json
 typf-tester/output/*.png
