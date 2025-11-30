@@ -28,7 +28,9 @@ impl WasmRenderer {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<WasmRenderer, JsValue> {
         #[cfg(not(all(feature = "shaping-none", feature = "render-opixa")))]
-        return Err(JsValue::from_str("WASM needs shaping-none and render-opixa features"));
+        return Err(JsValue::from_str(
+            "WASM needs shaping-none and render-opixa features",
+        ));
 
         #[cfg(all(feature = "shaping-none", feature = "render-opixa"))]
         {

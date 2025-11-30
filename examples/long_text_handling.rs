@@ -110,7 +110,11 @@ fn main() {
         .map(|c| c.iter().collect::<String>())
         .collect();
 
-    println!("Split into {} chunks of ~{} characters:", chunks.len(), chunk_size);
+    println!(
+        "Split into {} chunks of ~{} characters:",
+        chunks.len(),
+        chunk_size
+    );
     println!("Each chunk can be rendered separately and composited");
     println!("Chunk 1: \"{}...\"", &chunks[0][..50]);
     println!();

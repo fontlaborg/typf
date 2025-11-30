@@ -1,6 +1,6 @@
 [package]
 name = "typf-os"
-version = "2.0.0"
+version.workspace = true
 edition = "2021"
 description = "Platform-native linra text rendering dispatcher"
 license = "MIT OR Apache-2.0"

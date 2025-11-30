@@ -228,7 +228,10 @@ fn test_render_with_font_size() {
         .output()
         .expect("Failed to execute typf render");
 
-    assert!(output.status.success(), "render with custom size should succeed");
+    assert!(
+        output.status.success(),
+        "render with custom size should succeed"
+    );
     assert!(output_file.exists());
 
     let _ = fs::remove_file(output_file);
@@ -340,10 +343,7 @@ fn test_render_no_font_fails() {
         .expect("Failed to execute typf render");
 
     // Should fail because no font is specified
-    assert!(
-        !output.status.success(),
-        "render without font should fail"
-    );
+    assert!(!output.status.success(), "render without font should fail");
 }
 
 #[test]
@@ -378,13 +378,7 @@ fn test_render_corrupted_font_fails() {
     fs::write(&temp_font, b"not a real font file").expect("Failed to create temp file");
 
     let output = Command::new(typf_binary())
-        .args([
-            "render",
-            "Hello",
-            "-f",
-            temp_font.to_str().unwrap(),
-            "-q",
-        ])
+        .args(["render", "Hello", "-f", temp_font.to_str().unwrap(), "-q"])
         .output()
         .expect("Failed to execute typf render");
 
@@ -422,12 +416,7 @@ fn test_batch_empty_input() {
     fs::write(&input_file, "").expect("Failed to create temp file");
 
     let output = Command::new(typf_binary())
-        .args([
-            "batch",
-            "-i",
-            input_file.to_str().unwrap(),
-            "-q",
-        ])
+        .args(["batch", "-i", input_file.to_str().unwrap(), "-q"])
         .output()
         .expect("Failed to execute typf batch");
 
@@ -447,12 +436,7 @@ fn test_batch_invalid_json_fails() {
     fs::write(&input_file, "this is not valid json\n").expect("Failed to create temp file");
 
     let output = Command::new(typf_binary())
-        .args([
-            "batch",
-            "-i",
-            input_file.to_str().unwrap(),
-            "-q",
-        ])
+        .args(["batch", "-i", input_file.to_str().unwrap(), "-q"])
         .output()
         .expect("Failed to execute typf batch");
 
@@ -505,8 +489,5 @@ fn test_unknown_command_fails() {
         .output()
         .expect("Failed to execute typf");
 
-    assert!(
-        !output.status.success(),
-        "unknown command should fail"
-    );
+    assert!(!output.status.success(), "unknown command should fail");
 }

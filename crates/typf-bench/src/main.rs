@@ -182,9 +182,9 @@ impl BenchmarkRunner {
         let font_dir = Path::new(input_dir);
 
         if !font_dir.exists() {
-            return Err(TypfError::FontLoad(typf_core::error::FontLoadError::FileNotFound(
-                input_dir.to_string(),
-            )));
+            return Err(TypfError::FontLoad(
+                typf_core::error::FontLoadError::FileNotFound(input_dir.to_string()),
+            ));
         }
 
         // Discover font files
@@ -220,12 +220,17 @@ impl BenchmarkRunner {
         }
 
         if fonts.is_empty() {
-            return Err(TypfError::FontLoad(typf_core::error::FontLoadError::FileNotFound(
-                "No valid font files found".to_string(),
-            )));
+            return Err(TypfError::FontLoad(
+                typf_core::error::FontLoadError::FileNotFound(
+                    "No valid font files found".to_string(),
+                ),
+            ));
         }
 
-        println!("{}", format!("Loaded {} fonts for benchmarking", fonts.len()).cyan());
+        println!(
+            "{}",
+            format!("Loaded {} fonts for benchmarking", fonts.len()).cyan()
+        );
 
         Ok(Self { fonts, config })
     }
@@ -361,7 +366,10 @@ impl BenchmarkRunner {
         let shapers = self.get_shapers();
         let renderers = self.get_renderers();
 
-        println!("\n{}", "Starting comprehensive benchmark suite...".bold().cyan());
+        println!(
+            "\n{}",
+            "Starting comprehensive benchmark suite...".bold().cyan()
+        );
         println!(
             "{} shapers × {} renderers × {} fonts × {} sizes × {} texts × {} lengths = {} combinations",
             shapers.len(),
@@ -510,9 +518,12 @@ impl BenchmarkRunner {
         println!("{}", "─".repeat(80));
         println!(
             "{}",
-            format!("Completed {} linra benchmark combinations", total_combinations)
-                .bold()
-                .green()
+            format!(
+                "Completed {} linra benchmark combinations",
+                total_combinations
+            )
+            .bold()
+            .green()
         );
 
         Ok(())
@@ -534,7 +545,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = BenchmarkConfig::get(args.level);
 
     println!("{}", "Typf Comprehensive Benchmark Tool".bold().cyan());
-    println!("Input directory: {} | Level: {}", args.input_dir, args.level);
+    println!(
+        "Input directory: {} | Level: {}",
+        args.input_dir, args.level
+    );
 
     let runner = BenchmarkRunner::new(&args.input_dir, config)?;
     runner.run_benchmarks()?;

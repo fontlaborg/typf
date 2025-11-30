@@ -192,7 +192,7 @@ if [[ "$PUBLISH_PYPI" == "true" ]]; then
     echo ""
 
     if ! command -v maturin &>/dev/null; then
-        echo "Error: maturin not found. Install with: pip install maturin"
+        echo "Error: maturin not found. Install with: uv tool install maturin"
         exit 1
     fi
 

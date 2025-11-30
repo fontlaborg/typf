@@ -96,7 +96,12 @@ pub fn run(args: &BatchArgs) -> Result<()> {
         };
 
         if args.verbose {
-            eprintln!("Job {}: Rendering \"{}\" to {}", job_count, job.text, output_file.display());
+            eprintln!(
+                "Job {}: Rendering \"{}\" to {}",
+                job_count,
+                job.text,
+                output_file.display()
+            );
         }
 
         // Build render command arguments

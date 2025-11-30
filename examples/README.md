@@ -271,8 +271,8 @@ python examples/long_text_handling.py
 ```
 
 **Prerequisites**:
-1. Build Python bindings: `maturin develop --release --features shaping-hb,export-svg`
-2. Install Python dependencies: `pip install fire pillow`
+1. Build Python bindings: `uvx maturin develop --release --features shaping-hb,export-svg`
+2. Install Python dependencies: `uv pip install fire pillow`
 
 ---
 

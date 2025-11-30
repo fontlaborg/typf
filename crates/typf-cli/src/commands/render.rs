@@ -336,7 +336,9 @@ fn parse_color(color_str: &str) -> Result<Color> {
             .map_err(|_| TypfError::Other("Invalid color format".into()))?;
         (r, g, b, a)
     } else {
-        return Err(TypfError::Other("Color must be in RRGGBB or RRGGBBAA format".into()));
+        return Err(TypfError::Other(
+            "Color must be in RRGGBB or RRGGBBAA format".into(),
+        ));
     };
 
     Ok(Color::rgba(r, g, b, a))
@@ -441,7 +443,10 @@ fn select_shaper(shaper_name: &str) -> Result<Arc<dyn Shaper + Send + Sync>> {
         #[cfg(feature = "shaping-icu-hb")]
         "icu-hb" | "icu-harfbuzz" => Ok(Arc::new(typf_shape_icu_hb::IcuHarfBuzzShaper::new())),
 
-        _ => Err(TypfError::Other(format!("Unknown or unavailable shaper: {}", shaper_name))),
+        _ => Err(TypfError::Other(format!(
+            "Unknown or unavailable shaper: {}",
+            shaper_name
+        ))),
     }
 }
 
@@ -460,13 +465,19 @@ fn select_renderer(renderer_name: &str) -> Result<Arc<dyn Renderer + Send + Sync
         #[cfg(feature = "render-zeno")]
         "zeno" => Ok(Arc::new(typf_render_zeno::ZenoRenderer::new())),
 
-        _ => Err(TypfError::Other(format!("Unknown or unavailable renderer: {}", renderer_name))),
+        _ => Err(TypfError::Other(format!(
+            "Unknown or unavailable renderer: {}",
+            renderer_name
+        ))),
     }
 }
 
 /// Check if the renderer name refers to a linra (single-pass) renderer
 fn is_linra_renderer(renderer_name: &str) -> bool {
-    matches!(renderer_name, "linra" | "linra-mac" | "linra-win" | "linra-os")
+    matches!(
+        renderer_name,
+        "linra" | "linra-mac" | "linra-win" | "linra-os"
+    )
 }
 
 /// Select and create a linra renderer based on name
@@ -583,7 +594,9 @@ fn create_exporter(format: OutputFormat) -> Result<Arc<dyn typf_core::traits::Ex
         OutputFormat::Svg => {
             // SVG is handled via SvgRenderer returning RenderOutput::Vector
             // This path shouldn't be reached, but provide a fallback error
-            Err(TypfError::Other("SVG uses vector renderer, not bitmap exporter".into()))
+            Err(TypfError::Other(
+                "SVG uses vector renderer, not bitmap exporter".into(),
+            ))
         },
     }
 }

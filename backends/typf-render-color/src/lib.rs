@@ -313,7 +313,12 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
         if mask.is_none() {
             log::debug!(
                 "push_clip_box: {:?} - failed to create mask",
-                (clip_box.x_min, clip_box.y_min, clip_box.x_max, clip_box.y_max)
+                (
+                    clip_box.x_min,
+                    clip_box.y_min,
+                    clip_box.x_max,
+                    clip_box.y_max
+                )
             );
         }
         self.clip_stack.push(mask);
@@ -993,7 +998,10 @@ mod tests {
         let font_path =
             "../../external/resvg/crates/resvg/tests/fonts/NotoColorEmojiCOLR.subset.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
-            assert!(has_color_glyphs(&font_data), "NotoColorEmojiCOLR should have COLR table");
+            assert!(
+                has_color_glyphs(&font_data),
+                "NotoColorEmojiCOLR should have COLR table"
+            );
         } else {
             // Skip test if font not available
             eprintln!("Skipping test: font not found at {}", font_path);
@@ -1005,7 +1013,10 @@ mod tests {
     fn test_has_color_glyphs_regular_font() {
         let font_path = "../../external/resvg/crates/resvg/tests/fonts/NotoSans-Regular.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
-            assert!(!has_color_glyphs(&font_data), "NotoSans-Regular should not have COLR table");
+            assert!(
+                !has_color_glyphs(&font_data),
+                "NotoSans-Regular should not have COLR table"
+            );
         } else {
             eprintln!("Skipping test: font not found at {}", font_path);
         }
@@ -1033,7 +1044,11 @@ mod tests {
 
             if let Some(gid) = found_glyph {
                 let result = render_color_glyph(&font_data, gid as u32, 128, 128, 128.0, 0);
-                assert!(result.is_ok(), "Failed to render COLR glyph: {:?}", result.err());
+                assert!(
+                    result.is_ok(),
+                    "Failed to render COLR glyph: {:?}",
+                    result.err()
+                );
                 let pixmap = result.unwrap();
                 assert_eq!(pixmap.width(), 128);
                 assert_eq!(pixmap.height(), 128);
@@ -1058,7 +1073,11 @@ mod tests {
                 let glyph_id = GlyphId::new(gid as u32);
                 if color_glyphs.get(glyph_id).is_some() {
                     let format = get_color_glyph_format(&font_data, gid as u32);
-                    assert!(format.is_some(), "Should detect color format for glyph {}", gid);
+                    assert!(
+                        format.is_some(),
+                        "Should detect color format for glyph {}",
+                        gid
+                    );
                     // NotoColorEmojiColr1 uses COLRv1
                     if matches!(format, Some(ColorGlyphFormat::ColrV1)) {
                         println!("Found COLRv1 glyph at index {}", gid);
@@ -1113,7 +1132,10 @@ mod tests {
         if let Ok(font_data) = std::fs::read(font_path) {
             let types = detect_color_font_types(&font_data);
             println!("Detected color types for sbix: {:?}", types);
-            assert!(types.contains(&ColorFontType::Bitmap), "Should detect bitmap support");
+            assert!(
+                types.contains(&ColorFontType::Bitmap),
+                "Should detect bitmap support"
+            );
         } else {
             eprintln!("Skipping test: font not found at {}", font_path);
         }
@@ -1127,7 +1149,10 @@ mod tests {
         if let Ok(font_data) = std::fs::read(font_path) {
             let types = detect_color_font_types(&font_data);
             println!("Detected color types for SVG: {:?}", types);
-            assert!(types.contains(&ColorFontType::Svg), "Should detect SVG support");
+            assert!(
+                types.contains(&ColorFontType::Svg),
+                "Should detect SVG support"
+            );
         } else {
             eprintln!("Skipping test: font not found at {}", font_path);
         }
@@ -1193,7 +1218,10 @@ mod tests {
                 if let Ok(result) = render_glyph(&font_data, gid, 64, 64, 64.0, 0) {
                     println!("Unified render used {:?} for glyph {}", result.method, gid);
                     // sbix fonts should use Bitmap or Outline
-                    assert!(matches!(result.method, RenderMethod::Bitmap | RenderMethod::Outline));
+                    assert!(matches!(
+                        result.method,
+                        RenderMethod::Bitmap | RenderMethod::Outline
+                    ));
                     return;
                 }
             }
@@ -1222,7 +1250,12 @@ mod tests {
                 let glyph_id = GlyphId::new(gid as u32);
                 if color_glyphs.get(glyph_id).is_some() {
                     let result = render_color_glyph(&font_data, gid as u32, 64, 64, 64.0, 0);
-                    assert!(result.is_ok(), "Failed to render glyph {}: {:?}", gid, result.err());
+                    assert!(
+                        result.is_ok(),
+                        "Failed to render glyph {}: {:?}",
+                        gid,
+                        result.err()
+                    );
                     let pixmap = result.unwrap();
                     // Verify non-empty output
                     assert!(
@@ -1237,7 +1270,10 @@ mod tests {
                 }
             }
             assert!(rendered_count > 0, "Should render at least one color glyph");
-            println!("SUCCESS: Rendered {} Noto COLR emoji glyphs", rendered_count);
+            println!(
+                "SUCCESS: Rendered {} Noto COLR emoji glyphs",
+                rendered_count
+            );
         } else {
             eprintln!("Skipping test: font not found at {}", font_path);
         }

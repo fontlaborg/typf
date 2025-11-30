@@ -166,10 +166,12 @@ impl CoreTextLinraRenderer {
         );
 
         if !is_valid {
-            return Err(TypfError::RenderingFailed(RenderError::BackendError(format!(
-                "Invalid font signature: {:02x}{:02x}{:02x}{:02x}",
-                sig[0], sig[1], sig[2], sig[3]
-            ))));
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(
+                format!(
+                    "Invalid font signature: {:02x}{:02x}{:02x}{:02x}",
+                    sig[0], sig[1], sig[2], sig[3]
+                ),
+            )));
         }
 
         Ok(())
@@ -294,8 +296,11 @@ impl CoreTextLinraRenderer {
         let data_arc: Arc<[u8]> = Arc::from(data);
 
         // Create new CTFont - pass Arc clone so CGDataProvider uses the same Arc
-        let ct_font =
-            Self::create_ct_font(Arc::clone(&data_arc), params.size as f64, &params.variations)?;
+        let ct_font = Self::create_ct_font(
+            Arc::clone(&data_arc),
+            params.size as f64,
+            &params.variations,
+        )?;
 
         // Wrap in CachedFont to ensure data outlives the CTFont
         // Note: data_arc is now held both here AND in CGDataProvider (same Arc)
@@ -390,7 +395,11 @@ impl LinraRenderer for CoreTextLinraRenderer {
         font: Arc<dyn FontRef>,
         params: &LinraRenderParams,
     ) -> Result<RenderOutput> {
-        log::debug!("CoreTextLinraRenderer: Rendering '{}' at size {}", text, params.size);
+        log::debug!(
+            "CoreTextLinraRenderer: Rendering '{}' at size {}",
+            text,
+            params.size
+        );
 
         // Handle empty text
         if text.is_empty() {

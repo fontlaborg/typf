@@ -409,8 +409,10 @@ impl skrifa::outline::OutlinePen for ZenoPathBuilder {
         let cy1 = cy1 * self.scale;
         let x = x * self.scale;
         let y = y * self.scale;
-        self.commands
-            .push(format!("C {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}", cx0, cy0, cx1, cy1, x, y));
+        self.commands.push(format!(
+            "C {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}",
+            cx0, cy0, cx1, cy1, x, y
+        ));
         self.kurbo_path.curve_to(
             (cx0 as f64, cy0 as f64),
             (cx1 as f64, cy1 as f64),
@@ -494,7 +496,12 @@ fn calculate_bounds(path: &str, _scale: f32) -> (f32, f32, f32, f32) {
 
     // Add some padding to account for curves
     let padding = 2.0;
-    (min_x - padding, min_y - padding, max_x + padding, max_y + padding)
+    (
+        min_x - padding,
+        min_y - padding,
+        max_x + padding,
+        max_y + padding,
+    )
 }
 
 #[cfg(test)]

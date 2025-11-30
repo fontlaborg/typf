@@ -16,10 +16,10 @@
 - [x] P2: Add CLI smoke tests for `info`, `render`, and `batch` commands using temp outputs and bad-input failures.
 - [x] P3: Write `ARCHITECTURE.md` explaining pipeline/backends and link from README.
 - [x] P3: Expand CONTRIBUTING with release flow, cache guidance, backend addition steps; create `RELEASING.md`; add version policy to README.
-- [ ] P3: Migrate Python workflow docs/scripts/CI to `uv` (`uv venv`, `uv pip`, `uv run`, `uvx`) and add CONTRIBUTING guardrails.
+- [x] P3: Migrate Python workflow docs/scripts/CI to `uv` (`uv venv`, `uv pip`, `uv run`, `uvx`) and add CONTRIBUTING guardrails.
 - [ ] Phase5: Implement Skia renderer SVG output mode.
 - [ ] Phase5: Implement Zeno renderer SVG output mode.
 - [ ] Phase5: Preserve gradients and embed bitmaps for SVG output when needed.
-- [ ] Release: Test full release cycle with `./scripts/publish.sh --dry-run`.
-- [ ] Release: Test version propagation with `cargo set-version`.
-- [ ] Release: Confirm wheel version matches git tag in CI.
+- [x] Release: Test full release cycle with `./scripts/publish.sh --dry-run`.
+- [x] Release: Test version propagation with `cargo set-version`.
+- [x] Release: Confirm wheel version matches git tag in CI (fixed pyproject.toml to use dynamic versioning).

@@ -418,7 +418,10 @@ mod tests {
                 assert_eq!(bitmap.format, BitmapFormat::Rgba8);
                 assert!(bitmap.width > 0);
                 assert!(bitmap.height > 0);
-                assert_eq!(bitmap.data.len(), (bitmap.width * bitmap.height * 4) as usize);
+                assert_eq!(
+                    bitmap.data.len(),
+                    (bitmap.width * bitmap.height * 4) as usize
+                );
             },
             _ => panic!("Expected bitmap output"),
         }

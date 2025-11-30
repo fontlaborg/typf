@@ -250,7 +250,10 @@ impl Renderer for CoreGraphicsRenderer {
         font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
-        log::debug!("CoreGraphicsRenderer: Rendering {} glyphs", shaped.glyphs.len());
+        log::debug!(
+            "CoreGraphicsRenderer: Rendering {} glyphs",
+            shaped.glyphs.len()
+        );
 
         // Handle empty glyph case
         if shaped.glyphs.is_empty() {
@@ -316,10 +319,12 @@ impl Renderer for CoreGraphicsRenderer {
         // CoreText requires a positive, finite font size
         let font_size = shaped.advance_height as f64;
         if !font_size.is_finite() || font_size <= 0.0 {
-            return Err(TypfError::RenderingFailed(RenderError::BackendError(format!(
-                "Invalid font size: {}. Font size must be positive and finite.",
-                font_size
-            ))));
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(
+                format!(
+                    "Invalid font size: {}. Font size must be positive and finite.",
+                    font_size
+                ),
+            )));
         }
 
         // Create CTFont with variation coordinates applied (critical for variable fonts!)

@@ -323,8 +323,7 @@ impl Renderer for SkiaRenderer {
                         && canvas_y >= 0
                         && canvas_y < height as i32
                     {
-                        let canvas_idx =
-                            ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
+                        let canvas_idx = ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
                         let glyph_idx = (gy * bitmap.width + gx) as usize;
                         let alpha = bitmap.data[glyph_idx];
 
@@ -400,7 +399,10 @@ impl skrifa::outline::OutlinePen for PathPen<'_> {
     fn quad_to(&mut self, cx0: f32, cy0: f32, x: f32, y: f32) {
         // Draw a quadratic Bézier curve with one control point
         self.path.quad_to(
-            (cx0 as f64 * self.scale as f64, cy0 as f64 * self.scale as f64),
+            (
+                cx0 as f64 * self.scale as f64,
+                cy0 as f64 * self.scale as f64,
+            ),
             (x as f64 * self.scale as f64, y as f64 * self.scale as f64),
         );
     }
@@ -408,8 +410,14 @@ impl skrifa::outline::OutlinePen for PathPen<'_> {
     fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
         // Draw a cubic Bézier curve with two control points
         self.path.curve_to(
-            (cx0 as f64 * self.scale as f64, cy0 as f64 * self.scale as f64),
-            (cx1 as f64 * self.scale as f64, cy1 as f64 * self.scale as f64),
+            (
+                cx0 as f64 * self.scale as f64,
+                cy0 as f64 * self.scale as f64,
+            ),
+            (
+                cx1 as f64 * self.scale as f64,
+                cy1 as f64 * self.scale as f64,
+            ),
             (x as f64 * self.scale as f64, y as f64 * self.scale as f64),
         );
     }

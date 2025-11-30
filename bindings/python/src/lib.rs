@@ -149,9 +149,9 @@ impl Typf {
                 // JSON renderers get special handling - return the raw string
                 Ok(json_str.into_py(py))
             },
-            RenderOutput::Vector(_) => {
-                Err(PyValueError::new_err("Vector output not yet supported in Python bindings"))
-            },
+            RenderOutput::Vector(_) => Err(PyValueError::new_err(
+                "Vector output not yet supported in Python bindings",
+            )),
         }
     }
 
@@ -426,7 +426,9 @@ fn export_image(py: Python, image_data: PyObject, format: &str) -> PyResult<PyOb
             data,
         }
     } else {
-        return Err(PyValueError::new_err("image_data must be a dict from render_text()"));
+        return Err(PyValueError::new_err(
+            "image_data must be a dict from render_text()",
+        ));
     };
 
     let output = RenderOutput::Bitmap(bitmap);

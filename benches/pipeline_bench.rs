@@ -149,7 +149,12 @@ fn bench_full_pipeline(c: &mut Criterion) {
         let text = "Hello Typf!";
         b.iter(|| {
             pipeline
-                .process(black_box(text), font.clone(), &shaping_params, &render_params)
+                .process(
+                    black_box(text),
+                    font.clone(),
+                    &shaping_params,
+                    &render_params,
+                )
                 .unwrap()
         })
     });

@@ -5,7 +5,6 @@ Linra CLI using Click for consistent interface with Rust CLI.
 """
 
 import sys
-from pathlib import Path
 from typing import Optional
 
 import click

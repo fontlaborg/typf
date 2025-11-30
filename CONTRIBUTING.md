@@ -11,6 +11,7 @@ Be respectful. Be constructive.
 ### Prerequisites
 
 - Rust 1.70+ (install via [rustup](https://rustup.rs/))
+- `uv` for Python development (install: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - HarfBuzz support:
   - **macOS**: `brew install harfbuzz`
   - **Linux**: `sudo apt-get install libharfbuzz-dev`

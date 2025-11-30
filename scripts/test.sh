@@ -102,15 +102,24 @@ fi
 
 # Python linting
 if [[ "$RUN_PYTHON" == "true" ]] && [[ "$RUN_LINT" == "true" ]]; then
-    if command -v ruff &>/dev/null; then
+    if command -v uv &>/dev/null; then
+        echo "==> Running Python linting (ruff via uvx)..."
+        if [[ -d "bindings/python/python" ]]; then
+            if uvx ruff check bindings/python/python bindings/python/tests 2>/dev/null; then
+                echo "    Ruff OK"
+            else
+                echo "    Ruff found issues"
+                # Don't fail on Python lint issues for now
+            fi
+        fi
+        echo ""
+    elif command -v ruff &>/dev/null; then
         echo "==> Running Python linting (ruff)..."
-        # Check bindings/python/python directory
         if [[ -d "bindings/python/python" ]]; then
             if ruff check bindings/python/python; then
                 echo "    Ruff OK"
             else
                 echo "    Ruff found issues"
-                # Don't fail on Python lint issues for now
             fi
         fi
         echo ""
@@ -119,16 +128,26 @@ fi
 
 # Python tests
 if [[ "$RUN_PYTHON" == "true" ]] && [[ "$RUN_TESTS" == "true" ]]; then
-    if command -v maturin &>/dev/null && command -v pytest &>/dev/null; then
+    if command -v uv &>/dev/null; then
+        echo "==> Running Python tests (uv)..."
+        cd bindings/python
+        if uv run --isolated --with pytest pytest tests/ -v 2>&1 | tail -20; then
+            echo "    Python tests OK"
+        else
+            echo "    Python tests FAILED"
+            # Don't fail the whole build for Python test issues
+        fi
+        cd "$ROOT_DIR"
+        echo ""
+    elif command -v maturin &>/dev/null && command -v pytest &>/dev/null; then
         echo "==> Building Python extension for testing..."
         if maturin develop --release 2>&1 | tail -5; then
             echo ""
             echo "==> Running Python tests..."
-            if pytest bindings/python/python -v 2>/dev/null || pytest -v 2>/dev/null; then
+            if pytest bindings/python/tests -v 2>/dev/null; then
                 echo "    Python tests OK"
             else
                 echo "    Python tests FAILED (or no tests found)"
-                # Don't fail if no pytest tests exist yet
             fi
         else
             echo "    Python build FAILED"
@@ -136,7 +155,7 @@ if [[ "$RUN_PYTHON" == "true" ]] && [[ "$RUN_TESTS" == "true" ]]; then
         fi
         echo ""
     else
-        echo "==> Skipping Python tests (maturin or pytest not installed)"
+        echo "==> Skipping Python tests (uv or maturin+pytest not installed)"
         echo ""
     fi
 fi

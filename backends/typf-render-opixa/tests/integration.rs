@@ -101,7 +101,7 @@ fn test_opixa_render_with_real_font() {
         None => {
             eprintln!("Skipping test: NotoSans-Regular.ttf not found");
             return;
-        }
+        },
     };
 
     let renderer = OpixaRenderer::new();
@@ -169,7 +169,11 @@ fn test_opixa_render_different_sizes() {
         assert!(result.is_ok(), "Size {} should render successfully", size);
 
         if let Ok(RenderOutput::Bitmap(bitmap)) = result {
-            assert!(bitmap.height > 0, "Height should be positive for size {}", size);
+            assert!(
+                bitmap.height > 0,
+                "Height should be positive for size {}",
+                size
+            );
         }
     }
 }

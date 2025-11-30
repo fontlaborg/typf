@@ -89,7 +89,10 @@ fn test_full_pipeline() {
             assert!(bitmap.width > 0);
             assert!(bitmap.height > 0);
             assert!(!bitmap.data.is_empty());
-            assert_eq!(bitmap.data.len(), (bitmap.width * bitmap.height * 4) as usize);
+            assert_eq!(
+                bitmap.data.len(),
+                (bitmap.width * bitmap.height * 4) as usize
+            );
         },
         _ => panic!("Expected bitmap output"),
     }
@@ -168,7 +171,10 @@ fn test_empty_text() {
         RenderOutput::Bitmap(bitmap) => {
             // Should have minimum dimensions for empty text (at least 1x16 with no padding)
             assert!(bitmap.width >= 1, "Width should be at least 1");
-            assert!(bitmap.height >= 16, "Height should be at least 16 for empty text");
+            assert!(
+                bitmap.height >= 16,
+                "Height should be at least 16 for empty text"
+            );
         },
         _ => panic!("Expected bitmap output"),
     }

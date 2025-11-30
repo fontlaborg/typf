@@ -185,10 +185,12 @@ impl DirectWriteLinraRenderer {
         );
 
         if !is_valid {
-            return Err(TypfError::RenderingFailed(RenderError::BackendError(format!(
-                "Invalid font signature: {:02x}{:02x}{:02x}{:02x}",
-                sig[0], sig[1], sig[2], sig[3]
-            ))));
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(
+                format!(
+                    "Invalid font signature: {:02x}{:02x}{:02x}{:02x}",
+                    sig[0], sig[1], sig[2], sig[3]
+                ),
+            )));
         }
 
         Ok(())
@@ -357,7 +359,11 @@ impl LinraRenderer for DirectWriteLinraRenderer {
         font: Arc<dyn FontRef>,
         params: &LinraRenderParams,
     ) -> Result<RenderOutput> {
-        log::debug!("DirectWriteLinraRenderer: Rendering '{}' at size {}", text, params.size);
+        log::debug!(
+            "DirectWriteLinraRenderer: Rendering '{}' at size {}",
+            text,
+            params.size
+        );
 
         // Handle empty text
         if text.is_empty() {

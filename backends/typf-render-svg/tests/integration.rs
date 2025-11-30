@@ -101,7 +101,7 @@ fn test_svg_render_with_real_font() {
         None => {
             eprintln!("Skipping test: NotoSans-Regular.ttf not found");
             return;
-        }
+        },
     };
 
     let renderer = SvgRenderer::new();
@@ -120,7 +120,10 @@ fn test_svg_render_with_real_font() {
         assert!(svg.contains("<svg"), "Should have SVG element");
         assert!(svg.contains("</svg>"), "Should close SVG element");
         assert!(svg.contains("viewBox"), "Should have viewBox attribute");
-        assert!(svg.contains("<path"), "Should have path elements for glyphs");
+        assert!(
+            svg.contains("<path"),
+            "Should have path elements for glyphs"
+        );
     } else {
         panic!("Expected vector output");
     }
@@ -146,7 +149,10 @@ fn test_svg_render_empty_text() {
     assert!(result.is_ok(), "Empty text should render successfully");
 
     if let Ok(RenderOutput::Vector(vector)) = result {
-        assert!(vector.data.contains("<svg"), "Should still produce valid SVG");
+        assert!(
+            vector.data.contains("<svg"),
+            "Should still produce valid SVG"
+        );
         assert!(vector.data.contains("</svg>"), "Should close SVG");
         // Empty text should have no path elements
         assert!(

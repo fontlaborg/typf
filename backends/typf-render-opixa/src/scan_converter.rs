@@ -276,7 +276,11 @@ impl ScanConverter {
     ///
     /// Panics if bitmap.len() != width * height
     pub fn render_mono(&mut self, bitmap: &mut [u8]) {
-        assert_eq!(bitmap.len(), self.width * self.height, "Bitmap size mismatch");
+        assert_eq!(
+            bitmap.len(),
+            self.width * self.height,
+            "Bitmap size mismatch"
+        );
 
         // Fill with white (0)
         bitmap.fill(0);
@@ -522,7 +526,11 @@ mod tests {
 
         // Triangle should have filled pixels
         // Area ~ 0.5 * base * height = 0.5 * 10 * 10 = 50 pixels
-        assert!(filled_count > 20, "Triangle should have filled pixels (got {})", filled_count);
+        assert!(
+            filled_count > 20,
+            "Triangle should have filled pixels (got {})",
+            filled_count
+        );
     }
 
     #[test]

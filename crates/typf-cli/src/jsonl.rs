@@ -236,7 +236,11 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
         writeln!(&mut out)?;
     }
 
-    eprintln!("Completed {} jobs in {:.2}s", spec.jobs.len(), start.elapsed().as_secs_f64());
+    eprintln!(
+        "Completed {} jobs in {:.2}s",
+        spec.jobs.len(),
+        start.elapsed().as_secs_f64()
+    );
 
     Ok(())
 }

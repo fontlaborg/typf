@@ -349,7 +349,10 @@ mod tests {
 
         // Check cache hit rate (should be > 0 after second call)
         let hit_rate = shaper.cache_hit_rate().unwrap();
-        assert!(hit_rate > 0.0, "Cache hit rate should be > 0 after repeat query");
+        assert!(
+            hit_rate > 0.0,
+            "Cache hit rate should be > 0 after repeat query"
+        );
     }
 
     #[test]

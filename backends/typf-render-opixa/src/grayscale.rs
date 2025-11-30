@@ -231,7 +231,14 @@ pub fn render_grayscale_direct(
     sc.render_mono(&mut mono_bitmap);
 
     // Downsample to grayscale
-    downsample_to_grayscale(&mono_bitmap, oversample_width, oversample_height, width, height, level)
+    downsample_to_grayscale(
+        &mono_bitmap,
+        oversample_width,
+        oversample_height,
+        width,
+        height,
+        level,
+    )
 }
 
 #[cfg(test)]
@@ -304,7 +311,11 @@ mod tests {
         assert_eq!(gray.len(), 100);
 
         // Center should be filled (alpha ~255)
-        assert!(gray[5 * 10 + 5] > 200, "Center alpha = {}", gray[5 * 10 + 5]);
+        assert!(
+            gray[5 * 10 + 5] > 200,
+            "Center alpha = {}",
+            gray[5 * 10 + 5]
+        );
 
         // Corners should be empty (alpha ~0)
         assert!(gray[0] < 50, "Corner alpha = {}", gray[0]);

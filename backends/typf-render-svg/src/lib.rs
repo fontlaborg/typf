@@ -161,7 +161,8 @@ impl Renderer for SvgRenderer {
         let mut max_y: f32 = 0.0; // Above baseline (negative in SVG coords, but we track magnitude)
 
         for glyph in &shaped.glyphs {
-            let glyph_path = self.extract_glyph_path_with_bounds(&font, glyph.id, scale, &location)?;
+            let glyph_path =
+                self.extract_glyph_path_with_bounds(&font, glyph.id, scale, &location)?;
 
             if glyph_path.path.is_empty() {
                 continue; // Skip glyphs with no outline (e.g., space)

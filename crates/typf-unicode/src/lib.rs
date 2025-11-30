@@ -461,7 +461,11 @@ mod tests {
             .collect();
         assert!(!arabic_runs.is_empty(), "Should detect Arabic script");
         for run in arabic_runs {
-            assert_eq!(run.direction, Direction::RightToLeft, "Arabic should be RTL");
+            assert_eq!(
+                run.direction,
+                Direction::RightToLeft,
+                "Arabic should be RTL"
+            );
         }
     }
 
@@ -486,7 +490,11 @@ mod tests {
             .collect();
         assert!(!hebrew_runs.is_empty(), "Should detect Hebrew script");
         for run in hebrew_runs {
-            assert_eq!(run.direction, Direction::RightToLeft, "Hebrew should be RTL");
+            assert_eq!(
+                run.direction,
+                Direction::RightToLeft,
+                "Hebrew should be RTL"
+            );
         }
     }
 

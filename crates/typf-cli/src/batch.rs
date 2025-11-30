@@ -58,7 +58,9 @@ impl BatchConfig {
                         config.input = Some(PathBuf::from(&args[i + 1]));
                         i += 2;
                     } else {
-                        return Err(TypfError::Other("--batch-input requires a file path".into()));
+                        return Err(TypfError::Other(
+                            "--batch-input requires a file path".into(),
+                        ));
                     }
                 },
                 "--batch-output" | "-B" => {
@@ -81,7 +83,9 @@ impl BatchConfig {
                         }
                         i += 2;
                     } else {
-                        return Err(TypfError::Other("--batch-pattern requires a pattern".into()));
+                        return Err(TypfError::Other(
+                            "--batch-pattern requires a pattern".into(),
+                        ));
                     }
                 },
                 "--size" | "-s" => {
@@ -144,7 +148,11 @@ where
     let reader: Box<dyn BufRead> = match &config.input {
         Some(path) => {
             let file = File::open(path).map_err(|e| {
-                TypfError::Other(format!("Failed to open input file {}: {}", path.display(), e))
+                TypfError::Other(format!(
+                    "Failed to open input file {}: {}",
+                    path.display(),
+                    e
+                ))
             })?;
             Box::new(BufReader::new(file))
         },
@@ -208,8 +216,13 @@ where
         }
 
         // Shape, render, and export this line
-        match process_single_line(&line, &output_path, &shaping_params, &render_params, &components)
-        {
+        match process_single_line(
+            &line,
+            &output_path,
+            &shaping_params,
+            &render_params,
+            &components,
+        ) {
             Ok(_) => {
                 count += 1;
                 if config.verbose {

@@ -72,7 +72,7 @@ if [[ "$BUILD_PYTHON" == "true" ]]; then
         echo "    Python wheel built: target/wheels/"
     else
         echo "    Warning: maturin not found, skipping Python build"
-        echo "    Install with: pip install maturin"
+        echo "    Install with: uv tool install maturin (or use: uvx maturin ...)"
     fi
     echo ""
 fi

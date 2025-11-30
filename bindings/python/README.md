@@ -5,6 +5,10 @@ High-performance text rendering for Python applications.
 ## Installation
 
 ```bash
+# Using uv (recommended)
+uv pip install typfpy
+
+# Or using pip
 pip install typfpy
 ```
 
@@ -12,7 +16,13 @@ Or install from source with maturin:
 
 ```bash
 cd bindings/python
+
+# Using uv (recommended)
+uv pip install maturin
 maturin develop --release
+
+# Or with uvx (no install needed)
+uvx maturin develop --release
 ```
 
 ## Quick Start

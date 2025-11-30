@@ -1,71 +1,15 @@
-# Rustfmt configuration for Typf v2.0
-# Ensures consistent code formatting across the project
+# Rustfmt configuration for Typf
+# Uses only stable options to avoid nightly warnings
 
-# Edition
 edition = "2021"
-# Maximum line width
 max_width = 100
-# Hard tabs or spaces
 hard_tabs = false
 tab_spaces = 4
-# Function definitions
-fn_args_layout = "Tall"
-fn_call_width = 80
-# Imports
-imports_granularity = "Crate"
-imports_layout = "Mixed"
-group_imports = "StdExternalCrate"
-# Use field init shorthand if possible
+newline_style = "Unix"
 use_field_init_shorthand = true
-# Use try shorthand
 use_try_shorthand = true
-# Format strings
-format_strings = true
-# Format code in doc comments
-format_code_in_doc_comments = true
-# Normalize comments and put them on separate lines
-normalize_comments = true
-wrap_comments = true
-comment_width = 80
-# Match block trailing comma
 match_block_trailing_comma = true
-# Trailing commas
-trailing_comma = "Vertical"
-trailing_semicolon = true
-# Space around operators
-space_before_colon = false
-space_after_colon = true
-# Struct field alignment
-struct_field_align_threshold = 20
-# Reorder imports and modules
 reorder_imports = true
 reorder_modules = true
-# Empty items
-empty_item_single_line = true
-# Enum variants
-enum_discrim_align_threshold = 20
-# Where clause
-where_single_line = false
-# Blank lines
-blank_lines_upper_bound = 1
-blank_lines_lower_bound = 0
-# Merge derives
 merge_derives = true
-# Chain formatting
-chain_width = 60
-# Newlines
-newline_style = "Unix"
-# Remove nested parens
 remove_nested_parens = true
-# Overflow
-overflow_delimited_expr = true
-# Control flow
-control_brace_style = "AlwaysSameLine"
-# Binop separator
-binop_separator = "Front"
-# Combine control expressions
-combine_control_expr = true
-# Struct literal style
-struct_lit_single_line = true
-# Format macro bodies
-format_macro_bodies = true

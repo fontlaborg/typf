@@ -138,7 +138,10 @@ fn show_help() {
     println!("  {}  - Show this help", "help, h, ?".cyan());
     println!("  {}     - Show current settings", "status, s".cyan());
     println!("  {}       - Show system information", "info".cyan());
-    println!("  {} - Set configuration option", "set <key> <value>".cyan());
+    println!(
+        "  {} - Set configuration option",
+        "set <key> <value>".cyan()
+    );
     println!("  {} - Render text", "render <text> [output]".cyan());
     println!("  {}  - Exit REPL", "exit, quit, q".cyan());
     println!();
@@ -156,7 +159,10 @@ fn show_help() {
 #[cfg(feature = "repl")]
 fn show_status(context: &ReplContext) {
     println!("{}", "Current Settings:".bold().underline());
-    println!("  Font:   {}", context.font.as_deref().unwrap_or("(default)").cyan());
+    println!(
+        "  Font:   {}",
+        context.font.as_deref().unwrap_or("(default)").cyan()
+    );
     println!("  Size:   {}", format!("{}", context.size).cyan());
     println!("  Format: {}", context.output_format.cyan());
 }

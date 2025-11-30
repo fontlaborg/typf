@@ -114,7 +114,12 @@ pub fn encode_bitmap_to_png(bitmap: &BitmapData) -> Result<Vec<u8>> {
     );
 
     encoder
-        .write_image(img.as_raw(), bitmap.width, bitmap.height, image::ExtendedColorType::Rgba8)
+        .write_image(
+            img.as_raw(),
+            bitmap.width,
+            bitmap.height,
+            image::ExtendedColorType::Rgba8,
+        )
         .map_err(|e| ExportError::EncodingFailed(format!("PNG encoding failed: {}", e)))?;
 
     Ok(png_data)

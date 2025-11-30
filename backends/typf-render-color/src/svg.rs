@@ -162,7 +162,10 @@ mod tests {
     fn test_has_svg_glyphs_abelone() {
         let font_path = "../../test-fonts/AbeloneRegular-SVG.otf";
         if let Ok(font_data) = std::fs::read(font_path) {
-            assert!(has_svg_glyphs(&font_data), "AbeloneRegular-SVG should have SVG table");
+            assert!(
+                has_svg_glyphs(&font_data),
+                "AbeloneRegular-SVG should have SVG table"
+            );
         } else {
             eprintln!("Skipping test: font not found at {}", font_path);
         }
@@ -173,7 +176,10 @@ mod tests {
     fn test_has_svg_glyphs_regular_font() {
         let font_path = "../../external/resvg/crates/resvg/tests/fonts/NotoSans-Regular.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
-            assert!(!has_svg_glyphs(&font_data), "NotoSans-Regular should not have SVG table");
+            assert!(
+                !has_svg_glyphs(&font_data),
+                "NotoSans-Regular should not have SVG table"
+            );
         } else {
             eprintln!("Skipping test: font not found at {}", font_path);
         }
@@ -212,7 +218,11 @@ mod tests {
             for gid in 1..100 {
                 if get_svg_document(&font_data, gid).is_ok() {
                     let result = render_svg_glyph(&font_data, gid, 128, 128);
-                    assert!(result.is_ok(), "Failed to render SVG glyph: {:?}", result.err());
+                    assert!(
+                        result.is_ok(),
+                        "Failed to render SVG glyph: {:?}",
+                        result.err()
+                    );
                     let pixmap = result.unwrap();
                     assert_eq!(pixmap.width(), 128);
                     assert_eq!(pixmap.height(), 128);

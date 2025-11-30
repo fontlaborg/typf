@@ -357,7 +357,11 @@ impl CoreTextShaper {
 
         // Use FFI to call CTRunGetAdvances
         unsafe {
-            CTRunGetAdvances(run.as_concrete_TypeRef(), CFRange::init(0, 0), advances.as_mut_ptr());
+            CTRunGetAdvances(
+                run.as_concrete_TypeRef(),
+                CFRange::init(0, 0),
+                advances.as_mut_ptr(),
+            );
         }
 
         advances
@@ -505,7 +509,10 @@ mod tests {
             .join("../../../../runs/assets/candidates/Archivo[wdth,wght].ttf");
 
         if !font_path.exists() {
-            eprintln!("skipped: Archivo variable font not found at {:?}", font_path);
+            eprintln!(
+                "skipped: Archivo variable font not found at {:?}",
+                font_path
+            );
             return;
         }
 

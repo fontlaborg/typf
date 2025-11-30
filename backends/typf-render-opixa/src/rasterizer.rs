@@ -224,7 +224,10 @@ impl<'a> GlyphRasterizer<'a> {
 
         // Guard against memory bombs (malicious fonts or giant sizes)
         if width > 4096 || height > 4096 {
-            return Err(format!("Glyph bitmap too large: {}x{} (max 4096x4096)", width, height));
+            return Err(format!(
+                "Glyph bitmap too large: {}x{} (max 4096x4096)",
+                width, height
+            ));
         }
 
         // Prepare our canvas, oversized for smooth anti-aliasing

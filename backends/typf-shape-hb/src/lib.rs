@@ -721,7 +721,10 @@ mod tests {
 
         // Check cache hit rate (should be > 0 after second call)
         let hit_rate = shaper.cache_hit_rate().unwrap();
-        assert!(hit_rate > 0.0, "Cache hit rate should be > 0 after repeat query");
+        assert!(
+            hit_rate > 0.0,
+            "Cache hit rate should be > 0 after repeat query"
+        );
     }
 
     #[test]
@@ -780,7 +783,10 @@ mod tests {
 
         // Shared cache should have hits
         let shared_stats = shared_cache.read().unwrap().stats();
-        assert!(shared_stats.hits >= 1, "Shared cache should have at least one hit");
+        assert!(
+            shared_stats.hits >= 1,
+            "Shared cache should have at least one hit"
+        );
     }
 
     #[test]
