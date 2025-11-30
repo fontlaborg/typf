@@ -76,17 +76,20 @@ impl Font {
         self.face_index
     }
 
+    /// Creates a FontRef on-demand for parsing operations
+    fn font_ref(&self) -> Option<ReadFontRef<'_>> {
+        ReadFontRef::from_index(&self.data, self.face_index).ok()
+    }
+
     /// Finds which glyph draws this character
     pub fn glyph_id(&self, ch: char) -> Option<u32> {
-        self.font_ref
-            .as_ref()
+        self.font_ref()
             .and_then(|font| font.cmap().ok()?.map_codepoint(ch).map(|gid| gid.to_u32()))
     }
 
     /// Measures how wide this glyph will be
     pub fn advance_width(&self, glyph_id: u32) -> f32 {
-        self.font_ref
-            .as_ref()
+        self.font_ref()
             .and_then(|font| {
                 // Look up the horizontal metrics table
                 let hmtx = font.hmtx().ok()?;
@@ -105,8 +108,7 @@ impl Font {
 
     /// Counts how many different glyphs this font contains
     pub fn glyph_count(&self) -> Option<u32> {
-        self.font_ref
-            .as_ref()
+        self.font_ref()
             .and_then(|font| font.maxp().ok().map(|maxp| maxp.num_glyphs() as u32))
     }
 }
@@ -207,8 +209,7 @@ impl FontDatabase {
     }
 
     /// Clears all loaded fonts from the database.
-    /// Note: This drops the Arc references, but any leaked font data
-    /// (from Box::leak) cannot be reclaimed.
+    /// Memory is properly reclaimed when all Arc references are dropped.
     pub fn clear(&mut self) {
         self.fonts.clear();
         self.path_cache.clear();
