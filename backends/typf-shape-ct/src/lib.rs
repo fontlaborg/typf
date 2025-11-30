@@ -83,21 +83,30 @@ impl CoreTextShaper {
 
         // Sample first 64 bytes
         for (i, &b) in data.iter().take(64).enumerate() {
-            font_hash = font_hash.wrapping_mul(31).wrapping_add(b as u64).wrapping_add(i as u64);
+            font_hash = font_hash
+                .wrapping_mul(31)
+                .wrapping_add(b as u64)
+                .wrapping_add(i as u64);
         }
 
         // Sample 64 bytes from middle
         if len > 128 {
             let mid = len / 2;
             for (i, &b) in data[mid..].iter().take(64).enumerate() {
-                font_hash = font_hash.wrapping_mul(37).wrapping_add(b as u64).wrapping_add(i as u64);
+                font_hash = font_hash
+                    .wrapping_mul(37)
+                    .wrapping_add(b as u64)
+                    .wrapping_add(i as u64);
             }
         }
 
         // Sample last 64 bytes
         if len > 64 {
             for (i, &b) in data[len.saturating_sub(64)..].iter().enumerate() {
-                font_hash = font_hash.wrapping_mul(41).wrapping_add(b as u64).wrapping_add(i as u64);
+                font_hash = font_hash
+                    .wrapping_mul(41)
+                    .wrapping_add(b as u64)
+                    .wrapping_add(i as u64);
             }
         }
 
@@ -511,10 +520,7 @@ mod tests {
 
         // Apply variations that previously triggered descriptor-based lookup
         let mut var_params = base_params.clone();
-        var_params.variations = vec![
-            ("wght".to_string(), 900.0),
-            ("wdth".to_string(), 100.0),
-        ];
+        var_params.variations = vec![("wght".to_string(), 900.0), ("wdth".to_string(), 100.0)];
 
         let with_vars = CoreTextShaper::create_ct_font_from_data(&data, &var_params)
             .expect("failed to create CTFont with variations");

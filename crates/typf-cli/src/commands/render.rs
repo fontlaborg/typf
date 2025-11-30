@@ -8,13 +8,13 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use std::sync::Arc;
 use typf::error::{Result, TypfError};
+#[cfg(feature = "linra")]
+use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_core::{
     traits::{FontRef, Renderer, Shaper},
     types::{Direction, RenderOutput},
     Color, RenderParams, ShapingParams,
 };
-#[cfg(feature = "linra")]
-use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_export::{PngExporter, PnmExporter};
 use typf_fontdb::Font;
 use typf_render_opixa::OpixaRenderer;
@@ -72,21 +72,26 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     };
 
     // Track if we're falling back from linra for SVG export
-    let svg_fallback_shaper: Option<&str> = if use_linra && matches!(args.format, OutputFormat::Svg) {
+    let svg_fallback_shaper: Option<&str> = if use_linra && matches!(args.format, OutputFormat::Svg)
+    {
         // SVG export extracts glyph outlines from font after shaping.
         // Linra combines shaping+rendering atomically, so we can't get shaping result.
         // Fall back to the matching system shaper for consistent results.
         let fallback = match args.renderer.as_str() {
             "linra-mac" | "linra" => {
                 #[cfg(feature = "shaping-ct")]
-                { Some("ct") }
+                {
+                    Some("ct")
+                }
                 #[cfg(not(feature = "shaping-ct"))]
-                { Some("hb") }
-            }
+                {
+                    Some("hb")
+                }
+            },
             "linra-win" => {
                 // TODO: DirectWrite shaper when available
                 Some("hb")
-            }
+            },
             _ => Some("hb"),
         };
         eprintln!(
@@ -205,7 +210,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
                 eprintln!("  Format: {} (vector)", args.format.as_str().to_uppercase());
                 eprintln!("  Size: {} bytes", vector_data.data.len());
             }
-        }
+        },
         RenderOutput::Bitmap(_) => {
             // Bitmap output - export to requested format
             if args.verbose {
@@ -225,10 +230,10 @@ pub fn run(args: &RenderArgs) -> Result<()> {
                 eprintln!("  Format: {}", args.format.as_str().to_uppercase());
                 eprintln!("  Size: {} bytes", exported.len());
             }
-        }
+        },
         RenderOutput::Json(_) => {
             return Err(TypfError::Other("JSON output not yet supported".into()));
-        }
+        },
     }
 
     Ok(())
@@ -502,13 +507,11 @@ fn select_linra_renderer(renderer_name: &str) -> Result<Arc<dyn LinraRenderer>> 
         #[cfg(feature = "linra-mac")]
         "auto" | "linra" | "linra-mac" | "linra-os" => {
             Ok(Arc::new(typf_os_mac::CoreTextLinraRenderer::new()))
-        }
+        },
 
         #[cfg(all(feature = "linra-win", target_os = "windows"))]
-        "auto" | "linra" | "linra-win" | "linra-os" => {
-            typf_os_win::DirectWriteLinraRenderer::new()
-                .map(|r| Arc::new(r) as Arc<dyn LinraRenderer>)
-        }
+        "auto" | "linra" | "linra-win" | "linra-os" => typf_os_win::DirectWriteLinraRenderer::new()
+            .map(|r| Arc::new(r) as Arc<dyn LinraRenderer>),
 
         _ => Err(TypfError::Other(format!(
             "Unknown or unavailable linra renderer: {}. \

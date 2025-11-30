@@ -55,10 +55,10 @@ fn main() {
                 .save_png(output_path)
                 .expect("Failed to save PNG");
             println!("Saved to {}", output_path);
-        }
+        },
         Err(e) => {
             eprintln!("Failed to render glyph {}: {}", glyph_id, e);
             std::process::exit(1);
-        }
+        },
     }
 }

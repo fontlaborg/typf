@@ -441,7 +441,12 @@ impl BenchmarkRunner {
     fn run_linra_benchmarks(&self) -> Result<(), TypfError> {
         use typf_core::types::Direction;
 
-        println!("\n{}", "Linra Renderer Benchmark (CoreText single-pass):".bold().cyan());
+        println!(
+            "\n{}",
+            "Linra Renderer Benchmark (CoreText single-pass):"
+                .bold()
+                .cyan()
+        );
         println!("{}", "─".repeat(80));
 
         let linra = CoreTextLinraRenderer::new();

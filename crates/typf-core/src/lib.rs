@@ -89,10 +89,10 @@
 pub mod cache;
 pub mod context;
 pub mod error;
+pub mod linra;
 pub mod pipeline;
 pub mod shaping_cache;
 pub mod traits;
-pub mod linra;
 
 pub use context::PipelineContext;
 pub use error::{Result, TypfError};

@@ -323,7 +323,8 @@ impl Renderer for CoreGraphicsRenderer {
         }
 
         // Create CTFont with variation coordinates applied (critical for variable fonts!)
-        let ct_font = Self::create_ct_font_with_variations(font.data(), font_size, &params.variations)?;
+        let ct_font =
+            Self::create_ct_font_with_variations(font.data(), font_size, &params.variations)?;
 
         // Verify CTFont creation succeeded
         // CoreText might return a CTFont with NULL internal pointer on failure

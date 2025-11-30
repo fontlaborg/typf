@@ -21,8 +21,8 @@
 
 #![cfg(windows)]
 
-use std::sync::Arc;
 use std::num::NonZeroUsize;
+use std::sync::Arc;
 
 use lru::LruCache;
 use parking_lot::RwLock;
@@ -42,10 +42,9 @@ use windows::{
         Graphics::{
             Direct2D::{
                 Common::{D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT, D2D_RECT_F},
-                D2D1CreateFactory, ID2D1Factory, ID2D1RenderTarget,
-                D2D1_BITMAP_PROPERTIES, D2D1_FACTORY_TYPE_SINGLE_THREADED,
-                D2D1_RENDER_TARGET_PROPERTIES, D2D1_RENDER_TARGET_TYPE_DEFAULT,
-                D2D1_RENDER_TARGET_USAGE_NONE,
+                D2D1CreateFactory, ID2D1Factory, ID2D1RenderTarget, D2D1_BITMAP_PROPERTIES,
+                D2D1_FACTORY_TYPE_SINGLE_THREADED, D2D1_RENDER_TARGET_PROPERTIES,
+                D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1_RENDER_TARGET_USAGE_NONE,
             },
             DirectWrite::{
                 DWriteCreateFactory, IDWriteFactory, IDWriteFontFace, IDWriteTextFormat,
@@ -54,11 +53,11 @@ use windows::{
                 DWRITE_TEXT_METRICS,
             },
             Dxgi::Common::DXGI_FORMAT_R8G8B8A8_UNORM,
-            Imaging::{
-                CLSID_WICImagingFactory, IWICImagingFactory, WICBitmapCacheOnLoad,
-            },
+            Imaging::{CLSID_WICImagingFactory, IWICImagingFactory, WICBitmapCacheOnLoad},
         },
-        System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED},
+        System::Com::{
+            CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
+        },
     },
 };
 
@@ -132,8 +131,8 @@ impl DirectWriteLinraRenderer {
             CoInitializeEx(None, COINIT_MULTITHREADED).ok();
 
             // Create DirectWrite factory
-            let dwrite_factory: IDWriteFactory =
-                DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED).map_err(|e| {
+            let dwrite_factory: IDWriteFactory = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED)
+                .map_err(|e| {
                     TypfError::RenderingFailed(RenderError::BackendError(format!(
                         "Failed to create DirectWrite factory: {e}"
                     )))
@@ -186,12 +185,10 @@ impl DirectWriteLinraRenderer {
         );
 
         if !is_valid {
-            return Err(TypfError::RenderingFailed(RenderError::BackendError(
-                format!(
-                    "Invalid font signature: {:02x}{:02x}{:02x}{:02x}",
-                    sig[0], sig[1], sig[2], sig[3]
-                ),
-            )));
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(format!(
+                "Invalid font signature: {:02x}{:02x}{:02x}{:02x}",
+                sig[0], sig[1], sig[2], sig[3]
+            ))));
         }
 
         Ok(())
@@ -360,11 +357,7 @@ impl LinraRenderer for DirectWriteLinraRenderer {
         font: Arc<dyn FontRef>,
         params: &LinraRenderParams,
     ) -> Result<RenderOutput> {
-        log::debug!(
-            "DirectWriteLinraRenderer: Rendering '{}' at size {}",
-            text,
-            params.size
-        );
+        log::debug!("DirectWriteLinraRenderer: Rendering '{}' at size {}", text, params.size);
 
         // Handle empty text
         if text.is_empty() {
@@ -485,10 +478,7 @@ impl LinraRenderer for DirectWriteLinraRenderer {
 
             // Lock WIC bitmap and copy to output buffer
             let lock = wic_bitmap
-                .Lock(
-                    None,
-                    windows::Win32::Graphics::Imaging::WICBitmapLockRead,
-                )
+                .Lock(None, windows::Win32::Graphics::Imaging::WICBitmapLockRead)
                 .map_err(|e| {
                     TypfError::RenderingFailed(RenderError::BackendError(format!(
                         "Failed to lock bitmap: {e}"

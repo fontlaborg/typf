@@ -51,8 +51,7 @@ impl SvgRenderer {
         scale: f32,
     ) -> Result<String> {
         let font_data = font.data();
-        let font_ref = skrifa::FontRef::new(font_data)
-            .map_err(|_| RenderError::InvalidFont)?;
+        let font_ref = skrifa::FontRef::new(font_data).map_err(|_| RenderError::InvalidFont)?;
 
         let outlines = font_ref.outline_glyphs();
         let glyph_id = skrifa::GlyphId::from(glyph_id as u16);
@@ -139,8 +138,7 @@ impl Renderer for SvgRenderer {
         }
 
         // SVG footer
-        writeln!(&mut svg, "</svg>")
-            .map_err(|_| RenderError::PathBuildingFailed)?;
+        writeln!(&mut svg, "</svg>").map_err(|_| RenderError::PathBuildingFailed)?;
 
         Ok(RenderOutput::Vector(VectorData {
             format: VectorFormat::Svg,

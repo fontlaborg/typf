@@ -4,9 +4,18 @@
 A comprehensive tool to test, render, and benchmark all TYPF backend combinations
 with multiple sample texts, font sizes, and output formats.
 
+Backends tested:
+  Shapers: none, harfbuzz, coretext, icu-hb
+  Renderers: json, opixa, coregraphics, skia, zeno
+  Linra (OS): coretext-linra (macOS), directwrite-linra (Windows)
+  Color: COLR v0/v1, SVG, bitmap (sbix, CBDT)
+
 Usage:
     python typfme.py render           # Render samples with all backends
+    python typfme.py render-linra     # Render samples using linra (OS) backend
+    python typfme.py render-color     # Render color font samples
     python typfme.py bench            # Benchmark all backend combinations
+    python typfme.py bench-linra      # Benchmark linra (OS) backend
     python typfme.py compare          # Side-by-side backend comparison
 
 Community project by FontLab https://www.fontlab.org/
@@ -15,7 +24,7 @@ Community project by FontLab https://www.fontlab.org/
 import json
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -28,8 +37,11 @@ except ImportError:
     print("Error: typfpy Python bindings not installed.")
     print("\nTo install:")
     print("  cd bindings/python")
-    print("  maturin develop --release --features shaping-hb,export-png,export-svg")
+    print("  maturin develop --release --features shaping-hb,export-png,export-svg,linra,linra-mac,render-cg")
     sys.exit(1)
+
+# Check for linra support
+LINRA_AVAILABLE = getattr(typf, '__linra_available__', False)
 
 # Try importing PIL for PNG verification
 try:
@@ -46,6 +58,16 @@ class BackendConfig:
 
     shaper: str
     renderer: str
+    description: str
+    available: bool = True
+    error: Optional[str] = None
+
+
+@dataclass
+class LinraConfig:
+    """Configuration for linra (OS) single-pass renderer"""
+
+    renderer: str  # "coretext", "directwrite", "auto"
     description: str
     available: bool = True
     error: Optional[str] = None
@@ -117,17 +139,20 @@ class TypfTester:
         # Font sizes for benchmarking
         self.bench_sizes = [16.0, 32.0, 64.0, 128.0]
 
-        # Available fonts
+        # All test fonts - regular, variable, and color
+        # The tester throws all fonts at all backends; typf handles detection
         self.fonts = {
-            "abecbdt": self.fonts_dir / "AbeloneRegular-CBDT.ttf",
-            "abecolr": self.fonts_dir / "AbeloneRegular-COLRv1.ttf",
-            "abesbix": self.fonts_dir / "AbeloneRegular-sbix.ttf",
-            "abesvg": self.fonts_dir / "AbeloneRegular-SVG.otf",
+            # Regular fonts
             "kalniav": self.fonts_dir / "Kalnia[wdth,wght].ttf",
             "notoara": self.fonts_dir / "NotoNaskhArabic-Regular.ttf",
             "notosan": self.fonts_dir / "NotoSans-Regular.ttf",
             "sourcev": self.fonts_dir / "SourceSansVariable-Italic.otf",
             "stixmat": self.fonts_dir / "STIX2Math.otf",
+            # Color fonts - various formats
+            "abe-cbdt": self.fonts_dir / "AbeloneRegular-CBDT.ttf",
+            "abe-colr": self.fonts_dir / "AbeloneRegular-COLRv1.ttf",
+            "abe-sbix": self.fonts_dir / "AbeloneRegular-sbix.ttf",
+            "abe-svg": self.fonts_dir / "AbeloneRegular-SVG.otf",
         }
 
         # Verify fonts exist
@@ -1380,12 +1405,27 @@ class TypfTester:
             char_count = len(text)
             print(f"  {name:20s} ({char_count:3d} chars)  {preview}")
 
+        # Linra (OS) backend status
+        print("\nLinra (OS) Single-Pass Rendering:")
+        print("-" * 80)
+        if LINRA_AVAILABLE:
+            print("  ✓ Linra support compiled in")
+            try:
+                linra = typf.TypfLinra("auto")
+                print(f"  ✓ Active renderer: {linra.get_renderer()}")
+            except Exception as e:
+                print(f"  ⚠ Linra init failed: {e}")
+        else:
+            print("  ✗ Linra not available (compile with --features linra)")
+
         # Benchmark capabilities
-        print("\nBenchmarking Capabilities:")
+        print("\nAvailable Commands:")
         print("-" * 80)
         commands = [
-            ("render", "Render samples with all backends (PNG + SVG)"),
+            ("render", "Render samples with all shaper+renderer backends"),
+            ("render-linra", "Render samples with linra (OS) backend"),
             ("bench", "Full benchmark with JSON + Markdown reports"),
+            ("bench-linra", "Benchmark linra (OS) backend performance"),
             ("bench-shaping", "Shaping-only performance (isolate from rendering)"),
             ("bench-rendering", "Rendering-only performance (isolate from shaping)"),
             ("bench-scaling", "Text length scaling analysis"),
@@ -1397,11 +1437,210 @@ class TypfTester:
         # Quick usage
         print("\nQuick Start:")
         print("-" * 80)
-        print("  python typfme.py render           # Test all backends")
+        print("  python typfme.py render           # Test all shaper+renderer backends")
+        print("  python typfme.py render-linra     # Test linra (OS) backend")
         print("  python typfme.py bench            # Run benchmarks")
         print("  python typfme.py info             # Show this information")
 
         print("\n" + "=" * 80)
+
+    def render_linra(self, size: float = 48.0, iterations: int = 1):
+        """Render samples using linra (OS) single-pass backend
+
+        Linra combines shaping and rendering in one platform-native call.
+        Available on macOS (CoreText) and Windows (DirectWrite).
+
+        Args:
+            size: Font size in pixels (default: 48)
+            iterations: Number of renders per sample (default: 1)
+        """
+        print("TYPF v2.0 Linra (OS) Rendering Test")
+        print("=" * 80)
+        print("Community project by FontLab https://www.fontlab.org/\n")
+
+        if not LINRA_AVAILABLE:
+            print("Error: Linra not available")
+            print("Rebuild with: maturin develop --release --features linra,linra-mac")
+            return 1
+
+        try:
+            linra = typf.TypfLinra("auto")
+            print(f"Linra renderer: {linra.get_renderer()}")
+        except Exception as e:
+            print(f"Error: Failed to initialize linra: {e}")
+            return 1
+
+        print(f"Font size: {size}px")
+        print(f"Iterations: {iterations}\n")
+
+        # Test with all fonts and texts
+        success_count = 0
+        fail_count = 0
+        results = []
+
+        for font_name, font_path in self.fonts.items():
+            if not font_path.exists():
+                print(f"  ⚠ Skipping {font_name}: file not found")
+                continue
+
+            for text_name, text in self.sample_texts.items():
+                output_name = f"linra-{font_name}-{text_name}.png"
+                output_path = self.output_dir / output_name
+
+                try:
+                    start_time = time.perf_counter()
+                    for _ in range(iterations):
+                        result = linra.render_text(
+                            text,
+                            str(font_path),
+                            size=size,
+                            color=(0, 0, 0, 255),
+                            background=(255, 255, 255, 255),
+                            padding=10,
+                        )
+                    elapsed = (time.perf_counter() - start_time) / iterations
+
+                    # Export to PNG
+                    png_bytes = typf.export_image(result, "png")
+                    output_path.write_bytes(png_bytes)
+
+                    size_kb = len(png_bytes) / 1024
+                    dims = f"{result['width']}x{result['height']}"
+                    print(f"  ✓ {font_name}/{text_name}: {dims} {size_kb:.1f}KB ({elapsed*1000:.2f}ms)")
+
+                    results.append({
+                        "font": font_name,
+                        "text": text_name,
+                        "width": result["width"],
+                        "height": result["height"],
+                        "size_kb": size_kb,
+                        "time_ms": elapsed * 1000,
+                        "output": output_name,
+                    })
+                    success_count += 1
+
+                except Exception as e:
+                    print(f"  ✗ {font_name}/{text_name}: {e}")
+                    fail_count += 1
+
+        # Summary
+        print("\n" + "=" * 80)
+        print(f"Linra rendering complete: {success_count} passed, {fail_count} failed")
+
+        # Save results
+        report_path = self.output_dir / "linra_render_results.json"
+        report_path.write_text(json.dumps({
+            "renderer": linra.get_renderer(),
+            "size": size,
+            "iterations": iterations,
+            "success": success_count,
+            "failed": fail_count,
+            "results": results,
+        }, indent=2))
+        print(f"Results saved to: {report_path}")
+
+        return 0 if fail_count == 0 else 1
+
+    def bench_linra(self, iterations: int = 100, warmup: int = 10):
+        """Benchmark linra (OS) single-pass backend performance
+
+        Measures shaping+rendering performance in a single operation.
+
+        Args:
+            iterations: Number of iterations per test (default: 100)
+            warmup: Warmup iterations before timing (default: 10)
+        """
+        print("TYPF v2.0 Linra (OS) Benchmark")
+        print("=" * 80)
+        print("Community project by FontLab https://www.fontlab.org/\n")
+
+        if not LINRA_AVAILABLE:
+            print("Error: Linra not available")
+            print("Rebuild with: maturin develop --release --features linra,linra-mac")
+            return 1
+
+        try:
+            linra = typf.TypfLinra("auto")
+            print(f"Linra renderer: {linra.get_renderer()}")
+        except Exception as e:
+            print(f"Error: Failed to initialize linra: {e}")
+            return 1
+
+        print(f"Iterations: {iterations}")
+        print(f"Warmup: {warmup}\n")
+
+        test_sizes = [16.0, 32.0, 64.0, 128.0]
+        results = []
+
+        # Use a subset of fonts for benchmarking
+        bench_fonts = ["notosan", "kalniav", "abe-colr"]
+        bench_texts = ["latn", "rtl"]
+
+        for font_name in bench_fonts:
+            font_path = self.fonts.get(font_name)
+            if not font_path or not font_path.exists():
+                continue
+
+            for text_name in bench_texts:
+                text = self.sample_texts.get(text_name, "")
+                if not text:
+                    continue
+
+                for size in test_sizes:
+                    # Warmup
+                    for _ in range(warmup):
+                        try:
+                            linra.render_text(text, str(font_path), size=size)
+                        except:
+                            break
+
+                    # Benchmark
+                    times = []
+                    for _ in range(iterations):
+                        start = time.perf_counter()
+                        try:
+                            linra.render_text(text, str(font_path), size=size)
+                            times.append(time.perf_counter() - start)
+                        except Exception as e:
+                            break
+
+                    if times:
+                        avg_ms = (sum(times) / len(times)) * 1000
+                        min_ms = min(times) * 1000
+                        max_ms = max(times) * 1000
+                        ops_sec = 1000 / avg_ms
+
+                        print(f"  {font_name}/{text_name} @{size}px: {avg_ms:.3f}ms avg ({ops_sec:.0f} ops/s)")
+
+                        results.append({
+                            "font": font_name,
+                            "text": text_name,
+                            "size": size,
+                            "iterations": len(times),
+                            "avg_ms": avg_ms,
+                            "min_ms": min_ms,
+                            "max_ms": max_ms,
+                            "ops_per_sec": ops_sec,
+                        })
+
+        # Summary
+        print("\n" + "=" * 80)
+        if results:
+            avg_all = sum(r["avg_ms"] for r in results) / len(results)
+            print(f"Average across all tests: {avg_all:.3f}ms")
+
+        # Save results
+        report_path = self.output_dir / "linra_benchmark.json"
+        report_path.write_text(json.dumps({
+            "renderer": linra.get_renderer(),
+            "iterations": iterations,
+            "warmup": warmup,
+            "test_count": len(results),
+            "results": results,
+        }, indent=2))
+        print(f"Results saved to: {report_path}")
+
+        return 0
 
 
 if __name__ == "__main__":

@@ -10,13 +10,13 @@ use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 use std::sync::Arc;
+#[cfg(feature = "linra")]
+use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_core::{
     traits::{Exporter, Renderer, Shaper},
     types::{BitmapData, Direction, RenderOutput},
     Color, RenderParams, ShapingParams,
 };
-#[cfg(feature = "linra")]
-use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_export::PnmExporter;
 use typf_fontdb::Font;
 
@@ -346,7 +346,7 @@ impl TypfLinra {
                 result.set_item("format", format!("{:?}", bitmap.format))?;
                 result.set_item("data", PyBytes::new_bound(py, &bitmap.data))?;
                 Ok(result.into())
-            }
+            },
             _ => Err(PyValueError::new_err("Unexpected render output format")),
         }
     }

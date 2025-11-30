@@ -52,9 +52,9 @@ use std::ptr;
 
 use typf_core::{
     error::{RenderError, Result, TypfError},
+    linra::{LinraRenderParams, LinraRenderer},
     traits::FontRef,
     types::{BitmapData, BitmapFormat, RenderOutput},
-    linra::{LinraRenderParams, LinraRenderer},
     Color,
 };
 
@@ -166,12 +166,10 @@ impl CoreTextLinraRenderer {
         );
 
         if !is_valid {
-            return Err(TypfError::RenderingFailed(RenderError::BackendError(
-                format!(
-                    "Invalid font signature: {:02x}{:02x}{:02x}{:02x}",
-                    sig[0], sig[1], sig[2], sig[3]
-                ),
-            )));
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(format!(
+                "Invalid font signature: {:02x}{:02x}{:02x}{:02x}",
+                sig[0], sig[1], sig[2], sig[3]
+            ))));
         }
 
         Ok(())
@@ -226,9 +224,8 @@ impl CoreTextLinraRenderer {
             let var_pairs: Vec<(CFNumber, CFNumber)> = variations
                 .iter()
                 .filter_map(|(tag, value)| {
-                    Self::tag_to_axis_id(tag).map(|axis_id| {
-                        (CFNumber::from(axis_id), CFNumber::from(*value as f64))
-                    })
+                    Self::tag_to_axis_id(tag)
+                        .map(|axis_id| (CFNumber::from(axis_id), CFNumber::from(*value as f64)))
                 })
                 .collect();
 
@@ -393,11 +390,7 @@ impl LinraRenderer for CoreTextLinraRenderer {
         font: Arc<dyn FontRef>,
         params: &LinraRenderParams,
     ) -> Result<RenderOutput> {
-        log::debug!(
-            "CoreTextLinraRenderer: Rendering '{}' at size {}",
-            text,
-            params.size
-        );
+        log::debug!("CoreTextLinraRenderer: Rendering '{}' at size {}", text, params.size);
 
         // Handle empty text
         if text.is_empty() {
