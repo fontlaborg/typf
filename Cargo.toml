@@ -73,30 +73,30 @@ thiserror = "2.0"
 # Rendering dependencies
 tiny-skia = "0.11"
 # Internal crates
-typf = { path = "crates/typf" }
-typf-bench = { path = "crates/typf-bench" }
-typf-core = { path = "crates/typf-core" }
-typf-export = { path = "crates/typf-export" }
-typf-fontdb = { path = "crates/typf-fontdb" }
-typf-input = { path = "crates/typf-input" }
-typf-os = { path = "backends/typf-os" }
+typf = { path = "crates/typf", version = "2.0.0" }
+typf-bench = { path = "crates/typf-bench", version = "2.0.0" }
+typf-core = { path = "crates/typf-core", version = "2.0.0" }
+typf-export = { path = "crates/typf-export", version = "2.0.0" }
+typf-fontdb = { path = "crates/typf-fontdb", version = "2.0.0" }
+typf-input = { path = "crates/typf-input", version = "2.0.0" }
+typf-os = { path = "backends/typf-os", version = "2.0.0" }
 # Linra OS backends
-typf-os-mac = { path = "backends/typf-os-mac" }
-typf-os-win = { path = "backends/typf-os-win" }
-typf-render-cg = { path = "backends/typf-render-cg" }
-typf-render-color = { path = "backends/typf-render-color" }
+typf-os-mac = { path = "backends/typf-os-mac", version = "2.0.0" }
+typf-os-win = { path = "backends/typf-os-win", version = "2.0.0" }
+typf-render-cg = { path = "backends/typf-render-cg", version = "2.0.0" }
+typf-render-color = { path = "backends/typf-render-color", version = "2.0.0" }
 # Rendering backends
-typf-render-json = { path = "backends/typf-render-json" }
-typf-render-opixa = { path = "backends/typf-render-opixa" }
-typf-render-skia = { path = "backends/typf-render-skia" }
-typf-render-svg = { path = "backends/typf-render-svg" }
-typf-render-zeno = { path = "backends/typf-render-zeno" }
-typf-shape-ct = { path = "backends/typf-shape-ct" }
-typf-shape-hb = { path = "backends/typf-shape-hb" }
-typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb" }
+typf-render-json = { path = "backends/typf-render-json", version = "2.0.0" }
+typf-render-opixa = { path = "backends/typf-render-opixa", version = "2.0.0" }
+typf-render-skia = { path = "backends/typf-render-skia", version = "2.0.0" }
+typf-render-svg = { path = "backends/typf-render-svg", version = "2.0.0" }
+typf-render-zeno = { path = "backends/typf-render-zeno", version = "2.0.0" }
+typf-shape-ct = { path = "backends/typf-shape-ct", version = "2.0.0" }
+typf-shape-hb = { path = "backends/typf-shape-hb", version = "2.0.0" }
+typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb", version = "2.0.0" }
 # Shaping backends
-typf-shape-none = { path = "backends/typf-shape-none" }
-typf-unicode = { path = "crates/typf-unicode" }
+typf-shape-none = { path = "backends/typf-shape-none", version = "2.0.0" }
+typf-unicode = { path = "crates/typf-unicode", version = "2.0.0" }
 usvg = "0.45"
 zeno = "0.3"
 
