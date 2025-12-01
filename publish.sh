@@ -171,7 +171,6 @@ main() {
     
     # List of crates to publish (in order of dependency)
     local crates=(
-        "crates/typf:typf"
         "crates/typf-core:typf-core"
         "crates/typf-unicode:typf-unicode"
         "crates/typf-fontdb:typf-fontdb"
@@ -180,6 +179,7 @@ main() {
         "crates/typf-export-svg:typf-export-svg"
         "crates/typf-cli:typf-cli"
         "crates/typf-bench:typf-bench"
+        "crates/typf:typf"
     )
     
     local any_published=false
