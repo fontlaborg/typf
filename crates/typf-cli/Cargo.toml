@@ -28,6 +28,7 @@ typf-os = { workspace = true, optional = true }
 typf-os-mac = { workspace = true, optional = true }
 typf-os-win = { workspace = true, optional = true }
 typf-export = { workspace = true }
+typf-unicode = { workspace = true }
 clap = { version = "4.5", features = ["derive", "string"] }
 env_logger = "0.11"
 serde = { version = "1.0", features = ["derive"] }

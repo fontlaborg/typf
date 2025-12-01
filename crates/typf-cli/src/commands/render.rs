@@ -8,11 +8,10 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use std::sync::Arc;
 use typf::error::{Result, TypfError};
-use typf_core::Pipeline;
 #[cfg(feature = "linra")]
 use typf_core::linra::{LinraRenderParams, LinraRenderer};
+use typf_core::Pipeline;
 use typf_core::{
-    error::ExportError,
     traits::{Exporter, FontRef, Renderer, Shaper},
     types::{Direction, RenderOutput, VectorFormat},
     Color, RenderMode, RenderParams, ShapingParams,
@@ -98,7 +97,12 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     let font: Arc<dyn FontRef> = load_font(args)?;
 
     // 3. Resolve direction (auto uses UnicodeProcessor)
-    let direction = resolve_direction(&text, &args.direction, args.language.as_deref())?;
+    let direction = resolve_direction(
+        &text,
+        &args.direction,
+        args.language.as_deref(),
+        script_hint(&args.script),
+    )?;
 
     // 4. Parse rendering parameters
     let font_size = parse_font_size(&args.font_size)?;
@@ -285,14 +289,69 @@ fn parse_font_size(size_str: &str) -> Result<f32> {
     }
 }
 
-fn parse_direction(dir_str: &str) -> Result<Direction> {
+fn resolve_direction(
+    text: &str,
+    dir_str: &str,
+    language: Option<&str>,
+    script_hint: Option<&str>,
+) -> Result<Direction> {
     match dir_str {
-        "auto" | "ltr" => Ok(Direction::LeftToRight),
+        "ltr" => Ok(Direction::LeftToRight),
         "rtl" => Ok(Direction::RightToLeft),
         "ttb" => Ok(Direction::TopToBottom),
         "btt" => Ok(Direction::BottomToTop),
+        "auto" => {
+            let processor = UnicodeProcessor::new();
+            let options = UnicodeOptions {
+                detect_scripts: true,
+                normalize: true,
+                bidi_resolve: true,
+                language: language.map(|l| l.to_string()),
+            };
+
+            let runs = processor.process(text, &options)?;
+
+            let mut direction = runs
+                .iter()
+                .find_map(|run| {
+                    if matches!(
+                        run.direction,
+                        Direction::RightToLeft | Direction::BottomToTop
+                    ) {
+                        Some(run.direction)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(Direction::LeftToRight);
+
+            if direction == Direction::LeftToRight {
+                if let Some(script) = script_hint {
+                    if is_rtl_script(script) {
+                        direction = Direction::RightToLeft;
+                    }
+                }
+            }
+
+            Ok(direction)
+        },
         _ => Err(TypfError::Other(format!("Invalid direction: {}", dir_str))),
     }
+}
+
+fn script_hint(script: &str) -> Option<&str> {
+    if script.eq_ignore_ascii_case("auto") {
+        None
+    } else {
+        Some(script)
+    }
+}
+
+fn is_rtl_script(script: &str) -> bool {
+    matches!(
+        script.to_ascii_lowercase().as_str(),
+        "arab" | "hebr" | "syrc" | "thaa" | "nkoo" | "tfng" | "avst" | "phnx" | "armi"
+    )
 }
 
 fn parse_color(color_str: &str) -> Result<Color> {
@@ -500,7 +559,12 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
 
     // 3. Parse rendering parameters
     let font_size = parse_font_size(&args.font_size)?;
-    let direction = parse_direction(&args.direction)?;
+    let direction = resolve_direction(
+        &text,
+        &args.direction,
+        args.language.as_deref(),
+        script_hint(&args.script),
+    )?;
     let foreground = parse_color(&args.foreground)?;
     let background = parse_color(&args.background)?;
 
@@ -564,7 +628,7 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
     Ok(())
 }
 
-fn create_exporter(format: OutputFormat) -> Result<Arc<dyn typf_core::traits::Exporter>> {
+fn create_exporter(format: OutputFormat) -> Result<Arc<dyn Exporter>> {
     match format {
         OutputFormat::Ppm => Ok(Arc::new(PnmExporter::ppm())),
         OutputFormat::Pgm => Ok(Arc::new(PnmExporter::pgm())),
@@ -574,13 +638,37 @@ fn create_exporter(format: OutputFormat) -> Result<Arc<dyn typf_core::traits::Ex
             // PNG1 and PNG4 not yet supported - fall back to PNG8
             Ok(Arc::new(PngExporter::new()))
         },
-        OutputFormat::Svg => {
-            // SVG is handled via SvgRenderer returning RenderOutput::Vector
-            // This path shouldn't be reached, but provide a fallback error
-            Err(TypfError::Other(
-                "SVG uses vector renderer, not bitmap exporter".into(),
-            ))
-        },
+        OutputFormat::Svg => Ok(Arc::new(SvgOutputExporter)),
+    }
+}
+
+struct SvgOutputExporter;
+
+impl Exporter for SvgOutputExporter {
+    fn name(&self) -> &'static str {
+        "SvgExporter"
+    }
+
+    fn export(&self, output: &RenderOutput) -> Result<Vec<u8>> {
+        match output {
+            RenderOutput::Vector(vector) if vector.format == VectorFormat::Svg => {
+                Ok(vector.data.as_bytes().to_vec())
+            },
+            RenderOutput::Vector(_) => Err(TypfError::Other(
+                "SVG exporter received non-SVG vector data".into(),
+            )),
+            _ => Err(TypfError::Other(
+                "SVG output requires a vector renderer".into(),
+            )),
+        }
+    }
+
+    fn extension(&self) -> &'static str {
+        "svg"
+    }
+
+    fn mime_type(&self) -> &'static str {
+        "image/svg+xml"
     }
 }
 
@@ -593,4 +681,32 @@ fn write_output(args: &RenderArgs, data: &[u8]) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn direction_auto_detects_rtl_text() {
+        let text = "مرحبا"; // Arabic should resolve to RTL via bidi runs
+        let direction = resolve_direction(text, "auto", Some("ar"), None)
+            .expect("direction detection should succeed");
+        assert_eq!(direction, Direction::RightToLeft);
+    }
+
+    #[test]
+    fn direction_auto_uses_script_hint_when_neutral() {
+        let text = "1234"; // Neutral text, relies on script hint
+        let direction = resolve_direction(text, "auto", None, Some("Arab"))
+            .expect("direction detection should succeed");
+        assert_eq!(direction, Direction::RightToLeft);
+    }
+
+    #[test]
+    fn direction_errors_on_invalid_value() {
+        let err = resolve_direction("text", "sideways", None, None)
+            .expect_err("invalid direction should error");
+        assert!(format!("{err}").contains("Invalid direction"));
+    }
 }

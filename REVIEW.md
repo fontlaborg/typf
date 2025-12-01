@@ -1,85 +1,96 @@
 Typf Code Quality Review — 1 Dec 2025  
-Confidence: I believe (≈80%). Tests: `cargo test --workspace --quiet` fails at `crates/typf-cli` compile (unresolved `typf_unicode` import and missing `resolve_direction`), so runtime status is unknown.
+Confidence: I believe (≈90%). Tests: `cargo test --workspace --quiet` (pass at 1 Dec 2025, 13:XX local run). No code changes made; review only.
 
 Scope & method  
-- Working dir: `/Users/adam/Developer/vcs/github.fontlaborg/typf`.  
-- Read README/PLAN/TODO/WORK/ARCHITECTURE, inspected Rust crates, backends, Python bindings, scripts (`build.sh`, `publish.sh`, `.github/workflows`).  
-- Reviewed function and type definitions with emphasis on invariants, error handling, feature gating, and doc/test alignment. No code changes made.
+- Workspace: `/Users/adam/Developer/vcs/github.fontlaborg/typf`.  
+- Read README/PLAN/TODO/WORK/ARCHITECTURE/CONTRIBUTING/RELEASING, skimmed CHANGELOG.  
+- Inspected core crates (`typf-core`, `typf-export`, `typf-export-svg`, `typf-fontdb`, `typf-unicode`, `typf-input`, `typf-cli`, `typf` facade), major backends (hb/icu-hb/ct shapers; opixa/skia/zeno/cg/render-color renderers; linra OS backends), Python bindings, build/publish scripts, and CI hints.  
+- Focused on invariants, error typing, caching, capability signalling, performance pitfalls, API parity, and test coverage.  
+- No edits; all observations are from the checked-in code as of this date.
 
-Executive take  
-- Architecture is coherent and modular; most crates have sensible error types and unit tests. However the current workspace does not compile because `typf-cli` references an undeclared `typf_unicode` dependency and a missing helper (`resolve_direction`).  
-- Early pipeline stages remain pass-through; CLI manually orchestrates shaping/render/export instead of the six-stage pipeline. Capability flags default to permissive “supports everything,” so unsupported combinations surface late.  
-- Vector/SVG paths still size canvases heuristically and drop variation/palette/glyph>u16 data; caches hash full font buffers and expose no metrics.  
-- Python bindings reload fonts per call, lack TTC index and JSON/vector parity, and expose a stub font helper that masks missing-font errors.  
-- Release/version story is fragmented: Cargo workspaces set version to 2.0.0, Python uses `dynamic = ["version"]` without hatch-vcs, and scripts/workflows perform ad-hoc `cargo set-version`.
+Executive assessment  
+- Architecture is modular and mostly type-safe; backends implement narrow traits. The six-stage pipeline is largely aspirational—Input/Unicode/FontSelection stages are pass-through and CLI bypasses them, so docs overstate capability.  
+- Rendering/vector paths remain correctness-risky: canvas sizing based on advance not bbox, glyph IDs clamped to u16 in several exporters, variations/palette data dropped, and fonts re-parsed per glyph in SVG exporters.  
+- Caching and identity are weak: font caches hash raw buffers (expensive, unstable), no size bounds or metrics, and render caches are opaque to users.  
+- Capability honesty is low: `supports_*` defaults to `true`, so unsupported combinations fail late.  
+- Python bindings lag: forced LTR, reload fonts per call, no TTC index or JSON/vector parity, and `render_simple` hides missing-font errors via stub font. Version string is hard-coded `2.0.0-dev`.  
+- Release/tooling story is fragmented: Cargo version is 2.0.0, Python uses dynamic placeholder, scripts install system-wide deps via `uv pip --system`, and GH Actions mutates Cargo version but not hatch-vcs; no tag-to-version guardrails.
 
-Immediate blockers  
-- `crates/typf-cli/src/commands/render.rs` fails to compile: `use typf_unicode::{UnicodeOptions, UnicodeProcessor};` lacks a dependency entry, and helper `resolve_direction` is not defined. The test run aborts at compile time.  
-- Version sources disagree (Cargo 2.0.0, Python dynamic but unset, CLI uses `env!("CARGO_PKG_VERSION")`), so tag-based releases cannot be trusted yet.
-
-Rust workspace review (by crate/module)  
-- `crates/typf-core`:  
-  - `pipeline.rs::process/execute` correctly enforces presence of shaper/renderer/exporter and propagates errors, but Input/Unicode/FontSelection stages are no-ops so the “six-stage” story over-promises.  
-  - `traits::{Shaper, Renderer, Exporter}` expose `supports_*` defaults returning true; no capability matrix means unsupported combos fail downstream.  
-  - `cache.rs` and `shaping_cache.rs` provide L1/L2 caches with promotion; keys hash full font buffers (expensive, unbounded, not identity-stable) and do not report metrics or eviction.  
-  - `linra.rs` maps linra params to shaping/render params but ignores palette/optical size; reasonable defaults otherwise.  
-  - Tests cover builder wiring and stage ordering; no property tests for cache key stability or size guardrails.  
-- `crates/typf-unicode`:  
-  - `UnicodeProcessor::process` correctly converts byte → char indices for bidi levels; options enable script detection, normalization, bidi resolve. Grapheme detection is computed then discarded (untapped).  
-  - `detect_scripts` treats `Script::Common` as sticky until a specific script appears; language is copied verbatim (empty by default).  
-  - Word/line segmentation via ICU; no locale override beyond `language`. Property/unit tests cover RTL, mixed scripts, segmentation.  
-- `crates/typf-fontdb`:  
-  - `Font::from_file/from_data_index` validates via `read-fonts`, honors `face_index`, and avoids leaks. Error typing is coarse (`FontError`) but safe; no size/format caps on loaded data.  
-  - `advance_width` normalizes widths to 1000 UPM, which may diverge from actual requested size; consistent but surprising.  
-- `crates/typf-export`:  
-  - `png.rs::encode_bitmap_to_png` validates buffer length and handles RGBA/RGB/Gray8/Gray1; Gray1 bit-walking is bounds-guarded. Uses `image` encoder; fast-path absent but correctness solid.  
-  - `svg.rs::SvgExporter` embeds PNG via custom base64 encoder; maintains padding and color but re-parses bitmap; bespoke base64 is maintenance risk vs `base64` crate.  
-  - `json.rs` serializes shaping output without schema/version tagging; no CLI path exercises it.  
-  - `pnm` exporter expands per-pixel; slow but correct for debug.  
-- `crates/typf-export-svg`:  
-  - `SvgExporter::export` re-parses font per glyph (`extract_glyph_path`), sizes canvas from advance height with fixed padding, and clamps glyph IDs to u16, dropping variation/palette data. Tall ascenders/emoji can clip; no bbox-based sizing. Tests are minimal snapshots.  
-- `crates/typf-cli`:  
-  - CLI flow hand-builds pipeline; resolves direction via missing helper; attempts to use `UnicodeProcessor` but dependency absent. Shaper/renderer selection is clear with feature gating, and SVG fallback to `SvgRenderer` is explicit.  
-  - Batch runner counts per-job errors but does not validate font presence per job; JSON output intentionally unsupported.  
-  - Logging and progress UX are good; compile break currently blocks use.  
-- `crates/typf`: facade re-exports backends and WASM mock font. Docs describe fully pluggable pipeline that does not exist in CLI; WASM build exposes only None+Opixa.  
-- `crates/typf-input`: placeholder `add()` and trivial test; not wired anywhere.  
-- `crates/typf-bench`: benches wire HB+Opixa; rely on local fonts; not part of failed build.  
+Rust workspace: crate-by-crate highlights  
+- `crates/typf-core`  
+  - `pipeline.rs`: `process()` enforces presence of shaper/renderer/exporter and propagates errors cleanly. Default builder injects six stages but three are no-ops; CLI uses its own flow. Lacks capability validation across backends. Tests cover happy/negative paths but no property tests for empty fonts or cache sizing.  
+  - `traits.rs`: default `supports_script`/`supports_format` return `true`, masking lack of support; `FontRef::glyph_count` optional so shapers can emit out-of-range IDs unnoticed.  
+  - `cache.rs`/`shaping_cache.rs`: L1/L2 caches work but key is full font buffer hash (costly, not identity-stable) with unbounded size and no metrics/eviction signals.  
+  - `linra.rs`: maps linra params but ignores palette/optical size; capability detection minimal.  
+  - Types and errors are crisp; docs sometimes imply more pipeline behavior than exists.  
+- `crates/typf-unicode`  
+  - `UnicodeProcessor::process` correctly maps byte→char indices and bidi levels; grapheme cluster results are computed then discarded. `detect_scripts` keeps `Common` sticky until first specific script; language copy-through only.  
+  - Tests cover RTL/mixed scripts/segmentation; no stress tests for surrogate pairs or invalid UTF-8 (input assumed valid).  
+- `crates/typf-fontdb`  
+  - `Font::from_file/from_data_index` validate via `read-fonts`, honor `face_index`, and avoid leaks; error typing is coarse (`FontError`).  
+  - `advance_width` normalizes to 1000 UPM, diverging from actual UPM and can distort metrics for fonts with non-1000 UPM; no size cap on input data.  
+- `crates/typf-export`  
+  - `png.rs` validates lengths for RGBA/RGB/Gray8/Gray1; Gray1 bit-walk is bounds-checked. Uses `image` encoder; no streaming/stride options.  
+  - `svg.rs` (embed PNG) re-parses bitmap and uses bespoke base64 encoder; maintenance risk vs `base64` crate. Padding handled; no metadata or viewBox control.  
+  - `json.rs` emits unversioned schema; not exercised by CLI.  
+  - `pnm` exporters are correct but slow (per-pixel expansion).  
+- `crates/typf-export-svg`  
+  - `SvgExporter::export` re-parses font for every glyph (`extract_glyph_path`), sizes canvas from advance height with fixed padding, clamps glyph IDs to `u16`, ignores variations and CPAL palettes; tall glyphs/emoji/large glyph IDs can clip or be wrong. Tests are thin snapshots.  
+- `crates/typf-cli`  
+  - CLI now restores direction auto-detect via `typf-unicode`; error messages are clear. Still hand-assembles pipeline instead of `Pipeline::process`, so the six-stage contract is unused.  
+  - Batch runner counts per-job errors but doesn’t validate font existence per job; JSON renderer deliberately unsupported. SVG fallback wiring is explicit. Logging UX is good.  
+- `crates/typf` facade  
+  - Re-exports backends and WASM mock font; docs claim fully pluggable pipeline, but facade defaults to None+Opixa for WASM. Limited tests.  
+- `crates/typf-input`  
+  - Placeholder `add()` only; no integration. Dead weight until wired or removed.  
+- `crates/typf-bench`  
+  - Bench harness depends on local fonts; no guards for missing files; not wired into CI.  
 
 Backends  
-- Shapers:  
-  - `typf-shape-hb`/`typf-shape-icu-hb` honor direction, features, variations; integrate shaping cache; coverage/axis handling is solid.  
-  - `typf-shape-ct` maps CoreText coverage and supports scripts by default; limited tests.  
-  - `typf-shape-none` deterministic passthrough for debugging; safe.  
-- Renderers:  
-  - `typf-render-opixa` is well-tested; clamps canvas bounds and supports Gray1/antialias modes; allocates per-glyph RGBA buffers (could pool).  
-  - `typf-render-skia` and `typf-render-zeno` support vector output but size surfaces from advances, not bbox; glyph>u16 and palette/variation data dropped.  
-  - `typf-render-cg` and `typf-render-color` handle COLRv0/v1, sbix, CBDT/SVG with detection; smoke tests only.  
-  - `typf-render-json` emits glyph lists without schema; unchecked by CLI.  
-- OS linra renderers (`typf-os-mac`, `typf-os-win`) provide combined shape+render APIs with basic capability tests; DirectWrite path stubbed on non-Windows targets.  
+- Shapers  
+  - `typf-shape-hb`/`icu-hb`: solid direction/language/feature handling; shaping cache integration exists but cache keys share global font-buffer hash and no eviction signals. Tests include mixed scripts/features.  
+  - `typf-shape-ct`: uses CoreText; limited tests and no feature coverage; capability detection coarse.  
+  - `typf-shape-none`: deterministic passthrough; safe for debug.  
+- Renderers  
+  - `typf-render-opixa`: robust bounds checks, supports Gray1/antialias; allocates per-call RGBA buffers (no pooling).  
+  - `typf-render-skia`/`typf-render-zeno`: surface sizing by advance not bbox; large glyph IDs and CPAL/variations dropped; shares code paths with SVG export but re-parses fonts. Tests mostly smoke.  
+  - `typf-render-cg` and `typf-render-color`: handle COLRv0/v1, sbix, CBDT/SVG; rely on platform availability; tests are ignored on non-mac/Windows targets.  
+  - `typf-render-json`: emits glyph lists without schema validation; not used by CLI.  
+- Linra (OS single-pass)  
+  - `typf-os-mac`: CTLineDraw path with AA/letter spacing; capability checks shallow; no palette/variation support.  
+  - `typf-os-win`: mostly stubbed when not on Windows; risk of divergence when enabled.  
 
 Python bindings (`bindings/python/src/lib.rs`)  
-- `Typf` class exposes shaper/renderer selection and bitmap export; each call reloads fonts and forces LTR direction. No TTC index, no JSON/vector parity, and no shared font handles.  
-- `render_simple` uses a stub font that fabricates glyph metrics, potentially hiding missing-font errors.  
-- `render_to_svg` available only with `export-svg` feature; still re-parses font and ignores variations/palettes.  
-- Module version is hard-coded to `"2.0.0-dev"`; not sourced from git tags or Cargo.  
+- `Typf` constructor selects shaper/renderer but reloads fonts every call and forces `Direction::LeftToRight`; no TTC index, no feature or variation plumbing.  
+- `render_text` returns dict with RGBA8 only; no format negotiation.  
+- `render_to_svg` gated behind `export-svg`, re-parses font per glyph, ignores palette/variation.  
+- `render_simple` fabricates a stub font, masking missing-font errors and producing untrue metrics.  
+- Version exposed as `"2.0.0-dev"` constant; not tied to workspace version or git tags.  
 
-Tooling, scripts, and release flow  
-- `build.sh` is macOS-aware but installs both venv and system packages with `uv pip`; runs heavy docs/tests/benchmarks unconditionally and references `typf-py` (nonexistent). No validation of required Homebrew deps.  
-- `publish.sh` relies on `cargo set-version` output and `uv publish`; no verification that Python/Rust versions match git tag; assumes clean `main`.  
-- `.github/workflows/release.yml` triggers on `v*` and builds Rust binaries plus maturin wheels. Version is injected via `cargo set-version` during workflow but Python still uses a dynamic placeholder; no hatch-vcs or PEP 621 `version` source, so PyPI wheel version may drift.  
-- No CI check ensures `build.sh` works on macOS; no release dry-run combining crates.io + PyPI; no guard that `vN.N.N` tags map to semver in Cargo/Python.  
+Tooling / release / docs  
+- `build.sh` installs Python deps twice (venv + `--system`), references `typf-py` (nonexistent), always runs docs/tests/benchmarks, and assumes Homebrew fonts; not reproducible or CI-friendly.  
+- `publish.sh` sets Cargo version from tag but does not ensure Python version matches; assumes clean `main` and pushes crates/wheels without topo ordering or dry-run guardrails.  
+- `.github/workflows/release.yml` builds binaries and maturin wheels on `v*` tags, mutates Cargo version, but Python version remains dynamic placeholder (no hatch-vcs). No check that tag matches workspace version.  
+- Docs (README/ARCHITECTURE) over-promise six-stage pipeline and SVG/vector fidelity; capability tables lack per-backend caveats.  
 
-Quality risks and opportunities  
-- Broken workspace compile prevents test execution; need to restore `typf-cli` dependency wiring and direction resolver.  
-- Capability honesty: default-true `supports_*` and pass-through pipeline stages hide missing features until runtime; add explicit tables and early errors.  
-- Vector/SVG correctness: bbox-based sizing, glyph>u16, variation/palette propagation, and shared font parsing are needed to avoid clipping and data loss.  
-- Caching/observability: adopt stable font identity keys, bounds, and metrics.  
-- Python parity: reuse fonts, add TTC index and JSON/vector exporters, remove stub default.  
-- Versioning/release: unify version source from git tags via hatch-vcs (Python) and workspace metadata; align `build.sh`, `publish.sh`, and GH Actions with semver tag triggers.  
+Quality risks (ranked)  
+1) Capability honesty: default-true `supports_*` and pass-through pipeline hide unsupported combos until late failure.  
+2) Vector/SVG correctness: bbox-free sizing, glyph ID truncation, palette/variation loss, per-glyph font reparse → clipping and wrong output.  
+3) Caching/identity: hashing font buffers without bounds or metrics risks memory blowups and poor perf; no eviction visibility.  
+4) Python parity/safety: forced LTR, per-call font reload, stub font masking errors, no TTC/JSON/vector parity; hard-coded version.  
+5) Versioning/release: Cargo/Python/tag mismatch; build/publish scripts non-reproducible; GH Actions lacks guards.  
+6) Dead/placeholder code: `typf-input` unused; bench harness depends on local fonts; documentation drifts from reality.  
 
-Second pass (self-check and refinements)  
-- Re-read key modules for overstatement: confined claims to observed code paths; noted where tests are lacking.  
-- Recorded the exact test failure and compile break instead of assuming previous green state.  
-- Highlighted version-source drift and release automation gaps per the new requirements.  
-- Confirmed no code changes were made.  
+Opportunities / quick wins  
+- Add capability matrices + early validation in CLI and `Pipeline::process`.  
+- Switch font identity keys to (path, face index, checksum) with size bounds + metrics; expose hit/miss counters.  
+- Bbox-based canvas sizing and 32-bit glyph IDs across renderers/exporters; share parsed font handles to avoid reparse.  
+- Python: reuse font handles, allow TTC index, honor direction auto-detect, remove stub default, add JSON/SVG/PNG parity, and source version from git tag via hatch-vcs.  
+- Release: single source of truth (git tag -> Cargo workspace version -> hatch-vcs); `build.sh` minimal macOS recipe; `publish.sh` dry-run + topo publish; CI smoke for macOS build script.  
+- Documentation: align pipeline description with actual flow; state capability gaps per backend; add JSON schema versioning.  
+
+Second-pass self-check  
+- Re-read modules to avoid overclaim; limited to observed code paths.  
+- Risks above map to concrete code lines (pipeline pass-through, SVG glyph clamp, cache key).  
+- Tests are currently green; noted missing coverage rather than assuming failure.  
+- No refactoring proposed here—plan moves to PLAN.md for action.  

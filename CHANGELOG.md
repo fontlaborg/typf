@@ -44,6 +44,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
   - Added `clear()` method to reset database state
   - Added `font_count()` method for diagnostics
   - Impact: Prevents unbounded memory growth when same font is loaded repeatedly
+- **Rust CLI Direction + SVG**: Rewired `typf-cli` to depend on `typf-unicode`, restored `resolve_direction` auto-bidi detection, and added SVG exporter passthrough so `typf render -O svg` succeeds again.
 
 ### Added
 - **Backend Documentation**: Comprehensive comparison tables for shapers, renderers, and export formats in README.md

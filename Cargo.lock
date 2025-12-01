@@ -2058,6 +2058,7 @@ dependencies = [
  "typf-shape-hb",
  "typf-shape-icu-hb",
  "typf-shape-none",
+ "typf-unicode",
 ]
 
 [[package]]
