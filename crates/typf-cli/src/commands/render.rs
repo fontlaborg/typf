@@ -8,10 +8,12 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use std::sync::Arc;
 use typf::error::{Result, TypfError};
+use typf_core::Pipeline;
 #[cfg(feature = "linra")]
 use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_core::{
-    traits::{FontRef, Renderer, Shaper},
+    error::ExportError,
+    traits::{Exporter, FontRef, Renderer, Shaper},
     types::{Direction, RenderOutput, VectorFormat},
     Color, RenderMode, RenderParams, ShapingParams,
 };
@@ -20,6 +22,7 @@ use typf_fontdb::Font;
 use typf_render_opixa::OpixaRenderer;
 use typf_render_svg::SvgRenderer;
 use typf_shape_none::NoneShaper;
+use typf_unicode::{UnicodeOptions, UnicodeProcessor};
 
 pub fn run(args: &RenderArgs) -> Result<()> {
     // Check if using linra (single-pass) renderer
@@ -94,16 +97,18 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     // 2. Load font
     let font: Arc<dyn FontRef> = load_font(args)?;
 
-    // 3. Parse rendering parameters
+    // 3. Resolve direction (auto uses UnicodeProcessor)
+    let direction = resolve_direction(&text, &args.direction, args.language.as_deref())?;
+
+    // 4. Parse rendering parameters
     let font_size = parse_font_size(&args.font_size)?;
-    let direction = parse_direction(&args.direction)?;
     let foreground = parse_color(&args.foreground)?;
     let background = parse_color(&args.background)?;
 
-    // 4. Parse variable font variations
+    // 5. Parse variable font variations
     let variations = parse_variations(&args.instance)?;
 
-    // 5. Create shaping parameters
+    // 6. Create shaping parameters
     let shaping_params = ShapingParams {
         size: font_size,
         direction,
@@ -118,7 +123,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         letter_spacing: 0.0,
     };
 
-    // 6. Create rendering parameters
+    // 7. Create rendering parameters
     let output_mode = if matches!(args.format, OutputFormat::Svg) {
         RenderMode::Vector(VectorFormat::Svg)
     } else {
@@ -135,7 +140,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         output: output_mode,
     };
 
-    // 6. Select backends
+    // 8. Select backends
     // Use fallback shaper if we're falling back from linra for SVG
     let shaper_name = svg_fallback_shaper.unwrap_or(&args.shaper);
     let shaper = select_shaper(shaper_name)?;
@@ -150,66 +155,35 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         renderer = select_renderer(renderer_name)?;
     }
 
-    // 7. Shape text
+    // 9. Build pipeline
+    let exporter = create_exporter(args.format)?;
+    let pipeline = Pipeline::builder()
+        .shaper(shaper.clone())
+        .renderer(renderer.clone())
+        .exporter(exporter.clone())
+        .build()?;
+
     if args.verbose {
         eprintln!("Shaping with {} backend...", shaper_name);
-    }
-    let shaped = shaper.shape(&text, font.clone(), &shaping_params)?;
-
-    if args.verbose {
-        eprintln!("Shaped {} glyphs", shaped.glyphs.len());
-    }
-
-    // 8. Render
-    if args.verbose {
         eprintln!("Rendering with {} backend...", renderer_name);
+        eprintln!("Exporting to {} format...", args.format.as_str());
     }
-    let rendered = renderer.render(&shaped, font, &render_params)?;
 
-    // 9. Export and write output
-    match rendered {
-        RenderOutput::Vector(vector_data) => {
-            // Vector output (SVG) - write directly
-            if let Some(ref path) = args.output_file {
-                let mut file = File::create(path)?;
-                file.write_all(vector_data.data.as_bytes())?;
-            } else {
-                io::stdout().write_all(vector_data.data.as_bytes())?;
-            }
+    // 10. Execute pipeline
+    let exported = pipeline.process(&text, font, &shaping_params, &render_params)?;
+    let output_size = exported.len();
 
-            if !args.quiet {
-                if let Some(ref path) = args.output_file {
-                    eprintln!("✓ Successfully rendered to {}", path.display());
-                } else {
-                    eprintln!("✓ Successfully rendered to stdout");
-                }
-                eprintln!("  Format: {} (vector)", args.format.as_str().to_uppercase());
-                eprintln!("  Size: {} bytes", vector_data.data.len());
-            }
-        },
-        RenderOutput::Bitmap(_) => {
-            // Bitmap output - export to requested format
-            if args.verbose {
-                eprintln!("Exporting to {} format...", args.format.as_str());
-            }
-            let exporter = create_exporter(args.format)?;
-            let exported = exporter.export(&rendered)?;
+    // 11. Write output
+    write_output(args, &exported)?;
 
-            write_output(args, &exported)?;
-
-            if !args.quiet {
-                if let Some(ref path) = args.output_file {
-                    eprintln!("✓ Successfully rendered to {}", path.display());
-                } else {
-                    eprintln!("✓ Successfully rendered to stdout");
-                }
-                eprintln!("  Format: {}", args.format.as_str().to_uppercase());
-                eprintln!("  Size: {} bytes", exported.len());
-            }
-        },
-        RenderOutput::Json(_) => {
-            return Err(TypfError::Other("JSON output not yet supported".into()));
-        },
+    if !args.quiet {
+        if let Some(ref path) = args.output_file {
+            eprintln!("✓ Successfully rendered to {}", path.display());
+        } else {
+            eprintln!("✓ Successfully rendered to stdout");
+        }
+        eprintln!("  Format: {}", args.format.as_str().to_uppercase());
+        eprintln!("  Size: {} bytes", output_size);
     }
 
     Ok(())
