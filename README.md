@@ -64,8 +64,8 @@ That's it. Your text is rendered.
 | Backend | Anti-alias | Color | Output | Performance | Platform |
 |---------|------------|-------|--------|-------------|----------|
 | **opixa** | Monochrome | No | Bitmap | 2K ops/sec | All (pure Rust) |
-| **skia** | 256 levels | No | Bitmap | 3.5K ops/sec | All |
-| **zeno** | 256 levels | No | Bitmap | 3K ops/sec | All (pure Rust) |
+| **skia** | 256 levels | No | Bitmap/SVG | 3.5K ops/sec | All |
+| **zeno** | 256 levels | No | Bitmap/SVG | 3K ops/sec | All (pure Rust) |
 | **coregraphics** | 256 levels | Yes (sbix/COLR) | Bitmap | 4K ops/sec | macOS only |
 | **json** | N/A | N/A | JSON data | 25K ops/sec | All |
 

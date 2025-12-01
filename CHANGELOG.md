@@ -20,6 +20,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
   - Extracts glyph outlines from fonts using skrifa
   - Produces scalable vector graphics with perfect path data
   - Available via `--renderer svg` or `--format svg` in CLI
+- **Skia/Zeno SVG Modes**: Added `RenderMode` on `RenderParams` with SVG output path support in Skia and Zeno renderers (delegates to the SVG renderer) so `--renderer skia|zeno --format svg` now emits vector output.
 - **Linra Integration**: Exposed single-pass shaping+rendering (linra) to Rust and Python CLIs
   - New `--renderer linra-mac` and `--renderer linra-win` options in Rust CLI
   - New `TypfLinra` class in Python bindings with `render_text()` method
@@ -33,6 +34,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
   - Supports formats: `wght=700,wdth=100` and `wght:700 wdth:100`
   - Connected to both traditional and linra rendering pipelines
 - **HarfBuzz as Default**: Changed default features to include `shaping-hb` for CLI
+- **SVG Color Embedding**: SVG renderer now detects COLR/SVG/bitmap glyphs via `typf-render-color`, embeds CPAL-aware PNGs (gradients preserved), and adds palette regression tests using Abelone COLRv1.
 
 ### Fixed
 - **Memory Leak in FontDatabase** (Critical - Issue #450)

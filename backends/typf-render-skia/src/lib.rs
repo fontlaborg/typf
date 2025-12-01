@@ -19,9 +19,10 @@ use std::sync::Arc;
 use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},
-    types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult},
-    RenderParams,
+    types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult, VectorFormat},
+    RenderMode, RenderParams,
 };
+use typf_render_svg::SvgRenderer;
 
 /// tiny-skia powered renderer for pristine glyph output
 ///
@@ -224,6 +225,20 @@ impl Renderer for SkiaRenderer {
         font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
+        // Vector mode: delegate to the SVG renderer for path extraction
+        if let RenderMode::Vector(vector_format) = params.output {
+            if vector_format == VectorFormat::Svg {
+                let svg_renderer = SvgRenderer::new();
+                return svg_renderer.render(shaped, font, params);
+            } else {
+                return Err(RenderError::FormatNotSupported(format!(
+                    "Skia renderer does not support {:?}",
+                    vector_format
+                ))
+                .into());
+            }
+        }
+
         let padding = params.padding as f32;
         let glyph_size = shaped.advance_height;
 
@@ -354,7 +369,8 @@ impl Renderer for SkiaRenderer {
     }
 
     fn supports_format(&self, format: &str) -> bool {
-        matches!(format, "bitmap" | "rgba")
+        let f = format.to_ascii_lowercase();
+        matches!(f.as_str(), "bitmap" | "rgba" | "svg" | "vector")
     }
 }
 
@@ -431,6 +447,8 @@ impl skrifa::outline::OutlinePen for PathPen<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+    use typf_core::types::Direction;
 
     #[test]
     fn test_renderer_creation() {
@@ -450,8 +468,55 @@ mod tests {
         let renderer = SkiaRenderer::new();
         assert!(renderer.supports_format("bitmap"));
         assert!(renderer.supports_format("rgba"));
-        assert!(!renderer.supports_format("svg"));
+        assert!(renderer.supports_format("svg"));
+        assert!(renderer.supports_format("vector"));
         assert!(!renderer.supports_format("pdf"));
         assert!(!renderer.supports_format("unknown"));
+    }
+
+    fn load_test_font() -> Arc<dyn FontRef> {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.pop(); // typf-render-skia
+        path.pop(); // backends
+        path.push("test-fonts");
+        path.push("NotoSans-Regular.ttf");
+
+        let font = typf_fontdb::Font::from_file(&path).expect("test font should load for SVG mode");
+        Arc::new(font)
+    }
+
+    #[test]
+    fn test_svg_output_mode_returns_vector() {
+        let renderer = SkiaRenderer::new();
+        let font = load_test_font();
+
+        let glyph_id = font.glyph_id('A').unwrap_or(0);
+        let shaped = ShapingResult {
+            glyphs: vec![typf_core::types::PositionedGlyph {
+                id: glyph_id,
+                x: 0.0,
+                y: 0.0,
+                advance: 64.0,
+                cluster: 0,
+            }],
+            advance_width: 64.0,
+            advance_height: 64.0,
+            direction: Direction::LeftToRight,
+        };
+
+        let params = RenderParams {
+            output: RenderMode::Vector(VectorFormat::Svg),
+            ..RenderParams::default()
+        };
+
+        let result = renderer.render(&shaped, font, &params).unwrap();
+
+        match result {
+            RenderOutput::Vector(vector) => {
+                assert_eq!(vector.format, VectorFormat::Svg);
+                assert!(vector.data.contains("<svg"));
+            },
+            other => panic!("expected vector output, got {:?}", other),
+        }
     }
 }

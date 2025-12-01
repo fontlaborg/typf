@@ -37,7 +37,7 @@ Central types and traits that all components share:
 - **`Exporter` trait**: Pixels/vectors → file bytes
 - **`FontRef` trait**: Abstraction over font data access
 - **`ShapingParams`**: Font size, features, variations, language
-- **`RenderParams`**: Colors, padding, antialiasing
+- **`RenderParams`**: Colors, padding, antialiasing, output mode
 - **`ShapingResult`**: Positioned glyphs with metrics
 - **`RenderOutput`**: Bitmap or vector data
 
@@ -155,6 +155,7 @@ RenderParams {
     antialias: true,                      // Smooth edges
     variations: vec![("wght".into(), 700.0)], // For SVG renderer
     color_palette: 0,                     // CPAL palette index
+    output: RenderMode::Bitmap,           // Vector: RenderMode::Vector(VectorFormat::Svg)
 }
 ```
 

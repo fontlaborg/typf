@@ -19,3 +19,7 @@ skrifa = "0.39"
 thiserror.workspace = true
 typf-core = { workspace = true }
 zeno = "0.3"
+typf-render-svg = { workspace = true }
+
+[dev-dependencies]
+typf-fontdb = { workspace = true }

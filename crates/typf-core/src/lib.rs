@@ -242,6 +242,8 @@ pub struct RenderParams {
     pub variations: Vec<(String, f32)>,
     /// CPAL color palette index for COLR color glyphs (0 = default palette)
     pub color_palette: u16,
+    /// Desired render output mode (bitmap or vector)
+    pub output: RenderMode,
 }
 
 impl Default for RenderParams {
@@ -253,8 +255,18 @@ impl Default for RenderParams {
             antialias: true,
             variations: Vec::new(),
             color_palette: 0,
+            output: RenderMode::Bitmap,
         }
     }
+}
+
+/// Target output for rendering operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RenderMode {
+    /// Raster output (default)
+    Bitmap,
+    /// Vector output (currently SVG only)
+    Vector(types::VectorFormat),
 }
 
 /// Simple RGBA color that works everywhere

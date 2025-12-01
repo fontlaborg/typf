@@ -13,7 +13,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::sync::Arc;
 
-use typf::{Color, Pipeline, RenderParams, ShapingParams};
+use typf::{Color, Pipeline, RenderMode, RenderParams, ShapingParams};
 use typf_core::traits::{FontRef, Renderer, Shaper};
 use typf_export::{PnmExporter, PnmFormat};
 use typf_render_opixa::OpixaRenderer;
@@ -142,6 +142,7 @@ fn bench_full_pipeline(c: &mut Criterion) {
         padding: 5,
         antialias: false, // Faster for benchmarking
         variations: Vec::new(),
+        output: RenderMode::Bitmap,
     };
 
     // Complete pipeline for short text - common UI scenarios

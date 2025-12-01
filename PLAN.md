@@ -16,10 +16,10 @@ All P0-P3 milestones achieved. The six-stage pipeline, bidi correctness, and exp
 
 Optional enhancements for advanced SVG output:
 
-- Implement Skia renderer SVG output mode
-- Implement Zeno renderer SVG output mode
-- Preserve gradients and embed bitmaps for SVG output when needed
-- CPAL color palette support in SVG (requires ColorPainter implementation)
+- Implement Skia renderer SVG output mode — DONE (Dec 1, 2025)
+- Implement Zeno renderer SVG output mode — DONE (Dec 1, 2025)
+- Preserve gradients and embed bitmaps for SVG output when needed — DONE (Dec 1, 2025)
+- CPAL color palette support in SVG (requires ColorPainter implementation) — DONE (Dec 1, 2025)
 
 ---
 

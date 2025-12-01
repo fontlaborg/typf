@@ -11,3 +11,8 @@ license.workspace = true
 log = { workspace = true }
 skrifa = { workspace = true }
 typf-core = { workspace = true }
+typf-export = { workspace = true }
+typf-render-color = { workspace = true, features = ["bitmap", "svg"] }
+
+[dev-dependencies]
+typf-fontdb = { workspace = true }

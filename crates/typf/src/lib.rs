@@ -36,7 +36,7 @@
 //! - `export-pnm` - PPM, PGM, PBM output formats
 //! - `full` - Everything unlocked and ready to go
 
-pub use typf_core::{error, traits, Color, Pipeline, RenderParams, ShapingParams};
+pub use typf_core::{error, traits, Color, Pipeline, RenderMode, RenderParams, ShapingParams};
 
 #[cfg(feature = "input")]
 pub use typf_input as input;
@@ -88,6 +88,6 @@ pub mod prelude {
         error::{Result, TypfError},
         traits::{Exporter, FontRef, Renderer, Shaper},
         types::{Direction, RenderOutput, ShapingResult},
-        Color, Pipeline, RenderParams, ShapingParams,
+        Color, Pipeline, RenderMode, RenderParams, ShapingParams,
     };
 }

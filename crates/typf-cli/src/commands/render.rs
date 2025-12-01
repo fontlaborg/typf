@@ -12,8 +12,8 @@ use typf::error::{Result, TypfError};
 use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_core::{
     traits::{FontRef, Renderer, Shaper},
-    types::{Direction, RenderOutput},
-    Color, RenderParams, ShapingParams,
+    types::{Direction, RenderOutput, VectorFormat},
+    Color, RenderMode, RenderParams, ShapingParams,
 };
 use typf_export::{PngExporter, PnmExporter};
 use typf_fontdb::Font;
@@ -119,6 +119,12 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     };
 
     // 6. Create rendering parameters
+    let output_mode = if matches!(args.format, OutputFormat::Svg) {
+        RenderMode::Vector(VectorFormat::Svg)
+    } else {
+        RenderMode::Bitmap
+    };
+
     let render_params = RenderParams {
         foreground,
         background: Some(background),
@@ -126,6 +132,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
         variations,
         color_palette: args.color_palette as u16,
+        output: output_mode,
     };
 
     // 6. Select backends
@@ -133,13 +140,15 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     let shaper_name = svg_fallback_shaper.unwrap_or(&args.shaper);
     let shaper = select_shaper(shaper_name)?;
 
-    // For SVG output, use SVG renderer; otherwise use requested renderer
-    let renderer_name = if matches!(args.format, OutputFormat::Svg) {
-        "svg"
-    } else {
-        &args.renderer
-    };
-    let renderer = select_renderer(renderer_name)?;
+    // Prefer requested renderer; if SVG output is requested but the renderer
+    // cannot emit SVG, fall back to the dedicated SVG renderer.
+    let mut renderer_name = args.renderer.as_str();
+    let mut renderer = select_renderer(renderer_name)?;
+
+    if matches!(args.format, OutputFormat::Svg) && !renderer.supports_format("svg") {
+        renderer_name = "svg";
+        renderer = select_renderer(renderer_name)?;
+    }
 
     // 7. Shape text
     if args.verbose {

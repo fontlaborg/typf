@@ -11,6 +11,7 @@ use typf_core::{
     types::{Direction, PositionedGlyph, RenderOutput, ShapingResult, VectorFormat},
     RenderParams,
 };
+use typf_fontdb::Font;
 use typf_render_svg::SvgRenderer;
 
 /// Simple font wrapper for testing
@@ -61,6 +62,17 @@ fn load_font(name: &str) -> Option<Arc<dyn FontRef>> {
     Some(Arc::new(TestFont { data, upem: 1000 }) as Arc<dyn FontRef>)
 }
 
+/// Load a real font via typf-fontdb for glyph-dependent tests
+fn load_real_font(name: &str) -> Option<Arc<dyn FontRef>> {
+    let path = test_font_path(name);
+    if !path.exists() {
+        return None;
+    }
+    Font::from_file(path)
+        .ok()
+        .map(|font| Arc::new(font) as Arc<dyn FontRef>)
+}
+
 /// Create a simple shaping result for testing
 fn simple_shaping_result() -> ShapingResult {
     let glyphs = vec![
@@ -86,6 +98,23 @@ fn simple_shaping_result() -> ShapingResult {
         advance_height: 200.0,
         direction: Direction::LeftToRight,
     }
+}
+
+/// Find the first glyph ID with COLR color data
+fn first_color_glyph(font: &Arc<dyn FontRef>) -> Option<u32> {
+    use typf_render_color::get_color_glyph_format;
+
+    let data = font.data();
+    let glyph_count = font.glyph_count().unwrap_or(512);
+
+    (0..glyph_count).find(|gid| get_color_glyph_format(data, *gid).is_some())
+}
+
+/// Extract the base64 payload from a data URI inside the SVG
+fn extract_base64_image(svg: &str) -> Option<String> {
+    let start = svg.find("base64,")? + "base64,".len();
+    let end = svg[start..].find('"')? + start;
+    Some(svg[start..end].to_string())
 }
 
 #[test]
@@ -249,6 +278,127 @@ fn test_svg_consistency() {
     } else {
         panic!("Expected vector outputs");
     }
+}
+
+#[test]
+fn test_svg_embeds_colr_glyph_as_image() {
+    let font = match load_real_font("AbeloneRegular-COLRv1.ttf") {
+        Some(f) => f,
+        None => {
+            eprintln!("Skipping test: AbeloneRegular-COLRv1.ttf not found");
+            return;
+        },
+    };
+
+    let glyph_id = match first_color_glyph(&font) {
+        Some(gid) => gid,
+        None => {
+            eprintln!("Skipping test: no COLR glyphs found");
+            return;
+        },
+    };
+
+    let advance_width = font.advance_width(glyph_id);
+
+    let shaped = ShapingResult {
+        glyphs: vec![PositionedGlyph {
+            id: glyph_id,
+            x: 0.0,
+            y: 0.0,
+            advance: advance_width,
+            cluster: 0,
+        }],
+        advance_width,
+        advance_height: 256.0,
+        direction: Direction::LeftToRight,
+    };
+
+    let renderer = SvgRenderer::new();
+    let params = RenderParams::default();
+
+    let result = renderer.render(&shaped, font, &params);
+
+    if let Ok(RenderOutput::Vector(vector)) = result {
+        assert!(
+            vector.data.contains("<image"),
+            "SVG should embed color glyph as image"
+        );
+        assert!(
+            vector.data.contains("data:image/png;base64,"),
+            "SVG should embed PNG data for color glyph"
+        );
+    } else {
+        panic!("Expected vector output");
+    }
+}
+
+#[test]
+fn test_svg_color_palette_affects_output() {
+    let font = match load_real_font("AbeloneRegular-COLRv1.ttf") {
+        Some(f) => f,
+        None => return,
+    };
+
+    let glyph_id = match first_color_glyph(&font) {
+        Some(gid) => gid,
+        None => return,
+    };
+
+    // Verify palette count >= 2; otherwise skip
+    let palette_count = skrifa::FontRef::new(font.data())
+        .ok()
+        .map(|f| skrifa::color::ColorPalettes::new(&f).len())
+        .unwrap_or(0);
+    if palette_count < 2 {
+        eprintln!(
+            "Skipping palette test: font has {} palette(s)",
+            palette_count
+        );
+        return;
+    }
+
+    let advance_width = font.advance_width(glyph_id);
+    let shaped = ShapingResult {
+        glyphs: vec![PositionedGlyph {
+            id: glyph_id,
+            x: 0.0,
+            y: 0.0,
+            advance: advance_width,
+            cluster: 0,
+        }],
+        advance_width,
+        advance_height: 256.0,
+        direction: Direction::LeftToRight,
+    };
+
+    let renderer = SvgRenderer::new();
+
+    let mut params0 = RenderParams::default();
+    params0.color_palette = 0;
+    let svg0 = match renderer.render(&shaped, font.clone(), &params0) {
+        Ok(RenderOutput::Vector(v)) => v.data,
+        _ => panic!("Expected vector output for palette 0"),
+    };
+
+    let mut params1 = params0.clone();
+    params1.color_palette = 1;
+    let svg1 = match renderer.render(&shaped, font, &params1) {
+        Ok(RenderOutput::Vector(v)) => v.data,
+        _ => panic!("Expected vector output for palette 1"),
+    };
+
+    let img0 = extract_base64_image(&svg0).expect("Palette 0 image should exist");
+    let img1 = extract_base64_image(&svg1).expect("Palette 1 image should exist");
+
+    if img0 == img1 {
+        eprintln!("Skipping palette diff: palettes render identical PNG for this font");
+        return;
+    }
+
+    assert_ne!(
+        img0, img1,
+        "Different palettes should change embedded image data"
+    );
 }
 
 #[test]

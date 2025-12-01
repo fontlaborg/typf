@@ -2227,6 +2227,8 @@ dependencies = [
  "thiserror",
  "tiny-skia",
  "typf-core",
+ "typf-fontdb",
+ "typf-render-svg",
 ]
 
 [[package]]
@@ -2236,6 +2238,9 @@ dependencies = [
  "log",
  "skrifa",
  "typf-core",
+ "typf-export",
+ "typf-fontdb",
+ "typf-render-color",
 ]
 
 [[package]]
@@ -2248,6 +2253,8 @@ dependencies = [
  "skrifa",
  "thiserror",
  "typf-core",
+ "typf-fontdb",
+ "typf-render-svg",
  "zeno",
 ]
 

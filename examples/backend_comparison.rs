@@ -80,6 +80,7 @@ fn main() {
         background: Some(Color::white()),
         padding: 10,
         antialias: true,
+        ..Default::default()
     };
 
     println!("Text: 2 glyphs, 1000px width, 64px height\n");

@@ -916,6 +916,19 @@ pub fn render_glyph(
     size: f32,
     palette_index: u16,
 ) -> Result<RenderResult, ColorRenderError> {
+    render_glyph_with_variations(font_data, glyph_id, width, height, size, palette_index, &[])
+}
+
+/// Unified glyph renderer that accepts variation settings
+pub fn render_glyph_with_variations(
+    font_data: &[u8],
+    glyph_id: u32,
+    width: u32,
+    height: u32,
+    size: f32,
+    palette_index: u16,
+    variations: &[(&str, f32)],
+) -> Result<RenderResult, ColorRenderError> {
     let font = skrifa::FontRef::new(font_data).map_err(|_| ColorRenderError::FontParseFailed)?;
     let gid = GlyphId::new(glyph_id);
 
@@ -925,7 +938,15 @@ pub fn render_glyph(
         .get_with_format(gid, ColorGlyphFormat::ColrV1)
         .is_some()
     {
-        let pixmap = render_color_glyph(font_data, glyph_id, width, height, size, palette_index)?;
+        let pixmap = render_color_glyph_with_variations(
+            font_data,
+            glyph_id,
+            width,
+            height,
+            size,
+            palette_index,
+            variations,
+        )?;
         return Ok(RenderResult {
             pixmap,
             method: RenderMethod::ColrV1,
@@ -938,7 +959,15 @@ pub fn render_glyph(
         .get_with_format(gid, ColorGlyphFormat::ColrV0)
         .is_some()
     {
-        let pixmap = render_color_glyph(font_data, glyph_id, width, height, size, palette_index)?;
+        let pixmap = render_color_glyph_with_variations(
+            font_data,
+            glyph_id,
+            width,
+            height,
+            size,
+            palette_index,
+            variations,
+        )?;
         return Ok(RenderResult {
             pixmap,
             method: RenderMethod::ColrV0,
@@ -961,14 +990,14 @@ pub fn render_glyph(
     {
         let (pixmap, used_bitmap) =
             bitmap::render_bitmap_glyph_or_outline(font_data, glyph_id, width, height, size)?;
-        Ok(RenderResult {
+        return Ok(RenderResult {
             pixmap,
             method: if used_bitmap {
                 RenderMethod::Bitmap
             } else {
                 RenderMethod::Outline
             },
-        })
+        });
     }
 
     // Final fallback: outline only (no bitmap feature)
