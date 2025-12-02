@@ -16,7 +16,8 @@ use crate::types::ShapingResult;
 /// Key for caching shaping results
 ///
 /// Uniquely identifies a shaping operation by its inputs:
-/// text content, font identity, size, locale settings, and OpenType features.
+/// text content, font identity, size, locale settings, OpenType features,
+/// and variable font axis coordinates.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ShapingCacheKey {
     /// Text content
@@ -31,6 +32,8 @@ pub struct ShapingCacheKey {
     pub script: Option<String>,
     /// Enabled OpenType features with their values
     pub features: Vec<(String, u32)>,
+    /// Variable font axis coordinates (stored as i32: value * 100 for hash stability)
+    pub variations: Vec<(String, i32)>,
 }
 
 impl ShapingCacheKey {
@@ -38,6 +41,9 @@ impl ShapingCacheKey {
     ///
     /// The font data is hashed to create a stable identifier that doesn't
     /// require keeping the full font data in memory for cache lookups.
+    ///
+    /// Variable font coordinates are included in the key to ensure different
+    /// axis settings (e.g., wght=400 vs wght=700) produce different cache entries.
     pub fn new(
         text: impl Into<String>,
         font_data: &[u8],
@@ -45,11 +51,18 @@ impl ShapingCacheKey {
         language: Option<String>,
         script: Option<String>,
         features: Vec<(String, u32)>,
+        variations: Vec<(String, f32)>,
     ) -> Self {
         // Hash the font data for the font_id
         let mut hasher = DefaultHasher::new();
         font_data.hash(&mut hasher);
         let font_id = hasher.finish();
+
+        // Convert variations to integer representation for hash stability
+        let variations_int: Vec<(String, i32)> = variations
+            .into_iter()
+            .map(|(tag, val)| (tag, (val * 100.0) as i32))
+            .collect();
 
         Self {
             text: text.into(),
@@ -58,6 +71,7 @@ impl ShapingCacheKey {
             language,
             script,
             features,
+            variations: variations_int,
         }
     }
 }
@@ -157,18 +171,20 @@ mod tests {
             Some("en".to_string()),
             Some("latn".to_string()),
             vec![("liga".to_string(), 1)],
+            vec![("wght".to_string(), 700.0)],
         );
 
         assert_eq!(key.text, "Hello");
         assert_eq!(key.size, 1600); // 16.0 * 100
         assert_eq!(key.language, Some("en".to_string()));
+        assert_eq!(key.variations, vec![("wght".to_string(), 70000)]); // 700.0 * 100
     }
 
     #[test]
     fn test_cache_insert_and_get() {
         let cache = ShapingCache::new();
 
-        let key = ShapingCacheKey::new("Test", b"font", 12.0, None, None, vec![]);
+        let key = ShapingCacheKey::new("Test", b"font", 12.0, None, None, vec![], vec![]);
 
         let result = ShapingResult {
             glyphs: vec![PositionedGlyph {
@@ -194,7 +210,7 @@ mod tests {
     fn test_cache_miss() {
         let cache = ShapingCache::new();
 
-        let key = ShapingCacheKey::new("Missing", b"font", 16.0, None, None, vec![]);
+        let key = ShapingCacheKey::new("Missing", b"font", 16.0, None, None, vec![], vec![]);
         assert!(cache.get(&key).is_none());
     }
 
@@ -202,7 +218,7 @@ mod tests {
     fn test_cache_stats() {
         let cache = ShapingCache::new();
 
-        let key = ShapingCacheKey::new("Text", b"font", 16.0, None, None, vec![]);
+        let key = ShapingCacheKey::new("Text", b"font", 16.0, None, None, vec![], vec![]);
         let result = ShapingResult {
             glyphs: vec![],
             advance_width: 0.0,
@@ -227,14 +243,48 @@ mod tests {
 
     #[test]
     fn test_different_keys() {
-        let key1 = ShapingCacheKey::new("Hello", b"font1", 16.0, None, None, vec![]);
-        let key2 = ShapingCacheKey::new("Hello", b"font2", 16.0, None, None, vec![]);
-        let key3 = ShapingCacheKey::new("World", b"font1", 16.0, None, None, vec![]);
+        let key1 = ShapingCacheKey::new("Hello", b"font1", 16.0, None, None, vec![], vec![]);
+        let key2 = ShapingCacheKey::new("Hello", b"font2", 16.0, None, None, vec![], vec![]);
+        let key3 = ShapingCacheKey::new("World", b"font1", 16.0, None, None, vec![], vec![]);
 
         // Different font data should produce different keys
         assert_ne!(key1, key2);
 
         // Different text should produce different keys
         assert_ne!(key1, key3);
+    }
+
+    #[test]
+    fn test_different_variations_produce_different_keys() {
+        // Same font, same text, but different wght values
+        let key_400 = ShapingCacheKey::new(
+            "Test",
+            b"font",
+            16.0,
+            None,
+            None,
+            vec![],
+            vec![("wght".to_string(), 400.0)],
+        );
+        let key_700 = ShapingCacheKey::new(
+            "Test",
+            b"font",
+            16.0,
+            None,
+            None,
+            vec![],
+            vec![("wght".to_string(), 700.0)],
+        );
+        let key_no_var = ShapingCacheKey::new("Test", b"font", 16.0, None, None, vec![], vec![]);
+
+        // Different variations should produce different keys
+        assert_ne!(
+            key_400, key_700,
+            "wght=400 and wght=700 should have different cache keys"
+        );
+        assert_ne!(
+            key_400, key_no_var,
+            "wght=400 and no variations should have different keys"
+        );
     }
 }

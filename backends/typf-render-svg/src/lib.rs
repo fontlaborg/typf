@@ -24,10 +24,10 @@ use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},
     types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult, VectorData, VectorFormat},
-    RenderParams,
+    GlyphSource, GlyphSourcePreference, RenderParams,
 };
 use typf_export::png::encode_bitmap_to_png;
-use typf_render_color::{render_glyph_with_variations, RenderMethod};
+use typf_render_color::render_glyph_with_preference;
 
 /// SVG vector renderer
 ///
@@ -132,6 +132,7 @@ impl SvgRenderer {
         bounds: &GlyphBounds,
         glyph_size: f32,
         params: &RenderParams,
+        source: GlyphSource,
     ) -> Option<ColorImage> {
         let width = (bounds.max_x - bounds.min_x).ceil().max(1.0) as u32;
         let height = (bounds.max_y - bounds.min_y).ceil().max(1.0) as u32;
@@ -146,7 +147,9 @@ impl SvgRenderer {
             .map(|(tag, value)| (tag.as_str(), *value))
             .collect();
 
-        let render_result = render_glyph_with_variations(
+        let preference = GlyphSourcePreference::from_parts(vec![source], []);
+
+        let (render_result, _) = render_glyph_with_preference(
             font.data(),
             glyph_id,
             width,
@@ -154,13 +157,9 @@ impl SvgRenderer {
             glyph_size,
             params.color_palette,
             &variations,
+            &preference,
         )
         .ok()?;
-
-        // If the glyph fell back to outline-only rendering, keep path-based SVG instead
-        if matches!(render_result.method, RenderMethod::Outline) {
-            return None;
-        }
 
         let bitmap = BitmapData {
             width,
@@ -247,6 +246,7 @@ impl Renderer for SvgRenderer {
         let mut prepared_glyphs: Vec<PreparedGlyph> = Vec::new();
         let mut min_y: f32 = 0.0; // Below baseline (positive in SVG coords)
         let mut max_y: f32 = 0.0; // Above baseline (negative in SVG coords, but we track magnitude)
+        let source_order = params.glyph_sources.effective_order();
 
         for glyph in &shaped.glyphs {
             let glyph_path =
@@ -265,20 +265,42 @@ impl Renderer for SvgRenderer {
             min_y = min_y.min(glyph_min_y);
             max_y = max_y.max(glyph_max_y);
 
-            let color_image = self.render_color_image(&font, glyph.id, &bounds, glyph_size, params);
+            let mut chosen_kind: Option<GlyphRenderKind> = None;
+            for source in &source_order {
+                match source {
+                    GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2 => {
+                        if !glyph_path.path.is_empty() {
+                            chosen_kind = Some(GlyphRenderKind::Path(glyph_path.path.clone()));
+                            break;
+                        }
+                    },
+                    GlyphSource::Colr1
+                    | GlyphSource::Colr0
+                    | GlyphSource::Svg
+                    | GlyphSource::Sbix
+                    | GlyphSource::Cbdt
+                    | GlyphSource::Ebdt => {
+                        if let Some(img) = self.render_color_image(
+                            &font,
+                            glyph.id,
+                            &bounds,
+                            glyph_size,
+                            params,
+                            *source,
+                        ) {
+                            chosen_kind = Some(GlyphRenderKind::ColorImage {
+                                data_base64: img.data_base64,
+                                width: img.width,
+                                height: img.height,
+                            });
+                            break;
+                        }
+                    },
+                }
+            }
 
-            let kind = match color_image {
-                Some(img) => GlyphRenderKind::ColorImage {
-                    data_base64: img.data_base64,
-                    width: img.width,
-                    height: img.height,
-                },
-                None => {
-                    if glyph_path.path.is_empty() {
-                        continue; // Skip glyphs with no outline (e.g., space)
-                    }
-                    GlyphRenderKind::Path(glyph_path.path)
-                },
+            let Some(kind) = chosen_kind else {
+                continue;
             };
 
             prepared_glyphs.push(PreparedGlyph {
@@ -543,6 +565,94 @@ fn base64_encode(data: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+    use typf_core::{
+        types::{Direction, PositionedGlyph},
+        GlyphSource,
+        GlyphSourcePreference,
+        RenderMode,
+    };
+
+    fn load_font(name: &str) -> Arc<dyn FontRef> {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.pop(); // typf-render-svg
+        path.pop(); // backends
+        path.push("test-fonts");
+        path.push(name);
+        let font = typf_fontdb::Font::from_file(&path)
+            .unwrap_or_else(|_| panic!("missing test font at {:?}", path));
+        Arc::new(font)
+    }
+
+    fn shaped_for_char(font: &Arc<dyn FontRef>, ch: char, size: f32) -> ShapingResult {
+        let gid = font.glyph_id(ch).unwrap_or(0);
+        ShapingResult {
+            glyphs: vec![PositionedGlyph {
+                id: gid,
+                x: 0.0,
+                y: 0.0,
+                advance: size,
+                cluster: 0,
+            }],
+            advance_width: size,
+            advance_height: size,
+            direction: Direction::LeftToRight,
+        }
+    }
+
+    #[test]
+    fn default_prefers_outlines_over_color() {
+        let renderer = SvgRenderer::new();
+        let font = load_font("AbeloneRegular-COLRv1.ttf");
+        let shaped = shaped_for_char(&font, 'A', 64.0);
+
+        let params = RenderParams {
+            output: RenderMode::Vector(VectorFormat::Svg),
+            ..RenderParams::default()
+        };
+
+        let output = renderer.render(&shaped, font, &params).unwrap();
+        let svg = match output {
+            RenderOutput::Vector(v) => v.data,
+            other => panic!("expected vector output, got {:?}", other),
+        };
+
+        assert!(
+            svg.contains("<path"),
+            "outline path should be used when outlines are preferred"
+        );
+        assert!(
+            !svg.contains("<image"),
+            "color glyphs should be skipped when outlines are preferred"
+        );
+    }
+
+    #[test]
+    fn prefers_color_when_requested() {
+        let renderer = SvgRenderer::new();
+        let font = load_font("AbeloneRegular-COLRv1.ttf");
+        let shaped = shaped_for_char(&font, 'A', 64.0);
+
+        let params = RenderParams {
+            output: RenderMode::Vector(VectorFormat::Svg),
+            glyph_sources: GlyphSourcePreference::from_parts(
+                vec![GlyphSource::Colr1, GlyphSource::Glyf],
+                [],
+            ),
+            ..RenderParams::default()
+        };
+
+        let output = renderer.render(&shaped, font, &params).unwrap();
+        let svg = match output {
+            RenderOutput::Vector(v) => v.data,
+            other => panic!("expected vector output, got {:?}", other),
+        };
+
+        assert!(
+            svg.contains("<image"),
+            "color glyph should be embedded when COLR is preferred"
+        );
+    }
 
     #[test]
     fn test_renderer_creation() {

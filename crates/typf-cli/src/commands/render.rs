@@ -14,7 +14,7 @@ use typf_core::Pipeline;
 use typf_core::{
     traits::{Exporter, FontRef, Renderer, Shaper},
     types::{Direction, RenderOutput, VectorFormat},
-    Color, RenderMode, RenderParams, ShapingParams,
+    Color, GlyphSource, GlyphSourcePreference, RenderMode, RenderParams, ShapingParams,
 };
 use typf_export::{PngExporter, PnmExporter};
 use typf_fontdb::Font;
@@ -134,6 +134,8 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         RenderMode::Bitmap
     };
 
+    let glyph_sources = parse_glyph_sources(&args.glyph_source)?;
+
     let render_params = RenderParams {
         foreground,
         background: Some(background),
@@ -141,6 +143,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
         variations,
         color_palette: args.color_palette as u16,
+        glyph_sources,
         output: output_mode,
     };
 
@@ -472,6 +475,71 @@ fn parse_variations(instance_str: &Option<String>) -> Result<Vec<(String, f32)>>
     Ok(result)
 }
 
+/// Parse glyph-source preference/deny arguments
+fn parse_glyph_sources(specs: &[String]) -> Result<GlyphSourcePreference> {
+    if specs.is_empty() {
+        return Ok(GlyphSourcePreference::default());
+    }
+
+    let mut prefer = Vec::new();
+    let mut deny = Vec::new();
+
+    for spec in specs {
+        let (kind, list) = spec.split_once('=').ok_or_else(|| {
+            TypfError::Other("glyph-source expects prefer= or deny=<list>".into())
+        })?;
+
+        let sources = parse_glyph_source_list(list)?;
+        match kind.to_ascii_lowercase().as_str() {
+            "prefer" => prefer.extend(sources),
+            "deny" => deny.extend(sources),
+            other => {
+                return Err(TypfError::Other(format!(
+                    "Invalid glyph-source flag '{}'; use prefer= or deny=",
+                    other
+                )))
+            },
+        }
+    }
+
+    Ok(GlyphSourcePreference::from_parts(prefer, deny))
+}
+
+fn parse_glyph_source_list(list: &str) -> Result<Vec<GlyphSource>> {
+    if list.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut sources = Vec::new();
+    for token in list.split([',', ' ']) {
+        let token = token.trim();
+        if token.is_empty() {
+            continue;
+        }
+        sources.push(parse_glyph_source(token)?);
+    }
+
+    Ok(sources)
+}
+
+fn parse_glyph_source(token: &str) -> Result<GlyphSource> {
+    match token.to_ascii_lowercase().as_str() {
+        "glyf" | "ttf" => Ok(GlyphSource::Glyf),
+        "cff" => Ok(GlyphSource::Cff),
+        "cff2" => Ok(GlyphSource::Cff2),
+        "colr" | "colr0" => Ok(GlyphSource::Colr0),
+        "colr1" => Ok(GlyphSource::Colr1),
+        "svg" => Ok(GlyphSource::Svg),
+        "sbix" => Ok(GlyphSource::Sbix),
+        "cbdt" => Ok(GlyphSource::Cbdt),
+        "ebdt" => Ok(GlyphSource::Ebdt),
+        other => Err(TypfError::Other(format!(
+            "unknown glyph source '{}'; expected glyf,cff,cff2,colr0,colr1,svg,sbix,cbdt,ebdt",
+            other
+        ))),
+    }
+}
+
 fn select_shaper(shaper_name: &str) -> Result<Arc<dyn Shaper + Send + Sync>> {
     match shaper_name {
         "auto" | "none" => Ok(Arc::new(NoneShaper::new())),
@@ -708,5 +776,31 @@ mod tests {
         let err = resolve_direction("text", "sideways", None, None)
             .expect_err("invalid direction should error");
         assert!(format!("{err}").contains("Invalid direction"));
+    }
+
+    #[test]
+    fn glyph_source_parsing_applies_prefer_and_deny() {
+        let specs = vec!["prefer=glyf,svg".to_string(), "deny=svg,colr1".to_string()];
+
+        let pref = parse_glyph_sources(&specs).expect("parsing should succeed");
+        assert_eq!(pref.prefer, vec![GlyphSource::Glyf]);
+        assert!(pref.deny.contains(&GlyphSource::Svg));
+        assert!(pref.deny.contains(&GlyphSource::Colr1));
+    }
+
+    #[test]
+    fn glyph_source_parsing_defaults_when_empty() {
+        let pref = parse_glyph_sources(&[]).expect("empty specs should use default");
+        assert_eq!(pref, GlyphSourcePreference::default());
+    }
+
+    #[test]
+    fn glyph_source_parsing_errors_on_unknown_source() {
+        let err = parse_glyph_sources(&["prefer=unknown".to_string()])
+            .expect_err("unknown source should error");
+        assert!(
+            format!("{err}").contains("unknown glyph source"),
+            "error message should mention source"
+        );
     }
 }

@@ -205,6 +205,94 @@ fn test_render_svg_to_file() {
 }
 
 #[test]
+fn test_glyph_source_preference_outline_first() {
+    let font = test_font("AbeloneRegular-COLRv1.ttf");
+    if !font.exists() {
+        eprintln!("Skipping test: color font not found at {:?}", font);
+        return;
+    }
+
+    let output_file = temp_output("svg");
+
+    let output = Command::new(typf_binary())
+        .args([
+            "render",
+            "Color",
+            "-f",
+            font.to_str().unwrap(),
+            "-o",
+            output_file.to_str().unwrap(),
+            "-O",
+            "svg",
+            "--glyph-source",
+            "deny=colr1,colr0,svg,sbix,cbdt,ebdt",
+            "-q",
+        ])
+        .output()
+        .expect("Failed to execute typf render with glyph-source deny");
+
+    assert!(
+        output.status.success(),
+        "render should succeed: {:?}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let svg = fs::read_to_string(&output_file).expect("failed to read svg output");
+    assert!(
+        svg.contains("<path"),
+        "outline path should be present when color sources are denied"
+    );
+    assert!(
+        !svg.contains("<image"),
+        "color images should not be embedded when color sources are denied"
+    );
+
+    let _ = fs::remove_file(output_file);
+}
+
+#[test]
+fn test_glyph_source_preference_color_first() {
+    let font = test_font("AbeloneRegular-COLRv1.ttf");
+    if !font.exists() {
+        eprintln!("Skipping test: color font not found at {:?}", font);
+        return;
+    }
+
+    let output_file = temp_output("svg");
+
+    let output = Command::new(typf_binary())
+        .args([
+            "render",
+            "Color",
+            "-f",
+            font.to_str().unwrap(),
+            "-o",
+            output_file.to_str().unwrap(),
+            "-O",
+            "svg",
+            "--glyph-source",
+            "prefer=colr1,glyf",
+            "-q",
+        ])
+        .output()
+        .expect("Failed to execute typf render with glyph-source prefer");
+
+    assert!(
+        output.status.success(),
+        "render should succeed: {:?}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let svg = fs::read_to_string(&output_file).expect("failed to read svg output");
+    assert!(
+        svg.contains("<image"),
+        "color image should be embedded when COLR is preferred"
+    );
+
+    let _ = fs::remove_file(output_file);
+}
+
+#[test]
 fn test_render_with_font_size() {
     let font = test_font("NotoSans-Regular.ttf");
     if !font.exists() {

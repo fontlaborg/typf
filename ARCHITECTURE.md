@@ -155,6 +155,7 @@ RenderParams {
     antialias: true,                      // Smooth edges
     variations: vec![("wght".into(), 700.0)], // For SVG renderer
     color_palette: 0,                     // CPAL palette index
+    glyph_sources: GlyphSourcePreference::default(), // Outline-first glyph source order
     output: RenderMode::Bitmap,           // Vector: RenderMode::Vector(VectorFormat::Svg)
 }
 ```

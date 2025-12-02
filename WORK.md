@@ -1,5 +1,4 @@
 # Current Work Session
 
-- Restored `typf-cli` direction auto-detection with `typf-unicode` and SVG exporter passthrough.
-- Added helper tests for direction resolution.
-- Tests: `cargo test --workspace --quiet` (pass).
+- Implemented glyph-source preference enum/defaults plus CLI `--glyph-source` parsing; updated plan/todo and docs.
+- Tests: `cargo test --workspace --quiet` (pass before and after changes).

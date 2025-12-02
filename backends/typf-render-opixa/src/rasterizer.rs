@@ -219,8 +219,13 @@ impl<'a> GlyphRasterizer<'a> {
         let x_max = bounds_calc.x_max.ceil() as i32;
         let y_max = bounds_calc.y_max.ceil() as i32;
 
-        let width = ((x_max - x_min) as u32 * self.oversample as u32).max(1);
-        let height = ((y_max - y_min) as u32 * self.oversample as u32).max(1);
+        // Calculate OUTPUT dimensions first (ensuring at least 1x1), then derive
+        // oversampled dimensions. This ensures render_grayscale's mono_bitmap size
+        // matches the scan_converter dimensions.
+        let out_width = ((x_max - x_min) as usize).max(1);
+        let out_height = ((y_max - y_min) as usize).max(1);
+        let width = out_width * self.oversample as usize;
+        let height = out_height * self.oversample as usize;
 
         // Guard against memory bombs (malicious fonts or giant sizes)
         if width > 4096 || height > 4096 {
@@ -231,7 +236,7 @@ impl<'a> GlyphRasterizer<'a> {
         }
 
         // Prepare our canvas, oversized for smooth anti-aliasing
-        let mut scan_converter = ScanConverter::new(width as usize, height as usize);
+        let mut scan_converter = ScanConverter::new(width, height);
         scan_converter.set_fill_rule(fill_rule);
         scan_converter.set_dropout_mode(dropout_mode);
 
@@ -325,11 +330,8 @@ impl<'a> GlyphRasterizer<'a> {
             _ => GrayscaleLevel::Level4x4, // Default to 4x4
         };
 
-        let out_width = width as usize / self.oversample as usize;
-        let out_height = height as usize / self.oversample as usize;
-
         // Use the grayscale module's downsample function
-        // We need to import it properly
+        // out_width and out_height were calculated at the top of this function
         let gray_bitmap = crate::grayscale::render_grayscale(
             &mut scan_converter,
             out_width,

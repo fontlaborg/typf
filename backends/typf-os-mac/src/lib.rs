@@ -427,10 +427,20 @@ impl LinraRenderer for CoreTextLinraRenderer {
         let descent = typographic_bounds.descent;
         let line_height = ascent + descent;
 
+        // Validate metrics are finite (corrupt fonts can produce NaN/Inf)
+        if !line_width.is_finite() || !line_height.is_finite() || !ascent.is_finite() || !descent.is_finite() {
+            return Err(TypfError::RenderingFailed(RenderError::BackendError(
+                format!(
+                    "Invalid typographic bounds from font (width={}, height={}) - font may be corrupt",
+                    line_width, line_height
+                ),
+            )));
+        }
+
         // Calculate canvas dimensions
         let padding = params.padding as f64;
-        let width = ((line_width + padding * 2.0).ceil() as u32).max(1);
-        let height = ((line_height + padding * 2.0).ceil() as u32).max(1);
+        let width = ((line_width + padding * 2.0).ceil().max(1.0) as u32).clamp(1, 16384);
+        let height = ((line_height + padding * 2.0).ceil().max(1.0) as u32).clamp(1, 16384);
 
         log::debug!(
             "CoreTextLinraRenderer: Canvas {}x{}, line width {:.1}",

@@ -3,7 +3,7 @@
 //! This module defines the command-line interface structure
 //! following the linra Typf CLI specification.
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 /// Typf - Professional text rendering from the command line
@@ -136,6 +136,10 @@ pub struct RenderArgs {
     /// Font CPAL palette index
     #[arg(short = 'p', long = "color-palette", default_value = "0")]
     pub color_palette: u32,
+
+    /// Glyph source preferences or deny list (e.g., prefer=glyf,cff2 deny=sbix)
+    #[arg(long = "glyph-source", action = ArgAction::Append)]
+    pub glyph_source: Vec<String>,
 
     // Output Options
     /// Output file path (stdout if omitted)

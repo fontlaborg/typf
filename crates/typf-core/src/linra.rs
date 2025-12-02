@@ -103,6 +103,7 @@ impl LinraRenderParams {
             antialias: self.antialias,
             variations: self.variations.clone(),
             color_palette: 0, // TODO: add color_palette to LinraRenderParams
+            glyph_sources: crate::GlyphSourcePreference::default(),
             output: crate::RenderMode::Bitmap,
         }
     }

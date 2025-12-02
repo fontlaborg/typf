@@ -1,5 +1,8 @@
 # TODO (flat plan)
 
+- [x] P1: Introduce glyph-source preference struct, defaults, and CLI flag for prefer/deny lists.
+- [x] P1: Thread glyph-source preference through renderer source selection paths (opixa, skia, zeno, svg, json).
+- [x] P1: Add renderer/CLI tests verifying glyph-source preference is honored (outline-first, deny list respected).
 - [x] P0: Replace `typf-export` SVG exporter with valid PNG/vector output; add embed/external snapshot tests; fail fast on malformed buffers and Gray1/short-buffer regressions.
 - [x] P0: Fix bidi/script indexing in `crates/typf-unicode` to use scalar positions; mixed RTL/LTR fixtures; CLI `--direction auto` exists (defaults to LTR).
 - [x] P0: Make the default six-stage pipeline functional or deprecate it — documented as pass-through stages; CLI uses `Pipeline.process()` directly.

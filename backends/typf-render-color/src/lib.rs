@@ -1005,6 +1005,131 @@ pub fn render_glyph_with_variations(
     Err(ColorRenderError::GlyphNotFound)
 }
 
+/// Render a specific glyph source in the order provided by GlyphSourcePreference.
+///
+/// Attempts sources in order; returns the first successful render along with
+/// the resolved GlyphSource. Outline-only sources are skipped here so that
+/// bitmap/vector renderers can keep using their existing outline paths.
+pub fn render_glyph_with_preference(
+    font_data: &[u8],
+    glyph_id: u32,
+    width: u32,
+    height: u32,
+    size: f32,
+    palette_index: u16,
+    variations: &[(&str, f32)],
+    preference: &typf_core::GlyphSourcePreference,
+) -> Result<(RenderResult, typf_core::GlyphSource), ColorRenderError> {
+    use typf_core::GlyphSource;
+
+    let gid = GlyphId::new(glyph_id);
+    let font = skrifa::FontRef::new(font_data).map_err(|_| ColorRenderError::FontParseFailed)?;
+    let orders = preference.effective_order();
+
+    for source in orders {
+        match source {
+            GlyphSource::Colr1 => {
+                if let Some(color_glyph) = font
+                    .color_glyphs()
+                    .get_with_format(gid, ColorGlyphFormat::ColrV1)
+                {
+                    let palettes = ColorPalettes::new(&font);
+                    let palette = palettes
+                        .get(palette_index)
+                        .ok_or(ColorRenderError::NoPalette)?;
+                    let colors = palette.colors();
+                    let location = font.axes().location(variations.iter().copied());
+
+                    let mut pixmap =
+                        Pixmap::new(width, height).ok_or(ColorRenderError::PixmapCreationFailed)?;
+                    let mut painter =
+                        TinySkiaColorPainter::new(&mut pixmap, colors, &font, size);
+                    color_glyph.paint(&location, &mut painter)?;
+
+                    return Ok((
+                        RenderResult {
+                            pixmap,
+                            method: RenderMethod::ColrV1,
+                        },
+                        GlyphSource::Colr1,
+                    ));
+                }
+            },
+            GlyphSource::Colr0 => {
+                if let Some(color_glyph) = font
+                    .color_glyphs()
+                    .get_with_format(gid, ColorGlyphFormat::ColrV0)
+                {
+                    let palettes = ColorPalettes::new(&font);
+                    let palette = palettes
+                        .get(palette_index)
+                        .ok_or(ColorRenderError::NoPalette)?;
+                    let colors = palette.colors();
+                    let location = font.axes().location(variations.iter().copied());
+
+                    let mut pixmap =
+                        Pixmap::new(width, height).ok_or(ColorRenderError::PixmapCreationFailed)?;
+                    let mut painter =
+                        TinySkiaColorPainter::new(&mut pixmap, colors, &font, size);
+                    color_glyph.paint(&location, &mut painter)?;
+
+                    return Ok((
+                        RenderResult {
+                            pixmap,
+                            method: RenderMethod::ColrV0,
+                        },
+                        GlyphSource::Colr0,
+                    ));
+                }
+            },
+            GlyphSource::Svg => {
+                #[cfg(feature = "svg")]
+                {
+                    if let Ok(pixmap) = svg::render_svg_glyph(font_data, glyph_id, width, height) {
+                        return Ok((
+                            RenderResult {
+                                pixmap,
+                                method: RenderMethod::Svg,
+                            },
+                            GlyphSource::Svg,
+                        ));
+                    }
+                }
+            },
+            GlyphSource::Sbix | GlyphSource::Cbdt | GlyphSource::Ebdt => {
+                #[cfg(feature = "bitmap")]
+                {
+                    match bitmap::render_bitmap_glyph_or_outline(
+                        font_data, glyph_id, width, height, size,
+                    ) {
+                        Ok((pixmap, used_bitmap)) => {
+                            if used_bitmap {
+                                return Ok((
+                                    RenderResult {
+                                        pixmap,
+                                        method: RenderMethod::Bitmap,
+                                    },
+                                    source,
+                                ));
+                            }
+                        },
+                        Err(bitmap::BitmapRenderError::NoBitmapTable)
+                        | Err(bitmap::BitmapRenderError::GlyphNotFound)
+                        | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {},
+                        Err(e) => return Err(e.into()),
+                    }
+                }
+            },
+            GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2 => {
+                // Outline rendering is handled in the caller; skip here.
+                continue;
+            },
+        }
+    }
+
+    Err(ColorRenderError::GlyphNotFound)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

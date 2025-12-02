@@ -129,6 +129,7 @@ impl Shaper for HarfBuzzShaper {
                 params.language.clone(),
                 params.script.clone(),
                 params.features.clone(),
+                params.variations.clone(),
             );
             // Try to get from cache
             if let Some(ref cache) = self.cache {

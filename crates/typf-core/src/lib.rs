@@ -86,6 +86,8 @@
 //! Data flows through the types in [`types`] - these structures carry
 //! the results from one stage to the next.
 
+use std::collections::HashSet;
+
 pub mod cache;
 pub mod context;
 pub mod error;
@@ -230,6 +232,90 @@ impl Default for ShapingParams {
     }
 }
 
+/// Which glyph data sources are allowed and in what order
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GlyphSource {
+    Glyf,
+    Cff,
+    Cff2,
+    Colr0,
+    Colr1,
+    Svg,
+    Sbix,
+    Cbdt,
+    Ebdt,
+}
+
+const DEFAULT_GLYPH_SOURCES: [GlyphSource; 9] = [
+    GlyphSource::Glyf,
+    GlyphSource::Cff2,
+    GlyphSource::Cff,
+    GlyphSource::Colr1,
+    GlyphSource::Colr0,
+    GlyphSource::Svg,
+    GlyphSource::Sbix,
+    GlyphSource::Cbdt,
+    GlyphSource::Ebdt,
+];
+
+/// Preference ordering and deny list for glyph sources
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GlyphSourcePreference {
+    pub prefer: Vec<GlyphSource>,
+    pub deny: HashSet<GlyphSource>,
+}
+
+impl GlyphSourcePreference {
+    /// Build a preference list with an optional deny set.
+    ///
+    /// - Empty `prefer` uses the default outline-first order.
+    /// - Duplicates are removed while keeping first-seen order.
+    /// - Denied sources are removed from the preferred list.
+    pub fn from_parts(
+        prefer: Vec<GlyphSource>,
+        deny: impl IntoIterator<Item = GlyphSource>,
+    ) -> Self {
+        let deny: HashSet<GlyphSource> = deny.into_iter().collect();
+        let source_order = if prefer.is_empty() {
+            DEFAULT_GLYPH_SOURCES.to_vec()
+        } else {
+            prefer
+        };
+
+        let mut seen = HashSet::new();
+        let mut normalized = Vec::new();
+
+        for source in source_order {
+            if deny.contains(&source) {
+                continue;
+            }
+            if seen.insert(source) {
+                normalized.push(source);
+            }
+        }
+
+        Self {
+            prefer: normalized,
+            deny,
+        }
+    }
+
+    /// Effective order with current denies applied.
+    pub fn effective_order(&self) -> Vec<GlyphSource> {
+        self.prefer
+            .iter()
+            .copied()
+            .filter(|src| !self.deny.contains(src))
+            .collect()
+    }
+}
+
+impl Default for GlyphSourcePreference {
+    fn default() -> Self {
+        Self::from_parts(DEFAULT_GLYPH_SOURCES.to_vec(), [])
+    }
+}
+
 /// How rendering should look
 #[derive(Debug, Clone)]
 pub struct RenderParams {
@@ -242,6 +328,8 @@ pub struct RenderParams {
     pub variations: Vec<(String, f32)>,
     /// CPAL color palette index for COLR color glyphs (0 = default palette)
     pub color_palette: u16,
+    /// Allowed glyph sources (order + deny list)
+    pub glyph_sources: GlyphSourcePreference,
     /// Desired render output mode (bitmap or vector)
     pub output: RenderMode,
 }
@@ -255,6 +343,7 @@ impl Default for RenderParams {
             antialias: true,
             variations: Vec::new(),
             color_palette: 0,
+            glyph_sources: GlyphSourcePreference::default(),
             output: RenderMode::Bitmap,
         }
     }

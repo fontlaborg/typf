@@ -9,7 +9,7 @@ tags:
 
 # Architecture Overview
 
-Typf turns text into pixels through six stages.
+Typf v2.4.5 turns text into pixels through six stages with enhanced memory management and backend detection.
 
 ## The Pipeline
 
@@ -54,7 +54,7 @@ All backends implement the same traits, so you can swap them without changing yo
 
 ## Memory Strategy
 
-Fonts are memory-mapped and intentionally leaked to avoid copying. Glyphs cache in an LRU hierarchy. Arc handles sharing between threads safely.
+Fonts are memory-mapped and intentionally leaked to avoid copying. Glyphs cache in an LRU hierarchy. Arc handles sharing between threads safely. **v2.4.5**: Fixed memory leaks in FontDatabase via path-based deduplication (Issue #450).
 
 ## Performance
 
@@ -62,7 +62,7 @@ SIMD accelerates pixel operations. Text chunks process in parallel. Cache cohere
 
 ## Configuration
 
-Feature flags control what compiles. Runtime settings choose backends. You build only what you need.
+Feature flags control what compiles. Runtime settings choose backends. You build only what you need. **v2.4.5**: Improved backend detection for macOS CoreText/CoreGraphics and fixed feature flag mismatches between CLI and backend packages.
 
 ## Error Handling
 

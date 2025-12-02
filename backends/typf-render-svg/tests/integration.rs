@@ -9,7 +9,7 @@ use std::sync::Arc;
 use typf_core::{
     traits::{FontRef, Renderer},
     types::{Direction, PositionedGlyph, RenderOutput, ShapingResult, VectorFormat},
-    RenderParams,
+    GlyphSource, GlyphSourcePreference, RenderParams,
 };
 use typf_fontdb::Font;
 use typf_render_svg::SvgRenderer;
@@ -314,7 +314,13 @@ fn test_svg_embeds_colr_glyph_as_image() {
     };
 
     let renderer = SvgRenderer::new();
-    let params = RenderParams::default();
+    let params = RenderParams {
+        glyph_sources: GlyphSourcePreference::from_parts(
+            vec![GlyphSource::Colr1, GlyphSource::Colr0, GlyphSource::Glyf],
+            [],
+        ),
+        ..RenderParams::default()
+    };
 
     let result = renderer.render(&shaped, font, &params);
 
@@ -375,6 +381,8 @@ fn test_svg_color_palette_affects_output() {
 
     let mut params0 = RenderParams::default();
     params0.color_palette = 0;
+    params0.glyph_sources =
+        GlyphSourcePreference::from_parts(vec![GlyphSource::Colr1, GlyphSource::Glyf], []);
     let svg0 = match renderer.render(&shaped, font.clone(), &params0) {
         Ok(RenderOutput::Vector(v)) => v.data,
         _ => panic!("Expected vector output for palette 0"),

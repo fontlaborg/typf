@@ -87,7 +87,8 @@ impl CoreGraphicsRenderer {
     ///
     /// CoreGraphics needs explicit dimensions, so we calculate the bounding box
     /// that contains all our positioned glyphs plus any requested padding.
-    fn calculate_dimensions(shaped: &ShapingResult, params: &RenderParams) -> (u32, u32) {
+    /// Returns None if dimensions cannot be computed (NaN/Inf in glyph data).
+    fn calculate_dimensions(shaped: &ShapingResult, params: &RenderParams) -> Option<(u32, u32)> {
         // Track the extremes of our glyph layout
         let mut min_x = f32::MAX;
         let mut max_x = f32::MIN;
@@ -95,6 +96,10 @@ impl CoreGraphicsRenderer {
         let mut max_y = f32::MIN;
 
         for glyph in &shaped.glyphs {
+            // Skip glyphs with invalid positions (NaN/Inf from faulty font data)
+            if !glyph.x.is_finite() || !glyph.advance.is_finite() || !glyph.y.is_finite() {
+                continue;
+            }
             min_x = min_x.min(glyph.x);
             max_x = max_x.max(glyph.x + glyph.advance);
             // Estimate vertical bounds using font proportions (80% ascent, 20% descent)
@@ -102,8 +107,8 @@ impl CoreGraphicsRenderer {
             max_y = max_y.max(glyph.y + shaped.advance_height * 0.2);
         }
 
-        // Don't crash on empty text—give it a minimal reasonable size
-        if shaped.glyphs.is_empty() {
+        // Don't crash on empty text or all-invalid glyphs—give it a minimal reasonable size
+        if shaped.glyphs.is_empty() || min_x == f32::MAX {
             min_x = 0.0;
             max_x = 1.0;
             min_y = 0.0;
@@ -113,11 +118,21 @@ impl CoreGraphicsRenderer {
         let content_width = (max_x - min_x).max(1.0);
         let content_height = (max_y - min_y).max(1.0);
 
-        let padding = params.padding as f32;
-        let width = (content_width + padding * 2.0).ceil() as u32;
-        let height = (content_height + padding * 2.0).ceil() as u32;
+        // Validate computed dimensions are finite
+        if !content_width.is_finite() || !content_height.is_finite() {
+            return None;
+        }
 
-        (width, height)
+        let padding = params.padding as f32;
+        let width = (content_width + padding * 2.0).ceil().max(1.0) as u32;
+        let height = (content_height + padding * 2.0).ceil().max(1.0) as u32;
+
+        // Final sanity check: dimensions must be positive and reasonable
+        if width == 0 || height == 0 || width > 16384 || height > 16384 {
+            return None;
+        }
+
+        Some((width, height))
     }
 
     /// Convert Typf's Color type to CoreGraphics' normalized float format
@@ -266,8 +281,13 @@ impl Renderer for CoreGraphicsRenderer {
             }));
         }
 
-        // Calculate dimensions
-        let (width, height) = Self::calculate_dimensions(shaped, params);
+        // Calculate dimensions - bail gracefully if font data is corrupt
+        let (width, height) = Self::calculate_dimensions(shaped, params).ok_or_else(|| {
+            TypfError::RenderingFailed(RenderError::BackendError(
+                "Cannot compute valid bitmap dimensions (font may have corrupt glyph data)"
+                    .to_string(),
+            ))
+        })?;
 
         log::debug!("CoreGraphicsRenderer: Canvas size {}x{}", width, height);
 

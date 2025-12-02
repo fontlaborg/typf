@@ -20,7 +20,7 @@ use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},
     types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult, VectorFormat},
-    RenderMode, RenderParams,
+    GlyphSource, RenderMode, RenderParams,
 };
 use typf_render_svg::SvgRenderer;
 
@@ -225,6 +225,18 @@ impl Renderer for SkiaRenderer {
         font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
+        let allows_outline = params
+            .glyph_sources
+            .effective_order()
+            .iter()
+            .any(|s| matches!(s, GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2));
+        if !allows_outline {
+            return Err(RenderError::BackendError(
+                "skia renderer requires outline glyph sources".to_string(),
+            )
+            .into());
+        }
+
         // Vector mode: delegate to the SVG renderer for path extraction
         if let RenderMode::Vector(vector_format) = params.output {
             if vector_format == VectorFormat::Svg {
@@ -448,7 +460,11 @@ impl skrifa::outline::OutlinePen for PathPen<'_> {
 mod tests {
     use super::*;
     use std::path::PathBuf;
-    use typf_core::types::Direction;
+    use typf_core::{
+        types::Direction,
+        GlyphSource,
+        GlyphSourcePreference,
+    };
 
     #[test]
     fn test_renderer_creation() {
@@ -472,6 +488,34 @@ mod tests {
         assert!(renderer.supports_format("vector"));
         assert!(!renderer.supports_format("pdf"));
         assert!(!renderer.supports_format("unknown"));
+    }
+
+    #[test]
+    fn fails_when_outlines_denied() {
+        let renderer = SkiaRenderer::new();
+        let font = load_test_font();
+
+        let glyph_id = font.glyph_id('A').unwrap_or(0);
+        let shaped = ShapingResult {
+            glyphs: vec![typf_core::types::PositionedGlyph {
+                id: glyph_id,
+                x: 0.0,
+                y: 0.0,
+                advance: 64.0,
+                cluster: 0,
+            }],
+            advance_width: 64.0,
+            advance_height: 64.0,
+            direction: Direction::LeftToRight,
+        };
+
+        let params = RenderParams {
+            glyph_sources: GlyphSourcePreference::from_parts(vec![GlyphSource::Colr1], []),
+            ..RenderParams::default()
+        };
+
+        let result = renderer.render(&shaped, font, &params);
+        assert!(result.is_err(), "denying outlines should error");
     }
 
     fn load_test_font() -> Arc<dyn FontRef> {

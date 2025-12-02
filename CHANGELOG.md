@@ -5,6 +5,26 @@ Changes to Typf.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0//),
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
+## [2.4.5] - 2025-12-02
+
+### Fixed
+- Memory leak issues in FontDatabase with path-based deduplication (Issue #450)
+- Backend detection mismatches in Rust CLI for macOS CoreText/CoreGraphics
+- Feature flag inconsistencies between CLI and actual backend packages
+- Test script font dictionary keys in benchmark suite
+
+### Added
+- Comprehensive test coverage for typf-core with new test suite
+- Property-based tests for typf-unicode module
+- Glyph cache optimizations in opixa renderer
+- PLAN.md for structured development planning
+
+### Changed
+- Updated rendering pipeline for improved performance across all backends
+- Enhanced shaping cache implementation in typf-core
+- Improved linra integration for native rendering on macOS/Windows
+- Updated documentation structure and working files
+
 ## [Unreleased]
 
 ### Added
@@ -15,6 +35,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
   - Unified `render_glyph()` API that auto-selects best rendering method
   - 31 tests covering all color font formats
   - Feature flags: `colr` (default), `svg`, `bitmap`
+- **Glyph Source Preferences**: `typf-core` now exposes `GlyphSourcePreference` (ordered allowlist + deny set) with default outline-first order and CLI flag `--glyph-source prefer=...|deny=...`; includes parsing tests for Rust CLI and core.
 - **SVG Renderer Backend**: New `typf-render-svg` crate as a proper Renderer
   - Implements `Renderer` trait returning `RenderOutput::Vector`
   - Extracts glyph outlines from fonts using skrifa

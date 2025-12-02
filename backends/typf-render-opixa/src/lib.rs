@@ -16,9 +16,11 @@
 //! - `parallel`: Multi-cored mastery when you need all the horsepower
 
 use std::sync::Arc;
+
 pub mod curves;
 pub mod edge;
 pub mod fixed;
+pub mod glyph_cache;
 pub mod grayscale;
 pub mod rasterizer;
 pub mod scan_converter;
@@ -51,7 +53,7 @@ use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},
     types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult},
-    Color, RenderParams,
+    Color, GlyphSource, RenderParams,
 };
 
 // SIMD gives us 4-8x speedup when modern CPUs are available
@@ -73,6 +75,8 @@ pub struct OpixaRenderer {
     /// Guard against memory bombs with reasonable size limits
     /// 8K prepares us for future high-DPI displays without going mad
     max_size: u32,
+    /// Optional glyph cache for efficient repeated rendering
+    cache: Option<Arc<glyph_cache::GlyphCache>>,
 }
 
 impl OpixaRenderer {
@@ -80,6 +84,40 @@ impl OpixaRenderer {
     pub fn new() -> Self {
         Self {
             max_size: 65535, // Maximum u16 value, practical limit for bitmap dimensions
+            cache: None,
+        }
+    }
+
+    /// Create renderer with glyph caching enabled
+    ///
+    /// The cache stores rendered glyph bitmaps to avoid re-rasterization.
+    /// Default capacity: 1000 glyphs (good for most text rendering).
+    pub fn with_cache() -> Self {
+        Self::with_cache_capacity(1000)
+    }
+
+    /// Create renderer with custom cache capacity
+    pub fn with_cache_capacity(capacity: usize) -> Self {
+        Self {
+            max_size: 65535,
+            cache: Some(Arc::new(glyph_cache::GlyphCache::new(capacity))),
+        }
+    }
+
+    /// Get cache statistics if caching is enabled
+    pub fn cache_stats(&self) -> Option<glyph_cache::GlyphCacheStats> {
+        self.cache.as_ref().map(|c| c.stats())
+    }
+
+    /// Get cache hit rate if caching is enabled
+    pub fn cache_hit_rate(&self) -> Option<f64> {
+        self.cache.as_ref().map(|c| c.hit_rate())
+    }
+
+    /// Clear the glyph cache
+    pub fn clear_cache(&self) {
+        if let Some(ref cache) = self.cache {
+            cache.clear();
         }
     }
 
@@ -222,6 +260,18 @@ impl Renderer for OpixaRenderer {
     ) -> Result<RenderOutput> {
         log::debug!("OpixaRenderer: Rendering {} glyphs", shaped.glyphs.len());
 
+        let allows_outline = params
+            .glyph_sources
+            .effective_order()
+            .iter()
+            .any(|s| matches!(s, GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2));
+        if !allows_outline {
+            return Err(RenderError::BackendError(
+                "opixa renderer requires outline glyph sources".to_string(),
+            )
+            .into());
+        }
+
         // Extract raw font bytes for our rasterizer to analyze
         let font_data = font.data();
         let padding = params.padding as f32;
@@ -254,21 +304,56 @@ impl Renderer for OpixaRenderer {
             None
         };
 
-        // Render each glyph and collect bounds
+        // Render each glyph and collect bounds (with caching if enabled)
         for glyph in &shaped.glyphs {
-            let Some(ref mut rast) = rasterizer else {
-                log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
-                continue;
-            };
+            // Try cache first if enabled
+            let glyph_bitmap = if let Some(ref cache) = self.cache {
+                let cache_key = glyph_cache::GlyphCacheKey::new(
+                    font_data,
+                    glyph.id,
+                    glyph_size,
+                    &params.variations,
+                );
 
-            let glyph_bitmap =
+                if let Some(cached) = cache.get(&cache_key) {
+                    cached
+                } else {
+                    // Cache miss - render and store
+                    let Some(ref mut rast) = rasterizer else {
+                        log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
+                        continue;
+                    };
+
+                    let bitmap = match rast.render_glyph(
+                        glyph.id,
+                        FillRule::NonZeroWinding,
+                        DropoutMode::None,
+                    ) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            log::warn!("Glyph {} refused to render: {}", glyph.id, e);
+                            continue;
+                        },
+                    };
+
+                    cache.insert(cache_key, bitmap.clone());
+                    bitmap
+                }
+            } else {
+                // No cache - render directly
+                let Some(ref mut rast) = rasterizer else {
+                    log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
+                    continue;
+                };
+
                 match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
                     Ok(bitmap) => bitmap,
                     Err(e) => {
                         log::warn!("Glyph {} refused to render: {}", glyph.id, e);
                         continue;
                     },
-                };
+                }
+            };
 
             // Skip empty glyphs (like spaces)
             if glyph_bitmap.width == 0 || glyph_bitmap.height == 0 {
@@ -364,7 +449,10 @@ struct RenderedGlyph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use typf_core::types::{Direction, PositionedGlyph};
+    use typf_core::{
+        types::{Direction, PositionedGlyph},
+        GlyphSource, GlyphSourcePreference,
+    };
 
     #[test]
     fn test_basic_rendering() {
@@ -425,6 +513,49 @@ mod tests {
             },
             _ => panic!("Expected bitmap output"),
         }
+    }
+
+    #[test]
+    fn errors_when_outlines_denied() {
+        let renderer = OpixaRenderer::new();
+
+        let shaped = ShapingResult {
+            glyphs: vec![PositionedGlyph {
+                id: 1,
+                x: 0.0,
+                y: 0.0,
+                advance: 10.0,
+                cluster: 0,
+            }],
+            advance_width: 10.0,
+            advance_height: 16.0,
+            direction: Direction::LeftToRight,
+        };
+
+        struct MockFont;
+        impl FontRef for MockFont {
+            fn data(&self) -> &[u8] {
+                &[]
+            }
+            fn units_per_em(&self) -> u16 {
+                1000
+            }
+            fn glyph_id(&self, _ch: char) -> Option<u32> {
+                Some(1)
+            }
+            fn advance_width(&self, _glyph_id: u32) -> f32 {
+                500.0
+            }
+        }
+
+        let font = Arc::new(MockFont);
+        let params = RenderParams {
+            glyph_sources: GlyphSourcePreference::from_parts(vec![GlyphSource::Colr1], []),
+            ..RenderParams::default()
+        };
+
+        let result = renderer.render(&shaped, font, &params);
+        assert!(result.is_err(), "outline denial should be an error");
     }
 
     #[test]
