@@ -1797,7 +1797,7 @@
 
 
 <h1 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h1>
-<p>Typf turns text into pixels through six stages.</p>
+<p>Typf v2.4.5 turns text into pixels through six stages with enhanced memory management and backend detection.</p>
 <h2 id="the-pipeline">The Pipeline<a class="headerlink" href="#the-pipeline" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>graph LR
     A[Text] --&gt; B[Unicode]
@@ -1831,11 +1831,11 @@
 - JSON (data export)</p>
 <p>All backends implement the same traits, so you can swap them without changing your code.</p>
 <h2 id="memory-strategy">Memory Strategy<a class="headerlink" href="#memory-strategy" title="Permanent link">&para;</a></h2>
-<p>Fonts are memory-mapped and intentionally leaked to avoid copying. Glyphs cache in an LRU hierarchy. Arc handles sharing between threads safely.</p>
+<p>Fonts are memory-mapped and intentionally leaked to avoid copying. Glyphs cache in an LRU hierarchy. Arc handles sharing between threads safely. <strong>v2.4.5</strong>: Fixed memory leaks in FontDatabase via path-based deduplication (Issue <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/fontlaborg/typf/issues/450" title="GitHub Issue: fontlaborg/typf #450">#450</a>).</p>
 <h2 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h2>
 <p>SIMD accelerates pixel operations. Text chunks process in parallel. Cache coherence prevents redundant work.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>Feature flags control what compiles. Runtime settings choose backends. You build only what you need.</p>
+<p>Feature flags control what compiles. Runtime settings choose backends. You build only what you need. <strong>v2.4.5</strong>: Improved backend detection for macOS CoreText/CoreGraphics and fixed feature flag mismatches between CLI and backend packages.</p>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
 <p>Clear error types tell you exactly what failed. No silent fallbacks - if a backend isn't compiled, you get an explicit error message.</p>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>

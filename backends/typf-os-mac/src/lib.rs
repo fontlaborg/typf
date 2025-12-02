@@ -428,7 +428,11 @@ impl LinraRenderer for CoreTextLinraRenderer {
         let line_height = ascent + descent;
 
         // Validate metrics are finite (corrupt fonts can produce NaN/Inf)
-        if !line_width.is_finite() || !line_height.is_finite() || !ascent.is_finite() || !descent.is_finite() {
+        if !line_width.is_finite()
+            || !line_height.is_finite()
+            || !ascent.is_finite()
+            || !descent.is_finite()
+        {
             return Err(TypfError::RenderingFailed(RenderError::BackendError(
                 format!(
                     "Invalid typographic bounds from font (width={}, height={}) - font may be corrupt",

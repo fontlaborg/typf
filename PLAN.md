@@ -42,7 +42,7 @@ Phase 4 — COLRv0/COLRv1 Support via skrifa
 - Add regression tests for COLRv0 layered glyphs and COLRv1 gradients/affine transforms (e.g., Noto Color Emoji, test fonts in repo).
 
 Phase 5 — Renderer Wiring & CLI UX
-- Thread `GlyphSourcePreference` through opixa, skia, zeno, svg, and json renderers; ensure color/svg branches are behind feature flags (`resvg` optional dep).
+- [x] Thread `GlyphSourcePreference` through opixa, skia, zeno, svg, and json renderers; ensure color/svg branches are behind feature flags (`resvg` optional dep).
 - Extend CLI help and examples showing how to prefer outlines, disallow color, or force bitmap sources.
 - Add logging/metrics hooks to surface which source was chosen per glyph when `--verbose` or JSON output is enabled.
 

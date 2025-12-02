@@ -35,7 +35,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
   - Unified `render_glyph()` API that auto-selects best rendering method
   - 31 tests covering all color font formats
   - Feature flags: `colr` (default), `svg`, `bitmap`
-- **Glyph Source Preferences**: `typf-core` now exposes `GlyphSourcePreference` (ordered allowlist + deny set) with default outline-first order and CLI flag `--glyph-source prefer=...|deny=...`; includes parsing tests for Rust CLI and core.
+- **Glyph Source Preferences**: `typf-core` now exposes `GlyphSourcePreference` (ordered allowlist + deny set) with default outline-first order and CLI flag `--glyph-source prefer=...|deny=...`; includes parsing tests for Rust CLI and core. Renderers (opixa/skia/zeno/svg) now honor prefer/deny lists and SVG/CLI integration tests cover outline-first vs. color-preferred paths.
 - **SVG Renderer Backend**: New `typf-render-svg` crate as a proper Renderer
   - Implements `Renderer` trait returning `RenderOutput::Vector`
   - Extracts glyph outlines from fonts using skrifa

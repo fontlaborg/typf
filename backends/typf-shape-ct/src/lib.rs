@@ -7,6 +7,7 @@
 
 #![cfg(target_os = "macos")]
 
+use std::cell::RefCell;
 use std::sync::Arc;
 use typf_core::{
     error::{Result, ShapingError, TypfError},
@@ -36,6 +37,14 @@ use core_text::{
 use lru::LruCache;
 use parking_lot::RwLock;
 
+// Thread-local font cache to avoid cross-thread CTFont destruction.
+// CoreText fonts have thread affinity - destroying a CTFont on a different
+// thread than it was created causes memory corruption in OTL::Lookup.
+thread_local! {
+    static FONT_CACHE: RefCell<LruCache<FontCacheKey, Arc<CTFont>>> =
+        RefCell::new(LruCache::new(std::num::NonZeroUsize::new(50).unwrap()));
+}
+
 /// How we identify fonts in our cache
 type FontCacheKey = String;
 
@@ -55,9 +64,10 @@ impl AsRef<[u8]> for ProviderData {
 
 /// Professional text shaping powered by macOS CoreText
 pub struct CoreTextShaper {
-    /// Cache fonts to avoid expensive CTFont creation
-    font_cache: RwLock<LruCache<FontCacheKey, Arc<CTFont>>>,
     /// Cache shaping results to avoid redundant work
+    /// Note: font_cache is thread-local (FONT_CACHE) to ensure CTFont objects
+    /// are always destroyed on the same thread they were created, avoiding
+    /// memory corruption in CoreText's OTL lookup tables.
     shape_cache: RwLock<LruCache<ShapeCacheKey, Arc<ShapingResult>>>,
 }
 
@@ -65,7 +75,6 @@ impl CoreTextShaper {
     /// Creates a new shaper ready to work with CoreText
     pub fn new() -> Self {
         Self {
-            font_cache: RwLock::new(LruCache::new(std::num::NonZeroUsize::new(100).unwrap())),
             shape_cache: RwLock::new(LruCache::new(std::num::NonZeroUsize::new(1000).unwrap())),
         }
     }
@@ -144,28 +153,28 @@ impl CoreTextShaper {
         // Create cache key to see if we already have this font
         let cache_key = Self::font_cache_key(font, params);
 
-        // Check cache first
-        {
-            let cache = self.font_cache.read();
-            if let Some(cached) = cache.peek(&cache_key) {
-                log::debug!("CoreTextShaper: Font cache hit");
+        // Use thread-local cache to ensure CTFont destruction happens on
+        // the same thread as creation (CoreText thread-safety requirement)
+        FONT_CACHE.with(|cache| {
+            let mut cache = cache.borrow_mut();
+
+            // Check cache first
+            if let Some(cached) = cache.get(&cache_key) {
+                log::debug!("CoreTextShaper: Font cache hit (thread-local)");
                 return Ok(Arc::clone(cached));
             }
-        }
 
-        log::debug!("CoreTextShaper: Building new CTFont");
+            log::debug!("CoreTextShaper: Building new CTFont (thread-local)");
 
-        // Create the font from our data
-        let ct_font = Self::create_ct_font_from_data(font.data(), params)?;
-        let arc_font = Arc::new(ct_font);
+            // Create the font from our data
+            let ct_font = Self::create_ct_font_from_data(font.data(), params)?;
+            let arc_font = Arc::new(ct_font);
 
-        // Save it for next time
-        {
-            let mut cache = self.font_cache.write();
+            // Save it for next time (on this thread only)
             cache.put(cache_key, Arc::clone(&arc_font));
-        }
 
-        Ok(arc_font)
+            Ok(arc_font)
+        })
     }
 
     /// Turns raw font bytes into a CoreText CTFont
@@ -447,7 +456,9 @@ impl Shaper for CoreTextShaper {
 
     fn clear_cache(&self) {
         log::debug!("CoreTextShaper: Clearing caches");
-        self.font_cache.write().clear();
+        // Clear thread-local font cache
+        FONT_CACHE.with(|cache| cache.borrow_mut().clear());
+        // Clear shared shape cache
         self.shape_cache.write().clear();
     }
 }
