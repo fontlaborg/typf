@@ -7,8 +7,7 @@
 
 #![cfg(target_os = "macos")]
 
-use std::cell::RefCell;
-use std::sync::Arc;
+use std::{cell::RefCell, ptr, sync::Arc};
 use typf_core::{
     error::{Result, ShapingError, TypfError},
     traits::{FontRef, Shaper},
@@ -18,22 +17,25 @@ use typf_core::{
 
 use core_foundation::{
     attributed_string::CFMutableAttributedString,
-    base::{CFRange, TCFType},
+    base::{CFRange, CFType, TCFType},
     dictionary::CFDictionary,
     number::CFNumber,
     string::CFString,
 };
 use core_graphics::{
+    base::CGFloat,
     data_provider::CGDataProvider,
     font::CGFont,
     geometry::{CGPoint, CGSize},
 };
 use core_text::{
-    font::{new_from_CGFont, new_from_CGFont_with_variations, CTFont},
+    font::{new_from_CGFont, CTFont},
+    font_descriptor::{kCTFontVariationAttribute, new_from_attributes},
     line::CTLine,
     run::{CTRun, CTRunRef},
     string_attributes::{kCTFontAttributeName, kCTKernAttributeName, kCTLigatureAttributeName},
 };
+use foreign_types::ForeignType;
 use lru::LruCache;
 use parking_lot::RwLock;
 
@@ -68,15 +70,26 @@ pub struct CoreTextShaper {
     /// Note: font_cache is thread-local (FONT_CACHE) to ensure CTFont objects
     /// are always destroyed on the same thread they were created, avoiding
     /// memory corruption in CoreText's OTL lookup tables.
-    shape_cache: RwLock<LruCache<ShapeCacheKey, Arc<ShapingResult>>>,
+    shape_cache: Option<RwLock<LruCache<ShapeCacheKey, Arc<ShapingResult>>>>,
 }
 
 impl CoreTextShaper {
     /// Creates a new shaper ready to work with CoreText
     pub fn new() -> Self {
-        Self {
-            shape_cache: RwLock::new(LruCache::new(std::num::NonZeroUsize::new(1000).unwrap())),
-        }
+        Self::with_cache(true)
+    }
+
+    /// Creates a new shaper with optional shape caching
+    pub fn with_cache(enabled: bool) -> Self {
+        let cache = if enabled {
+            Some(RwLock::new(LruCache::new(
+                std::num::NonZeroUsize::new(1000).unwrap(),
+            )))
+        } else {
+            None
+        };
+
+        Self { shape_cache: cache }
     }
 
     /// Makes a unique key for caching fonts with their settings
@@ -177,6 +190,21 @@ impl CoreTextShaper {
         })
     }
 
+    /// Convert a 4-character axis tag to its numeric identifier.
+    /// Example: "wght" -> 2003265652 (0x77676874)
+    fn tag_to_axis_id(tag: &str) -> Option<i64> {
+        if tag.len() != 4 {
+            return None;
+        }
+        let bytes = tag.as_bytes();
+        Some(
+            ((bytes[0] as i64) << 24)
+                | ((bytes[1] as i64) << 16)
+                | ((bytes[2] as i64) << 8)
+                | (bytes[3] as i64),
+        )
+    }
+
     /// Turns raw font bytes into a CoreText CTFont
     fn create_ct_font_from_data(data: &[u8], params: &ShapingParams) -> Result<CTFont> {
         // Create Arc from font data
@@ -201,23 +229,48 @@ impl CoreTextShaper {
                 params.variations.len()
             );
 
-            // Convert variations to CFDictionary<CFString, CFNumber>
-            let var_pairs: Vec<(CFString, CFNumber)> = params
+            // Convert variations to CFDictionary<CFNumber(axis_id), CFNumber(value)>
+            let var_pairs: Vec<(CFNumber, CFNumber)> = params
                 .variations
                 .iter()
-                .filter(|(tag, _)| tag.len() == 4)
-                .map(|(tag, value)| (CFString::new(tag), CFNumber::from(*value as f64)))
+                .filter_map(|(tag, value)| {
+                    Self::tag_to_axis_id(tag)
+                        .map(|axis_id| (CFNumber::from(axis_id), CFNumber::from(*value as f64)))
+                })
                 .collect();
 
             if !var_pairs.is_empty() {
-                let var_dict: CFDictionary<CFString, CFNumber> =
+                let var_dict: CFDictionary<CFNumber, CFNumber> =
                     CFDictionary::from_CFType_pairs(&var_pairs);
 
-                return Ok(new_from_CGFont_with_variations(
-                    &cg_font,
-                    params.size as f64,
-                    &var_dict,
-                ));
+                // Build descriptor with variation attribute (requires CFNumber keys)
+                let var_key = unsafe { CFString::wrap_under_get_rule(kCTFontVariationAttribute) };
+                let var_val = unsafe { CFType::wrap_under_get_rule(var_dict.as_CFTypeRef()) };
+                let attrs: CFDictionary<CFString, CFType> =
+                    CFDictionary::from_CFType_pairs(&[(var_key, var_val)]);
+                let desc = new_from_attributes(&attrs);
+
+                // Use CoreText API directly so variation axes are honored
+                #[link(name = "CoreText", kind = "framework")]
+                extern "C" {
+                    fn CTFontCreateWithGraphicsFont(
+                        graphicsFont: core_graphics::sys::CGFontRef,
+                        size: CGFloat,
+                        matrix: *const core_graphics::geometry::CGAffineTransform,
+                        attributes: core_text::font_descriptor::CTFontDescriptorRef,
+                    ) -> core_text::font::CTFontRef;
+                }
+
+                let font_ref = unsafe {
+                    CTFontCreateWithGraphicsFont(
+                        cg_font.as_ptr(),
+                        params.size as CGFloat,
+                        ptr::null(),
+                        desc.as_concrete_TypeRef(),
+                    )
+                };
+
+                return Ok(unsafe { CTFont::wrap_under_create_rule(font_ref) });
             }
         }
 
@@ -406,8 +459,8 @@ impl Shaper for CoreTextShaper {
         let cache_key = Self::shape_cache_key(text, &font, params);
 
         // Check shape cache
-        {
-            let cache = self.shape_cache.read();
+        if let Some(cache_lock) = &self.shape_cache {
+            let cache = cache_lock.read();
             if let Some(cached) = cache.peek(&cache_key) {
                 log::debug!("CoreTextShaper: Shape cache hit");
                 return Ok((**cached).clone());
@@ -441,8 +494,8 @@ impl Shaper for CoreTextShaper {
         };
 
         // Cache the result
-        {
-            let mut cache = self.shape_cache.write();
+        if let Some(cache_lock) = &self.shape_cache {
+            let mut cache = cache_lock.write();
             cache.put(cache_key, Arc::new(result.clone()));
         }
 
@@ -459,7 +512,9 @@ impl Shaper for CoreTextShaper {
         // Clear thread-local font cache
         FONT_CACHE.with(|cache| cache.borrow_mut().clear());
         // Clear shared shape cache
-        self.shape_cache.write().clear();
+        if let Some(cache) = &self.shape_cache {
+            cache.write().clear();
+        }
     }
 }
 
