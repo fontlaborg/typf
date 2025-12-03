@@ -257,6 +257,7 @@ impl Typf {
     ///     language: Language hint for direction detection
     ///     face_index: TTC collection face index (default: 0)
     #[allow(clippy::useless_conversion)]
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (text, font_path, size=16.0, direction="auto", language=None, face_index=0))]
     fn shape_text(
         &self,

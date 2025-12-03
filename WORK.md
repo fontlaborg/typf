@@ -9,8 +9,7 @@ Completed quality improvements addressing REVIEW.md findings.
 1. **Python bindings: Direction auto-detect** (was forcing LTR)
    - Added `typf-unicode` dependency
    - Created `detect_direction()` and `parse_direction()` helpers
-   - Updated `render_text`, `shape_text`, `render_to_svg`, `render_simple` to accept `direction` param
-   - Default is now `"auto"` using Unicode bidi analysis
+   - Updated all render methods to accept `direction` param with default `"auto"`
    - Added optional `language` param for RTL language hints
 
 2. **Python bindings: Workspace version**
@@ -20,18 +19,25 @@ Completed quality improvements addressing REVIEW.md findings.
 3. **Trait capability honesty**
    - Changed `Shaper::supports_script()` default from `true` to `false`
    - Changed `Renderer::supports_format()` default from `true` to `false`
-   - All backends already implement these explicitly, so no breakage
+
+4. **Fix glyph ID truncation in typf-export-svg**
+   - Changed `GlyphId::from(glyph_id as u16)` to `GlyphId::new(glyph_id)`
+   - Now supports fonts with >65535 glyphs
+
+5. **Python bindings: TTC face index support**
+   - Added `face_index` param to `render_text`, `shape_text`, `render_to_svg`, linra `render_text`
+   - Added `face_index` to `FontInfo` class
+   - Created `load_font()` helper for consistent TTC handling
 
 ### Tests Passing
 
 - `cargo test --workspace --quiet` - all pass
 - `cargo clippy --workspace -- -D warnings` - clean
-- `cargo check -p typf-py --all-features` - success
 
 ### Files Modified
 
 - `bindings/python/Cargo.toml` - added typf-unicode dependency
-- `bindings/python/src/lib.rs` - direction auto-detect, workspace version
+- `bindings/python/src/lib.rs` - direction, version, TTC index
 - `crates/typf-core/src/traits.rs` - capability honesty defaults
+- `crates/typf-export-svg/src/lib.rs` - glyph ID fix
 - `TODO.md` - mark tasks complete
-- `WORK.md` - session notes

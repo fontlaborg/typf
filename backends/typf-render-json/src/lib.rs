@@ -27,9 +27,14 @@ pub struct HbGlyphInfo {
     pub dy: i32,   // Vertical offset from default position
 }
 
+/// Schema version for JSON output format
+pub const JSON_SCHEMA_VERSION: &str = "1.0";
+
 /// Complete shaping output in a debug-friendly format
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonOutput {
+    /// Schema version for forward compatibility
+    pub schema_version: String,
     pub glyphs: Vec<HbGlyphInfo>, // The positioned glyph sequence
     pub direction: String,        // Text direction that influenced shaping
     pub script: Option<String>,   // Script detection result (when available)

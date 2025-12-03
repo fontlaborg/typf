@@ -20,6 +20,8 @@
 - [x] Python bindings: direction auto-detect (was forced LTR)
 - [x] Python bindings: workspace version instead of hard-coded "2.0.0-dev"
 - [x] Trait defaults: `supports_script`/`supports_format` now return `false` (capability honesty)
+- [x] Fix glyph ID truncation in typf-export-svg (u16 → u32)
+- [x] Python bindings: TTC face index support
 
 ## Pending
 
