@@ -6,7 +6,7 @@
 # Platform matrix (December 2025):
 #   Rust: linux-x64, linux-arm64, linux-x64-musl, linux-arm64-musl,
 #         macos-x64, macos-arm64, windows-x64, windows-arm64
-#   Python: 3.9-3.13 on manylinux, musllinux, macOS, Windows
+#   Python: 3.12-3.13 on manylinux, musllinux, macOS, Windows
 
 name: Release
 
@@ -258,7 +258,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
-          args: --release --out dist --interpreter 3.9 3.10 3.11 3.12 3.13
+          args: --release --out dist --interpreter 3.12 3.13
           before-script-linux: |
             if [ "${{ matrix.manylinux }}" = "musllinux_1_2" ]; then
               apk add --no-cache harfbuzz-dev
@@ -271,7 +271,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --interpreter 3.9 3.10 3.11 3.12 3.13
+          args: --release --out dist --interpreter 3.12 3.13
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4

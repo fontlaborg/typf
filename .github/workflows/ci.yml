@@ -218,15 +218,18 @@ jobs:
 
   # Python tests
   python:
-    name: Python Tests
+    name: Python Tests (py${{ matrix.python-version }})
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
