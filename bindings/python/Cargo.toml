@@ -30,6 +30,7 @@ typf-shape-ct = { workspace = true, optional = true }
 typf-shape-hb = { workspace = true, optional = true }
 typf-shape-icu-hb = { workspace = true, optional = true }
 typf-shape-none = { workspace = true }
+typf-unicode = { workspace = true }
 
 [features]
 default = [

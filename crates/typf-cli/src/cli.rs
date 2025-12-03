@@ -137,8 +137,17 @@ pub struct RenderArgs {
     #[arg(short = 'p', long = "color-palette", default_value = "0")]
     pub color_palette: u32,
 
-    /// Glyph source preferences or deny list (e.g., prefer=glyf,cff2 deny=sbix)
-    #[arg(long = "glyph-source", action = ArgAction::Append)]
+    /// Glyph source preferences or deny list.
+    ///
+    /// Control which glyph data sources are used and in what order.
+    /// Sources: glyf, cff, cff2, colr0, colr1, svg, sbix, cbdt, ebdt
+    ///
+    /// Examples:
+    ///   --glyph-source prefer=glyf,cff2         Use outline sources first
+    ///   --glyph-source deny=colr0,colr1,svg     Disable all color sources
+    ///   --glyph-source prefer=colr1,colr0,svg   Prefer COLR over SVG
+    ///   --glyph-source deny=sbix,cbdt,ebdt      Disable bitmap sources
+    #[arg(long = "glyph-source", action = ArgAction::Append, verbatim_doc_comment)]
     pub glyph_source: Vec<String>,
 
     /// Disable shaping cache (enabled by default)

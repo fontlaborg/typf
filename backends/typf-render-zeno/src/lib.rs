@@ -205,6 +205,11 @@ impl ZenoRenderer {
     }
 
     /// Attempt to render a color/SVG/bitmap glyph before falling back to outlines.
+    ///
+    /// Returns `Ok(Some(...))` if a color glyph was successfully rendered,
+    /// `Ok(None)` if no color glyph is available (allowing outline fallback),
+    /// or `Err(...)` for actual rendering failures.
+    #[allow(clippy::too_many_arguments)]
     fn try_color_glyph(
         &self,
         font: &Arc<dyn FontRef>,
@@ -253,11 +258,28 @@ impl ZenoRenderer {
                     bearing_y: bearings.1.ceil() as i32,
                 }))
             },
-            Err(err) => Err(RenderError::BackendError(format!(
-                "color glyph {} unavailable: {:?}",
-                glyph_id, err
-            ))
-            .into()),
+            Err(typf_render_color::ColorRenderError::GlyphNotFound) => {
+                // No color glyph available - allow outline fallback
+                log::debug!("Zeno: no color glyph for {}, falling back to outline", glyph_id);
+                Ok(None)
+            },
+            Err(typf_render_color::ColorRenderError::NoColrTable) => {
+                // Font has no COLR table - allow outline fallback
+                Ok(None)
+            },
+            Err(typf_render_color::ColorRenderError::NoPalette) => {
+                // No palette available - allow outline fallback
+                log::debug!("Zeno: no palette for glyph {}, falling back to outline", glyph_id);
+                Ok(None)
+            },
+            Err(err) => {
+                // Actual rendering error (pixmap creation failed, paint error, etc.)
+                Err(RenderError::BackendError(format!(
+                    "color glyph {} render failed: {:?}",
+                    glyph_id, err
+                ))
+                .into())
+            },
         }
     }
 }

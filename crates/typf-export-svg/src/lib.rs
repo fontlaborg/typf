@@ -126,7 +126,7 @@ impl SvgExporter {
             .map_err(|_| ExportError::EncodingFailed("Invalid font".to_string()))?;
 
         let outlines = font_ref.outline_glyphs();
-        let glyph_id = skrifa::GlyphId::from(glyph_id as u16);
+        let glyph_id = skrifa::GlyphId::new(glyph_id);
 
         let glyph = outlines.get(glyph_id).ok_or_else(|| {
             ExportError::EncodingFailed(format!("Glyph {} not found", glyph_id.to_u32()))

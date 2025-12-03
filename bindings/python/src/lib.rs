@@ -20,6 +20,64 @@ use typf_core::{
 };
 use typf_export::PnmExporter;
 use typf_fontdb::TypfFontFace;
+use typf_unicode::{UnicodeOptions, UnicodeProcessor};
+
+/// Workspace version (injected at build time)
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Auto-detect text direction using Unicode bidi analysis
+fn detect_direction(text: &str, language: Option<&str>) -> Direction {
+    let processor = UnicodeProcessor::new();
+    let options = UnicodeOptions {
+        detect_scripts: true,
+        normalize: true,
+        bidi_resolve: true,
+        language: language.map(|l| l.to_string()),
+    };
+
+    match processor.process(text, &options) {
+        Ok(runs) => {
+            // Find first run with explicit RTL direction
+            runs.iter()
+                .find_map(|run| {
+                    if matches!(run.direction, Direction::RightToLeft | Direction::BottomToTop) {
+                        Some(run.direction)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(Direction::LeftToRight)
+        }
+        Err(_) => Direction::LeftToRight,
+    }
+}
+
+/// Parse direction string to Direction enum
+fn parse_direction(dir_str: &str, text: &str, language: Option<&str>) -> PyResult<Direction> {
+    match dir_str {
+        "auto" => Ok(detect_direction(text, language)),
+        "ltr" => Ok(Direction::LeftToRight),
+        "rtl" => Ok(Direction::RightToLeft),
+        "ttb" => Ok(Direction::TopToBottom),
+        "btt" => Ok(Direction::BottomToTop),
+        _ => Err(PyValueError::new_err(format!(
+            "Invalid direction: {}. Use: auto, ltr, rtl, ttb, btt",
+            dir_str
+        ))),
+    }
+}
+
+/// Load font with optional TTC index
+fn load_font(font_path: &str, face_index: u32) -> PyResult<Arc<dyn typf_core::traits::FontRef>> {
+    let font = if face_index == 0 {
+        TypfFontFace::from_file(font_path)
+    } else {
+        TypfFontFace::from_file_index(font_path, face_index)
+    }
+    .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
+
+    Ok(Arc::new(font) as Arc<dyn typf_core::traits::FontRef>)
+}
 
 // Note: Skia and Zeno renderers not yet available in workspace
 
@@ -86,9 +144,21 @@ impl Typf {
     ///
     /// This method does the full pipeline: loads the font, shapes the text,
     /// renders to bitmap, and returns it in a Python-friendly format.
+    ///
+    /// Args:
+    ///     text: The text to render
+    ///     font_path: Path to the font file
+    ///     size: Font size in pixels (default: 16.0)
+    ///     color: Foreground color as (r, g, b, a) tuple (default: black)
+    ///     background: Background color as (r, g, b, a) tuple (default: transparent)
+    ///     padding: Padding around rendered text in pixels (default: 10)
+    ///     variations: Dict of font variation axis settings
+    ///     direction: Text direction - "auto", "ltr", "rtl", "ttb", "btt" (default: "auto")
+    ///     language: Language hint for direction detection (e.g., "ar", "he")
+    ///     face_index: TTC collection face index (default: 0)
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::useless_conversion)]
-    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10, variations=None))]
+    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10, variations=None, direction="auto", language=None, face_index=0))]
     fn render_text(
         &self,
         py: Python,
@@ -99,20 +169,24 @@ impl Typf {
         background: Option<(u8, u8, u8, u8)>,
         padding: u32,
         variations: Option<HashMap<String, f32>>,
+        direction: &str,
+        language: Option<&str>,
+        face_index: u32,
     ) -> PyResult<PyObject> {
-        // First, load and validate the font file
-        let font = TypfFontFace::from_file(font_path)
-            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
-        let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
+        // Load font with optional TTC index
+        let font_arc = load_font(font_path, face_index)?;
 
         let mut variation_vec: Vec<(String, f32)> =
             variations.unwrap_or_default().into_iter().collect();
         variation_vec.sort_by(|a, b| a.0.cmp(&b.0));
 
+        // Auto-detect or parse direction
+        let resolved_direction = parse_direction(direction, text, language)?;
+
         // Configure how we want to shape the text
         let shaping_params = ShapingParams {
             size,
-            direction: Direction::LeftToRight,
+            direction: resolved_direction,
             variations: variation_vec.clone(),
             ..Default::default()
         };
@@ -129,11 +203,13 @@ impl Typf {
             .unwrap_or(Color::rgba(0, 0, 0, 255));
         let background = background.map(|(r, g, b, a)| Color::rgba(r, g, b, a));
 
-        let mut render_params = RenderParams::default();
-        render_params.foreground = foreground;
-        render_params.background = background;
-        render_params.padding = padding;
-        render_params.variations = variation_vec;
+        let render_params = RenderParams {
+            foreground,
+            background,
+            padding,
+            variations: variation_vec,
+            ..Default::default()
+        };
 
         // Render the shaped glyphs into actual pixels
         let rendered = self
@@ -172,18 +248,36 @@ impl Typf {
     }
 
     /// Shape text without rendering (for benchmarking and JSON export)
+    ///
+    /// Args:
+    ///     text: The text to shape
+    ///     font_path: Path to the font file
+    ///     size: Font size in pixels (default: 16.0)
+    ///     direction: Text direction - "auto", "ltr", "rtl", "ttb", "btt" (default: "auto")
+    ///     language: Language hint for direction detection
+    ///     face_index: TTC collection face index (default: 0)
     #[allow(clippy::useless_conversion)]
-    #[pyo3(signature = (text, font_path, size=16.0))]
-    fn shape_text(&self, py: Python, text: &str, font_path: &str, size: f32) -> PyResult<PyObject> {
-        // Load font
-        let font = TypfFontFace::from_file(font_path)
-            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
-        let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
+    #[pyo3(signature = (text, font_path, size=16.0, direction="auto", language=None, face_index=0))]
+    fn shape_text(
+        &self,
+        py: Python,
+        text: &str,
+        font_path: &str,
+        size: f32,
+        direction: &str,
+        language: Option<&str>,
+        face_index: u32,
+    ) -> PyResult<PyObject> {
+        // Load font with optional TTC index
+        let font_arc = load_font(font_path, face_index)?;
+
+        // Auto-detect or parse direction
+        let resolved_direction = parse_direction(direction, text, language)?;
 
         // Set up shaping parameters
         let shaping_params = ShapingParams {
             size,
-            direction: Direction::LeftToRight,
+            direction: resolved_direction,
             ..Default::default()
         };
 
@@ -201,9 +295,20 @@ impl Typf {
     }
 
     /// Render text to SVG vector format
+    ///
+    /// Args:
+    ///     text: The text to render
+    ///     font_path: Path to the font file
+    ///     size: Font size in pixels (default: 16.0)
+    ///     color: Foreground color as (r, g, b, a) tuple (default: black)
+    ///     padding: Padding around rendered text in pixels (default: 10)
+    ///     direction: Text direction - "auto", "ltr", "rtl", "ttb", "btt" (default: "auto")
+    ///     language: Language hint for direction detection
+    ///     face_index: TTC collection face index (default: 0)
     #[cfg(feature = "export-svg")]
     #[allow(clippy::useless_conversion)]
-    #[pyo3(signature = (text, font_path, size=16.0, color=None, padding=10))]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (text, font_path, size=16.0, color=None, padding=10, direction="auto", language=None, face_index=0))]
     fn render_to_svg(
         &self,
         text: &str,
@@ -211,16 +316,20 @@ impl Typf {
         size: f32,
         color: Option<(u8, u8, u8, u8)>,
         padding: u32,
+        direction: &str,
+        language: Option<&str>,
+        face_index: u32,
     ) -> PyResult<String> {
-        // Load font
-        let font = TypfFontFace::from_file(font_path)
-            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
-        let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
+        // Load font with optional TTC index
+        let font_arc = load_font(font_path, face_index)?;
+
+        // Auto-detect or parse direction
+        let resolved_direction = parse_direction(direction, text, language)?;
 
         // Set up shaping parameters
         let shaping_params = ShapingParams {
             size,
-            direction: Direction::LeftToRight,
+            direction: resolved_direction,
             ..Default::default()
         };
 
@@ -296,8 +405,22 @@ impl TypfLinra {
     ///
     /// This is faster than the traditional shaper+renderer pipeline because
     /// the platform API handles everything in one optimized call.
+    ///
+    /// Args:
+    ///     text: The text to render
+    ///     font_path: Path to the font file
+    ///     size: Font size in pixels (default: 16.0)
+    ///     color: Foreground color as (r, g, b, a) tuple (default: black)
+    ///     background: Background color as (r, g, b, a) tuple (default: transparent)
+    ///     padding: Padding around rendered text in pixels (default: 10)
+    ///     variations: Dict of font variation axis settings
+    ///     features: List of OpenType feature tuples (name, value)
+    ///     language: Language tag (e.g., "ar", "he", "en")
+    ///     script: Script tag (e.g., "Arab", "Hebr", "Latn")
+    ///     direction: Text direction - "auto", "ltr", "rtl", "ttb", "btt" (default: "auto")
+    ///     face_index: TTC collection face index (default: 0)
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10, variations=None, features=None, language=None, script=None))]
+    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10, variations=None, features=None, language=None, script=None, direction="auto", face_index=0))]
     fn render_text(
         &self,
         py: Python,
@@ -311,11 +434,11 @@ impl TypfLinra {
         features: Option<Vec<(String, u32)>>,
         language: Option<String>,
         script: Option<String>,
+        direction: &str,
+        face_index: u32,
     ) -> PyResult<PyObject> {
-        // Load font
-        let font = TypfFontFace::from_file(font_path)
-            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
-        let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
+        // Load font with optional TTC index
+        let font_arc = load_font(font_path, face_index)?;
 
         // Parse colors
         let foreground = color
@@ -327,10 +450,13 @@ impl TypfLinra {
             variations.unwrap_or_default().into_iter().collect();
         variation_vec.sort_by(|a, b| a.0.cmp(&b.0));
 
+        // Auto-detect or parse direction
+        let resolved_direction = parse_direction(direction, text, language.as_deref())?;
+
         // Create linra parameters
         let params = LinraRenderParams {
             size,
-            direction: Direction::LeftToRight,
+            direction: resolved_direction,
             foreground,
             background,
             padding,
@@ -380,30 +506,33 @@ struct FontInfo {
     units_per_em: u16,
     #[pyo3(get)]
     path: String,
+    #[pyo3(get)]
+    face_index: u32,
 }
 
 #[pymethods]
 impl FontInfo {
     /// Load font information
+    ///
+    /// Args:
+    ///     path: Path to the font file
+    ///     face_index: TTC collection face index (default: 0)
     #[new]
-    fn new(path: &str) -> PyResult<Self> {
-        let font = TypfFontFace::from_file(path)
-            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
-
-        let font_ref = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
+    #[pyo3(signature = (path, face_index=0))]
+    fn new(path: &str, face_index: u32) -> PyResult<Self> {
+        let font_arc = load_font(path, face_index)?;
         Ok(Self {
-            units_per_em: font_ref.units_per_em(),
+            units_per_em: font_arc.units_per_em(),
             path: path.to_string(),
+            face_index,
         })
     }
 
     /// Get glyph ID for a character
     #[allow(clippy::useless_conversion)]
     fn glyph_id(&self, ch: char) -> PyResult<Option<u32>> {
-        let font = TypfFontFace::from_file(&self.path)
-            .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
-        let font_ref = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
-        Ok(font_ref.glyph_id(ch))
+        let font_arc = load_font(&self.path, self.face_index)?;
+        Ok(font_arc.glyph_id(ch))
     }
 }
 
@@ -466,10 +595,15 @@ fn export_image(py: Python, image_data: PyObject, format: &str) -> PyResult<PyOb
 ///
 /// Sometimes you just need to see text on screen. This function uses
 /// a built-in stub font for ultra-simple rendering without file I/O.
+///
+/// Args:
+///     text: The text to render
+///     size: Font size in pixels (default: 16.0)
+///     direction: Text direction - "auto", "ltr", "rtl" (default: "auto")
 #[pyfunction]
 #[allow(clippy::useless_conversion)]
-#[pyo3(signature = (text, size=16.0))]
-fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
+#[pyo3(signature = (text, size=16.0, direction="auto"))]
+fn render_simple(py: Python, text: &str, size: f32, direction: &str) -> PyResult<PyObject> {
     // Create a minimal font that works without a font file
     use typf_core::traits::FontRef;
 
@@ -499,9 +633,12 @@ fn render_simple(py: Python, text: &str, size: f32) -> PyResult<PyObject> {
     let typf = Typf::new("none", "opixa")?;
     let font = Arc::new(StubFont { size }) as Arc<dyn FontRef>;
 
+    // Auto-detect or parse direction
+    let resolved_direction = parse_direction(direction, text, None)?;
+
     let shaping_params = ShapingParams {
         size,
-        direction: Direction::LeftToRight,
+        direction: resolved_direction,
         ..Default::default()
     };
 
@@ -548,7 +685,7 @@ fn typf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TypfLinra>()?;
     m.add_function(wrap_pyfunction!(export_image, m)?)?;
     m.add_function(wrap_pyfunction!(render_simple, m)?)?;
-    m.add("__version__", "2.0.0-dev")?;
+    m.add("__version__", VERSION)?;
     m.add("__linra_available__", cfg!(feature = "linra"))?;
     Ok(())
 }

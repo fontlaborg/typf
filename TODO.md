@@ -1,9 +1,26 @@
-# TODO (backend-neutral caching refactor)
+# TODO
 
-- [x] P1: Extend `ShapingCacheKey` with backend tag and update all callers/tests.
-- [x] P1: Add shared `glyph_cache.rs` (render-output cache) with stable key hashing and stats.
-- [x] P1: Add `CachePolicy` + builder toggles; wrap shaper/renderer with cached adaptors in `PipelineBuilder`.
-- [x] P1: Wire CLI flags `--no-shaping-cache/--no-glyph-cache`; force caches off for linra path.
-- [x] P1: Update HarfBuzz/ICU shapers to new key constructor and remove any stale cache paths.
-- [x] P1: Add core unit tests validating cache hits/misses and toggles; add CLI test for cache flags.
-- [x] P1: Run `cargo test --workspace --all-features` and record results in WORK.md.
+## Completed
+
+- [x] Phase 1: Core API for Glyph Source Selection
+- [x] Phase 2: SVG Emission from tiny-skia and zeno (via SvgRenderer delegation)
+- [x] Phase 3: resvg/usvg Integration for SVG table
+- [x] Phase 4: COLRv0/COLRv1 Support via skrifa
+- [x] Phase 5: Renderer Wiring & CLI UX (GlyphSourcePreference, logging, CLI help)
+- [x] Remove unused objc2/objc2-foundation dependencies from typf-shape-ct
+- [x] Fix clippy warnings across workspace
+- [x] Phase 6: QA, Performance, and Documentation
+  - [x] Benchmarks in typf-bench with resvg + COLR impact
+  - [x] Fix color glyph fallback bug in skia/zeno renderers
+  - [x] Update README.md with new capabilities (glyph-source flags, color support)
+  - [x] Update ARCHITECTURE.md with glyph source flow
+
+## Quality Improvements (Dec 3, 2025)
+
+- [x] Python bindings: direction auto-detect (was forced LTR)
+- [x] Python bindings: workspace version instead of hard-coded "2.0.0-dev"
+- [x] Trait defaults: `supports_script`/`supports_format` now return `false` (capability honesty)
+
+## Pending
+
+(No pending tasks)

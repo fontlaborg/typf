@@ -64,8 +64,8 @@ That's it. Your text is rendered.
 | Backend | Anti-alias | Color | Output | Performance | Platform |
 |---------|------------|-------|--------|-------------|----------|
 | **opixa** | Monochrome | No | Bitmap | 2K ops/sec | All (pure Rust) |
-| **skia** | 256 levels | No | Bitmap/SVG | 3.5K ops/sec | All |
-| **zeno** | 256 levels | No | Bitmap/SVG | 3K ops/sec | All (pure Rust) |
+| **skia** | 256 levels | Yes (COLR/SVG/bitmap) | Bitmap/SVG | 3.5K ops/sec | All |
+| **zeno** | 256 levels | Yes (COLR/SVG/bitmap) | Bitmap/SVG | 3K ops/sec | All (pure Rust) |
 | **coregraphics** | 256 levels | Yes (sbix/COLR) | Bitmap | 4K ops/sec | macOS only |
 | **json** | N/A | N/A | JSON data | 25K ops/sec | All |
 
@@ -105,14 +105,14 @@ The linra renderer bypasses the intermediate glyph extraction step, allowing Cor
 | CFF outlines (CFF ) | ✅ | ✅ | ✅ | ✅ | ✅ |
 | CFF2 outlines (CFF2) | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Variable fonts (gvar) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| COLR v0 (layered colors) | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| COLR v1 (gradients) | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| SVG glyphs (SVG table) | ❌ | ❌ | ❌ | ⚠️ | ❌ |
-| Bitmap glyphs (CBDT/sbix) | ❌ | ❌ | ❌ | ✅ | ❌ |
+| COLR v0 (layered colors) | ❌ | ✅ | ✅ | ⚠️ | ❌ |
+| COLR v1 (gradients) | ❌ | ✅ | ✅ | ⚠️ | ❌ |
+| SVG glyphs (SVG table) | ❌ | ✅ | ✅ | ⚠️ | ❌ |
+| Bitmap glyphs (CBDT/sbix) | ❌ | ✅ | ✅ | ✅ | ❌ |
 
-**Legend:** ✅ Full support | ⚠️ Partial/via OS | ❌ Not supported (planned)
+**Legend:** ✅ Full support | ⚠️ Partial/via OS | ❌ Not supported
 
-> **Note:** COLR v0/v1 and SVG glyph support is planned for future releases using skrifa's ColorPainter API.
+> **Note:** Color glyph support in skia/zeno requires the `resvg` feature for SVG glyphs and `bitmap` feature for CBDT/sbix.
 
 ## Build options
 
@@ -175,6 +175,17 @@ typf render "Ligatures" \
 
 # Unicode escapes
 typf render "Wave \u{1F44B}" -o emoji.png
+
+# Glyph source control (color fonts)
+# Prefer COLR over SVG glyphs
+typf render "Emoji" -f color.ttf \
+  --glyph-source prefer=colr1,colr0,svg \
+  -o emoji.png
+
+# Disable color glyphs (force outline rendering)
+typf render "Text" -f color.ttf \
+  --glyph-source deny=colr0,colr1,svg,sbix,cbdt,ebdt \
+  -o mono.png
 ```
 
 **Batch processing:**
@@ -229,7 +240,7 @@ Tests all backend combos on your hardware. Results go to `output/`.
 
 ## Status
 
-**v2.0.0** - Production ready. All features work:
+**v2.4.x** - Production ready. All features work:
 
 - ✅ 6-stage pipeline
 - ✅ 4 shapers, 5 renderers (20 combinations)
@@ -240,6 +251,10 @@ Tests all backend combos on your hardware. Results go to `output/`.
 - ✅ 446 total tests passing (206 unit + 240 integration)
 - ✅ macOS native backends (CoreText + CoreGraphics)
 - ✅ Comprehensive backend documentation and examples
+- ✅ COLR v0/v1 color glyph support (skia/zeno)
+- ✅ SVG table glyph support via resvg (skia/zeno)
+- ✅ Bitmap glyph support (sbix/CBDT/EBDT)
+- ✅ Configurable glyph source selection (`--glyph-source`)
 
 ## Limits
 

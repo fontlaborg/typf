@@ -83,15 +83,15 @@ All shapers support:
 
 Renderers convert positioned glyphs into visual output.
 
-| Backend | Crate | Output | Description |
-|---------|-------|--------|-------------|
-| **Opixa** | `typf-render-opixa` | Bitmap | Pure Rust, high-quality antialiasing, SIMD |
-| **Skia** | `typf-render-skia` | Bitmap | Uses tiny-skia for path rendering |
-| **Zeno** | `typf-render-zeno` | Bitmap | Pure Rust, zeno rasterizer |
-| **SVG** | `typf-render-svg` | Vector | Scalable vector output |
-| **JSON** | `typf-render-json` | Data | Glyph data for debugging |
-| **CoreGraphics** | `typf-render-cg` | Bitmap | macOS native rendering |
-| **Color** | `typf-render-color` | Bitmap | Color glyph support (COLR/CPAL) |
+| Backend | Crate | Output | Color Glyphs | Description |
+|---------|-------|--------|--------------|-------------|
+| **Opixa** | `typf-render-opixa` | Bitmap | ❌ | Pure Rust, high-quality antialiasing, SIMD |
+| **Skia** | `typf-render-skia` | Bitmap | ✅ COLR/SVG/bitmap | Uses tiny-skia for path rendering |
+| **Zeno** | `typf-render-zeno` | Bitmap | ✅ COLR/SVG/bitmap | Pure Rust, zeno rasterizer |
+| **SVG** | `typf-render-svg` | Vector | ❌ | Scalable vector output |
+| **JSON** | `typf-render-json` | Data | ❌ | Glyph data for debugging |
+| **CoreGraphics** | `typf-render-cg` | Bitmap | ⚠️ via OS | macOS native rendering |
+| **Color** | `typf-render-color` | Bitmap | ✅ All | Color glyph support (COLR/CPAL/SVG/bitmap) |
 
 ### Renderer Features
 
@@ -105,6 +105,31 @@ All raster renderers share:
 The SVG renderer additionally supports:
 - Variable font variations
 - Perfect scaling (vector output)
+
+### Color Glyph Rendering (Skia/Zeno)
+
+The skia and zeno renderers support color glyphs via `typf-render-color`:
+
+```
+For each glyph in ShapingResult:
+  1. Check GlyphSourcePreference order
+  2. Try color sources first (if allowed):
+     - COLR v1: skrifa ColorPainter → gradients, transforms, compositing
+     - COLR v0: skrifa ColorPainter → layered solid colors
+     - SVG: resvg → parse and rasterize SVG document
+     - Bitmap: decode sbix/CBDT/EBDT PNG/bitmap data
+  3. If no color glyph found, fall back to outline (glyf/CFF/CFF2)
+  4. Composite onto canvas with proper positioning
+```
+
+**GlyphSource priority order (default):**
+1. `glyf` / `cff` / `cff2` — outline sources (first match)
+2. `colr1` — COLR v1 with gradients
+3. `colr0` — COLR v0 layered colors
+4. `svg` — SVG table glyphs
+5. `sbix` / `cbdt` / `ebdt` — bitmap sources
+
+Use `--glyph-source prefer=X,Y` to customize priority or `--glyph-source deny=X` to disable sources.
 
 ## Data Flow
 

@@ -990,14 +990,14 @@ pub fn render_glyph_with_variations(
     {
         let (pixmap, used_bitmap) =
             bitmap::render_bitmap_glyph_or_outline(font_data, glyph_id, width, height, size)?;
-        return Ok(RenderResult {
+        Ok(RenderResult {
             pixmap,
             method: if used_bitmap {
                 RenderMethod::Bitmap
             } else {
                 RenderMethod::Outline
             },
-        });
+        })
     }
 
     // Final fallback: outline only (no bitmap feature)
@@ -1010,6 +1010,7 @@ pub fn render_glyph_with_variations(
 /// Attempts sources in order; returns the first successful render along with
 /// the resolved GlyphSource. Outline-only sources are skipped here so that
 /// bitmap/vector renderers can keep using their existing outline paths.
+#[allow(clippy::too_many_arguments)]
 pub fn render_glyph_with_preference(
     font_data: &[u8],
     glyph_id: u32,

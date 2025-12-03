@@ -120,8 +120,10 @@ pub trait Shaper: Send + Sync {
     ) -> Result<ShapingResult>;
 
     /// Can you handle this script?
+    ///
+    /// Returns false by default - implementations should explicitly declare support.
     fn supports_script(&self, _script: &str) -> bool {
-        true // Optimistic by default
+        false
     }
 
     /// Flush any cached shaping data
@@ -145,8 +147,10 @@ pub trait Renderer: Send + Sync {
     ) -> Result<RenderOutput>;
 
     /// Do you understand this output format?
+    ///
+    /// Returns false by default - implementations should explicitly declare support.
     fn supports_format(&self, _format: &str) -> bool {
-        true // Assume we can handle anything
+        false
     }
 
     /// Free up rendering resources
