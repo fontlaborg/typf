@@ -112,6 +112,7 @@ impl Renderer for JsonRenderer {
 
         // Package everything for downstream consumption
         let output = JsonOutput {
+            schema_version: JSON_SCHEMA_VERSION.to_string(),
             glyphs,
             direction: format!("{:?}", shaped.direction),
             script: None,   // Future: extract from Unicode processing stage
@@ -187,6 +188,8 @@ mod tests {
         assert!(result.is_ok());
 
         if let Ok(RenderOutput::Json(json)) = result {
+            assert!(json.contains("\"schema_version\""));
+            assert!(json.contains("\"1.0\""));
             assert!(json.contains("\"g\""));
             assert!(json.contains("\"cl\""));
             assert!(json.contains("\"ax\""));

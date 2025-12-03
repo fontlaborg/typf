@@ -146,6 +146,22 @@ parallel = []
 # Platform-specific auto-selection
 auto-backend = []
 
+[workspace.lints.rust]
+# Deny patterns that indicate likely bugs
+unsafe_code = "warn"
+# Note: missing_debug_implementations creates too much noise for generic types
+
+[workspace.lints.clippy]
+# Correctness
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+# Style
+needless_pass_by_value = "warn"
+cloned_instead_of_copied = "warn"
+# Performance
+inefficient_to_string = "warn"
+
 [profile.bench]
 inherits = "release"
 lto = false

@@ -120,10 +120,16 @@ pub struct L2Cache<K: Hash + Eq + Clone, V: Clone> {
     capacity: NonZeroUsize,
 }
 
+/// Default L2 cache capacity
+const DEFAULT_L2_CAPACITY: NonZeroUsize = match NonZeroUsize::new(1000) {
+    Some(v) => v,
+    None => unreachable!(),
+};
+
 impl<K: Hash + Eq + Clone, V: Clone> L2Cache<K, V> {
     /// Create a new L2 cache with LRU eviction
     pub fn new(capacity: usize) -> Self {
-        let capacity = NonZeroUsize::new(capacity).unwrap_or(NonZeroUsize::new(1000).unwrap());
+        let capacity = NonZeroUsize::new(capacity).unwrap_or(DEFAULT_L2_CAPACITY);
         Self {
             cache: Arc::new(RwLock::new(LruCache::new(capacity))),
             capacity,

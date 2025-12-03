@@ -29,6 +29,30 @@ Completed quality improvements addressing REVIEW.md findings.
    - Added `face_index` to `FontInfo` class
    - Created `load_font()` helper for consistent TTC handling
 
+6. **JSON schema version in typf-render-json**
+   - Added `JSON_SCHEMA_VERSION` constant ("1.0")
+   - Added `schema_version` field to `JsonOutput` struct
+   - Updated `render()` to populate the field
+   - Updated tests to verify schema version presence
+
+7. **Deprecate render_simple stub font**
+   - Added deprecation notice to docstring (RST format)
+   - Emits `DeprecationWarning` at runtime via Python warnings module
+   - Warns users to use `Typf.render_text()` with real font instead
+
+8. **Remove trivial add() from typf-cli lib.rs**
+   - Replaced placeholder function with proper crate documentation
+   - lib.rs now documents the binary-focused nature of the crate
+
+9. **Add workspace-level lint configuration**
+   - Added `[workspace.lints.rust]` with `unsafe_code = "warn"`
+   - Added `[workspace.lints.clippy]` for unwrap/expect/panic warnings
+   - Added `lints.workspace = true` to typf-core as example
+
+10. **Fix unwrap() in L2Cache**
+    - Replaced nested unwrap with const DEFAULT_L2_CAPACITY
+    - Uses const match pattern for compile-time safe NonZeroUsize
+
 ### Tests Passing
 
 - `cargo test --workspace --quiet` - all pass
@@ -37,7 +61,12 @@ Completed quality improvements addressing REVIEW.md findings.
 ### Files Modified
 
 - `bindings/python/Cargo.toml` - added typf-unicode dependency
-- `bindings/python/src/lib.rs` - direction, version, TTC index
+- `bindings/python/src/lib.rs` - direction, version, TTC index, render_simple deprecation
 - `crates/typf-core/src/traits.rs` - capability honesty defaults
+- `crates/typf-core/src/cache.rs` - const DEFAULT_L2_CAPACITY
+- `crates/typf-core/Cargo.toml` - lints.workspace = true
+- `crates/typf-cli/src/lib.rs` - removed trivial add(), added docs
 - `crates/typf-export-svg/src/lib.rs` - glyph ID fix
+- `backends/typf-render-json/src/lib.rs` - JSON schema version
+- `Cargo.toml` - workspace lints configuration
 - `TODO.md` - mark tasks complete

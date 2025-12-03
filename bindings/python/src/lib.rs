@@ -594,6 +594,10 @@ fn export_image(py: Python, image_data: PyObject, format: &str) -> PyResult<PyOb
 
 /// Quick rendering when you don't care about fonts
 ///
+/// .. deprecated:: 2.5.0
+///    This function uses a stub font that produces inaccurate metrics.
+///    Use `Typf.render_text()` with a real font file instead.
+///
 /// Sometimes you just need to see text on screen. This function uses
 /// a built-in stub font for ultra-simple rendering without file I/O.
 ///
@@ -605,6 +609,17 @@ fn export_image(py: Python, image_data: PyObject, format: &str) -> PyResult<PyOb
 #[allow(clippy::useless_conversion)]
 #[pyo3(signature = (text, size=16.0, direction="auto"))]
 fn render_simple(py: Python, text: &str, size: f32, direction: &str) -> PyResult<PyObject> {
+    // Emit deprecation warning
+    let warnings = py.import_bound("warnings")?;
+    warnings.call_method1(
+        "warn",
+        (
+            "render_simple() uses a stub font with inaccurate metrics. \
+             Use Typf.render_text() with a real font file instead.",
+            py.get_type_bound::<pyo3::exceptions::PyDeprecationWarning>(),
+        ),
+    )?;
+
     // Create a minimal font that works without a font file
     use typf_core::traits::FontRef;
 

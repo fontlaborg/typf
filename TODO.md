@@ -22,6 +22,11 @@
 - [x] Trait defaults: `supports_script`/`supports_format` now return `false` (capability honesty)
 - [x] Fix glyph ID truncation in typf-export-svg (u16 → u32)
 - [x] Python bindings: TTC face index support
+- [x] JSON schema version in typf-render-json output
+- [x] Deprecate render_simple with warning (stub font masks errors)
+- [x] Remove trivial add() placeholder from typf-cli lib.rs
+- [x] Add workspace-level lint configuration
+- [x] Fix unwrap() in L2Cache with const fallback
 
 ## Pending
 

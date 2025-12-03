@@ -17,3 +17,6 @@ default = []
 parallel = []
 simd = []
 cache-aggressive = []
+
+[lints]
+workspace = true
