@@ -34,8 +34,9 @@ use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},
     types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult, VectorFormat},
-    GlyphSource, RenderMode, RenderParams,
+    GlyphSource, GlyphSourcePreference, RenderMode, RenderParams,
 };
+use typf_render_color::render_glyph_with_preference;
 use typf_render_svg::SvgRenderer;
 
 /// Pure Rust renderer that punches above its weight
@@ -68,12 +69,14 @@ impl ZenoRenderer {
         glyph_id: u32,
         font_size: f32,
         location: &skrifa::instance::Location,
+        params: &RenderParams,
     ) -> Result<GlyphBitmap> {
         use zeno::Mask;
 
         // Grab the font data for skrifa to parse
         let font_data = font.data();
         let font_ref = skrifa::FontRef::new(font_data).map_err(|_| RenderError::InvalidFont)?;
+        let color_allowed = allows_color_sources(&params.glyph_sources);
 
         // Navigate to the glyph collection
         let outlines = font_ref.outline_glyphs();
@@ -114,7 +117,7 @@ impl ZenoRenderer {
             return Ok(GlyphBitmap {
                 width: 0,
                 height: 0,
-                data: Vec::new(),
+                data: GlyphBitmapData::Mask(Vec::new()),
                 bearing_x: 0,
                 bearing_y: 0,
             });
@@ -122,13 +125,53 @@ impl ZenoRenderer {
 
         // Extract actual coordinates from the bounding box
         // We don't flip Y here—that happens during bitmap rendering
-        let min_x = bbox.x0 as f32;
-        let min_y = bbox.y0 as f32;
-        let max_x = bbox.x1 as f32;
-        let max_y = bbox.y1 as f32;
+        let mut min_x = bbox.x0 as f32;
+        let mut min_y = bbox.y0 as f32;
+        let mut max_x = bbox.x1 as f32;
+        let mut max_y = bbox.y1 as f32;
+
+        if (max_x - min_x == 0.0 || max_y - min_y == 0.0) && color_allowed {
+            let fallback = font_size.max(1.0);
+            min_x = 0.0;
+            max_x = fallback;
+            min_y = 0.0;
+            max_y = fallback;
+        } else if max_x - min_x == 0.0 || max_y - min_y == 0.0 {
+            return Err(RenderError::InvalidDimensions {
+                width: 0,
+                height: 0,
+            }
+            .into());
+        }
 
         let width = ((max_x - min_x).ceil() as u32).max(1);
         let height = ((max_y - min_y).ceil() as u32).max(1);
+
+        if allows_color_sources(&params.glyph_sources) {
+            if let Some(color_bitmap) = self.try_color_glyph(
+                font,
+                glyph_id.to_u32(),
+                width,
+                height,
+                font_size,
+                (min_x, max_y),
+                params,
+            )? {
+                return Ok(color_bitmap);
+            }
+        }
+
+        let outline_allowed = params
+            .glyph_sources
+            .effective_order()
+            .iter()
+            .any(|s| matches!(s, GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2));
+        if !outline_allowed {
+            return Err(RenderError::BackendError(
+                "outline glyph sources disabled and no color glyph available".to_string(),
+            )
+            .into());
+        }
 
         // Create our rendering canvas
         let mut mask = vec![0u8; (width * height) as usize];
@@ -155,10 +198,67 @@ impl ZenoRenderer {
         Ok(GlyphBitmap {
             width,
             height,
-            data: mask,
+            data: GlyphBitmapData::Mask(mask),
             bearing_x: min_x as i32,
             bearing_y: max_y as i32, // Distance from baseline to top edge
         })
+    }
+
+    /// Attempt to render a color/SVG/bitmap glyph before falling back to outlines.
+    fn try_color_glyph(
+        &self,
+        font: &Arc<dyn FontRef>,
+        glyph_id: u32,
+        width: u32,
+        height: u32,
+        font_size: f32,
+        bearings: (f32, f32),
+        params: &RenderParams,
+    ) -> Result<Option<GlyphBitmap>> {
+        if width == 0 || height == 0 {
+            return Ok(None);
+        }
+
+        let variations: Vec<(&str, f32)> = params
+            .variations
+            .iter()
+            .map(|(tag, value)| (tag.as_str(), *value))
+            .collect();
+
+        match render_glyph_with_preference(
+            font.data(),
+            glyph_id,
+            width,
+            height,
+            font_size,
+            params.color_palette,
+            &variations,
+            &params.glyph_sources,
+        ) {
+            Ok((rendered, source_used)) => {
+                let pixmap = rendered.pixmap;
+                log::debug!(
+                    "Zeno: rendered glyph {} via {:?} into {}x{}",
+                    glyph_id,
+                    source_used,
+                    pixmap.width(),
+                    pixmap.height()
+                );
+
+                Ok(Some(GlyphBitmap {
+                    width: pixmap.width(),
+                    height: pixmap.height(),
+                    data: GlyphBitmapData::RgbaPremul(pixmap.data().to_vec()),
+                    bearing_x: bearings.0.floor() as i32,
+                    bearing_y: bearings.1.ceil() as i32,
+                }))
+            },
+            Err(err) => Err(RenderError::BackendError(format!(
+                "color glyph {} unavailable: {:?}",
+                glyph_id, err
+            ))
+            .into()),
+        }
     }
 }
 
@@ -166,6 +266,21 @@ impl Default for ZenoRenderer {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Whether preference allows any color/bitmap/SVG sources.
+fn allows_color_sources(pref: &GlyphSourcePreference) -> bool {
+    pref.effective_order().iter().any(|s| {
+        matches!(
+            s,
+            GlyphSource::Colr0
+                | GlyphSource::Colr1
+                | GlyphSource::Svg
+                | GlyphSource::Sbix
+                | GlyphSource::Cbdt
+                | GlyphSource::Ebdt
+        )
+    })
 }
 
 /// Build variation location from params
@@ -208,9 +323,10 @@ impl Renderer for ZenoRenderer {
             .effective_order()
             .iter()
             .any(|s| matches!(s, GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2));
-        if !allows_outline {
+        let allows_color = allows_color_sources(&params.glyph_sources);
+        if !allows_outline && !allows_color {
             return Err(RenderError::BackendError(
-                "zeno renderer requires outline glyph sources".to_string(),
+                "zeno renderer requires outline or color glyph sources".to_string(),
             )
             .into());
         }
@@ -240,29 +356,43 @@ impl Renderer for ZenoRenderer {
         let mut rendered_glyphs: Vec<RenderedGlyph> = Vec::new();
         let mut min_y: f32 = 0.0; // Relative to baseline
         let mut max_y: f32 = 0.0; // Relative to baseline
+        let mut last_error: Option<String> = None;
 
         for glyph in &shaped.glyphs {
-            if let Ok(bitmap) = self.render_glyph(&font, glyph.id, glyph_size, &location) {
-                // Skip empty glyphs (like spaces)
-                if bitmap.width == 0 || bitmap.height == 0 {
-                    continue;
-                }
+            match self.render_glyph(&font, glyph.id, glyph_size, &location, params) {
+                Ok(bitmap) => {
+                    // Skip empty glyphs (like spaces)
+                    if bitmap.width == 0 || bitmap.height == 0 {
+                        continue;
+                    }
 
-                // bearing_y is distance from baseline to top of glyph (positive = above baseline)
-                // glyph top relative to baseline = glyph.y + bearing_y
-                // glyph bottom relative to baseline = glyph.y + bearing_y - height
-                let glyph_top = glyph.y + bitmap.bearing_y as f32;
-                let glyph_bottom = glyph.y + bitmap.bearing_y as f32 - bitmap.height as f32;
+                    // bearing_y is distance from baseline to top of glyph (positive = above baseline)
+                    // glyph top relative to baseline = glyph.y + bearing_y
+                    // glyph bottom relative to baseline = glyph.y + bearing_y - height
+                    let glyph_top = glyph.y + bitmap.bearing_y as f32;
+                    let glyph_bottom = glyph.y + bitmap.bearing_y as f32 - bitmap.height as f32;
 
-                max_y = max_y.max(glyph_top);
-                min_y = min_y.min(glyph_bottom);
+                    max_y = max_y.max(glyph_top);
+                    min_y = min_y.min(glyph_bottom);
 
-                rendered_glyphs.push(RenderedGlyph {
-                    bitmap,
-                    glyph_x: glyph.x,
-                    glyph_y: glyph.y,
-                });
+                    rendered_glyphs.push(RenderedGlyph {
+                        bitmap,
+                        glyph_x: glyph.x,
+                        glyph_y: glyph.y,
+                    });
+                },
+                Err(e) => {
+                    log::warn!("Zeno: Failed to render glyph {}: {:?}", glyph.id, e);
+                    last_error = Some(e.to_string());
+                },
             }
+        }
+
+        if rendered_glyphs.is_empty() && !shaped.glyphs.is_empty() {
+            if let Some(err) = last_error {
+                return Err(RenderError::BackendError(err).into());
+            }
+            return Err(RenderError::BackendError("no glyphs rendered".into()).into());
         }
 
         // Phase 2: Calculate canvas dimensions from actual glyph bounds
@@ -285,16 +415,20 @@ impl Renderer for ZenoRenderer {
             return Err(RenderError::InvalidDimensions { width, height }.into());
         }
 
-        // Create RGBA canvas
+        // Create premultiplied RGBA canvas
         let mut canvas = vec![0u8; (width * height * 4) as usize];
 
-        // Fill background if specified
+        // Fill background if specified (premultiplied)
         if let Some(bg) = params.background {
+            let a = bg.a as u32;
+            let r = bg.r as u32 * a / 255;
+            let g = bg.g as u32 * a / 255;
+            let b = bg.b as u32 * a / 255;
             for pixel in canvas.chunks_exact_mut(4) {
-                pixel[0] = bg.r;
-                pixel[1] = bg.g;
-                pixel[2] = bg.b;
-                pixel[3] = bg.a;
+                pixel[0] = r as u8;
+                pixel[1] = g as u8;
+                pixel[2] = b as u8;
+                pixel[3] = a as u8;
             }
         }
 
@@ -310,48 +444,102 @@ impl Renderer for ZenoRenderer {
             let x = (padding + rg.glyph_x) as i32 + bitmap.bearing_x;
             let y = (baseline_y + rg.glyph_y) as i32 - bitmap.bearing_y;
 
-            // Composite glyph onto canvas
-            for gy in 0..bitmap.height {
-                for gx in 0..bitmap.width {
-                    let px = x + gx as i32;
-                    let py = y + gy as i32;
+            match &bitmap.data {
+                GlyphBitmapData::Mask(mask) => {
+                    for gy in 0..bitmap.height {
+                        for gx in 0..bitmap.width {
+                            let px = x + gx as i32;
+                            let py = y + gy as i32;
 
-                    // Check bounds
-                    if px < 0 || py < 0 || px >= width as i32 || py >= height as i32 {
-                        continue;
+                            // Check bounds
+                            if px < 0 || py < 0 || px >= width as i32 || py >= height as i32 {
+                                continue;
+                            }
+
+                            let coverage = mask[(gy * bitmap.width + gx) as usize] as u32;
+                            if coverage == 0 {
+                                continue;
+                            }
+
+                            let canvas_idx = ((py as u32 * width + px as u32) * 4) as usize;
+
+                            let fg = &params.foreground;
+                            let src_a = coverage * fg.a as u32 / 255;
+                            let src_r = fg.r as u32 * src_a / 255;
+                            let src_g = fg.g as u32 * src_a / 255;
+                            let src_b = fg.b as u32 * src_a / 255;
+
+                            let dst_a = canvas[canvas_idx + 3] as u32;
+                            let inv_a = 255 - src_a;
+
+                            canvas[canvas_idx] =
+                                ((src_r + canvas[canvas_idx] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 1] =
+                                ((src_g + canvas[canvas_idx + 1] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 2] =
+                                ((src_b + canvas[canvas_idx + 2] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 3] = ((src_a + dst_a * inv_a / 255).min(255)) as u8;
+                        }
                     }
+                },
+                GlyphBitmapData::RgbaPremul(rgba) => {
+                    for gy in 0..bitmap.height {
+                        for gx in 0..bitmap.width {
+                            let px = x + gx as i32;
+                            let py = y + gy as i32;
 
-                    let coverage = bitmap.data[(gy * bitmap.width + gx) as usize];
-                    if coverage == 0 {
-                        continue;
+                            // Check bounds
+                            if px < 0 || py < 0 || px >= width as i32 || py >= height as i32 {
+                                continue;
+                            }
+
+                            let glyph_idx = ((gy * bitmap.width + gx) * 4) as usize;
+                            let src_a = rgba[glyph_idx + 3] as u32;
+                            if src_a == 0 {
+                                continue;
+                            }
+
+                            let canvas_idx = ((py as u32 * width + px as u32) * 4) as usize;
+                            let src_r = rgba[glyph_idx] as u32;
+                            let src_g = rgba[glyph_idx + 1] as u32;
+                            let src_b = rgba[glyph_idx + 2] as u32;
+                            let dst_a = canvas[canvas_idx + 3] as u32;
+                            let inv_a = 255 - src_a;
+
+                            canvas[canvas_idx] =
+                                ((src_r + canvas[canvas_idx] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 1] =
+                                ((src_g + canvas[canvas_idx + 1] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 2] =
+                                ((src_b + canvas[canvas_idx + 2] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 3] = ((src_a + dst_a * inv_a / 255).min(255)) as u8;
+                        }
                     }
-
-                    let canvas_idx = ((py as u32 * width + px as u32) * 4) as usize;
-
-                    // Alpha blend foreground with coverage
-                    let alpha = (coverage as u32 * params.foreground.a as u32) / 255;
-                    let inv_alpha = 255 - alpha;
-
-                    canvas[canvas_idx] = ((params.foreground.r as u32 * alpha
-                        + canvas[canvas_idx] as u32 * inv_alpha)
-                        / 255) as u8;
-                    canvas[canvas_idx + 1] = ((params.foreground.g as u32 * alpha
-                        + canvas[canvas_idx + 1] as u32 * inv_alpha)
-                        / 255) as u8;
-                    canvas[canvas_idx + 2] = ((params.foreground.b as u32 * alpha
-                        + canvas[canvas_idx + 2] as u32 * inv_alpha)
-                        / 255) as u8;
-                    canvas[canvas_idx + 3] =
-                        ((alpha + canvas[canvas_idx + 3] as u32 * inv_alpha / 255).min(255)) as u8;
-                }
+                },
             }
+        }
+
+        // Convert premultiplied canvas back to straight RGBA for output
+        let mut output = canvas;
+        for px in output.chunks_exact_mut(4) {
+            let a = px[3];
+            if a == 0 {
+                px[0] = 0;
+                px[1] = 0;
+                px[2] = 0;
+                continue;
+            }
+            let a_u = a as u32;
+            px[0] = ((px[0] as u32 * 255 + a_u / 2) / a_u).min(255) as u8;
+            px[1] = ((px[1] as u32 * 255 + a_u / 2) / a_u).min(255) as u8;
+            px[2] = ((px[2] as u32 * 255 + a_u / 2) / a_u).min(255) as u8;
         }
 
         Ok(RenderOutput::Bitmap(BitmapData {
             width,
             height,
             format: BitmapFormat::Rgba8,
-            data: canvas,
+            data: output,
         }))
     }
 
@@ -370,11 +558,17 @@ struct RenderedGlyph {
 
 /// A rendered glyph complete with positioning for perfect layout
 struct GlyphBitmap {
-    width: u32,     // Width of the glyph bitmap in pixels
-    height: u32,    // Height of the glyph bitmap in pixels
-    data: Vec<u8>,  // Alpha coverage values for each pixel
-    bearing_x: i32, // Horizontal offset from origin to left edge
-    bearing_y: i32, // Vertical offset from baseline to top edge
+    width: u32,            // Width of the glyph bitmap in pixels
+    height: u32,           // Height of the glyph bitmap in pixels
+    data: GlyphBitmapData, // Coverage or premultiplied color data
+    bearing_x: i32,        // Horizontal offset from origin to left edge
+    bearing_y: i32,        // Vertical offset from baseline to top edge
+}
+
+/// Stored glyph data for compositing
+enum GlyphBitmapData {
+    Mask(Vec<u8>),
+    RgbaPremul(Vec<u8>),
 }
 
 /// Dual-output path builder that feeds two masters at once
@@ -535,8 +729,13 @@ fn calculate_bounds(path: &str, _scale: f32) -> (f32, f32, f32, f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use read_fonts::TableProvider;
+    use std::fs;
     use std::path::PathBuf;
-    use typf_core::{types::Direction, GlyphSource, GlyphSourcePreference};
+    use typf_core::{
+        types::{BitmapFormat, Direction},
+        Color, GlyphSource, GlyphSourcePreference,
+    };
 
     #[test]
     fn test_renderer_creation() {
@@ -581,12 +780,25 @@ mod tests {
         };
 
         let params = RenderParams {
-            glyph_sources: GlyphSourcePreference::from_parts(vec![GlyphSource::Colr1], []),
+            glyph_sources: GlyphSourcePreference::from_parts(
+                Vec::new(),
+                [
+                    GlyphSource::Glyf,
+                    GlyphSource::Cff,
+                    GlyphSource::Cff2,
+                    GlyphSource::Colr0,
+                    GlyphSource::Colr1,
+                    GlyphSource::Svg,
+                    GlyphSource::Sbix,
+                    GlyphSource::Cbdt,
+                    GlyphSource::Ebdt,
+                ],
+            ),
             ..RenderParams::default()
         };
 
         let result = renderer.render(&shaped, font, &params);
-        assert!(result.is_err(), "denying outlines should error");
+        assert!(result.is_err(), "denying all sources should error");
     }
 
     fn load_test_font() -> Arc<dyn FontRef> {
@@ -596,9 +808,138 @@ mod tests {
         path.push("test-fonts");
         path.push("NotoSans-Regular.ttf");
 
-        let font =
-            typf_fontdb::TypfFontFace::from_file(&path).expect("test font should load for SVG mode");
+        let font = typf_fontdb::TypfFontFace::from_file(&path)
+            .expect("test font should load for SVG mode");
         Arc::new(font)
+    }
+
+    fn color_font_path(name: &str) -> PathBuf {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.pop(); // typf-render-zeno
+        path.pop(); // backends
+        path.push("test-fonts");
+        path.push(name);
+        path
+    }
+
+    fn load_color_font(name: &str) -> (Arc<dyn FontRef>, Vec<u8>) {
+        let path = color_font_path(name);
+        let bytes = fs::read(&path).expect("color font should be present");
+        let font = typf_fontdb::TypfFontFace::from_file(&path).expect("color font should load");
+        (Arc::new(font), bytes)
+    }
+
+    fn first_colr_glyph(font_bytes: &[u8]) -> Option<u32> {
+        let font = skrifa::FontRef::new(font_bytes).ok()?;
+        let color_glyphs = font.color_glyphs();
+        let num = font.maxp().ok()?.num_glyphs() as u32;
+        for gid in 0..num {
+            let glyph_id = skrifa::GlyphId::new(gid);
+            if color_glyphs
+                .get_with_format(glyph_id, skrifa::color::ColorGlyphFormat::ColrV1)
+                .is_some()
+                || color_glyphs
+                    .get_with_format(glyph_id, skrifa::color::ColorGlyphFormat::ColrV0)
+                    .is_some()
+            {
+                return Some(glyph_id.to_u32());
+            }
+        }
+        None
+    }
+
+    fn first_svg_glyph(font_bytes: &[u8]) -> Option<u32> {
+        let font = skrifa::FontRef::new(font_bytes).ok()?;
+        let svg_table = font.svg().ok()?;
+        let doc_list = svg_table.svg_document_list().ok()?;
+        for record in doc_list.document_records() {
+            return Some(record.start_glyph_id().to_u32());
+        }
+        None
+    }
+
+    #[test]
+    fn renders_colr_glyph_when_outlines_denied() {
+        let renderer = ZenoRenderer::new();
+        let (font, bytes) = load_color_font("Nabla-Regular-COLR.ttf");
+        let glyph_id = first_colr_glyph(&bytes).expect("color glyph should exist");
+
+        let shaped = ShapingResult {
+            glyphs: vec![typf_core::types::PositionedGlyph {
+                id: glyph_id,
+                x: 0.0,
+                y: 0.0,
+                advance: 28.0,
+                cluster: 0,
+            }],
+            advance_width: 28.0,
+            advance_height: 28.0,
+            direction: Direction::LeftToRight,
+        };
+
+        let params = RenderParams {
+            foreground: Color::rgba(5, 15, 25, 255),
+            glyph_sources: GlyphSourcePreference::from_parts(
+                vec![GlyphSource::Colr1, GlyphSource::Colr0],
+                [GlyphSource::Glyf, GlyphSource::Cff, GlyphSource::Cff2],
+            ),
+            padding: 1,
+            ..RenderParams::default()
+        };
+
+        let result = renderer
+            .render(&shaped, font, &params)
+            .expect("render should succeed");
+        match result {
+            RenderOutput::Bitmap(bitmap) => {
+                assert_eq!(bitmap.format, BitmapFormat::Rgba8);
+                let has_alpha = bitmap.data.chunks_exact(4).any(|px| px[3] > 0);
+                assert!(has_alpha, "color glyph should render opaque pixels");
+            },
+            other => panic!("expected bitmap output, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn renders_svg_glyph_when_outlines_denied() {
+        let renderer = ZenoRenderer::new();
+        let (font, bytes) = load_color_font("Nabla-Regular-SVG.ttf");
+        let glyph_id = first_svg_glyph(&bytes).expect("svg glyph should exist");
+
+        let shaped = ShapingResult {
+            glyphs: vec![typf_core::types::PositionedGlyph {
+                id: glyph_id,
+                x: 0.0,
+                y: 0.0,
+                advance: 40.0,
+                cluster: 0,
+            }],
+            advance_width: 40.0,
+            advance_height: 40.0,
+            direction: Direction::LeftToRight,
+        };
+
+        let params = RenderParams {
+            foreground: Color::rgba(100, 20, 10, 255),
+            glyph_sources: GlyphSourcePreference::from_parts(
+                vec![GlyphSource::Svg],
+                [GlyphSource::Glyf, GlyphSource::Cff, GlyphSource::Cff2],
+            ),
+            padding: 2,
+            ..RenderParams::default()
+        };
+
+        let result = renderer
+            .render(&shaped, font, &params)
+            .expect("render should succeed");
+        match result {
+            RenderOutput::Bitmap(bitmap) => {
+                assert_eq!(bitmap.format, BitmapFormat::Rgba8);
+                let has_alpha = bitmap.data.chunks_exact(4).any(|px| px[3] > 0);
+                assert!(has_alpha, "svg glyph should render opaque pixels");
+            },
+            other => panic!("expected bitmap output, got {:?}", other),
+        }
     }
 
     #[test]

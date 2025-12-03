@@ -5,6 +5,12 @@ These tests verify that the Python bindings produce valid output
 matching the Rust library's behavior.
 """
 
+from pathlib import Path
+
+import pytest
+
+TEST_DATA_DIR = Path(__file__).resolve().parents[3] / "test-fonts"
+KALNIA_VAR_FONT = TEST_DATA_DIR / "Kalnia[wdth,wght].ttf"
 
 
 class TestImports:
@@ -140,6 +146,54 @@ class TestTypfClass:
 
         typf = Typf(renderer="opixa")
         assert typf is not None
+
+
+class TestVariableFonts:
+    """Variable font handling via variations parameter."""
+
+    def test_render_text_variations_affect_width(self):
+        """Width axis should change rendered bitmap width."""
+        if not KALNIA_VAR_FONT.exists():
+            pytest.skip("Variable font asset missing")
+
+        from typfpy import Typf
+
+        typf = Typf()
+        text = "WWW"
+
+        base = typf.render_text(text, str(KALNIA_VAR_FONT), size=48)
+        wide = typf.render_text(
+            text,
+            str(KALNIA_VAR_FONT),
+            size=48,
+            variations={"wdth": 125.0},
+        )
+
+        assert wide["width"] > base["width"]
+        assert len(wide["data"]) == wide["width"] * wide["height"] * 4
+
+    def test_linra_accepts_variations_when_available(self):
+        """Linra renderer should accept variations dict when enabled."""
+        if not KALNIA_VAR_FONT.exists():
+            pytest.skip("Variable font asset missing")
+
+        import typfpy
+
+        if not getattr(typfpy, "__linra_available__", False):
+            pytest.skip("Linra renderer not available")
+
+        from typfpy import TypfLinra
+
+        renderer = TypfLinra()
+        result = renderer.render_text(
+            "Hi",
+            str(KALNIA_VAR_FONT),
+            size=32,
+            variations={"wght": 700.0},
+        )
+
+        assert result["width"] > 0
+        assert result["height"] > 0
 
 
 class TestTypfLinra:

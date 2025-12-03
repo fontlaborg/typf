@@ -157,14 +157,14 @@ mod tests {
         assert!(!has_svg_glyphs(&[]));
     }
 
-    /// Test SVG table detection with Abelone SVG font
+    /// Test SVG table detection with Nabla SVG font
     #[test]
     fn test_has_svg_glyphs_abelone() {
-        let font_path = "../../test-fonts/AbeloneRegular-SVG.otf";
+        let font_path = "../../test-fonts/Nabla-Regular-SVG.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             assert!(
                 has_svg_glyphs(&font_data),
-                "AbeloneRegular-SVG should have SVG table"
+                "Nabla-Regular-SVG should have SVG table"
             );
         } else {
             eprintln!("Skipping test: font not found at {}", font_path);
@@ -185,10 +185,10 @@ mod tests {
         }
     }
 
-    /// Test SVG document extraction from Abelone font
+    /// Test SVG document extraction from Nabla font
     #[test]
     fn test_get_svg_document_abelone() {
-        let font_path = "../../test-fonts/AbeloneRegular-SVG.otf";
+        let font_path = "../../test-fonts/Nabla-Regular-SVG.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             // Get a glyph ID that should have SVG data
             // Typically glyph IDs start after .notdef (gid 0)
@@ -209,10 +209,10 @@ mod tests {
         }
     }
 
-    /// Test SVG rendering from Abelone font
+    /// Test SVG rendering from Nabla font
     #[test]
     fn test_render_svg_glyph_abelone() {
-        let font_path = "../../test-fonts/AbeloneRegular-SVG.otf";
+        let font_path = "../../test-fonts/Nabla-Regular-SVG.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             // Try to render an SVG glyph
             for gid in 1..100 {

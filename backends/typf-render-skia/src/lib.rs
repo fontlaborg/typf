@@ -20,8 +20,9 @@ use typf_core::{
     error::{RenderError, Result},
     traits::{FontRef, Renderer},
     types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult, VectorFormat},
-    GlyphSource, RenderMode, RenderParams,
+    GlyphSource, GlyphSourcePreference, RenderMode, RenderParams,
 };
+use typf_render_color::render_glyph_with_preference;
 use typf_render_svg::SvgRenderer;
 
 /// tiny-skia powered renderer for pristine glyph output
@@ -52,6 +53,7 @@ impl SkiaRenderer {
         glyph_id: u32,
         font_size: f32,
         location: &skrifa::instance::Location,
+        params: &RenderParams,
     ) -> Result<GlyphBitmap> {
         use kurbo::{BezPath, PathEl};
         use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Transform};
@@ -59,6 +61,7 @@ impl SkiaRenderer {
         // Pull raw font data for skrifa to parse
         let font_data = font.data();
         let font_ref = skrifa::FontRef::new(font_data).map_err(|_| RenderError::InvalidFont)?;
+        let color_allowed = allows_color_sources(&params.glyph_sources);
 
         // Navigate to the outline glyph collection
         let outlines = font_ref.outline_glyphs();
@@ -90,7 +93,9 @@ impl SkiaRenderer {
             .map_err(|_| RenderError::OutlineExtractionFailed)?;
 
         // Figure out how much canvas space this glyph needs
-        let bbox = path.bounding_box();
+        let mut bbox = path.bounding_box();
+
+        let outline_empty = bbox.width() == 0.0 || bbox.height() == 0.0;
 
         // Guard against malformed glyphs that could crash the renderer
         if bbox.x0.is_infinite()
@@ -100,7 +105,10 @@ impl SkiaRenderer {
         {
             return Err(RenderError::PathBuildingFailed.into());
         }
-        if bbox.width() == 0.0 || bbox.height() == 0.0 {
+        if outline_empty && color_allowed {
+            let fallback = font_size.max(1.0) as f64;
+            bbox = kurbo::Rect::new(0.0, 0.0, fallback, fallback);
+        } else if bbox.width() == 0.0 || bbox.height() == 0.0 {
             return Err(RenderError::InvalidDimensions {
                 width: bbox.width() as u32,
                 height: bbox.height() as u32,
@@ -122,6 +130,33 @@ impl SkiaRenderer {
             width,
             height
         );
+
+        // Prefer color/SVG/bitmap glyph sources when requested
+        if color_allowed {
+            if let Some(color_bitmap) = self.try_color_glyph(
+                font,
+                glyph_id.to_u32(),
+                width,
+                height,
+                font_size,
+                &bbox,
+                params,
+            )? {
+                return Ok(color_bitmap);
+            }
+        }
+
+        let outline_allowed = params
+            .glyph_sources
+            .effective_order()
+            .iter()
+            .any(|s| matches!(s, GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2));
+        if !outline_allowed {
+            return Err(RenderError::BackendError(
+                "outline glyph sources disabled and no color glyph available".to_string(),
+            )
+            .into());
+        }
 
         // Translate kurbo's path format into tiny-skia's native format
         let mut builder = PathBuilder::new();
@@ -177,10 +212,67 @@ impl SkiaRenderer {
         Ok(GlyphBitmap {
             width,
             height,
-            data: alpha,
+            data: GlyphBitmapData::Mask(alpha),
             bearing_x: bbox.x0.floor() as i32,
             bearing_y: bbox.y1.ceil() as i32,
         })
+    }
+
+    /// Attempt to render a color/SVG/bitmap glyph when requested.
+    fn try_color_glyph(
+        &self,
+        font: &Arc<dyn FontRef>,
+        glyph_id: u32,
+        width: u32,
+        height: u32,
+        font_size: f32,
+        bbox: &kurbo::Rect,
+        params: &RenderParams,
+    ) -> Result<Option<GlyphBitmap>> {
+        if width == 0 || height == 0 {
+            return Ok(None);
+        }
+
+        let variations: Vec<(&str, f32)> = params
+            .variations
+            .iter()
+            .map(|(tag, value)| (tag.as_str(), *value))
+            .collect();
+
+        match render_glyph_with_preference(
+            font.data(),
+            glyph_id,
+            width,
+            height,
+            font_size,
+            params.color_palette,
+            &variations,
+            &params.glyph_sources,
+        ) {
+            Ok((rendered, source_used)) => {
+                let pixmap = rendered.pixmap;
+                log::debug!(
+                    "Skia: rendered glyph {} via {:?} into {}x{}",
+                    glyph_id,
+                    source_used,
+                    pixmap.width(),
+                    pixmap.height()
+                );
+
+                Ok(Some(GlyphBitmap {
+                    width: pixmap.width(),
+                    height: pixmap.height(),
+                    data: GlyphBitmapData::RgbaPremul(pixmap.data().to_vec()),
+                    bearing_x: bbox.x0.floor() as i32,
+                    bearing_y: bbox.y1.ceil() as i32,
+                }))
+            },
+            Err(err) => Err(RenderError::BackendError(format!(
+                "color glyph {} unavailable: {:?}",
+                glyph_id, err
+            ))
+            .into()),
+        }
     }
 }
 
@@ -188,6 +280,21 @@ impl Default for SkiaRenderer {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Whether preference allows any color/bitmap/SVG sources.
+fn allows_color_sources(pref: &GlyphSourcePreference) -> bool {
+    pref.effective_order().iter().any(|s| {
+        matches!(
+            s,
+            GlyphSource::Colr0
+                | GlyphSource::Colr1
+                | GlyphSource::Svg
+                | GlyphSource::Sbix
+                | GlyphSource::Cbdt
+                | GlyphSource::Ebdt
+        )
+    })
 }
 
 /// Build variation location from params
@@ -230,9 +337,10 @@ impl Renderer for SkiaRenderer {
             .effective_order()
             .iter()
             .any(|s| matches!(s, GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2));
-        if !allows_outline {
+        let allows_color = allows_color_sources(&params.glyph_sources);
+        if !allows_outline && !allows_color {
             return Err(RenderError::BackendError(
-                "skia renderer requires outline glyph sources".to_string(),
+                "skia renderer requires outline or color glyph sources".to_string(),
             )
             .into());
         }
@@ -262,9 +370,10 @@ impl Renderer for SkiaRenderer {
         let mut rendered_glyphs: Vec<(RenderedGlyph, f32, f32)> = Vec::new();
         let mut min_y: f32 = 0.0; // Relative to baseline
         let mut max_y: f32 = 0.0; // Relative to baseline
+        let mut last_error: Option<String> = None;
 
         for glyph in shaped.glyphs.iter() {
-            match self.render_glyph(&font, glyph.id, glyph_size, &location) {
+            match self.render_glyph(&font, glyph.id, glyph_size, &location, params) {
                 Ok(bitmap) => {
                     // bearing_y is distance from baseline to top of glyph (positive = above baseline)
                     // glyph top relative to baseline = glyph.y + bearing_y
@@ -287,8 +396,16 @@ impl Renderer for SkiaRenderer {
                 },
                 Err(e) => {
                     log::warn!("Skia: Failed to render glyph {}: {:?}", glyph.id, e);
+                    last_error = Some(e.to_string());
                 },
             }
+        }
+
+        if rendered_glyphs.is_empty() && !shaped.glyphs.is_empty() {
+            if let Some(err) = last_error {
+                return Err(RenderError::BackendError(err).into());
+            }
+            return Err(RenderError::BackendError("no glyphs rendered".into()).into());
         }
 
         // Phase 2: Calculate canvas dimensions from actual glyph bounds
@@ -312,16 +429,20 @@ impl Renderer for SkiaRenderer {
             return Err(RenderError::InvalidDimensions { width, height }.into());
         }
 
-        // Create RGBA canvas
+        // Create premultiplied RGBA canvas
         let mut canvas = vec![0u8; (width * height * 4) as usize];
 
-        // Fill background if specified
+        // Fill background if specified (premultiplied)
         if let Some(bg) = params.background {
+            let a = bg.a as u32;
+            let r = bg.r as u32 * a / 255;
+            let g = bg.g as u32 * a / 255;
+            let b = bg.b as u32 * a / 255;
             for pixel in canvas.chunks_exact_mut(4) {
-                pixel[0] = bg.r;
-                pixel[1] = bg.g;
-                pixel[2] = bg.b;
-                pixel[3] = bg.a;
+                pixel[0] = r as u8;
+                pixel[1] = g as u8;
+                pixel[2] = b as u8;
+                pixel[3] = a as u8;
             }
         }
 
@@ -339,44 +460,111 @@ impl Renderer for SkiaRenderer {
             let x = (rg.glyph_x + padding) as i32 + bitmap.bearing_x;
             let y = (baseline_y + rg.glyph_y) as i32 - bitmap.bearing_y;
 
-            // Composite glyph onto canvas
-            for gy in 0..bitmap.height {
-                for gx in 0..bitmap.width {
-                    let canvas_x = x + gx as i32;
-                    let canvas_y = y + gy as i32;
+            match &bitmap.data {
+                GlyphBitmapData::Mask(mask) => {
+                    for gy in 0..bitmap.height {
+                        for gx in 0..bitmap.width {
+                            let canvas_x = x + gx as i32;
+                            let canvas_y = y + gy as i32;
 
-                    if canvas_x >= 0
-                        && canvas_x < width as i32
-                        && canvas_y >= 0
-                        && canvas_y < height as i32
-                    {
-                        let canvas_idx = ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
-                        let glyph_idx = (gy * bitmap.width + gx) as usize;
-                        let alpha = bitmap.data[glyph_idx];
+                            if canvas_x < 0
+                                || canvas_x >= width as i32
+                                || canvas_y < 0
+                                || canvas_y >= height as i32
+                            {
+                                continue;
+                            }
 
-                        // Alpha blending (glyph alpha over background)
-                        let fg = &params.foreground;
-                        canvas[canvas_idx] = ((canvas[canvas_idx] as u16 * (255 - alpha) as u16
-                            + fg.r as u16 * alpha as u16)
-                            / 255) as u8;
-                        canvas[canvas_idx + 1] = ((canvas[canvas_idx + 1] as u16
-                            * (255 - alpha) as u16
-                            + fg.g as u16 * alpha as u16)
-                            / 255) as u8;
-                        canvas[canvas_idx + 2] = ((canvas[canvas_idx + 2] as u16
-                            * (255 - alpha) as u16
-                            + fg.b as u16 * alpha as u16)
-                            / 255) as u8;
+                            let canvas_idx =
+                                ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
+                            let glyph_idx = (gy * bitmap.width + gx) as usize;
+                            let coverage = mask[glyph_idx] as u32;
+                            if coverage == 0 {
+                                continue;
+                            }
+
+                            let fg = &params.foreground;
+                            let src_a = coverage * fg.a as u32 / 255;
+                            let src_r = fg.r as u32 * src_a / 255;
+                            let src_g = fg.g as u32 * src_a / 255;
+                            let src_b = fg.b as u32 * src_a / 255;
+
+                            let dst_a = canvas[canvas_idx + 3] as u32;
+                            let inv_a = 255 - src_a;
+
+                            canvas[canvas_idx] =
+                                ((src_r + canvas[canvas_idx] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 1] =
+                                ((src_g + canvas[canvas_idx + 1] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 2] =
+                                ((src_b + canvas[canvas_idx + 2] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 3] = ((src_a + dst_a * inv_a / 255).min(255)) as u8;
+                        }
                     }
-                }
+                },
+                GlyphBitmapData::RgbaPremul(rgba) => {
+                    for gy in 0..bitmap.height {
+                        for gx in 0..bitmap.width {
+                            let canvas_x = x + gx as i32;
+                            let canvas_y = y + gy as i32;
+
+                            if canvas_x < 0
+                                || canvas_x >= width as i32
+                                || canvas_y < 0
+                                || canvas_y >= height as i32
+                            {
+                                continue;
+                            }
+
+                            let canvas_idx =
+                                ((canvas_y as u32 * width + canvas_x as u32) * 4) as usize;
+                            let glyph_idx = ((gy * bitmap.width + gx) * 4) as usize;
+
+                            let src_a = rgba[glyph_idx + 3] as u32;
+                            if src_a == 0 {
+                                continue;
+                            }
+
+                            let src_r = rgba[glyph_idx] as u32;
+                            let src_g = rgba[glyph_idx + 1] as u32;
+                            let src_b = rgba[glyph_idx + 2] as u32;
+                            let dst_a = canvas[canvas_idx + 3] as u32;
+                            let inv_a = 255 - src_a;
+
+                            canvas[canvas_idx] =
+                                ((src_r + canvas[canvas_idx] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 1] =
+                                ((src_g + canvas[canvas_idx + 1] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 2] =
+                                ((src_b + canvas[canvas_idx + 2] as u32 * inv_a) / 255) as u8;
+                            canvas[canvas_idx + 3] = ((src_a + dst_a * inv_a / 255).min(255)) as u8;
+                        }
+                    }
+                },
             }
+        }
+
+        // Convert premultiplied canvas back to straight RGBA for output
+        let mut output = canvas;
+        for px in output.chunks_exact_mut(4) {
+            let a = px[3];
+            if a == 0 {
+                px[0] = 0;
+                px[1] = 0;
+                px[2] = 0;
+                continue;
+            }
+            let a_u = a as u32;
+            px[0] = ((px[0] as u32 * 255 + a_u / 2) / a_u).min(255) as u8;
+            px[1] = ((px[1] as u32 * 255 + a_u / 2) / a_u).min(255) as u8;
+            px[2] = ((px[2] as u32 * 255 + a_u / 2) / a_u).min(255) as u8;
         }
 
         Ok(RenderOutput::Bitmap(BitmapData {
             width,
             height,
             format: BitmapFormat::Rgba8,
-            data: canvas,
+            data: output,
         }))
     }
 
@@ -393,13 +581,21 @@ struct RenderedGlyph {
     glyph_y: f32,
 }
 
+/// Stored glyph data for compositing
+enum GlyphBitmapData {
+    /// Single-channel coverage mask (monochrome outlines)
+    Mask(Vec<u8>),
+    /// Premultiplied RGBA pixels (color glyphs from COLR/SVG/bitmap)
+    RgbaPremul(Vec<u8>),
+}
+
 /// A rendered glyph with everything needed for proper positioning
 struct GlyphBitmap {
-    width: u32,     // Pixel width of the glyph bitmap
-    height: u32,    // Pixel height of the glyph bitmap
-    data: Vec<u8>,  // Grayscale alpha values for each pixel
-    bearing_x: i32, // Horizontal offset from origin to left edge
-    bearing_y: i32, // Vertical offset from baseline to top edge
+    width: u32,            // Pixel width of the glyph bitmap
+    height: u32,           // Pixel height of the glyph bitmap
+    data: GlyphBitmapData, // Coverage or color data
+    bearing_x: i32,        // Horizontal offset from origin to left edge
+    bearing_y: i32,        // Vertical offset from baseline to top edge
 }
 
 /// Bridge between skrifa's outline commands and kurbo's path format
@@ -459,8 +655,13 @@ impl skrifa::outline::OutlinePen for PathPen<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use read_fonts::TableProvider;
+    use std::fs;
     use std::path::PathBuf;
-    use typf_core::{types::Direction, GlyphSource, GlyphSourcePreference};
+    use typf_core::{
+        types::{BitmapFormat, Direction},
+        Color, GlyphSource, GlyphSourcePreference,
+    };
 
     #[test]
     fn test_renderer_creation() {
@@ -506,12 +707,25 @@ mod tests {
         };
 
         let params = RenderParams {
-            glyph_sources: GlyphSourcePreference::from_parts(vec![GlyphSource::Colr1], []),
+            glyph_sources: GlyphSourcePreference::from_parts(
+                Vec::new(),
+                [
+                    GlyphSource::Glyf,
+                    GlyphSource::Cff,
+                    GlyphSource::Cff2,
+                    GlyphSource::Colr0,
+                    GlyphSource::Colr1,
+                    GlyphSource::Svg,
+                    GlyphSource::Sbix,
+                    GlyphSource::Cbdt,
+                    GlyphSource::Ebdt,
+                ],
+            ),
             ..RenderParams::default()
         };
 
         let result = renderer.render(&shaped, font, &params);
-        assert!(result.is_err(), "denying outlines should error");
+        assert!(result.is_err(), "denying all sources should error");
     }
 
     fn load_test_font() -> Arc<dyn FontRef> {
@@ -521,9 +735,54 @@ mod tests {
         path.push("test-fonts");
         path.push("NotoSans-Regular.ttf");
 
-        let font =
-            typf_fontdb::TypfFontFace::from_file(&path).expect("test font should load for SVG mode");
+        let font = typf_fontdb::TypfFontFace::from_file(&path)
+            .expect("test font should load for SVG mode");
         Arc::new(font)
+    }
+
+    fn color_font_path(name: &str) -> PathBuf {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.pop(); // typf-render-skia
+        path.pop(); // backends
+        path.push("test-fonts");
+        path.push(name);
+        path
+    }
+
+    fn load_color_font(name: &str) -> (Arc<dyn FontRef>, Vec<u8>) {
+        let path = color_font_path(name);
+        let bytes = fs::read(&path).expect("color font should be present");
+        let font = typf_fontdb::TypfFontFace::from_file(&path).expect("color font should load");
+        (Arc::new(font), bytes)
+    }
+
+    fn first_colr_glyph(font_bytes: &[u8]) -> Option<u32> {
+        let font = skrifa::FontRef::new(font_bytes).ok()?;
+        let color_glyphs = font.color_glyphs();
+        let num = font.maxp().ok()?.num_glyphs() as u32;
+        for gid in 0..num {
+            let glyph_id = skrifa::GlyphId::new(gid);
+            if color_glyphs
+                .get_with_format(glyph_id, skrifa::color::ColorGlyphFormat::ColrV1)
+                .is_some()
+                || color_glyphs
+                    .get_with_format(glyph_id, skrifa::color::ColorGlyphFormat::ColrV0)
+                    .is_some()
+            {
+                return Some(glyph_id.to_u32());
+            }
+        }
+        None
+    }
+
+    fn first_svg_glyph(font_bytes: &[u8]) -> Option<u32> {
+        let font = skrifa::FontRef::new(font_bytes).ok()?;
+        let svg_table = font.svg().ok()?;
+        let doc_list = svg_table.svg_document_list().ok()?;
+        for record in doc_list.document_records() {
+            return Some(record.start_glyph_id().to_u32());
+        }
+        None
     }
 
     #[test]
@@ -558,6 +817,154 @@ mod tests {
                 assert!(vector.data.contains("<svg"));
             },
             other => panic!("expected vector output, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn renders_colr_glyph_when_outlines_denied() {
+        let renderer = SkiaRenderer::new();
+        let (font, bytes) = load_color_font("Nabla-Regular-COLR.ttf");
+        let glyph_id = first_colr_glyph(&bytes).expect("color glyph should exist");
+
+        let color_probe = render_glyph_with_preference(
+            font.data(),
+            glyph_id,
+            128,
+            128,
+            48.0,
+            0,
+            &[],
+            &GlyphSourcePreference::from_parts(vec![GlyphSource::Colr1, GlyphSource::Colr0], []),
+        )
+        .expect("color renderer should succeed directly");
+        assert!(
+            color_probe
+                .0
+                .pixmap
+                .data()
+                .chunks_exact(4)
+                .any(|px| px[3] > 0),
+            "direct color render produced empty pixmap"
+        );
+
+        let shaped = ShapingResult {
+            glyphs: vec![typf_core::types::PositionedGlyph {
+                id: glyph_id,
+                x: 0.0,
+                y: 0.0,
+                advance: 32.0,
+                cluster: 0,
+            }],
+            advance_width: 32.0,
+            advance_height: 32.0,
+            direction: Direction::LeftToRight,
+        };
+
+        let params = RenderParams {
+            foreground: Color::rgba(9, 18, 27, 255),
+            glyph_sources: GlyphSourcePreference::from_parts(
+                vec![GlyphSource::Colr1, GlyphSource::Colr0],
+                [GlyphSource::Glyf, GlyphSource::Cff, GlyphSource::Cff2],
+            ),
+            padding: 1,
+            ..RenderParams::default()
+        };
+
+        let result = renderer
+            .render(&shaped, font, &params)
+            .expect("render should succeed");
+        match result {
+            RenderOutput::Bitmap(bitmap) => {
+                assert_eq!(bitmap.format, BitmapFormat::Rgba8);
+                let max_alpha = bitmap
+                    .data
+                    .chunks_exact(4)
+                    .map(|px| px[3])
+                    .max()
+                    .unwrap_or(0);
+                assert!(
+                    max_alpha > 0,
+                    "color glyph should render opaque pixels (alpha={}, {}x{})",
+                    max_alpha,
+                    bitmap.width,
+                    bitmap.height
+                );
+            },
+            other => panic!("expected bitmap output, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn renders_svg_glyph_when_outlines_denied() {
+        let renderer = SkiaRenderer::new();
+        let (font, bytes) = load_color_font("Nabla-Regular-SVG.ttf");
+        let glyph_id = first_svg_glyph(&bytes).expect("svg glyph should exist");
+
+        let svg_probe = render_glyph_with_preference(
+            font.data(),
+            glyph_id,
+            128,
+            128,
+            48.0,
+            0,
+            &[],
+            &GlyphSourcePreference::from_parts(vec![GlyphSource::Svg], []),
+        )
+        .expect("svg renderer should succeed directly");
+        assert!(
+            svg_probe
+                .0
+                .pixmap
+                .data()
+                .chunks_exact(4)
+                .any(|px| px[3] > 0),
+            "direct svg render produced empty pixmap"
+        );
+
+        let shaped = ShapingResult {
+            glyphs: vec![typf_core::types::PositionedGlyph {
+                id: glyph_id,
+                x: 0.0,
+                y: 0.0,
+                advance: 48.0,
+                cluster: 0,
+            }],
+            advance_width: 48.0,
+            advance_height: 48.0,
+            direction: Direction::LeftToRight,
+        };
+
+        let params = RenderParams {
+            foreground: Color::rgba(200, 50, 10, 255),
+            glyph_sources: GlyphSourcePreference::from_parts(
+                vec![GlyphSource::Svg],
+                [GlyphSource::Glyf, GlyphSource::Cff, GlyphSource::Cff2],
+            ),
+            padding: 2,
+            ..RenderParams::default()
+        };
+
+        let result = renderer
+            .render(&shaped, font, &params)
+            .expect("render should succeed");
+        match result {
+            RenderOutput::Bitmap(bitmap) => {
+                assert_eq!(bitmap.format, BitmapFormat::Rgba8);
+                let max_alpha = bitmap
+                    .data
+                    .chunks_exact(4)
+                    .map(|px| px[3])
+                    .max()
+                    .unwrap_or(0);
+                assert!(
+                    max_alpha > 0,
+                    "svg glyph should render opaque pixels (alpha={}, {}x{})",
+                    max_alpha,
+                    bitmap.width,
+                    bitmap.height
+                );
+            },
+            other => panic!("expected bitmap output, got {:?}", other),
         }
     }
 }

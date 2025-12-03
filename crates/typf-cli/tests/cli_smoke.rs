@@ -206,7 +206,7 @@ fn test_render_svg_to_file() {
 
 #[test]
 fn test_glyph_source_preference_outline_first() {
-    let font = test_font("AbeloneRegular-COLRv1.ttf");
+    let font = test_font("Nabla-Regular-COLR.ttf");
     if !font.exists() {
         eprintln!("Skipping test: color font not found at {:?}", font);
         return;
@@ -252,7 +252,7 @@ fn test_glyph_source_preference_outline_first() {
 
 #[test]
 fn test_glyph_source_preference_color_first() {
-    let font = test_font("AbeloneRegular-COLRv1.ttf");
+    let font = test_font("Nabla-Regular-COLR.ttf");
     if !font.exists() {
         eprintln!("Skipping test: color font not found at {:?}", font);
         return;

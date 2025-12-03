@@ -2229,6 +2229,7 @@ dependencies = [
  "tiny-skia",
  "typf-core",
  "typf-fontdb",
+ "typf-render-color",
  "typf-render-svg",
 ]
 
@@ -2255,6 +2256,7 @@ dependencies = [
  "thiserror",
  "typf-core",
  "typf-fontdb",
+ "typf-render-color",
  "typf-render-svg",
  "zeno",
 ]

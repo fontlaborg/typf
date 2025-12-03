@@ -9,6 +9,7 @@
 use pyo3::exceptions::{PyIOError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
+use std::collections::HashMap;
 use std::sync::Arc;
 #[cfg(feature = "linra")]
 use typf_core::linra::{LinraRenderParams, LinraRenderer};
@@ -87,7 +88,7 @@ impl Typf {
     /// renders to bitmap, and returns it in a Python-friendly format.
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::useless_conversion)]
-    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10))]
+    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10, variations=None))]
     fn render_text(
         &self,
         py: Python,
@@ -97,16 +98,22 @@ impl Typf {
         color: Option<(u8, u8, u8, u8)>,
         background: Option<(u8, u8, u8, u8)>,
         padding: u32,
+        variations: Option<HashMap<String, f32>>,
     ) -> PyResult<PyObject> {
         // First, load and validate the font file
         let font = TypfFontFace::from_file(font_path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
         let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
 
+        let mut variation_vec: Vec<(String, f32)> =
+            variations.unwrap_or_default().into_iter().collect();
+        variation_vec.sort_by(|a, b| a.0.cmp(&b.0));
+
         // Configure how we want to shape the text
         let shaping_params = ShapingParams {
             size,
             direction: Direction::LeftToRight,
+            variations: variation_vec.clone(),
             ..Default::default()
         };
 
@@ -122,12 +129,11 @@ impl Typf {
             .unwrap_or(Color::rgba(0, 0, 0, 255));
         let background = background.map(|(r, g, b, a)| Color::rgba(r, g, b, a));
 
-        let render_params = RenderParams {
-            foreground,
-            background,
-            padding,
-            ..Default::default()
-        };
+        let mut render_params = RenderParams::default();
+        render_params.foreground = foreground;
+        render_params.background = background;
+        render_params.padding = padding;
+        render_params.variations = variation_vec;
 
         // Render the shaped glyphs into actual pixels
         let rendered = self
@@ -291,7 +297,7 @@ impl TypfLinra {
     /// This is faster than the traditional shaper+renderer pipeline because
     /// the platform API handles everything in one optimized call.
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10, features=None, language=None, script=None))]
+    #[pyo3(signature = (text, font_path, size=16.0, color=None, background=None, padding=10, variations=None, features=None, language=None, script=None))]
     fn render_text(
         &self,
         py: Python,
@@ -301,6 +307,7 @@ impl TypfLinra {
         color: Option<(u8, u8, u8, u8)>,
         background: Option<(u8, u8, u8, u8)>,
         padding: u32,
+        variations: Option<HashMap<String, f32>>,
         features: Option<Vec<(String, u32)>>,
         language: Option<String>,
         script: Option<String>,
@@ -316,6 +323,10 @@ impl TypfLinra {
             .unwrap_or(Color::rgba(0, 0, 0, 255));
         let background = background.map(|(r, g, b, a)| Color::rgba(r, g, b, a));
 
+        let mut variation_vec: Vec<(String, f32)> =
+            variations.unwrap_or_default().into_iter().collect();
+        variation_vec.sort_by(|a, b| a.0.cmp(&b.0));
+
         // Create linra parameters
         let params = LinraRenderParams {
             size,
@@ -323,7 +334,7 @@ impl TypfLinra {
             foreground,
             background,
             padding,
-            variations: Vec::new(),
+            variations: variation_vec,
             features: features.unwrap_or_default(),
             language,
             script,

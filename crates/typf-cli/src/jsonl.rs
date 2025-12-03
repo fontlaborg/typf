@@ -423,7 +423,9 @@ fn process_job(job: &Job) -> JobResult {
             TypfFontRenderableResult {
                 source: job.font.source.clone(),
                 instance: job.font.instance.clone(),
-                render: FontResult { size: job.font.size },
+                render: FontResult {
+                    size: job.font.size,
+                },
             },
             TimingInfo {
                 shape_ms,
@@ -499,7 +501,9 @@ fn process_job(job: &Job) -> JobResult {
         TypfFontRenderableResult {
             source: job.font.source.clone(),
             instance: job.font.instance.clone(),
-            render: FontResult { size: job.font.size },
+            render: FontResult {
+                size: job.font.size,
+            },
         },
         TimingInfo {
             shape_ms,

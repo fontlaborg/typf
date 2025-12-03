@@ -282,10 +282,10 @@ fn test_svg_consistency() {
 
 #[test]
 fn test_svg_embeds_colr_glyph_as_image() {
-    let font = match load_real_font("AbeloneRegular-COLRv1.ttf") {
+    let font = match load_real_font("Nabla-Regular-COLR.ttf") {
         Some(f) => f,
         None => {
-            eprintln!("Skipping test: AbeloneRegular-COLRv1.ttf not found");
+            eprintln!("Skipping test: Nabla-Regular-COLR.ttf not found");
             return;
         },
     };
@@ -340,7 +340,7 @@ fn test_svg_embeds_colr_glyph_as_image() {
 
 #[test]
 fn test_svg_color_palette_affects_output() {
-    let font = match load_real_font("AbeloneRegular-COLRv1.ttf") {
+    let font = match load_real_font("Nabla-Regular-COLR.ttf") {
         Some(f) => f,
         None => return,
     };

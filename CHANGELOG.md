@@ -47,6 +47,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
   - New `TypfLinra` class in Python bindings with `render_text()` method
   - `__linra_available__` module attribute for feature detection
   - Updated `info` command to display available linra renderers
+- **Python Variable Fonts**: `Typf.render_text` and `TypfLinra.render_text` now accept a `variations` dict for axis control (e.g., `{"wght": 700, "wdth": 125}`) to render variable font instances.
 - **Linra as Default**: Auto-selects linra when available for bitmap output
   - Falls back gracefully to traditional pipeline for SVG output
   - Warning message when linra requested with SVG (uses system shaper instead)

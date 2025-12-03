@@ -51,6 +51,14 @@ image = engine.render_text(
     padding=20
 )
 
+# Variable font instance (axis variations)
+image = engine.render_text(
+    "Wide",
+    font_path="/path/to/variable-font.ttf",
+    size=48,
+    variations={"wdth": 125.0, "wght": 650.0},
+)
+
 # Access image data
 print(f"Size: {image['width']}x{image['height']}")
 print(f"Format: {image['format']}")
@@ -97,6 +105,7 @@ typfpy info --renderers
 - ✅ Thread-safe for concurrent rendering
 - ✅ Complex script support (Arabic, Hebrew, Devanagari, Thai, CJK)
 - ✅ OpenType features (ligatures, kerning, small caps, etc.)
+- ✅ Variable fonts with axis variations (`{"wght": 700, "wdth": 120}`)
 - ✅ Click-based CLI for command-line usage
 
 ## API Reference
@@ -116,7 +125,7 @@ engine = Typf(shaper="harfbuzz", renderer="opixa")
 
 **Methods:**
 
-#### `render_text(text, font_path, size=16.0, color=None, background=None, padding=10)`
+#### `render_text(text, font_path, size=16.0, color=None, background=None, padding=10, variations=None)`
 
 Render text to an image.
 
@@ -127,6 +136,7 @@ Render text to an image.
 - `color` (tuple): Foreground color as (R, G, B, A) (default: black)
 - `background` (tuple): Background color as (R, G, B, A) (default: transparent)
 - `padding` (int): Padding in pixels (default: 10)
+- `variations` (dict | None): Variable font axis settings, e.g., `{"wght": 700, "wdth": 120}`
 
 **Returns:** Dictionary with `width`, `height`, `format`, and `data` keys
 
@@ -138,7 +148,8 @@ image = engine.render_text(
     size=32,
     color=(255, 0, 0, 255),
     background=(255, 255, 255, 255),
-    padding=15
+    padding=15,
+    variations={"wght": 700, "wdth": 110},
 )
 ```
 

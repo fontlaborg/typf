@@ -20,6 +20,7 @@ thiserror.workspace = true
 typf-core = { workspace = true }
 zeno = "0.3"
 typf-render-svg = { workspace = true }
+typf-render-color = { workspace = true, features = ["svg", "bitmap"] }
 
 [dev-dependencies]
 typf-fontdb = { workspace = true }

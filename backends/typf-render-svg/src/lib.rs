@@ -601,7 +601,7 @@ mod tests {
     #[test]
     fn default_prefers_outlines_over_color() {
         let renderer = SvgRenderer::new();
-        let Some(font) = load_font("AbeloneRegular-COLRv1.ttf") else {
+        let Some(font) = load_font("Nabla-Regular-COLR.ttf") else {
             return;
         };
         let shaped = shaped_for_char(&font, 'A', 64.0);
@@ -630,7 +630,7 @@ mod tests {
     #[test]
     fn prefers_color_when_requested() {
         let renderer = SvgRenderer::new();
-        let Some(font) = load_font("AbeloneRegular-COLRv1.ttf") else {
+        let Some(font) = load_font("Nabla-Regular-COLR.ttf") else {
             return;
         };
         let shaped = shaped_for_char(&font, 'A', 64.0);

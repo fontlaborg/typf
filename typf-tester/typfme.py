@@ -149,10 +149,10 @@ class TypfTester:
             "sourcev": self.fonts_dir / "SourceSansVariable-Italic.otf",
             "stixmat": self.fonts_dir / "STIX2Math.otf",
             # Color fonts - various formats
-            "abe-cbdt": self.fonts_dir / "AbeloneRegular-CBDT.ttf",
-            "abe-colr": self.fonts_dir / "AbeloneRegular-COLRv1.ttf",
-            "abe-sbix": self.fonts_dir / "AbeloneRegular-sbix.ttf",
-            "abe-svg": self.fonts_dir / "AbeloneRegular-SVG.otf",
+            "nabla-cbdt": self.fonts_dir / "Nabla-Regular-CBDT.ttf",
+            "nabla-colr": self.fonts_dir / "Nabla-Regular-COLR.ttf",
+            "nabla-sbix": self.fonts_dir / "Nabla-Regular-sbix.ttf",
+            "nabla-svg": self.fonts_dir / "Nabla-Regular-SVG.ttf",
         }
 
         # Verify fonts exist
@@ -1573,7 +1573,7 @@ class TypfTester:
         results = []
 
         # Use a subset of fonts for benchmarking
-        bench_fonts = ["notosan", "kalniav", "abe-colr"]
+        bench_fonts = ["notosan", "kalniav", "nabla-colr"]
         bench_texts = ["latn", "rtl"]
 
         for font_name in bench_fonts:

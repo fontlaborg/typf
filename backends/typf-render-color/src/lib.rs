@@ -1280,7 +1280,7 @@ mod tests {
     #[test]
     #[cfg(feature = "bitmap")]
     fn test_detect_color_font_types_sbix() {
-        let font_path = "../../test-fonts/AbeloneRegular-sbix.ttf";
+        let font_path = "../../test-fonts/Nabla-Regular-sbix.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             let types = detect_color_font_types(&font_data);
             println!("Detected color types for sbix: {:?}", types);
@@ -1297,7 +1297,7 @@ mod tests {
     #[test]
     #[cfg(feature = "svg")]
     fn test_detect_color_font_types_svg() {
-        let font_path = "../../test-fonts/AbeloneRegular-SVG.otf";
+        let font_path = "../../test-fonts/Nabla-Regular-SVG.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             let types = detect_color_font_types(&font_data);
             println!("Detected color types for SVG: {:?}", types);
@@ -1346,7 +1346,7 @@ mod tests {
     #[test]
     #[cfg(all(feature = "svg", feature = "bitmap"))]
     fn test_render_glyph_unified_svg() {
-        let font_path = "../../test-fonts/AbeloneRegular-SVG.otf";
+        let font_path = "../../test-fonts/Nabla-Regular-SVG.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             // Try rendering a glyph - should use SVG method
             for gid in 1..50 {
@@ -1364,7 +1364,7 @@ mod tests {
     #[test]
     #[cfg(feature = "bitmap")]
     fn test_render_glyph_unified_bitmap() {
-        let font_path = "../../test-fonts/AbeloneRegular-sbix.ttf";
+        let font_path = "../../test-fonts/Nabla-Regular-sbix.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             for gid in 1..50 {
                 if let Ok(result) = render_glyph(&font_data, gid, 64, 64, 64.0, 0) {
@@ -1437,7 +1437,7 @@ mod tests {
     fn test_success_metric_sbix_sizes() {
         use crate::bitmap::{get_bitmap_sizes, render_bitmap_glyph};
 
-        let font_path = "../../test-fonts/AbeloneRegular-sbix.ttf";
+        let font_path = "../../test-fonts/Nabla-Regular-sbix.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             // Get available sizes
             let sizes = get_bitmap_sizes(&font_data);
@@ -1467,7 +1467,7 @@ mod tests {
     /// Success Metric: COLR v1 renders with gradients
     #[test]
     fn test_success_metric_colrv1_gradients() {
-        let font_path = "../../test-fonts/AbeloneRegular-COLRv1.ttf";
+        let font_path = "../../test-fonts/Nabla-Regular-COLR.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             // Verify COLRv1 detection
             let types = detect_color_font_types(&font_data);
@@ -1506,7 +1506,7 @@ mod tests {
     fn test_success_metric_svg_accuracy() {
         use crate::svg::{get_svg_document, render_svg_glyph};
 
-        let font_path = "../../test-fonts/AbeloneRegular-SVG.otf";
+        let font_path = "../../test-fonts/Nabla-Regular-SVG.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             // Find and render SVG glyphs - some may be empty, so try several
             let mut rendered_count = 0;

@@ -368,11 +368,11 @@ mod tests {
 
     #[test]
     fn test_has_bitmap_glyphs_sbix_font() {
-        // Abelone sbix font should have bitmap tables
-        let font_path = "../../test-fonts/AbeloneRegular-sbix.ttf";
+        // Nabla sbix font should have bitmap tables
+        let font_path = "../../test-fonts/Nabla-Regular-sbix.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             let has_bitmaps = has_bitmap_glyphs(&font_data);
-            println!("AbeloneRegular-sbix has bitmaps: {}", has_bitmaps);
+            println!("Nabla-Regular-sbix has bitmaps: {}", has_bitmaps);
             // sbix fonts should have bitmap strikes
             assert!(has_bitmaps, "sbix font should have bitmap glyphs");
         } else {
@@ -382,11 +382,11 @@ mod tests {
 
     #[test]
     fn test_has_bitmap_glyphs_cbdt_font() {
-        // Abelone CBDT font should have bitmap tables
-        let font_path = "../../test-fonts/AbeloneRegular-CBDT.ttf";
+        // Nabla CBDT font should have bitmap tables
+        let font_path = "../../test-fonts/Nabla-Regular-CBDT.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             let has_bitmaps = has_bitmap_glyphs(&font_data);
-            println!("AbeloneRegular-CBDT has bitmaps: {}", has_bitmaps);
+            println!("Nabla-Regular-CBDT has bitmaps: {}", has_bitmaps);
             // CBDT fonts should have bitmap strikes
             assert!(has_bitmaps, "CBDT font should have bitmap glyphs");
         } else {
@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn test_get_bitmap_sizes_sbix() {
-        let font_path = "../../test-fonts/AbeloneRegular-sbix.ttf";
+        let font_path = "../../test-fonts/Nabla-Regular-sbix.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             let sizes = get_bitmap_sizes(&font_data);
             println!("sbix bitmap sizes: {:?}", sizes);
@@ -409,7 +409,7 @@ mod tests {
 
     #[test]
     fn test_render_bitmap_glyph_sbix() {
-        let font_path = "../../test-fonts/AbeloneRegular-sbix.ttf";
+        let font_path = "../../test-fonts/Nabla-Regular-sbix.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             if has_bitmap_glyphs(&font_data) {
                 // Try to render a bitmap glyph
@@ -468,7 +468,7 @@ mod tests {
     #[test]
     fn test_fallback_uses_bitmap_when_available() {
         // sbix font has bitmaps, should use bitmap (not fallback)
-        let font_path = "../../test-fonts/AbeloneRegular-sbix.ttf";
+        let font_path = "../../test-fonts/Nabla-Regular-sbix.ttf";
         if let Ok(font_data) = std::fs::read(font_path) {
             // Try to find a glyph with bitmap
             for gid in 1..100 {
