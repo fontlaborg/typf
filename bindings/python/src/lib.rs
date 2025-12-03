@@ -18,7 +18,7 @@ use typf_core::{
     Color, RenderParams, ShapingParams,
 };
 use typf_export::PnmExporter;
-use typf_fontdb::Font;
+use typf_fontdb::TypfFontFace;
 
 // Note: Skia and Zeno renderers not yet available in workspace
 
@@ -99,7 +99,7 @@ impl Typf {
         padding: u32,
     ) -> PyResult<PyObject> {
         // First, load and validate the font file
-        let font = Font::from_file(font_path)
+        let font = TypfFontFace::from_file(font_path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
         let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
 
@@ -170,7 +170,7 @@ impl Typf {
     #[pyo3(signature = (text, font_path, size=16.0))]
     fn shape_text(&self, py: Python, text: &str, font_path: &str, size: f32) -> PyResult<PyObject> {
         // Load font
-        let font = Font::from_file(font_path)
+        let font = TypfFontFace::from_file(font_path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
         let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
 
@@ -207,7 +207,7 @@ impl Typf {
         padding: u32,
     ) -> PyResult<String> {
         // Load font
-        let font = Font::from_file(font_path)
+        let font = TypfFontFace::from_file(font_path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
         let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
 
@@ -306,7 +306,7 @@ impl TypfLinra {
         script: Option<String>,
     ) -> PyResult<PyObject> {
         // Load font
-        let font = Font::from_file(font_path)
+        let font = TypfFontFace::from_file(font_path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
         let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
 
@@ -376,7 +376,7 @@ impl FontInfo {
     /// Load font information
     #[new]
     fn new(path: &str) -> PyResult<Self> {
-        let font = Font::from_file(path)
+        let font = TypfFontFace::from_file(path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
 
         let font_ref = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
@@ -389,7 +389,7 @@ impl FontInfo {
     /// Get glyph ID for a character
     #[allow(clippy::useless_conversion)]
     fn glyph_id(&self, ch: char) -> PyResult<Option<u32>> {
-        let font = Font::from_file(&self.path)
+        let font = TypfFontFace::from_file(&self.path)
             .map_err(|e| PyIOError::new_err(format!("Failed to load font: {:?}", e)))?;
         let font_ref = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
         Ok(font_ref.glyph_id(ch))

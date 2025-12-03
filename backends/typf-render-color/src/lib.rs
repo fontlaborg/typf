@@ -1042,8 +1042,7 @@ pub fn render_glyph_with_preference(
 
                     let mut pixmap =
                         Pixmap::new(width, height).ok_or(ColorRenderError::PixmapCreationFailed)?;
-                    let mut painter =
-                        TinySkiaColorPainter::new(&mut pixmap, colors, &font, size);
+                    let mut painter = TinySkiaColorPainter::new(&mut pixmap, colors, &font, size);
                     color_glyph.paint(&location, &mut painter)?;
 
                     return Ok((
@@ -1069,8 +1068,7 @@ pub fn render_glyph_with_preference(
 
                     let mut pixmap =
                         Pixmap::new(width, height).ok_or(ColorRenderError::PixmapCreationFailed)?;
-                    let mut painter =
-                        TinySkiaColorPainter::new(&mut pixmap, colors, &font, size);
+                    let mut painter = TinySkiaColorPainter::new(&mut pixmap, colors, &font, size);
                     color_glyph.paint(&location, &mut painter)?;
 
                     return Ok((

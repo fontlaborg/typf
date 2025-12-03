@@ -14,7 +14,7 @@ use typf_core::{
     types::Direction,
     Color, RenderParams, ShapingParams, TypfError,
 };
-use typf_fontdb::Font;
+use typf_fontdb::TypfFontFace;
 use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
@@ -172,7 +172,7 @@ struct BenchmarkResult {
 
 /// Main benchmark runner
 struct BenchmarkRunner {
-    fonts: Vec<Arc<Font>>,
+    fonts: Vec<Arc<TypfFontFace>>,
     config: BenchmarkConfig,
 }
 
@@ -201,7 +201,7 @@ impl BenchmarkRunner {
                         ext_str.to_lowercase().as_str(),
                         "ttf" | "otf" | "ttc" | "woff" | "woff2"
                     ) {
-                        match Font::from_file(&path) {
+                        match TypfFontFace::from_file(&path) {
                             Ok(font) => {
                                 println!("{}", format!("Loaded font: {}", path.display()).green());
                                 fonts.push(Arc::new(font));
@@ -287,7 +287,7 @@ impl BenchmarkRunner {
         &self,
         shaper: Arc<dyn Shaper>,
         renderer: Arc<dyn Renderer>,
-        font: Arc<Font>,
+        font: Arc<TypfFontFace>,
         text: &str,
         font_size: f32,
     ) -> Result<BenchmarkResult, TypfError> {

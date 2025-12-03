@@ -711,7 +711,7 @@ struct AppConfig {
     cache: CacheConfig,
     database: DatabaseConfig,
     security: SecurityConfig,
-    fonts: FontConfig,
+    fonts: TypfFontRenderableConfig,
 }
 
 impl AppConfig {

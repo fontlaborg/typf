@@ -185,6 +185,8 @@ fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<(
             .unwrap_or_else(|| "FFFFFF00".to_string()),
         color_palette: 0,
         glyph_source: Vec::new(),
+        no_shaping_cache: false,
+        no_glyph_cache: false,
         output_file: Some(output_file.to_path_buf()),
         format,
         quiet: args.quiet,

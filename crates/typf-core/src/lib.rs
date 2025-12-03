@@ -91,6 +91,7 @@ use std::collections::HashSet;
 pub mod cache;
 pub mod context;
 pub mod error;
+pub mod glyph_cache;
 pub mod linra;
 pub mod pipeline;
 pub mod shaping_cache;
@@ -107,7 +108,7 @@ pub mod types {
     pub type GlyphId = u32;
 
     /// Which way the text flows
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Direction {
         LeftToRight,
         RightToLeft,
@@ -168,7 +169,7 @@ pub mod types {
     }
 
     /// Which vector format we're speaking
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum VectorFormat {
         Svg,
         Pdf,
@@ -233,7 +234,7 @@ impl Default for ShapingParams {
 }
 
 /// Which glyph data sources are allowed and in what order
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum GlyphSource {
     Glyf,
     Cff,
@@ -350,7 +351,7 @@ impl Default for RenderParams {
 }
 
 /// Target output for rendering operations
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RenderMode {
     /// Raster output (default)
     Bitmap,
@@ -359,7 +360,7 @@ pub enum RenderMode {
 }
 
 /// Simple RGBA color that works everywhere
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Color {
     pub r: u8,
     pub g: u8,

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use typf_core::traits::Shaper;
 use typf_core::{types::Direction, ShapingParams};
-use typf_fontdb::Font;
+use typf_fontdb::TypfFontFace;
 use typf_shape_hb::HarfBuzzShaper;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load a font
     println!("\n1. Loading font...");
     let font_path = "/System/Library/Fonts/Helvetica.ttc"; // Common macOS font
-    let font = Font::from_file(font_path)?;
+    let font = TypfFontFace::from_file(font_path)?;
     let font_arc = Arc::new(font) as Arc<dyn typf_core::traits::FontRef>;
 
     println!("   Font loaded successfully!");

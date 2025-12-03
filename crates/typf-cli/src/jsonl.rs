@@ -29,23 +29,41 @@ pub struct Job {
     /// How to identify this job in the results
     pub id: String,
     /// Which font to use and how
-    pub font: FontConfig,
+    pub font: TypfFontRenderableConfig,
     /// What text to render
     pub text: TextConfig,
     /// How the output should look
     pub rendering: RenderingConfig,
 }
 
-/// Font selection and configuration
+/// Where the font data comes from (file path + optional face index)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FontConfig {
+pub struct TypfFontSourceConfig {
     /// Where to find the font file
     pub path: PathBuf,
-    /// How big the text should be
-    pub size: f32,
+    /// Which face to pick inside a collection (defaults to 0)
+    #[serde(default)]
+    pub face_index: Option<u32>,
+}
+
+/// Variable font coordinates (instance-level)
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TypfFontInstanceConfig {
     /// Variable font axis settings (weight, width, etc.)
     #[serde(default)]
     pub variations: HashMap<String, f32>,
+}
+
+/// Render-ready font settings (source + instance + size)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TypfFontRenderableConfig {
+    /// Font container (path + face index)
+    pub source: TypfFontSourceConfig,
+    /// Selected variation coordinates (instance)
+    #[serde(default)]
+    pub instance: TypfFontInstanceConfig,
+    /// Point size for rendering (renderable)
+    pub size: f32,
 }
 
 /// Text content and language settings
@@ -98,7 +116,7 @@ pub struct JobResult {
     pub error: Option<String>,
     /// Info about the font we used
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub font: Option<FontResult>,
+    pub font: Option<TypfFontRenderableResult>,
     /// How long everything took
     pub timing: TimingInfo,
 }
@@ -142,11 +160,24 @@ pub struct TimingInfo {
 /// Information about the font we actually used
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FontResult {
-    /// Which font file was loaded
-    pub path: String,
-    /// What variable font settings were applied
-    #[serde(skip_serializing_if = "HashMap::is_empty", default)]
-    pub variations: HashMap<String, f32>,
+    /// Renderable point size that was requested
+    pub size: f32,
+}
+
+/// Font source + instance returned in results
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TypfFontRenderableResult {
+    /// Source container describing where the font came from
+    pub source: TypfFontSourceConfig,
+    /// Instance coordinates that were applied
+    #[serde(skip_serializing_if = "instance_is_empty", default)]
+    pub instance: TypfFontInstanceConfig,
+    /// Renderable parameters used
+    pub render: FontResult,
+}
+
+fn instance_is_empty(instance: &TypfFontInstanceConfig) -> bool {
+    instance.variations.is_empty()
 }
 
 impl Default for TimingInfo {
@@ -177,7 +208,7 @@ impl JobResult {
     pub fn success_render(
         id: String,
         rendering: RenderingOutput,
-        font: FontResult,
+        font: TypfFontRenderableResult,
         timing: TimingInfo,
     ) -> Self {
         Self {
@@ -195,7 +226,7 @@ impl JobResult {
     pub fn success_metrics(
         id: String,
         metrics: MetricsOutput,
-        font: FontResult,
+        font: TypfFontRenderableResult,
         timing: TimingInfo,
     ) -> Self {
         Self {
@@ -300,7 +331,8 @@ fn process_job(job: &Job) -> JobResult {
     let start = Instant::now();
 
     // Load font
-    let font_data = match fs::read(&job.font.path) {
+    let font_path = &job.font.source.path;
+    let font_data = match fs::read(font_path) {
         Ok(data) => data,
         Err(e) => {
             return JobResult::error(&job.id, format!("Failed to load font: {}", e));
@@ -353,6 +385,7 @@ fn process_job(job: &Job) -> JobResult {
         features: Vec::new(), // TODO: parse job.text.features
         variations: job
             .font
+            .instance
             .variations
             .iter()
             .map(|(k, v)| (k.clone(), *v))
@@ -387,9 +420,10 @@ fn process_job(job: &Job) -> JobResult {
         return JobResult::success_metrics(
             job.id.clone(),
             metrics,
-            FontResult {
-                path: job.font.path.display().to_string(),
-                variations: job.font.variations.clone(),
+            TypfFontRenderableResult {
+                source: job.font.source.clone(),
+                instance: job.font.instance.clone(),
+                render: FontResult { size: job.font.size },
             },
             TimingInfo {
                 shape_ms,
@@ -462,9 +496,10 @@ fn process_job(job: &Job) -> JobResult {
             width,
             height,
         },
-        FontResult {
-            path: job.font.path.display().to_string(),
-            variations: job.font.variations.clone(),
+        TypfFontRenderableResult {
+            source: job.font.source.clone(),
+            instance: job.font.instance.clone(),
+            render: FontResult { size: job.font.size },
         },
         TimingInfo {
             shape_ms,
@@ -491,7 +526,7 @@ mod tests {
     fn test_job_deserialization() {
         let json = r#"{
             "id": "test1",
-            "font": {"path": "/fonts/arial.ttf", "size": 24},
+            "font": {"source": {"path": "/fonts/arial.ttf"}, "instance": {"variations": {"wght": 400}}, "size": 24},
             "text": {"content": "Hello"},
             "rendering": {"format": "ppm", "encoding": "base64", "width": 800, "height": 600}
         }"#;
@@ -499,6 +534,7 @@ mod tests {
         let job: Job = serde_json::from_str(json).unwrap();
         assert_eq!(job.id, "test1");
         assert_eq!(job.font.size, 24.0);
+        assert_eq!(job.font.source.path, PathBuf::from("/fonts/arial.ttf"));
         assert_eq!(job.text.content, "Hello");
     }
 
@@ -509,7 +545,7 @@ mod tests {
             "jobs": [
                 {
                     "id": "job1",
-                    "font": {"path": "/fonts/arial.ttf", "size": 24},
+                    "font": {"source": {"path": "/fonts/arial.ttf"}, "size": 24},
                     "text": {"content": "Test"},
                     "rendering": {"format": "ppm", "encoding": "base64", "width": 800, "height": 600}
                 }

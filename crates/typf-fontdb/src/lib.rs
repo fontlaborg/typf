@@ -22,17 +22,38 @@ use typf_core::{
     traits::FontRef as TypfFontRef,
 };
 
-/// A font that's been brought into memory, ready to shape text
+/// Source container for a font face (path or memory)
+#[derive(Clone, Debug)]
+pub struct TypfFontSource {
+    path: Option<PathBuf>,
+    face_index: u32,
+}
+
+impl TypfFontSource {
+    pub fn new(path: Option<PathBuf>, face_index: u32) -> Self {
+        Self { path, face_index }
+    }
+
+    pub fn path(&self) -> Option<&Path> {
+        self.path.as_deref()
+    }
+
+    pub fn face_index(&self) -> u32 {
+        self.face_index
+    }
+}
+
+/// A font face that's been brought into memory, ready to shape text
 ///
 /// Stores the raw font data and creates `FontRef` on-demand for parsing.
 /// For TTC collections, the `face_index` specifies which face to use.
-pub struct Font {
+pub struct TypfFontFace {
     data: Vec<u8>,
-    face_index: u32,
+    source: TypfFontSource,
     units_per_em: u16,
 }
 
-impl Font {
+impl TypfFontFace {
     /// Opens a font file from disk and makes it usable
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         Self::from_file_index(path, 0)
@@ -43,7 +64,7 @@ impl Font {
         let data = fs::read(path.as_ref())
             .map_err(|_| FontLoadError::FileNotFound(path.as_ref().display().to_string()))?;
 
-        Self::from_data_index(data, face_index)
+        Self::from_data_index_with_path(data, face_index, Some(path.as_ref().to_path_buf()))
     }
 
     /// Turns raw font bytes into something we can work with
@@ -53,6 +74,14 @@ impl Font {
 
     /// Turns raw font bytes into a specific face (for TTC collections)
     pub fn from_data_index(data: Vec<u8>, face_index: u32) -> Result<Self> {
+        Self::from_data_index_with_path(data, face_index, None)
+    }
+
+    fn from_data_index_with_path(
+        data: Vec<u8>,
+        face_index: u32,
+        path: Option<PathBuf>,
+    ) -> Result<Self> {
         // Validate the font data by attempting to parse it
         let font_ref =
             ReadFontRef::from_index(&data, face_index).map_err(|_| FontLoadError::InvalidData)?;
@@ -64,21 +93,31 @@ impl Font {
             .map(|head| head.units_per_em())
             .unwrap_or(1000);
 
-        Ok(Font {
+        Ok(TypfFontFace {
             data,
-            face_index,
+            source: TypfFontSource::new(path, face_index),
             units_per_em,
         })
     }
 
+    /// Returns the source descriptor (path + face index)
+    pub fn source(&self) -> &TypfFontSource {
+        &self.source
+    }
+
     /// Returns the face index for TTC collections (0 for single fonts)
     pub fn face_index(&self) -> u32 {
-        self.face_index
+        self.source.face_index
+    }
+
+    /// Returns the path if loaded from disk
+    pub fn path(&self) -> Option<&Path> {
+        self.source.path()
     }
 
     /// Creates a FontRef on-demand for parsing operations
     fn font_ref(&self) -> Option<ReadFontRef<'_>> {
-        ReadFontRef::from_index(&self.data, self.face_index).ok()
+        ReadFontRef::from_index(&self.data, self.source.face_index).ok()
     }
 
     /// Finds which glyph draws this character
@@ -113,7 +152,7 @@ impl Font {
     }
 }
 
-impl TypfFontRef for Font {
+impl TypfFontRef for TypfFontFace {
     fn data(&self) -> &[u8] {
         &self.data
     }
@@ -137,11 +176,12 @@ impl TypfFontRef for Font {
 
 /// Your font library: keeps track of all loaded fonts
 pub struct FontDatabase {
-    fonts: Vec<Arc<Font>>,
+    fonts: Vec<Arc<TypfFontFace>>,
+    sources: Vec<TypfFontSource>,
     /// Cache to prevent loading the same font file multiple times.
-    /// Maps canonical paths to their loaded fonts.
-    path_cache: HashMap<PathBuf, Arc<Font>>,
-    default_font: Option<Arc<Font>>,
+    /// Maps canonical (path, face_index) to their loaded fonts.
+    path_cache: HashMap<(PathBuf, u32), Arc<TypfFontFace>>,
+    default_font: Option<Arc<TypfFontFace>>,
 }
 
 impl FontDatabase {
@@ -149,6 +189,7 @@ impl FontDatabase {
     pub fn new() -> Self {
         Self {
             fonts: Vec::new(),
+            sources: Vec::new(),
             path_cache: HashMap::new(),
             default_font: None,
         }
@@ -156,11 +197,13 @@ impl FontDatabase {
 
     /// Loads a font file and remembers it for future use.
     /// If the same path was already loaded, returns the cached font.
-    pub fn load_font(&mut self, path: impl AsRef<Path>) -> Result<Arc<Font>> {
+    pub fn load_font(&mut self, path: impl AsRef<Path>) -> Result<Arc<TypfFontFace>> {
         let path = path.as_ref();
 
         // Try to canonicalize the path for reliable deduplication
-        let cache_key = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let face_index = 0;
+        let cache_key = (canonical.clone(), face_index);
 
         // Return cached font if already loaded
         if let Some(font) = self.path_cache.get(&cache_key) {
@@ -168,9 +211,11 @@ impl FontDatabase {
         }
 
         // Load and cache the font
-        let font = Arc::new(Font::from_file(path)?);
+        let font = Arc::new(TypfFontFace::from_file(path)?);
         self.path_cache.insert(cache_key, font.clone());
         self.fonts.push(font.clone());
+        self.sources
+            .push(TypfFontSource::new(Some(canonical), face_index));
 
         // First font loaded becomes the default
         if self.default_font.is_none() {
@@ -181,9 +226,11 @@ impl FontDatabase {
     }
 
     /// Adds a font from memory to the library
-    pub fn load_font_data(&mut self, data: Vec<u8>) -> Result<Arc<Font>> {
-        let font = Arc::new(Font::from_data(data)?);
+    pub fn load_font_data(&mut self, data: Vec<u8>) -> Result<Arc<TypfFontFace>> {
+        let font = Arc::new(TypfFontFace::from_data(data)?);
         self.fonts.push(font.clone());
+        self.sources
+            .push(TypfFontSource::new(None, font.face_index()));
 
         // First font loaded becomes the default
         if self.default_font.is_none() {
@@ -194,17 +241,22 @@ impl FontDatabase {
     }
 
     /// Returns the font we fall back to when nothing else is specified
-    pub fn default_font(&self) -> Option<Arc<Font>> {
+    pub fn default_font(&self) -> Option<Arc<TypfFontFace>> {
         self.default_font.clone()
     }
 
     /// Shows all fonts currently loaded
-    pub fn fonts(&self) -> &[Arc<Font>] {
+    pub fn fonts(&self) -> &[Arc<TypfFontFace>] {
         &self.fonts
     }
 
+    /// Shows all font sources currently known
+    pub fn sources(&self) -> &[TypfFontSource] {
+        &self.sources
+    }
+
     /// Looks up a font by name (simplified for now)
-    pub fn find_font(&self, _name: &str) -> Option<Arc<Font>> {
+    pub fn find_font(&self, _name: &str) -> Option<Arc<TypfFontFace>> {
         self.default_font.clone()
     }
 
@@ -212,6 +264,7 @@ impl FontDatabase {
     /// Memory is properly reclaimed when all Arc references are dropped.
     pub fn clear(&mut self) {
         self.fonts.clear();
+        self.sources.clear();
         self.path_cache.clear();
         self.default_font = None;
     }
@@ -237,6 +290,7 @@ mod tests {
         let db = FontDatabase::new();
         assert!(db.default_font().is_none());
         assert_eq!(db.fonts().len(), 0);
+        assert_eq!(db.sources().len(), 0);
         assert_eq!(db.font_count(), 0);
     }
 
@@ -244,7 +298,7 @@ mod tests {
     fn test_font_from_data() {
         // Create a minimal font data (empty for test)
         let data = vec![0; 100];
-        let result = Font::from_data(data);
+        let result = TypfFontFace::from_data(data);
         // This will fail with invalid data, which is expected
         assert!(result.is_err());
     }
@@ -253,7 +307,7 @@ mod tests {
     fn test_font_from_data_index_invalid() {
         // Invalid face index should fail
         let data = vec![0; 100];
-        let result = Font::from_data_index(data, 5);
+        let result = TypfFontFace::from_data_index(data, 5);
         assert!(result.is_err());
     }
 
@@ -263,6 +317,7 @@ mod tests {
         // After clear, database should be empty
         db.clear();
         assert!(db.default_font().is_none());
+        assert_eq!(db.sources().len(), 0);
         assert_eq!(db.font_count(), 0);
     }
 
@@ -271,7 +326,7 @@ mod tests {
         // When from_data fails, we can't test face_index, but we can verify
         // the API exists and returns 0 for default construction path
         let data = vec![0; 100];
-        let result = Font::from_data_index(data, 0);
+        let result = TypfFontFace::from_data_index(data, 0);
         // Invalid data, but we're testing the API structure
         assert!(result.is_err());
     }

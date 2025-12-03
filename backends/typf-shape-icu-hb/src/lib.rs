@@ -132,6 +132,7 @@ impl Shaper for IcuHarfBuzzShaper {
         let cache_key = if self.cache.is_some() {
             let key = ShapingCacheKey::new(
                 &normalized,
+                Shaper::name(self),
                 font_data,
                 params.size,
                 params.language.clone(),

@@ -17,7 +17,7 @@ use typf_core::{
     types::Direction,
     cache::{CacheManager, ShapingCacheKey, GlyphCacheKey},
 };
-use typf_fontdb::Font;
+use typf_fontdb::TypfFontFace;
 use typf_shape_none::NoneShaper;
 #[cfg(feature = "shaping-hb")]
 use typf_shape_hb::HarfBuzzShaper;
@@ -279,7 +279,7 @@ fn bench_pipeline(c: &mut Criterion) {
     let mut group = c.benchmark_group("pipeline");
 
     // Try to use a real system font for authentic performance measurement
-    let font = if let Ok(f) = Font::from_file("/System/Library/Fonts/Helvetica.ttc") {
+    let font = if let Ok(f) = TypfFontFace::from_file("/System/Library/Fonts/Helvetica.ttc") {
         Arc::new(f) as Arc<dyn typf_core::traits::FontRef>
     } else {
         // Fall back to mock font if system font unavailable (CI environments)

@@ -9,10 +9,10 @@ Solve common Typf problems and avoid pitfalls.
 **Problem**: "Font file not found" error
 ```rust
 // Wrong: Relative path
-let font = Font::from_file("Roboto.ttf")?; 
+let font = TypfFontFace::from_file("Roboto.ttf")?; 
 
 // Right: Absolute or well-known path
-let font = Font::from_file("/usr/share/fonts/Roboto.ttf")?;
+let font = TypfFontFace::from_file("/usr/share/fonts/Roboto.ttf")?;
 // Or use the font database
 let font = fontdb.load_font_by_name("Roboto")?;
 ```
@@ -219,7 +219,7 @@ impl FontTracker {
             }
         }
         
-        let font = Font::from_file(path)?;
+        let font = TypfFontFace::from_file(path)?;
         self.loaded_fonts.insert(path.to_string(), Arc::downgrade(&font));
         Ok(font)
     }
@@ -285,7 +285,7 @@ fontdb.add_font_dir("./custom_fonts")?;
 
 // DON'T: Load fonts repeatedly
 for text in texts {
-    let font = Font::from_file("Roboto.ttf")?; // Slow!
+    let font = TypfFontFace::from_file("Roboto.ttf")?; // Slow!
     pipeline.render_text(text, &font, &options)?;
 }
 

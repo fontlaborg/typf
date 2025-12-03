@@ -118,13 +118,13 @@ All examples work with the default feature set when building with `cargo run --e
 Most examples use mock/stub fonts for demonstration purposes. For real font rendering:
 
 1. Load a TrueType or OpenType font file
-2. Use `typf_fontdb::Font::from_file(path)`
+2. Use `typf_fontdb::TypfFontFace::from_file(path)`
 3. Pass the font to the shaper
 
 Example:
 ```rust
-use typf_fontdb::Font;
-let font = Font::from_file("path/to/font.ttf")?;
+use typf_fontdb::TypfFontFace;
+let font = TypfFontFace::from_file("path/to/font.ttf")?;
 ```
 
 ## 6. Troubleshooting

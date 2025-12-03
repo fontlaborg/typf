@@ -17,7 +17,7 @@ use typf_core::{
     Color, GlyphSource, GlyphSourcePreference, RenderMode, RenderParams, ShapingParams,
 };
 use typf_export::{PngExporter, PnmExporter};
-use typf_fontdb::Font;
+use typf_fontdb::TypfFontFace;
 use typf_render_opixa::OpixaRenderer;
 use typf_render_svg::SvgRenderer;
 use typf_shape_none::NoneShaper;
@@ -147,6 +147,13 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         output: output_mode,
     };
 
+    let (shaping_cache_on, glyph_cache_on, caching_allowed) = cache_flags(
+        use_linra,
+        svg_fallback_shaper.is_some(),
+        args.no_shaping_cache,
+        args.no_glyph_cache,
+    );
+
     // 8. Select backends
     // Use fallback shaper if we're falling back from linra for SVG
     let shaper_name = svg_fallback_shaper.unwrap_or(&args.shaper);
@@ -165,6 +172,8 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     // 9. Build pipeline
     let exporter = create_exporter(args.format)?;
     let pipeline = Pipeline::builder()
+        .enable_shaping_cache(shaping_cache_on)
+        .enable_glyph_cache(glyph_cache_on)
         .shaper(shaper.clone())
         .renderer(renderer.clone())
         .exporter(exporter.clone())
@@ -174,6 +183,16 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         eprintln!("Shaping with {} backend...", shaper_name);
         eprintln!("Rendering with {} backend...", renderer_name);
         eprintln!("Exporting to {} format...", args.format.as_str());
+        eprintln!(
+            "Caching: shaping={} glyph={}{}",
+            if shaping_cache_on { "on" } else { "off" },
+            if glyph_cache_on { "on" } else { "off" },
+            if !caching_allowed {
+                " (linra requested; disabled)"
+            } else {
+                ""
+            }
+        );
     }
 
     // 10. Execute pipeline
@@ -279,7 +298,7 @@ fn load_font(args: &RenderArgs) -> Result<Arc<dyn FontRef>> {
         eprintln!("Loading font from {}", font_path.display());
     }
 
-    Font::from_file(font_path).map(|f| Arc::new(f) as Arc<dyn FontRef>)
+    TypfFontFace::from_file(font_path).map(|f| Arc::new(f) as Arc<dyn FontRef>)
 }
 
 fn parse_font_size(size_str: &str) -> Result<f32> {
@@ -710,6 +729,18 @@ fn create_exporter(format: OutputFormat) -> Result<Arc<dyn Exporter>> {
     }
 }
 
+fn cache_flags(
+    use_linra: bool,
+    svg_fallback: bool,
+    no_shaping_cache: bool,
+    no_glyph_cache: bool,
+) -> (bool, bool, bool) {
+    let allowed = !use_linra || svg_fallback;
+    let shaping = allowed && !no_shaping_cache;
+    let glyph = allowed && !no_glyph_cache;
+    (shaping, glyph, allowed)
+}
+
 struct SvgOutputExporter;
 
 impl Exporter for SvgOutputExporter {
@@ -737,6 +768,48 @@ impl Exporter for SvgOutputExporter {
 
     fn mime_type(&self) -> &'static str {
         "image/svg+xml"
+    }
+}
+
+#[cfg(test)]
+mod cache_flag_tests {
+    use super::cache_flags;
+
+    #[test]
+    fn caches_enabled_by_default() {
+        let (shape, glyph, allowed) = cache_flags(false, false, false, false);
+        assert!(allowed);
+        assert!(shape);
+        assert!(glyph);
+    }
+
+    #[test]
+    fn linra_disables_caches() {
+        let (shape, glyph, allowed) = cache_flags(true, false, false, false);
+        assert!(!allowed);
+        assert!(!shape);
+        assert!(!glyph);
+    }
+
+    #[test]
+    fn linra_svg_fallback_keeps_caches() {
+        let (shape, glyph, allowed) = cache_flags(true, true, false, false);
+        assert!(allowed);
+        assert!(shape);
+        assert!(glyph);
+    }
+
+    #[test]
+    fn flags_turn_off_individually() {
+        let (shape, glyph, allowed) = cache_flags(false, false, true, false);
+        assert!(allowed);
+        assert!(!shape);
+        assert!(glyph);
+
+        let (shape2, glyph2, allowed2) = cache_flags(false, false, false, true);
+        assert!(allowed2);
+        assert!(shape2);
+        assert!(!glyph2);
     }
 }
 

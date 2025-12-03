@@ -124,6 +124,7 @@ impl Shaper for HarfBuzzShaper {
         let cache_key = if self.cache.is_some() {
             let key = ShapingCacheKey::new(
                 text,
+                Shaper::name(self),
                 font_data,
                 params.size,
                 params.language.clone(),

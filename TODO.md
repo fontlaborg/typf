@@ -1,28 +1,9 @@
-# TODO (flat plan)
+# TODO (backend-neutral caching refactor)
 
-- [x] P1: Introduce glyph-source preference struct, defaults, and CLI flag for prefer/deny lists.
-- [x] P1: Thread glyph-source preference through renderer source selection paths (opixa, skia, zeno, svg, json).
-- [x] P1: Add renderer/CLI tests verifying glyph-source preference is honored (outline-first, deny list respected).
-- [x] P0: Replace `typf-export` SVG exporter with valid PNG/vector output; add embed/external snapshot tests; fail fast on malformed buffers and Gray1/short-buffer regressions.
-- [x] P0: Fix bidi/script indexing in `crates/typf-unicode` to use scalar positions; mixed RTL/LTR fixtures; CLI `--direction auto` exists (defaults to LTR).
-- [x] P0: Make the default six-stage pipeline functional or deprecate it — documented as pass-through stages; CLI uses `Pipeline.process()` directly.
-- [x] P0: Remove silent stub-font fallback in CLI; require font file with explicit errors on missing fonts (Python `render_simple` is explicit opt-in).
-- [x] P1: Integrate `ShapingCache` into HarfBuzz and ICU shapers; surface cache configuration in CLI/params and expose hit stats.
-- [x] P1: Use ascent/descent/bbox for canvas sizing in Skia, Zeno, and SVG to avoid clipping; add tall-glyph regressions.
-- [x] P1: Extend vector renderer/exporters for glyph IDs > 65k and propagate variations/CPAL colors into SVG output.
-  - [x] Glyph IDs > 65k support in all renderers (SVG, Zeno, Skia, Opixa)
-  - [x] Variable font variations propagated into SVG, Zeno, and Skia renderers
-  - [x] CPAL color palette support in SVG (requires ColorPainter implementation)
-- [x] P1: Reduce memory leakage and improve face selection/error typing in `typf-fontdb` (no `Box::leak`, honor TTC index, proper units).
-- [x] P2: Add backend integration tests with small fonts (bitmap hashes, SVG snapshots, JSON schema for JSON renderer).
-- [x] P2: Add workspace lint/test CI (`fmt`, `clippy -D warnings`, `cargo test --workspace --all-features`) with feature matrix.
-- [x] P2: Add CLI smoke tests for `info`, `render`, and `batch` commands using temp outputs and bad-input failures.
-- [x] P3: Write `ARCHITECTURE.md` explaining pipeline/backends and link from README.
-- [x] P3: Expand CONTRIBUTING with release flow, cache guidance, backend addition steps; create `RELEASING.md`; add version policy to README.
-- [x] P3: Migrate Python workflow docs/scripts/CI to `uv` (`uv venv`, `uv pip`, `uv run`, `uvx`) and add CONTRIBUTING guardrails.
-- [x] Phase5: Implement Skia renderer SVG output mode.
-- [x] Phase5: Implement Zeno renderer SVG output mode.
-- [x] Phase5: Preserve gradients and embed bitmaps for SVG output when needed.
-- [x] Release: Test full release cycle with `./scripts/publish.sh --dry-run`.
-- [x] Release: Test version propagation with `cargo set-version`.
-- [x] Release: Confirm wheel version matches git tag in CI (fixed pyproject.toml to use dynamic versioning).
+- [x] P1: Extend `ShapingCacheKey` with backend tag and update all callers/tests.
+- [x] P1: Add shared `glyph_cache.rs` (render-output cache) with stable key hashing and stats.
+- [x] P1: Add `CachePolicy` + builder toggles; wrap shaper/renderer with cached adaptors in `PipelineBuilder`.
+- [x] P1: Wire CLI flags `--no-shaping-cache/--no-glyph-cache`; force caches off for linra path.
+- [x] P1: Update HarfBuzz/ICU shapers to new key constructor and remove any stale cache paths.
+- [x] P1: Add core unit tests validating cache hits/misses and toggles; add CLI test for cache flags.
+- [x] P1: Run `cargo test --workspace --all-features` and record results in WORK.md.

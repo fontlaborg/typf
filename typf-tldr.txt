@@ -1,0 +1,214 @@
+
+# Typf: Modular Text Rendering Pipeline
+
+## Project Structure
+```
+typf/
+├── backends/          # Shaping & rendering implementations
+├── crates/            # Core libraries & tools
+├── bindings/python/   # Python bindings
+├── scripts/           # Build & utility scripts
+└── fuzz/              # Fuzzing targets
+```
+
+## Core Components
+
+### `typf-core` ([`lib.rs`](crates/typf-core/src/lib.rs))
+```rust
+pub trait Stage: Send + Sync {
+    fn name(&self) -> &'static str;
+    fn process(&self, context: PipelineContext) -> Result<PipelineContext>;
+}
+
+pub trait FontRef: Send + Sync {
+    fn data(&self) -> &[u8];
+    fn units_per_em(&self) -> u16;
+    fn glyph_id(&self, ch: char) -> Option<GlyphId>;
+    fn advance_width(&self, glyph_id: GlyphId) -> f32;
+}
+
+pub trait Shaper: Send + Sync {
+    fn shape(&self, text: &str, font: Arc<dyn FontRef>, params: &ShapingParams) -> Result<ShapingResult>;
+}
+
+pub trait Renderer: Send + Sync {
+    fn render(&self, shaped: &ShapingResult, font: Arc<dyn FontRef>, params: &RenderParams) -> Result<RenderOutput>;
+}
+
+pub trait Exporter: Send + Sync {
+    fn export(&self, output: &RenderOutput) -> Result<Vec<u8>>;
+    fn extension(&self) -> &'static str;
+}
+
+pub struct Pipeline {
+    // Builder pattern for stage composition
+}
+
+pub struct LinraRenderer {
+    // Combined shape+render for performance
+}
+```
+
+### Shaping Backends
+- **`typf-shape-hb`**: HarfBuzz shaper ([`lib.rs`](backends/typf-shape-hb/src/lib.rs))
+- **`typf-shape-ct`**: CoreText shaper (macOS) ([`lib.rs`](backends/typf-shape-ct/src/lib.rs))
+- **`typf-shape-icu-hb`**: ICU + HarfBuzz ([`lib.rs`](backends/typf-shape-icu-hb/src/lib.rs))
+- **`typf-shape-none`**: No-op shaper ([`lib.rs`](backends/typf-shape-none/src/lib.rs))
+
+### Rendering Backends
+- **`typf-render-opixa`**: SIMD rasterizer ([`lib.rs`](backends/typf-render-opixa/src/lib.rs))
+- **`typf-render-skia`**: Skia renderer ([`lib.rs`](backends/typf-render-skia/src/lib.rs))
+- **`typf-render-cg`**: CoreGraphics (macOS) ([`lib.rs`](backends/typf-render-cg/src/lib.rs))
+- **`typf-render-color`**: COLR/SVG/bitmap glyphs ([`lib.rs`](backends/typf-render-color/src/lib.rs))
+
+### Platform-Specific Linra
+- **`typf-os-mac`**: CoreText linra renderer ([`lib.rs`](backends/typf-os-mac/src/lib.rs))
+- **`typf-os-win`**: DirectWrite linra renderer ([`lib.rs`](backends/typf-os-win/src/lib.rs))
+
+## Tools & Bindings
+
+### CLI (`typf-cli`)
+```rust
+struct Cli {
+    command: Commands,
+}
+
+enum Commands {
+    Render(RenderArgs),
+    Info(InfoArgs),
+    Batch(BatchArgs),
+}
+```
+
+### Python Bindings (`typf-py`)
+```python
+class Typf:
+    def render_text(self, text: str, font_path: str, size: float) -> dict
+    def get_shaper(self) -> str
+    def get_renderer(self) -> str
+
+def render_simple(text: str, size: float) -> dict
+def export_image(image_data: dict, format: str) -> bytes
+```
+
+## Key Features
+
+1. **Modular Architecture**: Swap shapers/renderers via traits
+2. **Performance**: SIMD rasterization, multi-level caching, parallel processing
+3. **Platform Support**: macOS (CoreText/CoreGraphics), Windows (DirectWrite/Direct2D), Linux
+4. **Export Formats**: PNG, SVG, PNM, JSON
+5. **Complex Scripts**: Arabic, Hindi, Thai, CJK via HarfBuzz
+6. **Color Fonts**: COLR v0/v1, SVG, bitmap glyphs
+7. **Fuzzing**: Comprehensive crash testing ([`README.md`](fuzz/README.md))
+
+## Build System
+- Workspace with feature flags for minimal/full builds
+- Python wheels via maturin
+- WASM support via wasm-pack
+- Benchmark suite with criterion
+## Scripts & Configuration
+
+### Scripts
+
+**count-tests.sh**
+```bash
+#!/bin/bash
+# Usage: ./scripts/count-tests.sh
+set -e
+TEST_OUTPUT=$(cargo test --workspace --all-features -- --list 2>&1)
+TEST_COUNT=$(echo "$TEST_OUTPUT" | grep -E ": test$" | wc -l | tr -d ' ')
+echo "Total tests found: $TEST_COUNT"
+# Updates README.md badge using sed
+```
+
+**fuzz.sh**
+```bash
+#!/bin/bash
+# Usage: ./scripts/fuzz.sh [target] [duration_seconds]
+set -e
+TARGET="${1:-fuzz_unicode_process}"
+DURATION="${2:-60}"
+# Validates target, creates seed corpus, runs cargo-fuzz
+```
+
+**generate_docs.sh**
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+# Generates Rust API reference from crate docs
+# Hydrates workspace metadata into temporary manifest
+cargo readme --no-title --no-license --no-badges --output "$TEMP_OUTPUT"
+```
+
+**profile-memory.sh**
+```bash
+#!/bin/bash
+# Usage: ./scripts/profile-memory.sh [target]
+set -e
+TARGET="${1:-typf-cli}"
+# Uses Valgrind (massif) and heaptrack for memory analysis
+```
+
+**publish.sh**
+```bash
+#!/bin/bash
+# Usage: ./scripts/publish.sh [--dry-run] [--crates] [--pypi]
+set -euo pipefail
+# Publishes to crates.io and PyPI in dependency-ordered layers
+# Requires CRATES_IO_TOKEN, PYPI_API_TOKEN
+```
+
+**set-version.sh**
+```bash
+#!/bin/bash
+# Usage: ./scripts/set-version.sh [--check] [VERSION]
+set -euo pipefail
+# Syncs workspace version from git tag or sets specific version
+# Updates Cargo.toml and pyproject.toml
+```
+
+**test.sh**
+```bash
+#!/bin/bash
+# Usage: ./scripts/test.sh [--quick] [--rust] [--python] [--lint]
+set -euo pipefail
+# Runs fmt check, clippy, cargo test, maturin develop, pytest
+```
+
+### Configuration
+
+**zensical.toml**
+```toml
+[project]
+site_name = "Typf"
+site_url = "https://fontlab.org/typf/"
+docs_dir = "./src_docs"
+site_dir = "./docs"
+repo_name = "fontlaborg/typf"
+copyright = "Copyright &copy; 2025 Fontlab Ltd"
+
+nav = [
+  "index.md",
+  { "Getting Started" = [...] },
+  { "Core Concepts" = [...] },
+  { "Shaping Backends" = [...] },
+  { "Rendering Backends" = [...] },
+  { "Output & Export" = [...] },
+  { "API Reference" = [...] },
+  { "Advanced Topics" = [...] }
+]
+
+[project.theme]
+features = [ "announce.dismiss", "content.action.edit", ... ]
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "blue"
+accent = "blue"
+
+[project.markdown_extensions]
+# Configured for abbr, admonition, attr_list, etc.
+[project.plugins]
+search = {}
+tags = {}
+```

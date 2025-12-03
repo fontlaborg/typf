@@ -274,7 +274,7 @@ fn load_user_font(path: &Path) -> Result<Arc<Font>> {
     }
 
     // 2. Load with timeout (use separate thread/process)
-    let font = Font::from_file(path)?;
+    let font = TypfFontFace::from_file(path)?;
 
     // 3. Validate basic properties
     if font.units_per_em() == 0 {

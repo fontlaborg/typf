@@ -11,7 +11,7 @@ use typf_core::{
     types::{Direction, PositionedGlyph, RenderOutput, ShapingResult, VectorFormat},
     GlyphSource, GlyphSourcePreference, RenderParams,
 };
-use typf_fontdb::Font;
+use typf_fontdb::TypfFontFace;
 use typf_render_svg::SvgRenderer;
 
 /// Simple font wrapper for testing
@@ -68,7 +68,7 @@ fn load_real_font(name: &str) -> Option<Arc<dyn FontRef>> {
     if !path.exists() {
         return None;
     }
-    Font::from_file(path)
+    TypfFontFace::from_file(path)
         .ok()
         .map(|font| Arc::new(font) as Arc<dyn FontRef>)
 }

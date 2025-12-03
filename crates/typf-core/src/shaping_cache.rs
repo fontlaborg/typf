@@ -22,6 +22,8 @@ use crate::types::ShapingResult;
 pub struct ShapingCacheKey {
     /// Text content
     pub text: String,
+    /// Name of the shaper/backend
+    pub backend: String,
     /// Font identifier (hash of font data)
     pub font_id: u64,
     /// Font size in points (stored as u32: size * 100 for hash stability)
@@ -44,8 +46,10 @@ impl ShapingCacheKey {
     ///
     /// Variable font coordinates are included in the key to ensure different
     /// axis settings (e.g., wght=400 vs wght=700) produce different cache entries.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         text: impl Into<String>,
+        backend: impl Into<String>,
         font_data: &[u8],
         size: f32,
         language: Option<String>,
@@ -66,6 +70,7 @@ impl ShapingCacheKey {
 
         Self {
             text: text.into(),
+            backend: backend.into(),
             font_id,
             size: (size * 100.0) as u32, // Store as integer for stability
             language,
@@ -166,6 +171,7 @@ mod tests {
     fn test_cache_key_creation() {
         let key = ShapingCacheKey::new(
             "Hello",
+            "hb",
             b"font_data",
             16.0,
             Some("en".to_string()),
@@ -184,7 +190,7 @@ mod tests {
     fn test_cache_insert_and_get() {
         let cache = ShapingCache::new();
 
-        let key = ShapingCacheKey::new("Test", b"font", 12.0, None, None, vec![], vec![]);
+        let key = ShapingCacheKey::new("Test", "hb", b"font", 12.0, None, None, vec![], vec![]);
 
         let result = ShapingResult {
             glyphs: vec![PositionedGlyph {
@@ -210,7 +216,7 @@ mod tests {
     fn test_cache_miss() {
         let cache = ShapingCache::new();
 
-        let key = ShapingCacheKey::new("Missing", b"font", 16.0, None, None, vec![], vec![]);
+        let key = ShapingCacheKey::new("Missing", "hb", b"font", 16.0, None, None, vec![], vec![]);
         assert!(cache.get(&key).is_none());
     }
 
@@ -218,7 +224,7 @@ mod tests {
     fn test_cache_stats() {
         let cache = ShapingCache::new();
 
-        let key = ShapingCacheKey::new("Text", b"font", 16.0, None, None, vec![], vec![]);
+        let key = ShapingCacheKey::new("Text", "hb", b"font", 16.0, None, None, vec![], vec![]);
         let result = ShapingResult {
             glyphs: vec![],
             advance_width: 0.0,
@@ -243,9 +249,9 @@ mod tests {
 
     #[test]
     fn test_different_keys() {
-        let key1 = ShapingCacheKey::new("Hello", b"font1", 16.0, None, None, vec![], vec![]);
-        let key2 = ShapingCacheKey::new("Hello", b"font2", 16.0, None, None, vec![], vec![]);
-        let key3 = ShapingCacheKey::new("World", b"font1", 16.0, None, None, vec![], vec![]);
+        let key1 = ShapingCacheKey::new("Hello", "hb", b"font1", 16.0, None, None, vec![], vec![]);
+        let key2 = ShapingCacheKey::new("Hello", "hb", b"font2", 16.0, None, None, vec![], vec![]);
+        let key3 = ShapingCacheKey::new("World", "hb", b"font1", 16.0, None, None, vec![], vec![]);
 
         // Different font data should produce different keys
         assert_ne!(key1, key2);
@@ -259,6 +265,7 @@ mod tests {
         // Same font, same text, but different wght values
         let key_400 = ShapingCacheKey::new(
             "Test",
+            "hb",
             b"font",
             16.0,
             None,
@@ -268,6 +275,7 @@ mod tests {
         );
         let key_700 = ShapingCacheKey::new(
             "Test",
+            "hb",
             b"font",
             16.0,
             None,
@@ -275,7 +283,8 @@ mod tests {
             vec![],
             vec![("wght".to_string(), 700.0)],
         );
-        let key_no_var = ShapingCacheKey::new("Test", b"font", 16.0, None, None, vec![], vec![]);
+        let key_no_var =
+            ShapingCacheKey::new("Test", "hb", b"font", 16.0, None, None, vec![], vec![]);
 
         // Different variations should produce different keys
         assert_ne!(

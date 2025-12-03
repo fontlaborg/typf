@@ -3,10 +3,12 @@
 use crate::{
     context::PipelineContext,
     error::{Result, TypfError},
+    glyph_cache::{GlyphCache, GlyphCacheKey, SharedGlyphCache},
+    shaping_cache::{ShapingCache, ShapingCacheKey, SharedShapingCache},
     traits::{Exporter, FontRef, Renderer, Shaper, Stage},
     RenderParams, ShapingParams,
 };
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 /// Pipeline for text rendering: Shape → Render → Export
 ///
@@ -51,6 +53,28 @@ pub struct Pipeline {
     shaper: Option<Arc<dyn Shaper>>,
     renderer: Option<Arc<dyn Renderer>>,
     exporter: Option<Arc<dyn Exporter>>,
+    #[allow(dead_code)]
+    cache_policy: CachePolicy,
+    #[allow(dead_code)]
+    shaping_cache: Option<SharedShapingCache>,
+    #[allow(dead_code)]
+    glyph_cache: Option<SharedGlyphCache>,
+}
+
+/// Controls runtime caching behaviour for pipelines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CachePolicy {
+    pub shaping: bool,
+    pub glyph: bool,
+}
+
+impl Default for CachePolicy {
+    fn default() -> Self {
+        Self {
+            shaping: true,
+            glyph: true,
+        }
+    }
 }
 
 impl Pipeline {
@@ -139,6 +163,9 @@ pub struct PipelineBuilder {
     shaper: Option<Arc<dyn Shaper>>,
     renderer: Option<Arc<dyn Renderer>>,
     exporter: Option<Arc<dyn Exporter>>,
+    cache_policy: CachePolicy,
+    shaping_cache: Option<SharedShapingCache>,
+    glyph_cache: Option<SharedGlyphCache>,
 }
 
 impl PipelineBuilder {
@@ -149,6 +176,9 @@ impl PipelineBuilder {
             shaper: None,
             renderer: None,
             exporter: None,
+            cache_policy: CachePolicy::default(),
+            shaping_cache: None,
+            glyph_cache: None,
         }
     }
 
@@ -176,6 +206,30 @@ impl PipelineBuilder {
         self
     }
 
+    /// Enable or disable shaping cache (default: enabled)
+    pub fn enable_shaping_cache(mut self, enabled: bool) -> Self {
+        self.cache_policy.shaping = enabled;
+        self
+    }
+
+    /// Enable or disable glyph/render cache (default: enabled)
+    pub fn enable_glyph_cache(mut self, enabled: bool) -> Self {
+        self.cache_policy.glyph = enabled;
+        self
+    }
+
+    /// Supply a shared shaping cache for reuse across pipelines
+    pub fn with_shaping_cache(mut self, cache: SharedShapingCache) -> Self {
+        self.shaping_cache = Some(cache);
+        self
+    }
+
+    /// Supply a shared glyph cache for reuse across pipelines
+    pub fn with_glyph_cache(mut self, cache: SharedGlyphCache) -> Self {
+        self.glyph_cache = Some(cache);
+        self
+    }
+
     /// Create the pipeline, ready to run
     pub fn build(self) -> Result<Pipeline> {
         // No custom stages? Use the classic six
@@ -192,11 +246,48 @@ impl PipelineBuilder {
             self.stages
         };
 
+        let shaping_cache = if self.cache_policy.shaping {
+            Some(
+                self.shaping_cache
+                    .unwrap_or_else(|| Arc::new(RwLock::new(ShapingCache::new()))),
+            )
+        } else {
+            None
+        };
+
+        let glyph_cache = if self.cache_policy.glyph {
+            Some(
+                self.glyph_cache
+                    .unwrap_or_else(|| Arc::new(RwLock::new(GlyphCache::new()))),
+            )
+        } else {
+            None
+        };
+
+        let shaper = match (self.shaper, shaping_cache.as_ref()) {
+            (Some(shaper), Some(cache)) => {
+                Some(Arc::new(CachedShaper::new(shaper, cache.clone())) as Arc<dyn Shaper>)
+            },
+            (Some(shaper), None) => Some(shaper),
+            (None, _) => None,
+        };
+
+        let renderer = match (self.renderer, glyph_cache.as_ref()) {
+            (Some(renderer), Some(cache)) => {
+                Some(Arc::new(CachedRenderer::new(renderer, cache.clone())) as Arc<dyn Renderer>)
+            },
+            (Some(renderer), None) => Some(renderer),
+            (None, _) => None,
+        };
+
         Ok(Pipeline {
             stages,
-            shaper: self.shaper,
-            renderer: self.renderer,
+            shaper,
+            renderer,
             exporter: self.exporter,
+            cache_policy: self.cache_policy,
+            shaping_cache,
+            glyph_cache,
         })
     }
 }
@@ -326,6 +417,97 @@ impl Stage for ExportStage {
         }
 
         Ok(context)
+    }
+}
+
+/// Wrapper adding backend-neutral shaping cache behaviour
+struct CachedShaper {
+    inner: Arc<dyn Shaper>,
+    cache: SharedShapingCache,
+}
+
+impl CachedShaper {
+    fn new(inner: Arc<dyn Shaper>, cache: SharedShapingCache) -> Self {
+        Self { inner, cache }
+    }
+}
+
+impl Shaper for CachedShaper {
+    fn name(&self) -> &'static str {
+        self.inner.name()
+    }
+
+    fn shape(
+        &self,
+        text: &str,
+        font: Arc<dyn FontRef>,
+        params: &ShapingParams,
+    ) -> Result<crate::types::ShapingResult> {
+        let key = ShapingCacheKey::new(
+            text,
+            self.inner.name(),
+            font.data(),
+            params.size,
+            params.language.clone(),
+            params.script.clone(),
+            params.features.clone(),
+            params.variations.clone(),
+        );
+
+        if let Ok(cache) = self.cache.read() {
+            if let Some(hit) = cache.get(&key) {
+                return Ok(hit);
+            }
+        }
+
+        let shaped = self.inner.shape(text, font, params)?;
+
+        if let Ok(cache) = self.cache.write() {
+            cache.insert(key, shaped.clone());
+        }
+
+        Ok(shaped)
+    }
+}
+
+/// Wrapper adding backend-neutral render/glyph cache behaviour
+struct CachedRenderer {
+    inner: Arc<dyn Renderer>,
+    cache: SharedGlyphCache,
+}
+
+impl CachedRenderer {
+    fn new(inner: Arc<dyn Renderer>, cache: SharedGlyphCache) -> Self {
+        Self { inner, cache }
+    }
+}
+
+impl Renderer for CachedRenderer {
+    fn name(&self) -> &'static str {
+        self.inner.name()
+    }
+
+    fn render(
+        &self,
+        shaped: &crate::types::ShapingResult,
+        font: Arc<dyn FontRef>,
+        params: &RenderParams,
+    ) -> Result<crate::types::RenderOutput> {
+        let key = GlyphCacheKey::new(self.inner.name(), font.data(), shaped, params);
+
+        if let Ok(cache) = self.cache.read() {
+            if let Some(hit) = cache.get(&key) {
+                return Ok(hit);
+            }
+        }
+
+        let rendered = self.inner.render(shaped, font, params)?;
+
+        if let Ok(cache) = self.cache.write() {
+            cache.insert(key, rendered.clone());
+        }
+
+        Ok(rendered)
     }
 }
 

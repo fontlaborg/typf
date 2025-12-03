@@ -536,11 +536,7 @@ fn calculate_bounds(path: &str, _scale: f32) -> (f32, f32, f32, f32) {
 mod tests {
     use super::*;
     use std::path::PathBuf;
-    use typf_core::{
-        types::Direction,
-        GlyphSource,
-        GlyphSourcePreference,
-    };
+    use typf_core::{types::Direction, GlyphSource, GlyphSourcePreference};
 
     #[test]
     fn test_renderer_creation() {
@@ -600,7 +596,8 @@ mod tests {
         path.push("test-fonts");
         path.push("NotoSans-Regular.ttf");
 
-        let font = typf_fontdb::Font::from_file(&path).expect("test font should load for SVG mode");
+        let font =
+            typf_fontdb::TypfFontFace::from_file(&path).expect("test font should load for SVG mode");
         Arc::new(font)
     }
 

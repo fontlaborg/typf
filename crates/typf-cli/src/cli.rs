@@ -141,6 +141,14 @@ pub struct RenderArgs {
     #[arg(long = "glyph-source", action = ArgAction::Append)]
     pub glyph_source: Vec<String>,
 
+    /// Disable shaping cache (enabled by default)
+    #[arg(long = "no-shaping-cache", action = ArgAction::SetTrue)]
+    pub no_shaping_cache: bool,
+
+    /// Disable glyph/render cache (enabled by default)
+    #[arg(long = "no-glyph-cache", action = ArgAction::SetTrue)]
+    pub no_glyph_cache: bool,
+
     // Output Options
     /// Output file path (stdout if omitted)
     #[arg(short = 'o', long = "output-file")]

@@ -27,7 +27,7 @@ Rust workspace: crate-by-crate highlights
   - `UnicodeProcessor::process` correctly maps byte→char indices and bidi levels; grapheme cluster results are computed then discarded. `detect_scripts` keeps `Common` sticky until first specific script; language copy-through only.  
   - Tests cover RTL/mixed scripts/segmentation; no stress tests for surrogate pairs or invalid UTF-8 (input assumed valid).  
 - `crates/typf-fontdb`  
-  - `Font::from_file/from_data_index` validate via `read-fonts`, honor `face_index`, and avoid leaks; error typing is coarse (`FontError`).  
+  - `TypfFontFace::from_file/from_data_index` validate via `read-fonts`, honor `face_index`, and avoid leaks; error typing is coarse (`FontError`).  
   - `advance_width` normalizes to 1000 UPM, diverging from actual UPM and can distort metrics for fonts with non-1000 UPM; no size cap on input data.  
 - `crates/typf-export`  
   - `png.rs` validates lengths for RGBA/RGB/Gray8/Gray1; Gray1 bit-walk is bounds-checked. Uses `image` encoder; no streaming/stride options.  

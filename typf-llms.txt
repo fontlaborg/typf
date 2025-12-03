@@ -1,0 +1,5507 @@
+Project Structure:
+📁 typf
+├── 📁 backends
+│   ├── 📁 typf-os
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-os-mac
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-os-win
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-render-cg
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-render-color
+│   │   ├── 📁 examples
+│   │   │   └── 📄 render_emoji.rs
+│   │   ├── 📁 src
+│   │   │   ├── 📄 bitmap.rs
+│   │   │   ├── 📄 lib.rs
+│   │   │   └── 📄 svg.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-render-json
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-render-opixa
+│   │   ├── 📁 examples
+│   │   │   └── 📄 profile.rs
+│   │   ├── 📁 src
+│   │   │   ├── 📄 curves.rs
+│   │   │   ├── 📄 edge.rs
+│   │   │   ├── 📄 fixed.rs
+│   │   │   ├── 📄 glyph_cache.rs
+│   │   │   ├── 📄 grayscale.rs
+│   │   │   ├── 📄 lib.rs
+│   │   │   ├── 📄 parallel.rs
+│   │   │   ├── 📄 rasterizer.rs
+│   │   │   ├── 📄 scan_converter.rs
+│   │   │   └── 📄 simd.rs
+│   │   ├── 📁 tests
+│   │   │   └── 📄 integration.rs
+│   │   ├── 📄 Cargo.toml
+│   │   └── 📄 TODO.md
+│   ├── 📁 typf-render-skia
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   ├── 📁 tests
+│   │   │   └── 📄 integration.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-render-svg
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   ├── 📁 tests
+│   │   │   └── 📄 integration.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-render-zeno
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   ├── 📁 tests
+│   │   │   └── 📄 integration.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-shape-ct
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-shape-hb
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   ├── 📁 tests
+│   │   │   ├── 📁 golden
+│   │   │   │   ├── 📄 empty_text.txt
+│   │   │   │   ├── 📄 numbers.txt
+│   │   │   │   ├── 📄 punctuation.txt
+│   │   │   │   ├── 📄 simple_latin.txt
+│   │   │   │   └── 📄 single_char.txt
+│   │   │   └── 📄 golden_tests.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-shape-icu-hb
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   └── 📄 Cargo.toml
+│   └── 📁 typf-shape-none
+│       ├── 📁 src
+│       │   └── 📄 lib.rs
+│       └── 📄 Cargo.toml
+├── 📁 benches
+│   ├── 📄 comprehensive.rs
+│   └── 📄 pipeline_bench.rs
+├── 📁 bindings
+│   └── 📁 python
+│       ├── 📁 python
+│       │   └── 📁 typfpy
+│       │       ├── 📄 __init__.py
+│       │       ├── 📄 __main__.py
+│       │       └── 📄 cli.py
+│       ├── 📁 src
+│       │   └── 📄 lib.rs
+│       ├── 📁 tests
+│       │   ├── 📄 __init__.py
+│       │   └── 📄 test_exports.py
+│       ├── 📄 Cargo.toml
+│       ├── 📄 pyproject.toml
+│       ├── 📄 pytest.ini
+│       └── 📄 README.md
+├── 📁 crates
+│   ├── 📁 typf
+│   │   ├── 📁 examples
+│   │   │   └── 📁 output
+│   │   │       ├── 📄 test.pbm
+│   │   │       ├── 📄 test.pgm
+│   │   │       └── 📄 test.ppm
+│   │   ├── 📁 src
+│   │   │   ├── 📄 lib.rs
+│   │   │   └── 📄 wasm.rs
+│   │   ├── 📁 tests
+│   │   │   └── 📄 integration_test.rs
+│   │   ├── 📄 Cargo.readme.generated.toml
+│   │   ├── 📄 Cargo.readme.XXXXXX.toml
+│   │   ├── 📄 Cargo.toml
+│   │   └── 📄 Cargo.toml.bak
+│   ├── 📁 typf-bench
+│   │   ├── 📁 src
+│   │   │   └── 📄 main.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-cli
+│   │   ├── 📁 src
+│   │   │   ├── 📁 commands
+│   │   │   │   ├── 📄 batch.rs
+│   │   │   │   ├── 📄 info.rs
+│   │   │   │   ├── 📄 mod.rs
+│   │   │   │   └── 📄 render.rs
+│   │   │   ├── 📄 batch.rs
+│   │   │   ├── 📄 cli.rs
+│   │   │   ├── 📄 jsonl.rs
+│   │   │   ├── 📄 lib.rs
+│   │   │   ├── 📄 main.rs
+│   │   │   ├── 📄 main_old.rs
+│   │   │   └── 📄 repl.rs
+│   │   ├── 📁 tests
+│   │   │   └── 📄 cli_smoke.rs
+│   │   ├── 📄 .gitignore
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-core
+│   │   ├── 📁 src
+│   │   │   ├── 📄 cache.rs
+│   │   │   ├── 📄 context.rs
+│   │   │   ├── 📄 error.rs
+│   │   │   ├── 📄 lib.rs
+│   │   │   ├── 📄 linra.rs
+│   │   │   ├── 📄 pipeline.rs
+│   │   │   ├── 📄 shaping_cache.rs
+│   │   │   └── 📄 traits.rs
+│   │   ├── 📁 tests
+│   │   │   └── 📄 glyph_source_preference.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-export
+│   │   ├── 📁 src
+│   │   │   ├── 📄 json.rs
+│   │   │   ├── 📄 lib.rs
+│   │   │   ├── 📄 png.rs
+│   │   │   └── 📄 svg.rs
+│   │   ├── 📄 .gitignore
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-export-svg
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   ├── 📁 tests
+│   │   │   └── 📄 integration.rs
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-fontdb
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   ├── 📄 .gitignore
+│   │   └── 📄 Cargo.toml
+│   ├── 📁 typf-input
+│   │   ├── 📁 src
+│   │   │   └── 📄 lib.rs
+│   │   ├── 📄 .gitignore
+│   │   └── 📄 Cargo.toml
+│   └── 📁 typf-unicode
+│       ├── 📁 src
+│       │   ├── 📄 lib.rs
+│       │   ├── 📄 proptests.rs
+│       │   └── 📄 tests.rs
+│       ├── 📄 .gitignore
+│       └── 📄 Cargo.toml
+├── 📁 fuzz
+│   ├── 📁 fuzz_targets
+│   │   ├── 📄 fuzz_harfbuzz_shape.rs
+│   │   ├── 📄 fuzz_pipeline.rs
+│   │   └── 📄 fuzz_unicode_process.rs
+│   ├── 📄 Cargo.toml
+│   └── 📄 README.md
+├── 📁 scripts
+│   ├── 📄 bench-compare.sh
+│   ├── 📄 bench.sh
+│   ├── 📄 build-wasm.sh
+│   ├── 📄 build.sh
+│   ├── 📄 count-tests.sh
+│   ├── 📄 fuzz.sh
+│   ├── 📄 generate_docs.sh
+│   ├── 📄 profile-memory.sh
+│   ├── 📄 publish.sh
+│   ├── 📄 set-version.sh
+│   └── 📄 test.sh
+├── 📄 build.sh
+├── 📄 Cargo.toml
+├── 📄 pyproject.toml
+└── 📄 zensical.toml
+
+
+<documents>
+<document index="1">
+<source>Cargo.toml</source>
+<document_content>
+[workspace]
+resolver = "2"
+exclude = ["fuzz"]
+members = [
+  "backends/typf-os",
+  # "backends/typf-render-mac",    # Same as cg
+  # "backends/typf-render-win",    # Windows Direct2D (needs Windows)
+  # Linra OS backends (single-pass shaping+rendering)
+  "backends/typf-os-mac",
+  "backends/typf-os-win",
+  "backends/typf-render-cg",
+  "backends/typf-render-color",
+  # "backends/typf-shape-mac",     # Same as ct
+  # "backends/typf-shape-win",     # Windows DirectWrite (needs Windows)
+  # Rendering backends
+  "backends/typf-render-json",
+  "backends/typf-render-opixa",
+  "backends/typf-render-skia",
+  "backends/typf-render-svg",
+  "backends/typf-render-zeno",
+  "backends/typf-shape-ct",
+  "backends/typf-shape-hb",
+  "backends/typf-shape-icu-hb",
+  # Shaping backends
+  "backends/typf-shape-none",
+  # Bindings
+  "bindings/python",
+  # Core crates
+  "crates/typf",
+  "crates/typf-bench",
+  # CLI
+  "crates/typf-cli",
+  "crates/typf-core",
+  "crates/typf-export",
+  "crates/typf-export-svg",
+  "crates/typf-fontdb",
+  "crates/typf-input",
+  "crates/typf-unicode",
+]
+
+[workspace.package]
+version = "2.0.0"
+authors = ["Typf Contributors"]
+edition = "2021"
+rust-version = "1.75"
+repository = "https://github.com/fontlaborg/typf"
+license = "EVALUATION LICENSE"
+
+[workspace.dependencies]
+anyhow = "1.0"
+env_logger = "0.11"
+flate2 = "1.0"
+# Shaping dependencies
+harfbuzz_rs = "2.0"
+# ICU dependencies (for icu-hb shaping)
+icu = "2.1"
+icu_properties = "2.1"
+icu_segmenter = "2.1"
+kurbo = "0.11"
+log = "0.4"
+lru = "0.16"
+# Caching and concurrency
+parking_lot = "0.12"
+# Bitmap glyph rendering (PNG decode)
+png = "0.17"
+rayon = "1.10"
+# External dependencies
+read-fonts = "0.36"
+# SVG glyph rendering
+resvg = "0.45"
+skrifa = "0.39"
+thiserror = "2.0"
+# Rendering dependencies
+tiny-skia = "0.11"
+# Internal crates
+typf = { path = "crates/typf", version = "2.0.0" }
+typf-bench = { path = "crates/typf-bench", version = "2.0.0" }
+typf-core = { path = "crates/typf-core", version = "2.0.0" }
+typf-export = { path = "crates/typf-export", version = "2.0.0" }
+typf-fontdb = { path = "crates/typf-fontdb", version = "2.0.0" }
+typf-input = { path = "crates/typf-input", version = "2.0.0" }
+typf-os = { path = "backends/typf-os", version = "2.0.0" }
+# Linra OS backends
+typf-os-mac = { path = "backends/typf-os-mac", version = "2.0.0" }
+typf-os-win = { path = "backends/typf-os-win", version = "2.0.0" }
+typf-render-cg = { path = "backends/typf-render-cg", version = "2.0.0" }
+typf-render-color = { path = "backends/typf-render-color", version = "2.0.0" }
+# Rendering backends
+typf-render-json = { path = "backends/typf-render-json", version = "2.0.0" }
+typf-render-opixa = { path = "backends/typf-render-opixa", version = "2.0.0" }
+typf-render-skia = { path = "backends/typf-render-skia", version = "2.0.0" }
+typf-render-svg = { path = "backends/typf-render-svg", version = "2.0.0" }
+typf-render-zeno = { path = "backends/typf-render-zeno", version = "2.0.0" }
+typf-shape-ct = { path = "backends/typf-shape-ct", version = "2.0.0" }
+typf-shape-hb = { path = "backends/typf-shape-hb", version = "2.0.0" }
+typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb", version = "2.0.0" }
+# Shaping backends
+typf-shape-none = { path = "backends/typf-shape-none", version = "2.0.0" }
+typf-unicode = { path = "crates/typf-unicode", version = "2.0.0" }
+usvg = "0.45"
+zeno = "0.3"
+
+# Feature flags for the workspace
+# These are referenced by individual crates
+[workspace.metadata.features]
+# Minimal build with no external dependencies
+minimal = ["shaping-none", "render-opixa", "export-pnm"]
+# Default build with common features
+default = ["minimal", "unicode", "fontdb"]
+# Full build with all features
+full = [
+  "default",
+  "shaping-hb",
+  "shaping-icu-hb",
+  "render-skia",
+  "render-zeno",
+  "export-png",
+  "export-svg",
+  "export-pdf",
+  "simd",
+  "parallel",
+]
+# Shaping backends
+shaping-none = []
+shaping-hb = []
+shaping-icu-hb = ["shaping-hb"]
+shaping-mac = []
+shaping-win = []
+# Rendering backends
+render-opixa = []
+render-skia = []
+render-zeno = []
+render-mac = []
+render-win = []
+# Export formats
+export-pnm = []
+export-png = []
+export-svg = []
+export-pdf = []
+export-json = []
+# Optional features
+unicode = []
+fontdb = []
+simd = []
+parallel = []
+# Platform-specific auto-selection
+auto-backend = []
+
+[profile.bench]
+inherits = "release"
+lto = false
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+codegen-units = 1
+
+[profile.minimal]
+inherits = "release"
+opt-level = "z"  # Optimize for size
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false
+</document_content>
+</document>
+
+<document index="2">
+<source>backends/typf-os/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-os"
+version.workspace = true
+edition = "2021"
+description = "Platform-native linra text rendering dispatcher"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fontlaborg/typf"
+keywords = ["font", "text", "rendering", "platform"]
+categories = ["graphics", "text-processing"]
+
+[dependencies]
+typf-core = { path = "../../crates/typf-core" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+typf-os-mac = { path = "../typf-os-mac" }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+typf-os-win = { path = "../typf-os-win" }
+
+[features]
+default = []
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-os/src/lib.rs
+# Language: rust
+
+mod tests;
+
+
+<document index="3">
+<source>backends/typf-os-mac/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-os-mac"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Single-pass text rendering using macOS CoreText"
+keywords = ["font", "text", "rendering", "coretext", "macos"]
+categories = ["graphics", "text-processing"]
+
+[dependencies]
+typf-core = { workspace = true }
+log = { workspace = true }
+lru = { workspace = true }
+parking_lot = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-graphics = "0.24"
+core-text = "21"
+foreign-types = "0.5"
+
+[dev-dependencies]
+env_logger = "0.11"
+
+[features]
+default = []
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-os-mac/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct ProviderData {
+}
+
+struct FontCacheKey {
+}
+
+struct CachedFont {
+}
+
+struct CoreTextLinraRenderer {
+}
+
+struct MockFont {
+}
+
+
+<document index="4">
+<source>backends/typf-os-win/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-os-win"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Single-pass text rendering using Windows DirectWrite"
+
+[dependencies]
+typf-core = { workspace = true }
+log = { workspace = true }
+parking_lot = { workspace = true }
+lru = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Imaging",
+    "Win32_System_Com",
+] }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-os-win/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct FontCacheKey {
+}
+
+struct CachedFont {
+}
+
+struct DirectWriteLinraRenderer {
+}
+
+struct MockFont {
+}
+
+
+<document index="5">
+<source>backends/typf-render-cg/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-render-cg"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "CoreGraphics rendering backend for Typf"
+license.workspace = true
+
+[dependencies]
+log = { workspace = true }
+typf-core = { workspace = true }
+
+[dev-dependencies]
+env_logger = "0.11"
+
+# macOS-specific dependencies
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-graphics = "0.24"
+core-text = "21.0"
+foreign-types = "0.5"
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-cg/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct ProviderData {
+}
+
+struct CoreGraphicsRenderer {
+}
+
+struct MockFont {
+}
+
+
+<document index="6">
+<source>backends/typf-render-color/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-render-color"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Color glyph renderer for Typf (COLR v0/v1, SVG, sbix/CBDT bitmap)"
+repository.workspace = true
+license.workspace = true
+keywords = ["color", "colr", "emoji", "font", "opentype"]
+categories = ["graphics", "rendering", "text-processing"]
+
+[dependencies]
+flate2 = { workspace = true, optional = true }
+log = { workspace = true }
+# Bitmap glyph support (optional)
+png = { workspace = true, optional = true }
+# SVG glyph support (optional)
+resvg = { workspace = true, optional = true }
+skrifa = { workspace = true }
+tiny-skia = { workspace = true }
+typf-core = { workspace = true }
+usvg = { workspace = true, optional = true }
+
+[features]
+default = ["colr"]
+# Bitmap glyph support for sbix (Apple) and CBDT/CBLC (Google) tables
+bitmap = ["dep:png"]
+# COLR v0/v1 layered color glyphs with gradients and compositing
+colr = []
+# SVG table glyph rendering via resvg (handles gzip compression)
+svg = ["dep:flate2", "dep:resvg", "dep:usvg"]
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-color/examples/render_emoji.rs
+# Language: rust
+
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-color/src/bitmap.rs
+# Language: rust
+
+mod tests;
+
+struct TinySkiaPathPen {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-color/src/lib.rs
+# Language: rust
+
+mod bitmap;
+
+mod svg;
+
+mod tests;
+
+struct TinySkiaPathPen {
+}
+
+struct TinySkiaColorPainter {
+}
+
+struct LayerState {
+}
+
+struct RenderResult {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-color/src/svg.rs
+# Language: rust
+
+mod tests;
+
+
+<document index="7">
+<source>backends/typf-render-json/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-render-json"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "JSON output renderer for Typf (HarfBuzz-compatible format)"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+log = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = { workspace = true }
+typf-core = { workspace = true }
+
+[dev-dependencies]
+env_logger = "0.11"
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-json/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct HbGlyphInfo {
+}
+
+struct JsonOutput {
+}
+
+struct JsonRenderer {
+}
+
+struct MockFont {
+}
+
+
+<document index="8">
+<source>backends/typf-render-opixa/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-render-opixa"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+log = { workspace = true }
+rayon = { version = "1.8", optional = true }
+read-fonts = { workspace = true }
+skrifa = { workspace = true }
+
+[features]
+default = []
+parallel = ["rayon"]
+</document_content>
+</document>
+
+<document index="9">
+<source>backends/typf-render-opixa/TODO.md</source>
+<document_content>
+Based on an in-depth analysis of your project files and modern rasterization techniques, this document provides a specific and actionable specification to radically increase the performance of the `typf-render-opixa` rasterizer. The recommendations are structured in phases, starting with foundational improvements and progressing to more advanced parallelization, balancing impact against implementation complexity.[1]
+
+### Phase 1: Foundational Optimizations
+
+This phase focuses on establishing a proper optimization workflow and implementing high-impact, low-complexity changes related to memory management and build configuration.[2][3]
+
+*   **1.1. Establish a Profiling Baseline**: Before any code changes, create a benchmark suite that reflects typical usage (e.g., rendering various fonts at different sizes). Use `cargo flamegraph` to generate a performance profile of the current implementation. This will identify the most significant bottlenecks and serve as a baseline to measure all future improvements against.[3]
+*   **1.2. Aggressive Build Configuration**: Modify your `Cargo.toml` to ensure the compiler generates the most optimized code possible for release builds. Enable link-time optimization (LTO), reduce codegen units to allow for more cross-crate inlining, and compile for the native CPU to unlock the best available instruction sets (like AVX2).[2][3]
+
+    ```toml
+    [profile.release]
+    lto = "fat"
+    codegen-units = 1
+    panic = "abort"
+    ```
+    Set the following environment variable when compiling: `RUSTFLAGS="-C target-cpu=native"`.[3]
+
+*   **1.3. Zero-Allocation Scan Conversion**: The core rasterization loop in `scan_converter.rs` must perform zero heap allocations.[2][3]
+    *   **Action**: Pre-allocate all necessary buffers outside the main loop, such as the Active Edge Table (AET) and scanline span buffers. Pass mutable slices (`&mut [T]`) into the rasterizer.
+    *   **Recommendation**: Use an arena allocator like `bumpalo` for managing the memory of all edges for a given glyph. This allows for extremely fast, contiguous allocations that are all deallocated at once when the glyph rendering is complete.
+
+### Phase 2: Algorithmic and Data Structure Enhancements
+
+This phase refines the core algorithms and data layouts for better cache performance and reduced computational overhead.[3][2]
+
+*   **2.1. Optimized Edge Table Management**: The current approach of sorting edges on every scanline is a major performance bottleneck. This should be replaced with a more efficient method in `edge.rs` and `scan_converter.rs`.[2][3]
+    *   **Global Edge Table (GET)**: Implement a bucket sort for all glyph edges. Create an array of lists (buckets), where each bucket corresponds to a Y scanline. During setup, place each edge into the bucket of its starting scanline. This eliminates sorting entirely at this stage.[2]
+    *   **Active Edge Table (AET)**: As you iterate through scanlines, add edges from the corresponding GET bucket to the AET. The AET can be kept sorted by insertion. For subsequent scanlines, simply update the X-intercept of each active edge by adding its slope (`dx/dy`), which is much faster than re-sorting.[3]
+*   **2.2. Adopt Structure-of-Arrays (SoA) Layout**: Transition the `Edge` struct from an Array-of-Structs (AoS) to a Structure-of-Arrays (SoA) layout. This dramatically improves cache-line utilization and is a prerequisite for effective SIMD vectorization.[3]
+    *   **Action**: Instead of `Vec<Edge { x, slope, y_max }>`, use a single struct:
+        ```rust
+        struct Edges {
+            x_coords: Vec<F26Dot6>,
+            slopes: Vec<F26Dot6>,
+            y_max: Vec<i32>,
+        }
+        ```
+*   **2.3. Implement Adaptive Curve Flattening**: The curve decomposition in `curves.rs` should be made adaptive to reduce the number of line segments for the rasterizer to process.[2]
+    *   **Action**: Modify the curve flattening function to accept a tolerance parameter. For smoother curves, this will generate fewer, longer line segments, reducing the total edge count significantly.
+
+### Phase 3: Advanced Parallelism
+
+With a solid foundation, this phase introduces multi-level parallelism to leverage modern multi-core CPUs for radical speedups.[3][2]
+
+*   **3.1. Implement SIMD on the Scanline**: The `simd.rs` module should be implemented to process multiple pixels simultaneously within the scan-conversion loop.[2][3]
+    *   **Action**: Use Rust's stable `std::simd` API to operate on vectors of 4 or 8 pixels at a time.
+    *   **Grayscale Coverage**: Load edge intersection points into SIMD registers. For each pixel in the vector, calculate coverage in parallel. This is especially effective for anti-aliasing. A 2x2 pixel quad approach can be more robust than a horizontal 4x1 span, as it handles both vertical and horizontal edges well.[3]
+    *   **Monochrome Fill**: For 1-bit monochrome output, use SIMD instructions to write entire 8- or 16-byte chunks to the bitmap buffer in a single operation, rather than pixel by pixel.[2]
+*   **3.2. Refine `rayon` Parallelism Strategy**: Your `parallel.rs` module can be enhanced with a multi-level approach.[1][2]
+    *   **Glyph-Level Parallelism**: For rendering strings or texture atlases, continue using `rayon` to distribute the rendering of individual, independent glyphs across the thread pool. This is highly effective and has low overhead.[2]
+    *   **Tile-Based Parallelism**: For very large and complex glyphs (e.g., CJK ideographs), implement a tile-based rendering strategy. Divide the glyph's bounding box into small, cache-friendly tiles (e.g., 32x32 or 64x64 pixels). Distribute these tiles as work units to a `rayon` thread pool. Each thread processes a subset of tiles, significantly improving cache locality and enabling parallel processing of a single glyph.[3]
+
+### Phase 4: High-Level Caching Strategy
+
+While the reference C code includes a complex cache manager (`cachemgr.c`), the `opixa` rasterizer itself should remain a pure, stateless computational kernel. Caching should be the responsibility of the application that *uses* the rasterizer.[4][3]
+
+*   **4.1. Glyph Bitmap Cache**: Implement an application-level LRU cache (using the `lru` crate) to store the final rendered glyph bitmaps. Before requesting a rasterization, check the cache for an existing bitmap. The key should be a struct containing the glyph ID, transformation details, and size.[2]
+*   **4.2. Outline Cache**: For maximum performance, implement a secondary cache for storing the pre-processed and scaled glyph outlines (the SoA `Edges` struct from step 2.2). This avoids re-calculating the flattened path if a glyph is needed again with a minor change like a subpixel shift.[2]
+
+[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/a00866e0-6112-4b04-bff0-fc3462000b60/llms-opixa.txt)
+[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/58339bd7-baaf-4230-9995-5369d680f5d3/pplx2.md)
+[3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/6044127f-d143-4c8f-b903-192c2e14d592/pplx1.md)
+[4](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106844374/e0fb27bf-08e4-4d4c-a482-f58e22d14b47/llms-raster.txt)
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/examples/profile.rs
+# Language: rust
+
+struct SimpleFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/curves.rs
+# Language: rust
+
+mod tests;
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/edge.rs
+# Language: rust
+
+mod tests;
+
+struct Edge {
+}
+
+struct EdgeList {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/fixed.rs
+# Language: rust
+
+mod tests;
+
+struct F26Dot6 {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/glyph_cache.rs
+# Language: rust
+
+mod tests;
+
+struct GlyphCacheKey {
+}
+
+struct GlyphCache {
+}
+
+struct GlyphCacheStats {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/grayscale.rs
+# Language: rust
+
+mod tests;
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/lib.rs
+# Language: rust
+
+mod curves;
+
+mod edge;
+
+mod fixed;
+
+mod glyph_cache;
+
+mod grayscale;
+
+mod rasterizer;
+
+mod scan_converter;
+
+mod simd;
+
+mod parallel;
+
+mod tests;
+
+struct OpixaRenderer {
+}
+
+struct RenderedGlyph {
+}
+
+struct MockFont {
+}
+
+struct MockFont {
+}
+
+struct MockFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/parallel.rs
+# Language: rust
+
+mod tests;
+
+struct ParallelRenderer {
+}
+
+struct ParallelStats {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/rasterizer.rs
+# Language: rust
+
+mod tests;
+
+struct GlyphRasterizer {
+}
+
+struct BoundsCalculator {
+}
+
+struct TransformPen {
+}
+
+struct GlyphBitmap {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/scan_converter.rs
+# Language: rust
+
+mod tests;
+
+struct ScanConverter {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/src/simd.rs
+# Language: rust
+
+mod tests;
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-opixa/tests/integration.rs
+# Language: rust
+
+struct TestFont {
+}
+
+
+<document index="10">
+<source>backends/typf-render-skia/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-render-skia"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Skia rendering backend for Typf"
+repository.workspace = true
+license.workspace = true
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+
+[dependencies]
+kurbo = "0.11"
+log.workspace = true
+read-fonts = "0.36"
+skrifa = "0.39"
+thiserror.workspace = true
+tiny-skia = "0.11"
+typf-core = { workspace = true }
+typf-render-svg = { workspace = true }
+
+[dev-dependencies]
+typf-fontdb = { workspace = true }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-skia/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct SkiaRenderer {
+}
+
+struct RenderedGlyph {
+}
+
+struct GlyphBitmap {
+}
+
+struct PathPen {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-skia/tests/integration.rs
+# Language: rust
+
+struct StubFont {
+}
+
+
+<document index="11">
+<source>backends/typf-render-svg/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-render-svg"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "SVG vector renderer for Typf - extracts glyph outlines as SVG paths"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+log = { workspace = true }
+skrifa = { workspace = true }
+typf-core = { workspace = true }
+typf-export = { workspace = true }
+typf-render-color = { workspace = true, features = ["bitmap", "svg"] }
+
+[dev-dependencies]
+typf-fontdb = { workspace = true }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-svg/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct SvgRenderer {
+}
+
+struct GlyphBounds {
+}
+
+struct GlyphPath {
+}
+
+struct ColorImage {
+}
+
+struct PreparedGlyph {
+}
+
+struct SvgPathBuilder {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-svg/tests/integration.rs
+# Language: rust
+
+struct TestFont {
+}
+
+
+<document index="12">
+<source>backends/typf-render-zeno/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-render-zeno"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Zeno rendering backend for Typf"
+repository.workspace = true
+license.workspace = true
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+
+[dependencies]
+kurbo = "0.11"
+log.workspace = true
+read-fonts = "0.36"
+skrifa = "0.39"
+thiserror.workspace = true
+typf-core = { workspace = true }
+zeno = "0.3"
+typf-render-svg = { workspace = true }
+
+[dev-dependencies]
+typf-fontdb = { workspace = true }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-zeno/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct ZenoRenderer {
+}
+
+struct RenderedGlyph {
+}
+
+struct GlyphBitmap {
+}
+
+struct ZenoPathBuilder {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-render-zeno/tests/integration.rs
+# Language: rust
+
+struct StubFont {
+}
+
+
+<document index="13">
+<source>backends/typf-shape-ct/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-shape-ct"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "CoreText shaping backend for Typf"
+license.workspace = true
+
+[dependencies]
+log = { workspace = true }
+lru = { workspace = true }
+parking_lot = { workspace = true }
+typf-core = { workspace = true }
+
+[dev-dependencies]
+env_logger = "0.11"
+
+# macOS-specific dependencies
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-graphics = "0.24"
+core-text = "21.0"
+foreign-types = "0.5"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = [
+  "NSAttributedString",
+  "NSDictionary",
+  "NSString"
+] }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-shape-ct/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct ProviderData {
+}
+
+struct CoreTextShaper {
+}
+
+struct MockFont {
+}
+
+
+<document index="14">
+<source>backends/typf-shape-hb/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-shape-hb"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+harfbuzz_rs = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+
+# Pool management
+parking_lot = { workspace = true }
+
+[dev-dependencies]
+read-fonts = { workspace = true }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-shape-hb/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct HarfBuzzShaper {
+}
+
+struct TestFont {
+}
+
+
+<document index="15">
+<source>backends/typf-shape-hb/tests/golden/empty_text.txt</source>
+<document_content>
+Glyph count: 0
+Advance width: 0.00
+Advance height: 16.00
+Direction: LeftToRight
+Glyphs:
+</document_content>
+</document>
+
+<document index="16">
+<source>backends/typf-shape-hb/tests/golden/numbers.txt</source>
+<document_content>
+Glyph count: 10
+Advance width: 80.00
+Advance height: 16.00
+Direction: LeftToRight
+Glyphs:
+  0: id=49, advance=500.00, pos=(0.00, 0.00), cluster=0
+  1: id=50, advance=500.00, pos=(8.00, 0.00), cluster=0
+  2: id=51, advance=500.00, pos=(16.00, 0.00), cluster=0
+  3: id=52, advance=500.00, pos=(24.00, 0.00), cluster=0
+  4: id=53, advance=500.00, pos=(32.00, 0.00), cluster=0
+  5: id=54, advance=500.00, pos=(40.00, 0.00), cluster=0
+  6: id=55, advance=500.00, pos=(48.00, 0.00), cluster=0
+  7: id=56, advance=500.00, pos=(56.00, 0.00), cluster=0
+  8: id=57, advance=500.00, pos=(64.00, 0.00), cluster=0
+  9: id=48, advance=500.00, pos=(72.00, 0.00), cluster=0
+</document_content>
+</document>
+
+<document index="17">
+<source>backends/typf-shape-hb/tests/golden/punctuation.txt</source>
+<document_content>
+Glyph count: 13
+Advance width: 104.00
+Advance height: 16.00
+Direction: LeftToRight
+Glyphs:
+  0: id=72, advance=500.00, pos=(0.00, 0.00), cluster=0
+  1: id=101, advance=500.00, pos=(8.00, 0.00), cluster=0
+  2: id=108, advance=500.00, pos=(16.00, 0.00), cluster=0
+  3: id=108, advance=500.00, pos=(24.00, 0.00), cluster=0
+  4: id=111, advance=500.00, pos=(32.00, 0.00), cluster=0
+  5: id=44, advance=500.00, pos=(40.00, 0.00), cluster=0
+  6: id=32, advance=500.00, pos=(48.00, 0.00), cluster=0
+  7: id=87, advance=500.00, pos=(56.00, 0.00), cluster=0
+  8: id=111, advance=500.00, pos=(64.00, 0.00), cluster=0
+  9: id=114, advance=500.00, pos=(72.00, 0.00), cluster=0
+  10: id=108, advance=500.00, pos=(80.00, 0.00), cluster=0
+  11: id=100, advance=500.00, pos=(88.00, 0.00), cluster=0
+  12: id=33, advance=500.00, pos=(96.00, 0.00), cluster=0
+</document_content>
+</document>
+
+<document index="18">
+<source>backends/typf-shape-hb/tests/golden/simple_latin.txt</source>
+<document_content>
+Glyph count: 5
+Advance width: 40.00
+Advance height: 16.00
+Direction: LeftToRight
+Glyphs:
+  0: id=72, advance=500.00, pos=(0.00, 0.00), cluster=0
+  1: id=101, advance=500.00, pos=(8.00, 0.00), cluster=0
+  2: id=108, advance=500.00, pos=(16.00, 0.00), cluster=0
+  3: id=108, advance=500.00, pos=(24.00, 0.00), cluster=0
+  4: id=111, advance=500.00, pos=(32.00, 0.00), cluster=0
+</document_content>
+</document>
+
+<document index="19">
+<source>backends/typf-shape-hb/tests/golden/single_char.txt</source>
+<document_content>
+Glyph count: 1
+Advance width: 8.00
+Advance height: 16.00
+Direction: LeftToRight
+Glyphs:
+  0: id=65, advance=500.00, pos=(0.00, 0.00), cluster=0
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-shape-hb/tests/golden_tests.rs
+# Language: rust
+
+struct MockFont {
+}
+
+
+<document index="20">
+<source>backends/typf-shape-icu-hb/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-shape-icu-hb"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "ICU + HarfBuzz shaping backend for Typf"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+harfbuzz_rs = { workspace = true }
+log = { workspace = true }
+lru = { workspace = true }
+parking_lot = { workspace = true }
+thiserror = { workspace = true }
+typf-core = { workspace = true }
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+env_logger = "0.11"
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-shape-icu-hb/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct IcuHarfBuzzShaper {
+}
+
+struct TestFont {
+}
+
+
+<document index="21">
+<source>backends/typf-shape-none/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-shape-none"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+log = { workspace = true }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/backends/typf-shape-none/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct NoneShaper {
+}
+
+struct MockFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/benches/comprehensive.rs
+# Language: rust
+
+struct MockFont {
+}
+
+struct MockFont {
+}
+
+struct MockFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/benches/pipeline_bench.rs
+# Language: rust
+
+struct BenchFont {
+}
+
+
+<document index="22">
+<source>bindings/python/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-py"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Python bindings for Typf text rendering pipeline"
+repository.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+name = "typf"
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+typf = { workspace = true, features = ["default"] }
+typf-core = { workspace = true }
+typf-export = { workspace = true }
+typf-export-svg = { path = "../../crates/typf-export-svg", optional = true }
+typf-fontdb = { workspace = true }
+typf-os = { workspace = true, optional = true }
+typf-os-mac = { workspace = true, optional = true }
+typf-os-win = { workspace = true, optional = true }
+typf-render-cg = { workspace = true, optional = true }
+typf-render-json = { workspace = true, optional = true }
+typf-render-opixa = { workspace = true, optional = true }
+typf-render-skia = { workspace = true, optional = true }
+typf-render-zeno = { workspace = true, optional = true }
+typf-shape-ct = { workspace = true, optional = true }
+typf-shape-hb = { workspace = true, optional = true }
+typf-shape-icu-hb = { workspace = true, optional = true }
+typf-shape-none = { workspace = true }
+
+[features]
+default = [
+  "export-png",
+  "export-svg",
+  "linra-mac",
+  "render-cg",
+  "render-json",
+  "render-opixa",
+  "render-skia",
+  "render-zeno",
+  "shaping-ct",
+  "shaping-hb",
+  "shaping-icu-hb"
+]
+export-png = ["typf/export-png"]
+export-svg = ["typf-export-svg", "typf/export-svg"]
+linra = ["typf-os"]
+linra-mac = ["linra", "typf-os-mac"]
+linra-win = ["linra", "typf-os-win"]
+render-cg = ["typf-render-cg", "typf/render-cg"]
+render-json = ["typf-render-json", "typf/render-json"]
+render-opixa = ["typf-render-opixa", "typf/render-opixa"]
+render-skia = ["typf-render-skia", "typf/render-skia"]
+render-zeno = ["typf-render-zeno", "typf/render-zeno"]
+shaping-ct = ["typf-shape-ct", "typf/shaping-ct"]
+shaping-hb = ["typf-shape-hb", "typf/shaping-hb"]
+shaping-icu-hb = ["typf-shape-icu-hb", "typf/shaping-icu-hb"]
+</document_content>
+</document>
+
+<document index="23">
+<source>bindings/python/README.md</source>
+<document_content>
+# Typf Python Bindings
+
+High-performance text rendering for Python applications.
+
+## Installation
+
+```bash
+# Using uv (recommended)
+uv pip install typfpy
+
+# Or using pip
+pip install typfpy
+```
+
+Or install from source with maturin:
+
+```bash
+cd bindings/python
+
+# Using uv (recommended)
+uv pip install maturin
+maturin develop --release
+
+# Or with uvx (no install needed)
+uvx maturin develop --release
+```
+
+## Quick Start
+
+### Python API
+
+```python
+from typfpy import Typf, render_simple, export_image
+
+# Simple text rendering (no font file needed)
+image = render_simple("Hello, Typf!", size=48)
+
+# Export to PNG
+png_data = export_image(image, format="png")
+with open("output.png", "wb") as f:
+    f.write(png_data)
+
+# Advanced usage with real fonts
+engine = Typf(shaper="harfbuzz", renderer="opixa")
+image = engine.render_text(
+    "Typography is beautiful",
+    font_path="/System/Library/Fonts/Helvetica.ttc",
+    size=48,
+    color=(0, 0, 255, 255),      # Blue text (RGBA)
+    background=(255, 255, 200, 255),  # Light yellow background
+    padding=20
+)
+
+# Access image data
+print(f"Size: {image['width']}x{image['height']}")
+print(f"Format: {image['format']}")
+
+# Export to multiple formats
+png_data = export_image(image, format="png")
+svg_data = export_image(image, format="svg")
+ppm_data = export_image(image, format="ppm")
+```
+
+### Command Line Interface
+
+The Click-based CLI provides a powerful command-line interface:
+
+```bash
+# Render text to PNG
+typfpy render "Hello World" -o output.png
+
+# Specify font and size
+typfpy render "مرحبا" -f /path/to/arabic.ttf -s 64 -o output.png
+
+# Custom colors (RRGGBBAA hex)
+typfpy render "Red Text" -c FF0000FF -b FFFFFFFF -o output.png
+
+# Choose renderer (linra-mac for best performance on macOS)
+typfpy render "Text" --renderer=linra-mac -O svg -o output.svg
+
+# Get system info and available backends
+typfpy info
+
+# Show available shapers
+typfpy info --shapers
+
+# Show available renderers
+typfpy info --renderers
+```
+
+## Features
+
+- ✅ Professional text shaping with HarfBuzz
+- ✅ High-performance rendering with SIMD optimizations
+- ✅ Support for TrueType/OpenType fonts (including .ttc collections)
+- ✅ Multiple export formats (PNG, SVG, PPM, PGM, PBM, JSON)
+- ✅ Thread-safe for concurrent rendering
+- ✅ Complex script support (Arabic, Hebrew, Devanagari, Thai, CJK)
+- ✅ OpenType features (ligatures, kerning, small caps, etc.)
+- ✅ Click-based CLI for command-line usage
+
+## API Reference
+
+### `typfpy.Typf`
+
+Main rendering engine.
+
+```python
+from typfpy import Typf
+engine = Typf(shaper="harfbuzz", renderer="opixa")
+```
+
+**Parameters:**
+- `shaper` (str): Shaping backend - "none" or "harfbuzz" (default: "harfbuzz")
+- `renderer` (str): Rendering backend - "opixa" (default: "opixa")
+
+**Methods:**
+
+#### `render_text(text, font_path, size=16.0, color=None, background=None, padding=10)`
+
+Render text to an image.
+
+**Parameters:**
+- `text` (str): Text to render
+- `font_path` (str): Path to TrueType/OpenType font file
+- `size` (float): Font size in points (default: 16.0)
+- `color` (tuple): Foreground color as (R, G, B, A) (default: black)
+- `background` (tuple): Background color as (R, G, B, A) (default: transparent)
+- `padding` (int): Padding in pixels (default: 10)
+
+**Returns:** Dictionary with `width`, `height`, `format`, and `data` keys
+
+**Example:**
+```python
+image = engine.render_text(
+    "Hello",
+    "/path/to/font.ttf",
+    size=32,
+    color=(255, 0, 0, 255),
+    background=(255, 255, 255, 255),
+    padding=15
+)
+```
+
+#### `get_shaper()` → str
+
+Get current shaper name.
+
+#### `get_renderer()` → str
+
+Get current renderer name.
+
+### `typfpy.FontInfo`
+
+Font information and metrics.
+
+```python
+from typfpy import FontInfo
+font = FontInfo("/path/to/font.ttf")
+```
+
+**Attributes:**
+- `units_per_em` (int): Font units per em
+- `path` (str): Path to font file
+
+**Methods:**
+
+#### `glyph_id(ch)` → int | None
+
+Get glyph ID for a character.
+
+**Example:**
+```python
+from typfpy import FontInfo
+font = FontInfo("/System/Library/Fonts/Arial.ttf")
+print(f"Units per em: {font.units_per_em}")
+glyph_id = font.glyph_id('A')
+print(f"Glyph ID for 'A': {glyph_id}")
+```
+
+### Module Functions
+
+#### `typfpy.render_simple(text, size=16.0)` → dict
+
+Simple rendering with stub font (no font file needed).
+
+**Parameters:**
+- `text` (str): Text to render
+- `size` (float): Font size in points (default: 16.0)
+
+**Returns:** Dictionary with `width`, `height`, `format`, and `data` keys
+
+**Example:**
+```python
+from typfpy import render_simple
+image = render_simple("Quick test", size=48)
+```
+
+#### `typfpy.export_image(image_data, format="ppm")` → bytes
+
+Export image to various formats.
+
+**Parameters:**
+- `image_data` (dict): Image dictionary from `render_text()` or `render_simple()`
+- `format` (str): Output format - "png", "svg", "ppm", "pgm", "pbm", or "json" (default: "ppm")
+
+**Returns:** Bytes of the exported image
+
+**Example:**
+```python
+from typfpy import render_simple, export_image
+image = render_simple("Test")
+png_bytes = export_image(image, format="png")
+svg_bytes = export_image(image, format="svg")
+
+with open("output.png", "wb") as f:
+    f.write(png_bytes)
+```
+
+## Examples
+
+See the `examples/` directory for complete examples:
+
+- `simple_render.py` - Basic rendering with stub font
+- `render_with_font.py` - Rendering with real font files
+- `long_text_handling.py` - Strategies for long text (SVG, line wrapping)
+
+## CLI Commands
+
+### `typfpy render`
+
+Render text to an image file.
+
+```bash
+typfpy render [TEXT] [OPTIONS]
+```
+
+**Options:**
+- `-f, --font-file` - Path to font file (.ttf, .otf, .ttc, .otc)
+- `-s, --font-size` - Font size in pixels (default: 200)
+- `--shaper` - Shaping backend: auto, none, hb, icu-hb, mac (default: auto)
+- `--renderer` - Rendering backend: auto, opixa, linra-mac, linra-win (default: auto)
+- `-O, --format` - Output format: pbm, png1, pgm, png4, png8, png, svg (default: png)
+- `-c, --foreground` - Text color as RRGGBB or RRGGBBAA (default: 000000FF)
+- `-b, --background` - Background color as RRGGBB or RRGGBBAA (default: FFFFFF00)
+- `-m, --margin` - Margin in pixels (default: 10)
+- `-o, --output-file` - Output file path (stdout if omitted)
+- `-q, --quiet` - Silent mode
+
+### `typfpy info`
+
+Display Typf version and available backends.
+
+```bash
+typfpy info [OPTIONS]
+```
+
+**Options:**
+- `--shapers` - List available shaping backends
+- `--renderers` - List available rendering backends
+- `--formats` - List available output formats
+
+## Development
+
+### Building from Source
+
+```bash
+# Install maturin
+pip install maturin
+
+# Build and install in development mode
+cd bindings/python
+maturin develop
+
+# Build release wheel
+maturin build --release
+```
+
+### Running Tests
+
+```bash
+pytest
+```
+
+## Platform Support
+
+- **macOS**: ✅ Full support (x86_64, ARM64)
+- **Linux**: ✅ Full support (x86_64, ARM64)
+- **Windows**: ✅ Full support (x86_64)
+
+## Performance
+
+Typf achieves industry-leading performance through:
+
+- SIMD-optimized blending (10GB/s+ throughput)
+- Multi-level caching (L1 < 50ns access)
+- Parallel rendering with work-stealing
+- Zero-copy font loading
+
+## License
+
+EVALUATION LICENSE
+
+---
+
+*Community project by FontLab - https://www.fontlab.org/*
+</document_content>
+</document>
+
+<document index="24">
+<source>bindings/python/pyproject.toml</source>
+<document_content>
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "typfpy"
+dynamic = ["version"]
+description = "High-performance text rendering pipeline"
+authors = [{name = "FontLab", email = "dev@fontlab.com"}]
+license = {text = "EVALUATION LICENSE"}
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Text Processing :: Fonts",
+]
+
+dependencies = [
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+    "pillow>=10.0",
+    "numpy>=1.20",
+]
+
+[project.scripts]
+typfpy = "typfpy.cli:main"
+
+[tool.maturin]
+module-name = "typfpy.typf"
+python-source = "python"
+features = ["pyo3/extension-module", "shaping-hb", "render-opixa", "export-png", "export-svg", "linra-mac"]
+</document_content>
+</document>
+
+<document index="25">
+<source>bindings/python/pytest.ini</source>
+<document_content>
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts = -v --tb=short
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/bindings/python/python/typfpy/__init__.py
+# Language: python
+
+from .typf import (
+    FontInfo,       # Font inspection and metadata
+    Typf,          # Main rendering pipeline
+    __version__,   # Version information
+    export_image,  # Convert results to files
+    render_simple,  # Quick rendering without fonts
+)
+from .typf import TypfLinra, __linra_available__
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/bindings/python/python/typfpy/__main__.py
+# Language: python
+
+from .cli import main
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/bindings/python/python/typfpy/cli.py
+# Language: python
+
+import sys
+from typing import Optional
+import click
+from typfpy import Typf, __version__, export_image, render_simple
+from typfpy import TypfLinra, __linra_available__
+
+def detect_available_shapers(()):
+
+def detect_available_renderers(()):
+
+def detect_available_linra_renderers(()):
+
+def is_linra_renderer((renderer_name: str)) -> bool:
+
+def cli(()):
+
+def info((shapers: bool, renderers: bool, formats: bool)):
+
+def render((
+    text: Optional[str],
+    font_file: Optional[str],
+    face_index: int,
+    instance: Optional[str],
+    text_opt: Optional[str],
+    text_file: Optional[str],
+    shaper: str,
+    renderer: str,
+    direction: str,
+    language: Optional[str],
+    script: str,
+    features: Optional[str],
+    font_size: str,
+    line_height: int,
+    width_height: str,
+    margin: int,
+    font_optical_sizing: str,
+    foreground: str,
+    background: str,
+    color_palette: int,
+    output_file: Optional[str],
+    output_format: str,
+    quiet: bool,
+    verbose: bool,
+)):
+
+def get_input_text((text: Optional[str], text_opt: Optional[str], text_file: Optional[str])) -> str:
+
+def decode_unicode_escapes((text: str)) -> str:
+
+def parse_color((color_str: str)) -> tuple:
+
+def parse_features((features_str: str)) -> list:
+
+def main(()):
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/bindings/python/src/lib.rs
+# Language: rust
+
+struct Typf {
+}
+
+struct TypfLinra {
+}
+
+struct FontInfo {
+}
+
+struct StubFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/bindings/python/tests/__init__.py
+# Language: python
+
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/bindings/python/tests/test_exports.py
+# Language: python
+
+from typfpy import Typf
+from typfpy import render_simple
+from typfpy import export_image
+from typfpy import FontInfo
+from typfpy import __version__
+from typfpy import render_simple
+from typfpy import render_simple
+from typfpy import render_simple
+from typfpy import export_image, render_simple
+from typfpy import export_image, render_simple
+from typfpy import export_image, render_simple
+from typfpy import Typf
+from typfpy import Typf
+from typfpy import Typf
+import typfpy
+import typfpy
+from typfpy import TypfLinra
+
+class TestImports:
+    def test_import_typf((self)):
+    def test_import_render_simple((self)):
+    def test_import_export_image((self)):
+    def test_import_font_info((self)):
+    def test_version_available((self)):
+
+class TestRenderSimple:
+    def test_render_simple_basic((self)):
+    def test_render_simple_with_size((self)):
+    def test_render_simple_empty_text((self)):
+
+class TestExportImage:
+    def test_export_png((self)):
+    def test_export_svg((self)):
+    def test_export_ppm((self)):
+
+class TestTypfClass:
+    def test_create_typf_default((self)):
+    def test_create_typf_with_shaper((self)):
+    def test_create_typf_with_renderer((self)):
+
+class TestTypfLinra:
+    def test_linra_availability_check((self)):
+    def test_linra_import_when_available((self)):
+
+def test_import_typf((self)):
+
+def test_import_render_simple((self)):
+
+def test_import_export_image((self)):
+
+def test_import_font_info((self)):
+
+def test_version_available((self)):
+
+def test_render_simple_basic((self)):
+
+def test_render_simple_with_size((self)):
+
+def test_render_simple_empty_text((self)):
+
+def test_export_png((self)):
+
+def test_export_svg((self)):
+
+def test_export_ppm((self)):
+
+def test_create_typf_default((self)):
+
+def test_create_typf_with_shaper((self)):
+
+def test_create_typf_with_renderer((self)):
+
+def test_linra_availability_check((self)):
+
+def test_linra_import_when_available((self)):
+
+
+<document index="26">
+<source>build.sh</source>
+<document_content>
+#!/bin/bash
+# Build script for Typf v2.0
+# Community project by FontLab https://www.fontlab.org/
+
+cd "$(dirname "$0")"
+set -e
+
+echo "Building Typf v2.0 workspace (excluding Python bindings)..."
+cargo build --release --workspace --exclude typf-py
+
+echo ""
+echo "Installing typf-cli with all available features..."
+# On macOS, build with CoreText and CoreGraphics support
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  cargo install --path crates/typf-cli --features "shaping-hb,shaping-mac,shaping-icu-hb,render-mac,render-skia,render-zeno"
+else
+  cargo install --path crates/typf-cli --features "shaping-hb,shaping-icu-hb,render-skia,render-zeno"
+fi
+
+echo ""
+echo "Installing typf-bench with all available features..."
+# On macOS, build with CoreText, CoreGraphics, and linra renderer support
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  cargo install --path crates/typf-bench --features "shaping-hb,shaping-mac,shaping-icu-hb,render-mac,render-skia,render-zeno,linra-os-mac"
+else
+  cargo install --path crates/typf-bench --features "shaping-hb,shaping-icu-hb,render-skia,render-zeno"
+fi
+
+echo ""
+echo "Setting up Python environment..."
+# Create or update virtual environment
+if [ ! -d ".venv" ]; then
+  uv venv --python 3.12
+fi
+source .venv/bin/activate
+
+# Install Python dependencies and the package itself
+echo "Installing Python dependencies and typfpy..."
+uv pip install --upgrade .[dev]
+uv pip install --system --upgrade .[dev]
+
+echo ""
+echo "Installing zensical CLI for documentation building..."
+uv pip install zensical
+
+echo ""
+echo "✅ Build and installation complete!"
+echo ""
+echo "Installed components:"
+echo "  - typf-cli (Rust CLI tool)"
+echo "  - typf-bench (Rust benchmark tool)"
+echo "  - typfpy (Python package with native bindings)"
+echo "  - zensical (documentation builder)"
+echo ""
+
+echo "Building comprehensive documentation..."
+echo ""
+zensical build
+
+echo "Running Typf tester..."
+echo ""
+python typf-tester/typfme.py render
+echo ""
+python typf-tester/typfme.py bench
+
+echo ""
+echo "Running Typf benchmark tool..."
+echo ""
+# Create a simple font directory for testing if none exists
+if [ ! -d "benchmark-fonts" ]; then
+  echo "Creating benchmark-fonts directory..."
+  mkdir -p benchmark-fonts
+  # Copy some system fonts if available (macOS)
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    cp "/System/Library/Fonts/Helvetica.ttc" benchmark-fonts/ 2>/dev/null || echo "Helvetica not found"
+    cp "/System/Library/Fonts/Times.ttc" benchmark-fonts/ 2>/dev/null || echo "Times not found"
+    cp "/System/Library/Fonts/Arial.ttf" benchmark-fonts/ 2>/dev/null || echo "Arial not found"
+  fi
+fi
+
+# Run benchmark if fonts are available
+if [ -n "$(ls -A test-fonts/ 2>/dev/null)" ]; then
+  echo "Running quick benchmark (Level 0 - ~10 seconds)..."
+  typf-bench -i test-fonts -l 0 2>&1 | tee typf-bench-quick.log
+  echo ""
+  echo "For comprehensive benchmarks, run: typf-bench -i test-fonts -l 1"
+else
+  echo "No fonts found in test-fonts/ directory. Skipping benchmarks."
+  echo "Add .ttf/.otf fonts to test-fonts/ and run: typf-bench -i test-fonts -l 0"
+fi
+
+echo ""
+echo "📚 Documentation built successfully!"
+echo "View documentation with: zensical serve"
+</document_content>
+</document>
+
+<document index="27">
+<source>crates/typf/Cargo.readme.XXXXXX.toml</source>
+<document_content>
+
+</document_content>
+</document>
+
+<document index="28">
+<source>crates/typf/Cargo.readme.generated.toml</source>
+<document_content>
+[package]
+name = "typf"
+version = "2.0.0-dev"
+authors = ["Typf Contributors"]
+edition = "2021"
+license = "EVALUATION LICENSE"
+
+[dependencies]
+typf-core = { workspace = true }
+typf-input = { workspace = true, optional = true }
+typf-unicode = { workspace = true, optional = true }
+typf-fontdb = { workspace = true, optional = true }
+typf-export = { workspace = true, optional = true }
+# Shaping backends
+typf-shape-none = { workspace = true, optional = true }
+typf-shape-hb = { workspace = true, optional = true }
+# Rendering backends
+typf-render-opixa = { workspace = true, optional = true }
+# External dependencies
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[features]
+default = ["minimal", "unicode", "fontdb", "export-pnm"]
+# Minimal configuration (no external dependencies)
+minimal = ["shaping-none", "render-opixa"]
+# Component features
+unicode = ["dep:typf-unicode"]
+fontdb = ["dep:typf-fontdb"]
+input = ["dep:typf-input"]
+# Export formats
+export-pnm = ["dep:typf-export"]
+export-png = []  # Future: requires image crate
+export-svg = []  # Future: requires svg crate
+export-pdf = []  # Future: requires pdf writer
+# Shaping backends
+shaping-none = ["dep:typf-shape-none"]
+shaping-hb = ["dep:typf-shape-hb"]
+shaping-icu-hb = ["shaping-hb"]  # Future: ["dep:typf-shape-icu-hb"]
+shaping-mac = []  # Future: ["dep:typf-shape-mac"]
+shaping-win = []  # Future: ["dep:typf-shape-win"]
+# Rendering backends
+render-opixa = ["dep:typf-render-opixa"]
+render-skia = []  # Future: ["dep:typf-render-skia"]
+render-zeno = []  # Future: ["dep:typf-render-zeno"]
+render-mac = []  # Future: ["dep:typf-render-mac"]
+render-win = []  # Future: ["dep:typf-render-win"]
+# Advanced features
+simd = []  # Enable SIMD optimizations
+parallel = []  # Enable parallel processing
+auto-backend = []  # Auto-select best backend for platform
+# Full build with all features
+full = [
+  "unicode",
+  "fontdb",
+  "input",
+  "export-pnm",
+  "shaping-none",
+  "shaping-hb",
+  "render-opixa",
+]
+
+[dev-dependencies]
+typf-shape-none = { workspace = true }
+typf-render-opixa = { workspace = true }
+typf-export = { workspace = true }
+criterion = "0.5"
+
+[[bench]]
+name = "pipeline_bench"
+harness = false
+path = "../../benches/pipeline_bench.rs"
+
+[[example]]
+name = "basic"
+path = "../../examples/basic.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "pipeline"
+path = "../../examples/pipeline.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "formats"
+path = "../../examples/formats.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "harfbuzz"
+path = "../../examples/harfbuzz.rs"
+required-features = ["fontdb", "shaping-hb"]
+</document_content>
+</document>
+
+<document index="29">
+<source>crates/typf/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[example]]
+name = "basic"
+path = "../../examples/basic.rs"
+required-features = ["export-pnm", "minimal"]
+
+[[example]]
+name = "pipeline"
+path = "../../examples/pipeline.rs"
+required-features = ["export-pnm", "minimal"]
+
+[[example]]
+name = "formats"
+path = "../../examples/formats.rs"
+required-features = ["export-pnm", "minimal"]
+
+[[example]]
+name = "harfbuzz"
+path = "../../examples/harfbuzz.rs"
+required-features = ["fontdb", "shaping-hb"]
+
+[[example]]
+name = "variable_fonts"
+path = "../../examples/variable_fonts.rs"
+required-features = ["shaping-hb"]
+
+[[example]]
+name = "long_text_handling"
+path = "../../examples/long_text_handling.rs"
+required-features = ["export-svg", "shaping-hb"]
+
+[[example]]
+name = "quickstart_backends"
+path = "../../examples/quickstart_backends.rs"
+required-features = ["minimal"]
+
+[[bench]]
+harness = false
+name = "pipeline_bench"
+path = "../../benches/pipeline_bench.rs"
+
+[dependencies]
+console_error_panic_hook = { version = "0.1", optional = true }
+log = { workspace = true }
+# External dependencies
+thiserror = { workspace = true }
+typf-core = { workspace = true }
+typf-export = { workspace = true, optional = true }
+typf-fontdb = { workspace = true, optional = true }
+typf-input = { workspace = true, optional = true }
+typf-render-cg = { workspace = true, optional = true }
+# Rendering backends
+typf-render-json = { workspace = true, optional = true }
+typf-render-opixa = { workspace = true, optional = true }
+typf-render-skia = { workspace = true, optional = true }
+typf-render-zeno = { workspace = true, optional = true }
+typf-shape-ct = { workspace = true, optional = true }
+typf-shape-hb = { workspace = true, optional = true }
+typf-shape-icu-hb = { workspace = true, optional = true }
+# Shaping backends
+typf-shape-none = { workspace = true, optional = true }
+typf-unicode = { workspace = true, optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[dev-dependencies]
+criterion = "0.5"
+typf-export = { workspace = true }
+typf-render-opixa = { workspace = true }
+typf-shape-none = { workspace = true }
+
+[features]
+default = ["export-pnm", "fontdb", "minimal", "unicode"]
+auto-backend = []  # Auto-select best backend for platform
+console_error_panic_hook = ["dep:console_error_panic_hook"]
+export-pdf = []  # Future: requires pdf writer
+export-png = []  # Future: requires image crate
+# Export formats
+export-pnm = ["dep:typf-export"]
+export-svg = []  # Future: requires svg crate
+fontdb = ["dep:typf-fontdb"]
+# Full build with all features
+full = [
+  "export-pnm",
+  "fontdb",
+  "input",
+  "render-cg",
+  "render-json",
+  "render-opixa",
+  "render-skia",
+  "render-zeno",
+  "shaping-ct",
+  "shaping-hb",
+  "shaping-icu-hb",
+  "shaping-none",
+  "unicode",
+]
+input = ["dep:typf-input"]
+# Minimal configuration (no external dependencies)
+minimal = ["render-opixa", "shaping-none"]
+parallel = []  # Enable parallel processing
+render-cg = ["dep:typf-render-cg"]
+# Rendering backends
+render-json = ["dep:typf-render-json"]
+render-mac = ["render-cg"]  # Alias for CoreGraphics
+render-opixa = ["dep:typf-render-opixa"]
+render-skia = ["dep:typf-render-skia"]
+render-win = []  # Future: ["dep:typf-render-win"] - requires Windows
+render-zeno = ["dep:typf-render-zeno"]
+shaping-ct = ["dep:typf-shape-ct"]
+shaping-hb = ["dep:typf-shape-hb"]
+shaping-icu-hb = ["dep:typf-shape-icu-hb", "unicode"]
+shaping-mac = ["shaping-ct"]  # Alias for CoreText
+# Shaping backends
+shaping-none = ["dep:typf-shape-none"]
+shaping-win = []  # Future: ["dep:typf-shape-win"] - requires Windows
+# Advanced features
+simd = []  # Enable SIMD optimizations
+# Component features
+unicode = ["dep:typf-unicode"]
+wasm = ["dep:wasm-bindgen"]
+</document_content>
+</document>
+
+<document index="30">
+<source>crates/typf/Cargo.toml.bak</source>
+<document_content>
+[package]
+name = "typf"
+version = "2.0.0-dev"
+authors = ["TYPF Contributors"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+typf-core = { workspace = true }
+typf-input = { workspace = true, optional = true }
+typf-unicode = { workspace = true, optional = true }
+typf-fontdb = { workspace = true, optional = true }
+typf-export = { workspace = true, optional = true }
+
+# Shaping backends
+typf-shape-none = { workspace = true, optional = true }
+typf-shape-hb = { workspace = true, optional = true }
+
+# Rendering backends
+typf-render-orge = { workspace = true, optional = true }
+
+# External dependencies
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[features]
+default = ["minimal", "unicode", "fontdb", "export-pnm"]
+
+# Minimal configuration (no external dependencies)
+minimal = ["shaping-none", "render-orge"]
+
+# Component features
+unicode = ["dep:typf-unicode"]
+fontdb = ["dep:typf-fontdb"]
+input = ["dep:typf-input"]
+
+# Export formats
+export-pnm = ["dep:typf-export"]
+export-png = []  # Future: requires image crate
+export-svg = []  # Future: requires svg crate
+export-pdf = []  # Future: requires pdf writer
+
+# Shaping backends
+shaping-none = ["dep:typf-shape-none"]
+shaping-hb = ["dep:typf-shape-hb"]
+shaping-icu-hb = ["shaping-hb"]  # Future: ["dep:typf-shape-icu-hb"]
+shaping-mac = []  # Future: ["dep:typf-shape-mac"]
+shaping-win = []  # Future: ["dep:typf-shape-win"]
+
+# Rendering backends
+render-orge = ["dep:typf-render-orge"]
+render-skia = []  # Future: ["dep:typf-render-skia"]
+render-zeno = []  # Future: ["dep:typf-render-zeno"]
+render-mac = []   # Future: ["dep:typf-render-mac"]
+render-win = []   # Future: ["dep:typf-render-win"]
+
+# Advanced features
+simd = []     # Enable SIMD optimizations
+parallel = [] # Enable parallel processing
+auto-backend = [] # Auto-select best backend for platform
+
+# Full build with all features
+full = [
+    "unicode", "fontdb", "input",
+    "export-pnm",
+    "shaping-none", "shaping-hb",
+    "render-orge",
+]
+
+[dev-dependencies]
+typf-shape-none = { workspace = true }
+typf-render-orge = { workspace = true }
+typf-export = { workspace = true }
+criterion = "0.5"
+
+[[bench]]
+name = "pipeline_bench"
+harness = false
+path = "../../benches/pipeline_bench.rs"
+
+[[example]]
+name = "basic"
+path = "../../examples/basic.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "pipeline"
+path = "../../examples/pipeline.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "formats"
+path = "../../examples/formats.rs"
+required-features = ["minimal", "export-pnm"]
+
+[[example]]
+name = "harfbuzz"
+path = "../../examples/harfbuzz.rs"
+required-features = ["fontdb", "shaping-hb"]
+</document_content>
+</document>
+
+<document index="31">
+<source>crates/typf/examples/output/test.pbm</source>
+<document_content>
+P1
+88 16
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+</document_content>
+</document>
+
+<document index="32">
+<source>crates/typf/examples/output/test.pgm</source>
+<document_content>
+P2
+88 16
+255
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+</document_content>
+</document>
+
+<document index="33">
+<source>crates/typf/examples/output/test.ppm</source>
+<document_content>
+P3
+88 16
+255
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf/src/lib.rs
+# Language: rust
+
+mod wasm;
+
+mod prelude;
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf/src/wasm.rs
+# Language: rust
+
+struct WasmRenderer {
+}
+
+struct MockFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf/tests/integration_test.rs
+# Language: rust
+
+struct MockFont {
+}
+
+
+<document index="34">
+<source>crates/typf-bench/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-bench"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "typf-bench"
+path = "src/main.rs"
+
+[dependencies]
+typf-core = { workspace = true }
+typf-fontdb = { workspace = true }
+typf-shape-none = { workspace = true }
+typf-shape-hb = { workspace = true, optional = true }
+typf-shape-ct = { workspace = true, optional = true }
+typf-shape-icu-hb = { workspace = true, optional = true }
+typf-render-opixa = { workspace = true }
+typf-render-cg = { workspace = true, optional = true }
+typf-render-skia = { workspace = true, optional = true }
+typf-render-zeno = { workspace = true, optional = true }
+typf-os-mac = { workspace = true, optional = true }
+typf-export = { workspace = true }
+
+clap = { version = "4.5", features = ["derive"] }
+env_logger = "0.11"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+colored = "2.1"
+
+[features]
+default = ["shaping-hb", "render-skia"]
+shaping-hb = ["dep:typf-shape-hb"]
+shaping-ct = ["dep:typf-shape-ct"]
+shaping-icu-hb = ["dep:typf-shape-icu-hb", "shaping-hb"]
+shaping-mac = ["shaping-ct"]
+shaping-win = []
+render-cg = ["dep:typf-render-cg"]
+render-skia = ["dep:typf-render-skia"]
+render-zeno = ["dep:typf-render-zeno"]
+render-mac = ["render-cg"]
+render-win = []
+linra-os-mac = ["dep:typf-os-mac"]
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-bench/src/main.rs
+# Language: rust
+
+struct BenchmarkConfig {
+}
+
+struct Args {
+}
+
+struct BenchmarkResult {
+}
+
+struct BenchmarkRunner {
+}
+
+
+<document index="35">
+<source>crates/typf-cli/.gitignore</source>
+<document_content>
+/target
+</document_content>
+</document>
+
+<document index="36">
+<source>crates/typf-cli/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-cli"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "typf"
+path = "src/main.rs"
+
+[dependencies]
+typf = { workspace = true }
+typf-core = { workspace = true }
+typf-fontdb = { workspace = true }
+typf-shape-none = { workspace = true }
+typf-shape-hb = { workspace = true, optional = true }
+typf-shape-ct = { workspace = true, optional = true }
+typf-shape-icu-hb = { workspace = true, optional = true }
+typf-render-opixa = { workspace = true }
+typf-render-svg = { workspace = true }
+typf-render-cg = { workspace = true, optional = true }
+typf-render-skia = { workspace = true, optional = true }
+typf-render-zeno = { workspace = true, optional = true }
+typf-os = { workspace = true, optional = true }
+typf-os-mac = { workspace = true, optional = true }
+typf-os-win = { workspace = true, optional = true }
+typf-export = { workspace = true }
+typf-unicode = { workspace = true }
+clap = { version = "4.5", features = ["derive", "string"] }
+env_logger = "0.11"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+base64 = "0.22"
+rustyline = { version = "14.0", optional = true }
+colored = { version = "2.1", optional = true }
+
+[features]
+default = ["shaping-hb"]
+shaping-hb = ["dep:typf-shape-hb", "typf/shaping-hb"]
+shaping-ct = ["dep:typf-shape-ct", "typf/shaping-ct"]
+shaping-icu-hb = ["dep:typf-shape-icu-hb", "shaping-hb", "typf/shaping-icu-hb"]
+shaping-mac = ["shaping-ct"]
+shaping-win = []
+render-cg = ["dep:typf-render-cg", "typf/render-cg"]
+render-skia = ["dep:typf-render-skia", "typf/render-skia"]
+render-zeno = ["dep:typf-render-zeno", "typf/render-zeno"]
+render-mac = ["render-cg"]
+render-win = []
+linra = ["dep:typf-os"]
+linra-mac = ["linra", "dep:typf-os-mac"]
+linra-win = ["linra", "dep:typf-os-win"]
+repl = ["dep:rustyline", "dep:colored"]
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/batch.rs
+# Language: rust
+
+mod tests;
+
+struct BatchConfig {
+}
+
+struct PipelineComponents {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/cli.rs
+# Language: rust
+
+struct Cli {
+}
+
+struct InfoArgs {
+}
+
+struct RenderArgs {
+}
+
+struct BatchArgs {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/commands/batch.rs
+# Language: rust
+
+struct BatchJob {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/commands/info.rs
+# Language: rust
+
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/commands/mod.rs
+# Language: rust
+
+mod batch;
+
+mod info;
+
+mod render;
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/commands/render.rs
+# Language: rust
+
+mod tests;
+
+struct SvgOutputExporter {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/jsonl.rs
+# Language: rust
+
+mod tests;
+
+struct JobSpec {
+}
+
+struct Job {
+}
+
+struct FontConfig {
+}
+
+struct TextConfig {
+}
+
+struct RenderingConfig {
+}
+
+struct JobResult {
+}
+
+struct RenderingOutput {
+}
+
+struct MetricsOutput {
+}
+
+struct TimingInfo {
+}
+
+struct FontResult {
+}
+
+struct SimpleFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/lib.rs
+# Language: rust
+
+mod tests;
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/main.rs
+# Language: rust
+
+mod cli;
+
+mod commands;
+
+mod batch;
+
+mod jsonl;
+
+mod repl;
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/main_old.rs
+# Language: rust
+
+mod batch;
+
+mod jsonl;
+
+mod repl;
+
+mod tests;
+
+struct Args {
+}
+
+struct StubFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/src/repl.rs
+# Language: rust
+
+struct ReplContext {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-cli/tests/cli_smoke.rs
+# Language: rust
+
+
+
+<document index="37">
+<source>crates/typf-core/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+log.workspace = true
+icu_properties = { workspace = true }
+parking_lot = { workspace = true }
+lru = { workspace = true }
+
+[features]
+default = []
+parallel = []
+simd = []
+cache-aggressive = []
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-core/src/cache.rs
+# Language: rust
+
+mod tests;
+
+struct ShapingCacheKey {
+}
+
+struct GlyphCacheKey {
+}
+
+struct CachedValue {
+}
+
+struct L1Cache {
+}
+
+struct L2Cache {
+}
+
+struct MultiLevelCache {
+}
+
+struct CacheStats {
+}
+
+struct CacheMetrics {
+}
+
+struct CacheManager {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-core/src/context.rs
+# Language: rust
+
+struct PipelineContext {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-core/src/error.rs
+# Language: rust
+
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-core/src/lib.rs
+# Language: rust
+
+mod cache;
+
+mod context;
+
+mod error;
+
+mod linra;
+
+mod pipeline;
+
+mod shaping_cache;
+
+mod traits;
+
+mod types;
+
+struct PositionedGlyph {
+}
+
+struct ShapingResult {
+}
+
+struct BitmapData {
+}
+
+struct VectorData {
+}
+
+struct SegmentOptions {
+}
+
+struct TextRun {
+}
+
+struct ShapingParams {
+}
+
+struct GlyphSourcePreference {
+}
+
+struct RenderParams {
+}
+
+struct Color {
+}
+
+
+<document index="38">
+<source>crates/typf-core/src/linra.rs</source>
+<document_content>
+//! Linra rendering: shape and render in a single pass
+//!
+//! For maximum performance, some platform APIs can shape AND render text in a
+//! single operation. This module provides the trait and types for such linra
+//! backends.
+//!
+//! ## Why Linra Rendering?
+//!
+//! Traditional pipeline: Shape → Extract Glyphs → Render Each Glyph
+//! Linra pipeline: Shape + Render in One Call
+//!
+//! On macOS, CoreText's CTLineDraw shapes and renders atomically.
+//! On Windows, DirectWrite's DrawTextLayout does the same.
+//!
+//! The linra approach:
+//! - Eliminates glyph extraction overhead
+//! - Allows the OS to optimize internally
+//! - Can leverage hardware acceleration
+
+use std::sync::Arc;
+
+use crate::error::Result;
+use crate::traits::FontRef;
+use crate::types::RenderOutput;
+use crate::Color;
+
+/// Combined parameters for linra shape+render operations
+///
+/// This replaces separate ShapingParams and RenderParams when using
+/// a linra renderer that handles both steps internally.
+#[derive(Debug, Clone)]
+pub struct LinraRenderParams {
+    /// Font size in points
+    pub size: f32,
+    /// Text direction
+    pub direction: crate::types::Direction,
+    /// Text color
+    pub foreground: Color,
+    /// Background color (None = transparent)
+    pub background: Option<Color>,
+    /// Padding around the rendered text
+    pub padding: u32,
+    /// Variable font axis values like [("wght", 700.0), ("wdth", 100.0)]
+    pub variations: Vec<(String, f32)>,
+    /// OpenType feature settings like [("liga", 1), ("kern", 1)]
+    pub features: Vec<(String, u32)>,
+    /// Language code for shaping (e.g., "en", "ar", "zh")
+    pub language: Option<String>,
+    /// Script tag for shaping (e.g., "latn", "arab")
+    pub script: Option<String>,
+    /// Enable antialiasing
+    pub antialias: bool,
+    /// Extra spacing between characters (in points, can be negative)
+    pub letter_spacing: f32,
+}
+
+impl Default for LinraRenderParams {
+    fn default() -> Self {
+        Self {
+            size: 16.0,
+            direction: crate::types::Direction::LeftToRight,
+            foreground: Color::black(),
+            background: None,
+            padding: 0,
+            variations: Vec::new(),
+            features: Vec::new(),
+            language: None,
+            script: None,
+            antialias: true,
+            letter_spacing: 0.0,
+        }
+    }
+}
+
+impl LinraRenderParams {
+    /// Create params with a specific font size
+    pub fn with_size(size: f32) -> Self {
+        Self {
+            size,
+            ..Default::default()
+        }
+    }
+
+    /// Convert to separate ShapingParams for compatibility
+    pub fn to_shaping_params(&self) -> crate::ShapingParams {
+        crate::ShapingParams {
+            size: self.size,
+            direction: self.direction,
+            language: self.language.clone(),
+            script: self.script.clone(),
+            features: self.features.clone(),
+            variations: self.variations.clone(),
+            letter_spacing: self.letter_spacing,
+        }
+    }
+
+    /// Convert to separate RenderParams for compatibility
+    pub fn to_render_params(&self) -> crate::RenderParams {
+        crate::RenderParams {
+            foreground: self.foreground,
+            background: self.background,
+            padding: self.padding,
+            antialias: self.antialias,
+            variations: self.variations.clone(),
+            color_palette: 0, // TODO: add color_palette to LinraRenderParams
+            glyph_sources: crate::GlyphSourcePreference::default(),
+            output: crate::RenderMode::Bitmap,
+        }
+    }
+}
+
+/// Linra text renderer: shapes AND renders in a single operation
+///
+/// Implementations of this trait bypass the separate shaper/renderer pipeline
+/// to achieve maximum performance through platform-native APIs.
+///
+/// ## Platform Implementations
+///
+/// - **macOS**: `CoreTextLinraRenderer` uses CTLineDraw
+/// - **Windows**: `DirectWriteLinraRenderer` uses DrawTextLayout
+///
+/// ## Usage
+///
+/// ```rust,no_run
+/// use typf_core::linra::{LinraRenderer, LinraRenderParams};
+/// use typf_core::traits::FontRef;
+/// use std::sync::Arc;
+///
+/// fn render_text<R: LinraRenderer>(
+///     renderer: &R,
+///     text: &str,
+///     font: Arc<dyn FontRef>,
+/// ) -> typf_core::Result<typf_core::types::RenderOutput> {
+///     let params = LinraRenderParams::with_size(24.0);
+///     renderer.render_text(text, font, &params)
+/// }
+/// ```
+pub trait LinraRenderer: Send + Sync {
+    /// The renderer's name (e.g., "coretext-linra", "directwrite-linra")
+    fn name(&self) -> &'static str;
+
+    /// Shape and render text in a single operation
+    ///
+    /// This method performs both text shaping (character→glyph mapping,
+    /// positioning, feature application) and rendering (rasterization)
+    /// in a single pass through the platform's native text API.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The text string to render
+    /// * `font` - Font to use for rendering
+    /// * `params` - Combined shaping and rendering parameters
+    ///
+    /// # Returns
+    ///
+    /// Rendered output as a bitmap or vector format
+    fn render_text(
+        &self,
+        text: &str,
+        font: Arc<dyn FontRef>,
+        params: &LinraRenderParams,
+    ) -> Result<RenderOutput>;
+
+    /// Clear any internal caches
+    fn clear_cache(&self) {}
+
+    /// Check if this renderer supports a given output format
+    fn supports_format(&self, format: &str) -> bool {
+        matches!(format, "bitmap" | "rgba")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_linra_params_default() {
+        let params = LinraRenderParams::default();
+        assert_eq!(params.size, 16.0);
+        assert!(params.antialias);
+        assert!(params.background.is_none());
+    }
+
+    #[test]
+    fn test_linra_params_with_size() {
+        let params = LinraRenderParams::with_size(24.0);
+        assert_eq!(params.size, 24.0);
+    }
+
+    #[test]
+    fn test_params_conversion() {
+        let linra = LinraRenderParams {
+            size: 32.0,
+            variations: vec![("wght".to_string(), 700.0)],
+            features: vec![("liga".to_string(), 1)],
+            language: Some("en".to_string()),
+            ..Default::default()
+        };
+
+        let shaping = linra.to_shaping_params();
+        assert_eq!(shaping.size, 32.0);
+        assert_eq!(shaping.variations.len(), 1);
+        assert_eq!(shaping.features.len(), 1);
+
+        let render = linra.to_render_params();
+        assert_eq!(render.variations.len(), 1);
+    }
+}
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-core/src/pipeline.rs
+# Language: rust
+
+mod tests;
+
+struct Pipeline {
+}
+
+struct PipelineBuilder {
+}
+
+struct InputParsingStage {
+}
+
+struct UnicodeProcessingStage {
+}
+
+struct FontSelectionStage {
+}
+
+struct ShapingStage {
+}
+
+struct RenderingStage {
+}
+
+struct ExportStage {
+}
+
+struct MockShaper {
+}
+
+struct MockRenderer {
+}
+
+struct MockExporter {
+}
+
+struct MockFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-core/src/shaping_cache.rs
+# Language: rust
+
+mod tests;
+
+struct ShapingCacheKey {
+}
+
+struct ShapingCache {
+}
+
+struct CacheStats {
+}
+
+
+<document index="39">
+<source>crates/typf-core/src/traits.rs</source>
+<document_content>
+//! The contracts that bind every backend together
+//!
+//! Five traits, infinite possibilities. Each trait defines a role
+//! in the pipeline, allowing you to swap implementations without
+//! touching a single line of user code.
+//!
+//! ## The Players
+//!
+//! - [`Stage`] - The foundation every pipeline component builds upon
+//! - [`FontRef`] - Your window into font data and metrics
+//! - [`Shaper`] - Where characters become glyphs
+//! - [`Renderer`] - Where glyphs become images
+//! - [`Exporter`] - Where images become files
+
+use crate::{error::Result, types::*, PipelineContext, RenderParams, ShapingParams};
+use std::sync::Arc;
+
+/// Every pipeline dancer learns these same steps
+///
+/// Implement Stage and your component can join the six-stage procession
+/// that transforms text into rendered output.
+///
+/// ```ignore
+/// struct MyStage;
+///
+/// impl Stage for MyStage {
+///     fn name(&self) -> &'static str {
+///         "my-stage"
+///     }
+///
+///     fn process(&self, context: PipelineContext) -> Result<PipelineContext> {
+///         // Transform the context, pass it forward
+///         Ok(context)
+///     }
+/// }
+/// ```
+pub trait Stage: Send + Sync {
+    /// Who are you? Used for debugging and logging
+    fn name(&self) -> &'static str;
+
+    /// Do your work and pass the context forward
+    ///
+    /// Take the context, make your changes, and return it for the next stage.
+    fn process(&self, context: PipelineContext) -> Result<PipelineContext>;
+}
+
+/// Your key to unlocking font secrets
+///
+/// Every font format speaks the same language through this trait.
+/// TTF, OTF, WOFF - they all expose their data and metrics the same way.
+///
+/// ```ignore
+/// struct MyFont {
+///     data: Vec<u8>,
+///     // ... your internal state
+/// }
+///
+/// impl FontRef for MyFont {
+///     fn data(&self) -> &[u8] {
+///         &self.data
+///     }
+///
+///     fn units_per_em(&self) -> u16 {
+///         1000 // Common for Type 1 fonts
+///     }
+///
+///     fn glyph_id(&self, ch: char) -> Option<GlyphId> {
+///         // Turn Unicode into font-specific glyph IDs
+///         Some(42)
+///     }
+///
+///     fn advance_width(&self, glyph_id: GlyphId) -> f32 {
+///         // How far to move after this glyph
+///         500.0
+///     }
+/// }
+/// ```
+pub trait FontRef: Send + Sync {
+    /// Raw font bytes as they live in the file
+    fn data(&self) -> &[u8];
+
+    /// The font's internal coordinate system scale
+    ///
+    /// Used to convert between font units and rendered pixels.
+    /// Type 1 fonts use 1000, TrueType often uses 2048.
+    fn units_per_em(&self) -> u16;
+
+    /// Find the glyph that represents this character
+    ///
+    /// Returns None when the font doesn't contain this character.
+    fn glyph_id(&self, ch: char) -> Option<GlyphId>;
+
+    /// How wide this glyph stands in font units
+    ///
+    /// This spacing determines how glyphs sit next to each other.
+    fn advance_width(&self, glyph_id: GlyphId) -> f32;
+
+    /// How many glyphs this font contains
+    ///
+    /// Useful for validation when shapers return glyph IDs.
+    fn glyph_count(&self) -> Option<u32> {
+        None // Not all implementations can provide this
+    }
+}
+
+/// Where characters learn their positions
+///
+/// Text shaping is where script rules, font features, and character clusters
+/// collide to produce perfectly positioned glyphs ready for rendering.
+pub trait Shaper: Send + Sync {
+    /// Identify yourself in logs and error messages
+    fn name(&self) -> &'static str;
+
+    /// Transform characters into positioned glyphs
+    fn shape(
+        &self,
+        text: &str,
+        font: Arc<dyn FontRef>,
+        params: &ShapingParams,
+    ) -> Result<ShapingResult>;
+
+    /// Can you handle this script?
+    fn supports_script(&self, _script: &str) -> bool {
+        true // Optimistic by default
+    }
+
+    /// Flush any cached shaping data
+    fn clear_cache(&self) {}
+}
+
+/// Where glyphs become visible
+///
+/// Rasterizers turn positioned glyphs into pixels. Vector renderers
+/// turn them into paths. Both implement this trait.
+pub trait Renderer: Send + Sync {
+    /// Your renderer's signature
+    fn name(&self) -> &'static str;
+
+    /// Convert glyphs to visual output
+    fn render(
+        &self,
+        shaped: &ShapingResult,
+        font: Arc<dyn FontRef>,
+        params: &RenderParams,
+    ) -> Result<RenderOutput>;
+
+    /// Do you understand this output format?
+    fn supports_format(&self, _format: &str) -> bool {
+        true // Assume we can handle anything
+    }
+
+    /// Free up rendering resources
+    fn clear_cache(&self) {}
+}
+
+/// The final step: pixels become files
+///
+/// Exporters know how to encode rendered output into the format
+/// users actually want - PNG, SVG, JSON, and more.
+pub trait Exporter: Send + Sync {
+    /// Who are you?
+    fn name(&self) -> &'static str;
+
+    /// Encode the rendered output as bytes
+    fn export(&self, output: &RenderOutput) -> Result<Vec<u8>>;
+
+    /// What file extension should be used?
+    fn extension(&self) -> &'static str;
+
+    /// What MIME type identifies your format?
+    fn mime_type(&self) -> &'static str;
+}
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-core/tests/glyph_source_preference.rs
+# Language: rust
+
+
+
+<document index="40">
+<source>crates/typf-export/.gitignore</source>
+<document_content>
+/target
+</document_content>
+</document>
+
+<document index="41">
+<source>crates/typf-export/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-export"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[dev-dependencies]
+base64 = "0.22"
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-export/src/json.rs
+# Language: rust
+
+mod tests;
+
+struct JsonExporter {
+}
+
+struct HarfBuzzOutput {
+}
+
+struct HarfBuzzGlyph {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-export/src/lib.rs
+# Language: rust
+
+mod json;
+
+mod png;
+
+mod svg;
+
+mod tests;
+
+struct PnmExporter {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-export/src/png.rs
+# Language: rust
+
+mod tests;
+
+struct PngExporter {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-export/src/svg.rs
+# Language: rust
+
+mod tests;
+
+struct SvgExporter {
+}
+
+
+<document index="42">
+<source>crates/typf-export-svg/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-export-svg"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "SVG export support for Typf"
+repository.workspace = true
+license.workspace = true
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+
+[dependencies]
+read-fonts = "0.36"
+skrifa = "0.39"
+thiserror.workspace = true
+typf-core = { workspace = true }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-export-svg/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct SvgExporter {
+}
+
+struct SvgPathBuilder {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-export-svg/tests/integration.rs
+# Language: rust
+
+struct StubFont {
+}
+
+
+<document index="43">
+<source>crates/typf-fontdb/.gitignore</source>
+<document_content>
+/target
+</document_content>
+</document>
+
+<document index="44">
+<source>crates/typf-fontdb/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-fontdb"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+read-fonts = { workspace = true }
+skrifa = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-fontdb/src/lib.rs
+# Language: rust
+
+mod tests;
+
+struct Font {
+}
+
+struct FontDatabase {
+}
+
+
+<document index="45">
+<source>crates/typf-input/.gitignore</source>
+<document_content>
+/target
+</document_content>
+</document>
+
+<document index="46">
+<source>crates/typf-input/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-input"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-input/src/lib.rs
+# Language: rust
+
+mod tests;
+
+
+<document index="47">
+<source>crates/typf-unicode/.gitignore</source>
+<document_content>
+/target
+</document_content>
+</document>
+
+<document index="48">
+<source>crates/typf-unicode/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-unicode"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+icu_segmenter = { workspace = true }
+icu_properties = { workspace = true }
+unicode-bidi = "0.3"
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+proptest = "1.4"
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-unicode/src/lib.rs
+# Language: rust
+
+mod tests;
+
+mod proptests;
+
+struct UnicodeOptions {
+}
+
+struct UnicodeProcessor {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-unicode/src/proptests.rs
+# Language: rust
+
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/crates/typf-unicode/src/tests.rs
+# Language: rust
+
+
+
+<document index="49">
+<source>fuzz/Cargo.toml</source>
+<document_content>
+[package]
+name = "typf-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.typf-unicode]
+path = "../crates/typf-unicode"
+
+[dependencies.typf-shape-hb]
+path = "../backends/typf-shape-hb"
+
+[dependencies.typf-core]
+path = "../crates/typf-core"
+
+# Prevent this from interfering with workspaces
+[[bin]]
+name = "fuzz_unicode_process"
+path = "fuzz_targets/fuzz_unicode_process.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_harfbuzz_shape"
+path = "fuzz_targets/fuzz_harfbuzz_shape.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_pipeline"
+path = "fuzz_targets/fuzz_pipeline.rs"
+test = false
+doc = false
+</document_content>
+</document>
+
+<document index="50">
+<source>fuzz/README.md</source>
+<document_content>
+# Fuzz Testing - Crash Typf Before Your Users Do
+
+Fuzzing throws random, malformed data at your code to find panics, crashes, and security vulnerabilities that normal testing misses. Typf handles complex Unicode text, font files, and rendering pipelines - perfect candidates for fuzzing to ensure robustness.
+
+## 🚀 Quick Start
+
+```bash
+# From project root - 60 seconds of fuzzing
+./scripts/fuzz.sh fuzz_unicode_process 60
+
+# Or dive deeper with direct cargo-fuzz commands
+cd fuzz
+cargo fuzz run fuzz_unicode_process
+```
+
+## 🎯 Fuzz Targets
+
+### `fuzz_unicode_process` - Unicode Bombardment
+**Goal**: Find Unicode processing crashes in normalization, bidirectional text, and script detection.
+
+**What gets tested:**
+- NFC normalization (character composition/decomposition)
+- Bidirectional algorithm failure modes
+- Script detection edge cases
+- Text segmentation bugs
+- Invalid UTF-8 sequences
+
+**Why it matters**: A single Unicode bug can crash your entire app when users paste text from different sources.
+
+### `fuzz_harfbuzz_shape` - Font Shaping Stress Test
+**Goal**: Ensure malformed text can't crash the professional HarfBuzz shaping engine.
+
+**What gets tested:**
+- Complex script shaping (Arabic, Hindi, Thai)
+- OpenType feature application
+- Right-to-left and left-to-right text mixing
+- Font loading and parsing
+- Glyph positioning algorithms
+
+**Why it matters**: HarfBuzz is complex C++ code that processes untrusted text - a perfect fuzzing target.
+
+### `fuzz_pipeline` - Architecture Robustness
+**Goal**: Test Typf's pipeline framework with minimal backends to isolate architectural bugs.
+
+**What gets tested:**
+- Pipeline builder pattern stability
+- Stage execution and error propagation
+- Context management between stages
+- Parameter validation
+- Component lifecycle management
+
+**Why it matters**: Pipeline bugs can affect every text rendering operation, regardless of which backends you use.
+
+## ⚙️ Setup & Installation
+
+```bash
+# Install cargo-fuzz (one-time setup)
+cargo install cargo-fuzz
+
+# Typf's fuzz targets are already initialized
+cd fuzz
+```
+
+## 🏃 Running Fuzz Tests
+
+### Basic Fuzzing
+```bash
+cd fuzz
+cargo fuzz run fuzz_unicode_process
+```
+
+### Time-Limited Fuzzing (Recommended for CI)
+```bash
+# Run for 60 seconds then stop
+cargo fuzz run fuzz_unicode_process -- -max_total_time=60
+```
+
+### Continuous Fuzzing (For Deep Testing)
+```bash
+# Run multiple targets in parallel
+cargo fuzz run fuzz_unicode_process -- -jobs=4 &
+cargo fuzz run fuzz_harfbuzz_shape -- -jobs=4 &
+cargo fuzz run fuzz_pipeline -- -jobs=4 &
+wait
+```
+
+### Custom Corpus Testing
+```bash
+# Use your own test cases as starting points
+cargo fuzz run fuzz_unicode_process corpus/mixed_scripts/
+```
+
+## 🔍 When Crashes Happen
+
+### Reproduce the Crash
+```bash
+# Test the exact input that caused the crash
+cargo fuzz run fuzz_unicode_process fuzz/artifacts/fuzz_unicode_process/crash-abc123
+```
+
+### Minimize the Crash Case
+```bash
+# Automatically reduce the input to the smallest crashing case
+cargo fuzz cmin fuzz_unicode_process
+```
+
+### Debug Deep with GDB
+```bash
+# Build with debugging symbols and attach GDB
+cargo fuzz run -O fuzz_unicode_process -- crash-abc123
+gdb target/x86_64-unknown-linux-gnu/release/fuzz_unicode_process
+```
+
+### Fix and Verify
+1. **Fix the bug** in the target code
+2. **Reproduce the crash** to confirm it's fixed
+3. **Add the minimized crash** to the corpus
+4. **Run the fuzzer again** to ensure no regressions
+
+## 🔄 Continuous Fuzzing
+
+### GitHub Actions Integration
+Add fuzzing to your CI to catch regressions early:
+
+```yaml
+# .github/workflows/fuzz.yml
+name: Security & Robustness Fuzzing
+on: [push, pull_request]
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install cargo-fuzz
+      run: cargo install cargo-fuzz
+    - name: Run comprehensive fuzz tests
+      run: |
+        cd fuzz
+        for target in fuzz_unicode_process fuzz_harfbuzz_shape fuzz_pipeline; do
+          echo "Fuzzing $target..."
+          cargo fuzz run $target -- -max_total_time=60 || {
+            echo "Fuzz failures detected in $target"
+            exit 1
+          }
+        done
+```
+
+### OSS-Fuzz for Industry-Scale Testing
+For continuous professional fuzzing, integrate with Google's OSS-Fuzz:
+
+1. **Submit to OSS-Fuzz** - Get free 24/7 fuzzing on Google's infrastructure
+2. **Daily reports** - Automatic bug reports with minimized test cases
+3. **Coverage tracking** - Measure your fuzzing effectiveness over time
+4. **Sanitizer variety** - Test with AddressSanitizer, MemorySanitizer, and more
+
+## 🎯 Fuzzing Best Practices
+
+### Write Effective Targets
+```rust
+#![no_main]
+use libfuzzer_sys::fuzz_target;
+
+fuzz_target!(|data: &[u8]| {
+    // 1. Transform raw bytes into your domain
+    let text = String::from_utf8_lossy(data);
+
+    // 2. Filter out time-wasters early
+    if text.is_empty() || text.len() > 10_000 {
+        return;
+    }
+
+    // 3. Exercise the code you want to protect
+    let result = my_function(&text);
+
+    // 4. Optional: Verify invariants aren't violated
+    if let Ok(output) = result {
+        assert!(output.is_valid());
+    }
+});
+```
+
+### Build a Smart Corpus
+1. **Seed with diversity**: Include real-world edge cases and problematic inputs
+2. **Let evolution work**: libFuzzer mutates and discovers new crash patterns
+3. **Minimize regularly**: `cargo fuzz cmin` removes redundant test cases
+4. **Share your findings**: Check in interesting crashes to the corpus
+
+### Maximize Performance
+1. **Reject early**: Filter out inputs that would waste CPU cycles
+2. **Timeout wisely**: Use `-timeout=5` to prevent stuck fuzzers
+3. **Enable sanitizers**: AddressSanitizer catches memory bugs, UBSan catches undefined behavior
+4. **Track coverage**: Use `-print_coverage=1` to see if you're exercising new code paths
+
+## 🛡️ Security Testing with Sanitizers
+
+### AddressSanitizer (ASan) - Memory Safety Guardian
+Catches the most common memory bugs:
+- Use-after-free and use-after-return
+- Heap, stack, and global buffer overflows
+- Memory leaks and double-free
+
+```bash
+cargo fuzz run --sanitizer=address fuzz_unicode_process
+```
+
+### MemorySanitizer (MSan) - Uninitialized Memory Hunter
+Finds reads of uninitialized memory that can cause unpredictable behavior:
+
+```bash
+cargo fuzz run --sanitizer=memory fuzz_unicode_process
+```
+
+### UndefinedBehaviorSanitizer (UBSan) - Undefined Behavior Detector
+Catches subtle C++/Rust undefined behaviors that compilers miss:
+
+```bash
+cargo fuzz run --sanitizer=undefined fuzz_unicode_process
+```
+
+## 📊 Coverage Analysis
+
+### Generate Coverage Reports
+See which parts of your code the fuzzer is actually exercising:
+
+```bash
+cargo fuzz coverage fuzz_unicode_process
+```
+
+### Visual Coverage Analysis
+```bash
+# Install coverage tools
+cargo install cargo-binutils
+rustup component add llvm-tools-preview
+
+# Generate beautiful HTML coverage report
+cargo fuzz coverage fuzz_unicode_process
+llvm-cov show target/x86_64-unknown-linux-gnu/coverage/x86_64-unknown-linux-gnu/release/fuzz_unicode_process \
+    -instr-profile=coverage/fuzz_unicode_process/coverage.profdata \
+    -format=html > coverage.html
+
+# Open in browser to see which lines were exercised
+open coverage.html
+```
+
+**Goal**: Aim for 80%+ coverage of critical text processing code paths.
+
+## Troubleshooting
+
+### "No corpus found"
+
+```bash
+# Create corpus directory
+mkdir -p corpus/fuzz_unicode_process
+echo "test" > corpus/fuzz_unicode_process/seed1.txt
+```
+
+### "Unable to find libFuzzer"
+
+```bash
+# Reinstall cargo-fuzz
+cargo install --force cargo-fuzz
+```
+
+### "Fuzzer timeout"
+
+Increase timeout:
+```bash
+cargo fuzz run target -- -timeout=5
+```
+
+## Resources
+
+- [libFuzzer Documentation](https://llvm.org/docs/LibFuzzer.html)
+- [cargo-fuzz Book](https://rust-fuzz.github.io/book/cargo-fuzz.html)
+- [Rust Fuzz Book](https://rust-fuzz.github.io/book/)
+- [OSS-Fuzz](https://google.github.io/oss-fuzz/)
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/fuzz/fuzz_targets/fuzz_harfbuzz_shape.rs
+# Language: rust
+
+struct MockFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/fuzz/fuzz_targets/fuzz_pipeline.rs
+# Language: rust
+
+struct FuzzShaper {
+}
+
+struct FuzzRenderer {
+}
+
+struct FuzzExporter {
+}
+
+struct FuzzFont {
+}
+
+
+# File: /Users/adam/Developer/vcs/github.docrepair-fonts/tldr/typf/fuzz/fuzz_targets/fuzz_unicode_process.rs
+# Language: rust
+
+
+
+<document index="51">
+<source>pyproject.toml</source>
+<document_content>
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "typfpy"
+dynamic = ["version"]
+description = "High-performance text rendering pipeline"
+authors = [{name = "FontLab", email = "dev@fontlab.com"}]
+license = {text = "EVALUATION LICENSE"}
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Text Processing :: Fonts",
+]
+
+dependencies = [
+    "fire>=0.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+    "pillow>=10.0",
+    "numpy>=1.20",
+]
+
+[project.scripts]
+typfpy = "typfpy.cli:main"
+
+[tool.maturin]
+module-name = "typfpy.typf"
+features = [
+    "pyo3/extension-module",
+    "shaping-hb",
+    "shaping-ct",
+    "shaping-icu-hb",
+    "render-json",
+    "render-cg",
+    "render-skia",
+    "render-zeno",
+    "export-png",
+    "export-svg"
+]
+manifest-path = "bindings/python/Cargo.toml"
+python-source = "bindings/python/python"
+</document_content>
+</document>
+
+<document index="52">
+<source>scripts/bench-compare.sh</source>
+<document_content>
+#!/usr/bin/env bash
+# Benchmark comparison script for Typf
+# Compares performance between two git commits
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+usage() {
+    cat << USAGE
+Usage: $0 [OPTIONS] <baseline-commit> <current-commit>
+
+Compare benchmark results between two commits.
+
+OPTIONS:
+    -h, --help          Show this help message
+    -o, --output FILE   Save comparison to file
+    -v, --verbose       Show detailed benchmark output
+
+EXAMPLES:
+    # Compare main branch with current working directory
+    $0 main HEAD
+
+    # Compare two specific commits
+    $0 abc1234 def5678
+
+    # Save results to file
+    $0 -o comparison.txt main HEAD
+USAGE
+}
+
+# Parse arguments
+OUTPUT_FILE=""
+VERBOSE=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -o|--output)
+            OUTPUT_FILE="$2"
+            shift 2
+            ;;
+        -v|--verbose)
+            VERBOSE=true
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [ $# -ne 2 ]; then
+    echo -e "${RED}Error: Requires two commit references${NC}"
+    usage
+    exit 1
+fi
+
+BASELINE=$1
+CURRENT=$2
+
+echo -e "${BLUE}=== Typf Benchmark Comparison ===${NC}"
+echo -e "Baseline: ${YELLOW}$BASELINE${NC}"
+echo -e "Current:  ${YELLOW}$CURRENT${NC}"
+echo
+
+# Create temp directory for results
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf $TEMP_DIR" EXIT
+
+BASELINE_RESULTS="$TEMP_DIR/baseline.txt"
+CURRENT_RESULTS="$TEMP_DIR/current.txt"
+
+# Function to run benchmarks for a commit
+run_benchmarks() {
+    local commit=$1
+    local output_file=$2
+
+    echo -e "${BLUE}Running benchmarks for $commit...${NC}"
+
+    # Checkout commit (save current state)
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    STASH_RESULT=$(git stash push -m "bench-compare temp stash" 2>&1)
+
+    git checkout "$commit" --quiet 2>/dev/null || {
+        echo -e "${RED}Error: Could not checkout $commit${NC}"
+        exit 1
+    }
+
+    # Run benchmarks
+    if [ "$VERBOSE" = true ]; then
+        cargo bench --workspace --all-features 2>&1 | tee "$output_file"
+    else
+        cargo bench --workspace --all-features > "$output_file" 2>&1
+    fi
+
+    # Restore previous state
+    git checkout "$CURRENT_BRANCH" --quiet
+    if [[ "$STASH_RESULT" != "No local changes to save" ]]; then
+        git stash pop --quiet
+    fi
+}
+
+# Run benchmarks for baseline
+run_benchmarks "$BASELINE" "$BASELINE_RESULTS"
+echo
+
+# Run benchmarks for current
+run_benchmarks "$CURRENT" "$CURRENT_RESULTS"
+echo
+
+# Compare results
+echo -e "${BLUE}=== Comparison ===${NC}"
+echo
+
+# Extract benchmark times and compare
+compare_benchmarks() {
+    local baseline=$1
+    local current=$2
+
+    # Look for "time:" patterns in criterion output
+    grep -E "time:\s+\[" "$baseline" > "$TEMP_DIR/baseline_times.txt" 2>/dev/null || true
+    grep -E "time:\s+\[" "$current" > "$TEMP_DIR/current_times.txt" 2>/dev/null || true
+
+    if [ ! -s "$TEMP_DIR/baseline_times.txt" ] || [ ! -s "$TEMP_DIR/current_times.txt" ]; then
+        echo -e "${YELLOW}No benchmark timing data found${NC}"
+        echo "This might happen if:"
+        echo "  - No benchmarks are defined"
+        echo "  - Benchmark format has changed"
+        echo "  - Build failed"
+        return
+    fi
+
+    echo -e "${GREEN}Performance Changes:${NC}"
+    echo "------------------------------------------------------------"
+
+    # Parse and compare (simplified - real implementation would be more robust)
+    python3 << 'PYTHON' 2>/dev/null || echo "Python not available for detailed comparison"
+import re
+import sys
+
+def parse_time(line):
+    """Extract mean time from criterion output"""
+    match = re.search(r'time:\s+\[[\d.]+\s+(\w+)\s+([\d.]+)\s+(\w+)\s+[\d.]+\s+(\w+)\]', line)
+    if match:
+        # Convert to nanoseconds
+        value = float(match.group(2))
+        unit = match.group(3)
+
+        units = {'ns': 1, 'µs': 1000, 'us': 1000, 'ms': 1000000, 's': 1000000000}
+        return value * units.get(unit, 1)
+    return None
+
+try:
+    with open('$TEMP_DIR/baseline_times.txt') as f:
+        baseline_lines = f.readlines()
+    with open('$TEMP_DIR/current_times.txt') as f:
+        current_lines = f.readlines()
+
+    for i, (baseline, current) in enumerate(zip(baseline_lines, current_lines)):
+        baseline_time = parse_time(baseline)
+        current_time = parse_time(current)
+
+        if baseline_time and current_time:
+            change = ((current_time - baseline_time) / baseline_time) * 100
+
+            if abs(change) < 1:
+                status = "✓ Same"
+                color = ""
+            elif change < 0:
+                status = f"↑ {abs(change):.1f}% faster"
+                color = "\033[0;32m"  # Green
+            else:
+                status = f"↓ {change:.1f}% slower"
+                color = "\033[0;31m"  # Red
+
+            print(f"Benchmark {i+1}: {color}{status}\033[0m")
+except Exception as e:
+    print(f"Error comparing: {e}", file=sys.stderr)
+PYTHON
+
+    echo "------------------------------------------------------------"
+}
+
+compare_benchmarks "$BASELINE_RESULTS" "$CURRENT_RESULTS"
+
+# Save to file if requested
+if [ -n "$OUTPUT_FILE" ]; then
+    {
+        echo "Typf Benchmark Comparison"
+        echo "Baseline: $BASELINE"
+        echo "Current: $CURRENT"
+        echo "Date: $(date)"
+        echo
+        echo "=== Baseline Results ==="
+        cat "$BASELINE_RESULTS"
+        echo
+        echo "=== Current Results ==="
+        cat "$CURRENT_RESULTS"
+    } > "$OUTPUT_FILE"
+
+    echo
+    echo -e "${GREEN}Results saved to: $OUTPUT_FILE${NC}"
+fi
+
+echo
+echo -e "${BLUE}Benchmark comparison complete!${NC}"
+</document_content>
+</document>
+
+<document index="53">
+<source>scripts/bench.sh</source>
+<document_content>
+#!/usr/bin/env bash
+# Simple benchmark runner for Typf
+
+set -e
+
+echo "Running Typf benchmarks..."
+echo
+
+# Run all benchmarks
+cargo bench --workspace --all-features -- --output-format bencher | tee bench-results.txt
+
+echo
+echo "Results saved to bench-results.txt"
+echo
+echo "To compare with a previous run:"
+echo "  ./scripts/bench-compare.sh <baseline-commit> HEAD"
+</document_content>
+</document>
+
+<document index="54">
+<source>scripts/build-wasm.sh</source>
+<document_content>
+#!/bin/bash
+# Build Typf for WebAssembly
+
+set -e
+
+echo "Building Typf for WebAssembly..."
+
+# Install wasm-pack if not present
+if ! command -v wasm-pack &> /dev/null; then
+    echo "Installing wasm-pack..."
+    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+fi
+
+# Install wasm32 target if not present
+rustup target add wasm32-unknown-unknown 2>/dev/null || true
+
+# Build with wasm-pack
+echo "Building WASM package..."
+cd crates/typf
+wasm-pack build \
+    --target web \
+    --out-dir ../../pkg \
+    --features wasm,wasm-minimal \
+    --no-default-features
+
+echo "WASM build complete! Output in pkg/"
+
+# Create example HTML file
+cat > ../../pkg/example.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Typf WASM Example</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #canvas { border: 1px solid #ccc; }
+        #controls { margin: 20px 0; }
+        input, button { margin: 5px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Typf WebAssembly Demo</h1>
+
+    <div id="controls">
+        <input type="text" id="text" value="Hello WASM!" placeholder="Enter text...">
+        <input type="number" id="fontSize" value="24" min="8" max="72">
+        <button id="render">Render</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script type="module">
+        import init, { WasmRenderer, measure_text } from './typf.js';
+
+        async function run() {
+            await init();
+
+            const renderer = new WasmRenderer();
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            function render() {
+                const text = document.getElementById('text').value;
+                const fontSize = parseFloat(document.getElementById('fontSize').value);
+
+                // Measure text
+                const width = Math.ceil(measure_text(text, fontSize)) + 20;
+                const height = Math.ceil(fontSize * 1.5) + 20;
+
+                // Set canvas size
+                canvas.width = width;
+                canvas.height = height;
+
+                // Render text
+                try {
+                    const pixels = renderer.render_text(text, fontSize);
+
+                    // Convert to ImageData
+                    const imageData = new ImageData(
+                        new Uint8ClampedArray(pixels),
+                        width,
+                        height
+                    );
+
+                    // Draw to canvas
+                    ctx.putImageData(imageData, 0, 0);
+                } catch (e) {
+                    console.error('Render error:', e);
+                    ctx.fillStyle = 'red';
+                    ctx.fillText('Error: ' + e, 10, 20);
+                }
+            }
+
+            document.getElementById('render').addEventListener('click', render);
+            document.getElementById('text').addEventListener('input', render);
+            document.getElementById('fontSize').addEventListener('input', render);
+
+            // Initial render
+            render();
+        }
+
+        run();
+    </script>
+</body>
+</html>
+EOF
+
+echo "Example HTML created at pkg/example.html"
+echo "To test, run: python3 -m http.server --directory pkg"
+</document_content>
+</document>
+
+<document index="55">
+<source>scripts/build.sh</source>
+<document_content>
+#!/bin/bash
+# build.sh - Build all Rust crates and Python wheels
+#
+# Usage:
+#   ./scripts/build.sh              # Build all in release mode
+#   ./scripts/build.sh --debug      # Build in debug mode
+#   ./scripts/build.sh --rust       # Build only Rust crates
+#   ./scripts/build.sh --python     # Build only Python wheel
+#
+# Output:
+#   Rust binaries: target/release/
+#   Python wheels: target/wheels/
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$ROOT_DIR"
+
+# Parse arguments
+BUILD_RUST=true
+BUILD_PYTHON=true
+PROFILE="release"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug)
+            PROFILE="debug"
+            shift
+            ;;
+        --rust)
+            BUILD_PYTHON=false
+            shift
+            ;;
+        --python)
+            BUILD_RUST=false
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--debug] [--rust] [--python]"
+            exit 1
+            ;;
+    esac
+done
+
+echo "Building typf ($PROFILE profile)..."
+echo ""
+
+# Build Rust workspace
+if [[ "$BUILD_RUST" == "true" ]]; then
+    echo "==> Building Rust workspace..."
+    if [[ "$PROFILE" == "release" ]]; then
+        cargo build --workspace --release
+    else
+        cargo build --workspace
+    fi
+    echo "    Rust build complete"
+    echo ""
+fi
+
+# Build Python wheel
+if [[ "$BUILD_PYTHON" == "true" ]]; then
+    echo "==> Building Python wheel..."
+    if command -v maturin &>/dev/null; then
+        if [[ "$PROFILE" == "release" ]]; then
+            maturin build --release
+        else
+            maturin build
+        fi
+        echo "    Python wheel built: target/wheels/"
+    else
+        echo "    Warning: maturin not found, skipping Python build"
+        echo "    Install with: uv tool install maturin (or use: uvx maturin ...)"
+    fi
+    echo ""
+fi
+
+echo "Build complete!"
+echo ""
+
+# Show build artifacts
+if [[ "$BUILD_RUST" == "true" ]]; then
+    BINARY_PATH="target/${PROFILE}/typf"
+    if [[ -f "$BINARY_PATH" ]]; then
+        echo "Rust binary: $BINARY_PATH ($(du -h "$BINARY_PATH" | cut -f1))"
+    fi
+fi
+
+if [[ "$BUILD_PYTHON" == "true" ]] && [[ -d "target/wheels" ]]; then
+    echo "Python wheels:"
+    ls -1 target/wheels/*.whl 2>/dev/null | while read -r wheel; do
+        echo "  $wheel ($(du -h "$wheel" | cut -f1))"
+    done
+fi
+</document_content>
+</document>
+
+<document index="56">
+<source>scripts/count-tests.sh</source>
+<document_content>
+#!/bin/bash
+# Count tests and update README badge
+# Usage: ./scripts/count-tests.sh
+
+set -e
+
+# Run tests with verbose output and count
+echo "Running tests to count them..."
+TEST_OUTPUT=$(cargo test --workspace --all-features -- --list 2>&1)
+
+# Count total tests (lines ending with ": test")
+TEST_COUNT=$(echo "$TEST_OUTPUT" | grep -E ": test$" | wc -l | tr -d ' ')
+
+echo "Total tests found: $TEST_COUNT"
+
+# Update README.md badge
+if [ -f "README.md" ]; then
+    # Use sed to update the badge (macOS and Linux compatible)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        sed -i '' "s/tests-[0-9]*%20passing/tests-${TEST_COUNT}%20passing/g" README.md
+    else
+        # Linux
+        sed -i "s/tests-[0-9]*%20passing/tests-${TEST_COUNT}%20passing/g" README.md
+    fi
+    echo "Updated README.md badge to show $TEST_COUNT tests"
+else
+    echo "ERROR: README.md not found"
+    exit 1
+fi
+</document_content>
+</document>
+
+<document index="57">
+<source>scripts/fuzz.sh</source>
+<document_content>
+#!/bin/bash
+# Fuzz testing script for Typf
+# Usage: ./scripts/fuzz.sh [target] [duration_seconds]
+
+set -e
+
+TARGET="${1:-fuzz_unicode_process}"
+DURATION="${2:-60}"
+
+echo "=== Typf Fuzz Testing ==="
+echo "Target: $TARGET"
+echo "Duration: ${DURATION}s"
+echo ""
+
+# Check if cargo-fuzz is installed
+if ! command -v cargo-fuzz &> /dev/null; then
+    echo "Installing cargo-fuzz..."
+    cargo install cargo-fuzz
+fi
+
+# Available targets
+TARGETS=(
+    "fuzz_unicode_process"
+    "fuzz_harfbuzz_shape"
+    "fuzz_pipeline"
+)
+
+# Validate target
+if [[ ! " ${TARGETS[@]} " =~ " ${TARGET} " ]]; then
+    echo "ERROR: Invalid target '$TARGET'"
+    echo "Available targets:"
+    for t in "${TARGETS[@]}"; do
+        echo "  - $t"
+    done
+    exit 1
+fi
+
+# Create corpus directory
+mkdir -p fuzz/corpus/$TARGET
+
+# Add seed inputs if corpus is empty
+if [ -z "$(ls -A fuzz/corpus/$TARGET 2>/dev/null)" ]; then
+    echo "Creating seed corpus..."
+    mkdir -p fuzz/corpus/$TARGET
+
+    case $TARGET in
+        fuzz_unicode_process)
+            echo "Hello, World!" > fuzz/corpus/$TARGET/hello.txt
+            echo "مرحبا بالعالم" > fuzz/corpus/$TARGET/arabic.txt
+            echo "你好世界" > fuzz/corpus/$TARGET/chinese.txt
+            echo "שלום עולם" > fuzz/corpus/$TARGET/hebrew.txt
+            echo "🎉🎊🎈" > fuzz/corpus/$TARGET/emoji.txt
+            ;;
+        fuzz_harfbuzz_shape)
+            echo "abcdefg" > fuzz/corpus/$TARGET/latin.txt
+            echo "مرحبا" > fuzz/corpus/$TARGET/arabic.txt
+            echo "テスト" > fuzz/corpus/$TARGET/japanese.txt
+            ;;
+        fuzz_pipeline)
+            echo "Test" > fuzz/corpus/$TARGET/simple.txt
+            echo "Complex text with numbers 123" > fuzz/corpus/$TARGET/complex.txt
+            ;;
+    esac
+fi
+
+echo "Running fuzzer..."
+echo "Corpus: fuzz/corpus/$TARGET"
+echo "Artifacts will be saved to: fuzz/artifacts/$TARGET"
+echo ""
+
+# Run fuzzer with timeout
+cd fuzz
+cargo fuzz run $TARGET -- -max_total_time=$DURATION
+
+echo ""
+echo "=== Fuzzing Complete ==="
+echo ""
+
+# Check for crashes
+if [ -d "artifacts/$TARGET" ] && [ "$(ls -A artifacts/$TARGET 2>/dev/null)" ]; then
+    echo "⚠️  CRASHES FOUND!"
+    echo "Crash files in: fuzz/artifacts/$TARGET"
+    ls -lh artifacts/$TARGET
+    exit 1
+else
+    echo "✓ No crashes found"
+    exit 0
+fi
+</document_content>
+</document>
+
+<document index="58">
+<source>scripts/generate_docs.sh</source>
+<document_content>
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REFERENCE_DIR="$ROOT_DIR/src_docs/reference"
+OUTPUT_FILE="$REFERENCE_DIR/rust-api.md"
+TEMP_OUTPUT="$(mktemp)"
+CRATE_MANIFEST="$ROOT_DIR/crates/typf/Cargo.toml"
+BACKUP_MANIFEST="$(mktemp)"
+SANITIZED_MANIFEST="$(mktemp)"
+
+WORKSPACE_VERSION_LINE="$(rg --max-count 1 --no-filename '^version = ' "$ROOT_DIR/Cargo.toml" || true)"
+WORKSPACE_AUTHORS_LINE="$(rg --max-count 1 --no-filename '^authors = ' "$ROOT_DIR/Cargo.toml" || true)"
+WORKSPACE_EDITION_LINE="$(rg --max-count 1 --no-filename '^edition = ' "$ROOT_DIR/Cargo.toml" || true)"
+WORKSPACE_LICENSE_LINE="$(rg --max-count 1 --no-filename '^license = ' "$ROOT_DIR/Cargo.toml" || true)"
+
+WORKSPACE_VERSION="${WORKSPACE_VERSION_LINE#*\"}"
+WORKSPACE_VERSION="${WORKSPACE_VERSION%\"*}"
+WORKSPACE_AUTHORS="${WORKSPACE_AUTHORS_LINE#*= }"
+WORKSPACE_EDITION="${WORKSPACE_EDITION_LINE#*\"}"
+WORKSPACE_EDITION="${WORKSPACE_EDITION%\"*}"
+WORKSPACE_LICENSE="${WORKSPACE_LICENSE_LINE#*\"}"
+WORKSPACE_LICENSE="${WORKSPACE_LICENSE%\"*}"
+
+if [[ -z "$WORKSPACE_VERSION" || -z "$WORKSPACE_AUTHORS" || -z "$WORKSPACE_EDITION" || -z "$WORKSPACE_LICENSE" ]]; then
+  echo "Unable to hydrate workspace metadata for cargo-readme" >&2
+  exit 1
+fi
+
+sed \
+  -e "s/^version\\.workspace = true\$/version = \"$WORKSPACE_VERSION\"/" \
+  -e "s/^authors\\.workspace = true\$/authors = $WORKSPACE_AUTHORS/" \
+  -e "s/^edition\\.workspace = true\$/edition = \"$WORKSPACE_EDITION\"/" \
+  -e "s/^license\\.workspace = true\$/license = \"$WORKSPACE_LICENSE\"/" \
+  "$CRATE_MANIFEST" > "$SANITIZED_MANIFEST"
+
+cp "$CRATE_MANIFEST" "$BACKUP_MANIFEST"
+restore_manifest() {
+  mv "$BACKUP_MANIFEST" "$CRATE_MANIFEST"
+}
+trap restore_manifest EXIT
+mv "$SANITIZED_MANIFEST" "$CRATE_MANIFEST"
+
+mkdir -p "$REFERENCE_DIR"
+
+pushd "$ROOT_DIR/crates/typf" >/dev/null
+cargo readme \
+  --no-title \
+  --no-license \
+  --no-badges \
+  --output "$TEMP_OUTPUT"
+popd >/dev/null
+
+cat <<YAML > "$OUTPUT_FILE"
+---
+title: Rust API Reference
+summary: API overview auto-generated from crate docs.
+tags:
+  - reference
+  - api
+warning: This file is generated via scripts/generate_docs.sh (do not edit manually).
+---
+
+> ⚠️ Auto-generated from Rust doc comments. Run `scripts/generate_docs.sh` to refresh.
+
+YAML
+
+cat "$TEMP_OUTPUT" >> "$OUTPUT_FILE"
+rm "$TEMP_OUTPUT"
+restore_manifest
+trap - EXIT
+
+echo "Generated $OUTPUT_FILE"
+</document_content>
+</document>
+
+<document index="59">
+<source>scripts/profile-memory.sh</source>
+<document_content>
+#!/bin/bash
+# Memory profiling script for Typf
+# Uses Valgrind (massif) and heaptrack for memory analysis
+# Usage: ./scripts/profile-memory.sh [target]
+
+set -e
+
+TARGET="${1:-typf-cli}"
+PROFILE_DIR="target/profile"
+
+# Create profile directory
+mkdir -p "$PROFILE_DIR"
+
+echo "=== Typf Memory Profiling ==="
+echo "Target: $TARGET"
+echo ""
+
+# Check for profiling tools
+has_valgrind=false
+has_heaptrack=false
+
+if command -v valgrind &> /dev/null; then
+    has_valgrind=true
+    echo "✓ Valgrind found"
+else
+    echo "✗ Valgrind not found (install: apt install valgrind / brew install valgrind)"
+fi
+
+if command -v heaptrack &> /dev/null; then
+    has_heaptrack=true
+    echo "✓ Heaptrack found"
+else
+    echo "✗ Heaptrack not found (install: apt install heaptrack / brew install heaptrack)"
+fi
+
+echo ""
+
+# Build release binary with debug symbols
+echo "Building release binary with debug symbols..."
+cargo build --release --package "$TARGET"
+
+BINARY="target/release/$TARGET"
+
+if [ ! -f "$BINARY" ]; then
+    echo "ERROR: Binary not found at $BINARY"
+    exit 1
+fi
+
+# Run Valgrind massif if available
+if [ "$has_valgrind" = true ]; then
+    echo ""
+    echo "=== Running Valgrind Massif ==="
+    MASSIF_OUT="$PROFILE_DIR/massif.out"
+
+    valgrind --tool=massif \
+        --massif-out-file="$MASSIF_OUT" \
+        --stacks=yes \
+        "$BINARY" --help > /dev/null 2>&1 || true
+
+    echo "Massif output saved to: $MASSIF_OUT"
+    echo "Visualize with: ms_print $MASSIF_OUT"
+
+    # Show peak memory usage
+    if [ -f "$MASSIF_OUT" ]; then
+        PEAK=$(grep "peak" "$MASSIF_OUT" | head -1 || echo "Unable to determine")
+        echo "Peak memory: $PEAK"
+    fi
+fi
+
+# Run heaptrack if available
+if [ "$has_heaptrack" = true ]; then
+    echo ""
+    echo "=== Running Heaptrack ==="
+    HEAPTRACK_OUT="$PROFILE_DIR/heaptrack.$TARGET"
+
+    heaptrack --output "$HEAPTRACK_OUT" "$BINARY" --help > /dev/null 2>&1 || true
+
+    echo "Heaptrack output saved to: ${HEAPTRACK_OUT}.*"
+    echo "Analyze with: heaptrack --analyze ${HEAPTRACK_OUT}.gz"
+fi
+
+# Memory baseline test
+echo ""
+echo "=== Memory Baseline Test ==="
+echo "Running simple text rendering to measure memory..."
+
+# Create test file
+TEST_TEXT="Hello, World! This is a memory profiling test."
+TEST_FILE="$PROFILE_DIR/test.txt"
+echo "$TEST_TEXT" > "$TEST_FILE"
+
+if [ "$has_valgrind" = true ]; then
+    echo ""
+    echo "Valgrind memcheck (leak detection):"
+    valgrind --leak-check=full \
+        --show-leak-kinds=all \
+        --track-origins=yes \
+        --log-file="$PROFILE_DIR/memcheck.log" \
+        "$BINARY" --help > /dev/null 2>&1 || true
+
+    echo "Memcheck log saved to: $PROFILE_DIR/memcheck.log"
+
+    # Show summary
+    if [ -f "$PROFILE_DIR/memcheck.log" ]; then
+        echo ""
+        grep -A 5 "LEAK SUMMARY" "$PROFILE_DIR/memcheck.log" || echo "No leaks detected!"
+    fi
+fi
+
+echo ""
+echo "=== Memory Profiling Complete ==="
+echo "Profile data saved in: $PROFILE_DIR/"
+echo ""
+echo "Next steps:"
+echo "  1. View massif profile: ms_print $PROFILE_DIR/massif.out | less"
+echo "  2. Analyze heaptrack: heaptrack --analyze $PROFILE_DIR/heaptrack.$TARGET.gz"
+echo "  3. Check for leaks: cat $PROFILE_DIR/memcheck.log"
+</document_content>
+</document>
+
+<document index="60">
+<source>scripts/publish.sh</source>
+<document_content>
+#!/bin/bash
+# publish.sh - Publish to crates.io and PyPI
+#
+# Usage:
+#   ./scripts/publish.sh                    # Publish all (requires tokens)
+#   ./scripts/publish.sh --dry-run          # Simulate without publishing
+#   ./scripts/publish.sh --crates           # Publish only to crates.io
+#   ./scripts/publish.sh --pypi             # Publish only to PyPI
+#
+# Environment variables:
+#   CRATES_IO_TOKEN - Token for crates.io (or use `cargo login` first)
+#   PYPI_API_TOKEN  - Token for PyPI
+#
+# Publishing order respects dependency DAG with 30s delays between layers.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$ROOT_DIR"
+
+# Parse arguments
+DRY_RUN=false
+PUBLISH_CRATES=true
+PUBLISH_PYPI=true
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --crates)
+            PUBLISH_PYPI=false
+            shift
+            ;;
+        --pypi)
+            PUBLISH_CRATES=false
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--dry-run] [--crates] [--pypi]"
+            exit 1
+            ;;
+    esac
+done
+
+# Get current version
+VERSION=$("$SCRIPT_DIR/set-version.sh" --check)
+echo "Publishing typf version $VERSION"
+echo ""
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[DRY RUN MODE - no actual publishing]"
+    echo ""
+fi
+
+# Verify version matches git tag
+if git describe --tags --abbrev=0 &>/dev/null; then
+    TAG=$(git describe --tags --abbrev=0)
+    TAG_VERSION="${TAG#v}"
+    if [[ "$VERSION" != "$TAG_VERSION" ]]; then
+        echo "WARNING: Cargo version ($VERSION) differs from git tag ($TAG_VERSION)"
+        echo "Run './scripts/set-version.sh' to sync versions first"
+        if [[ "$DRY_RUN" != "true" ]]; then
+            exit 1
+        fi
+    fi
+fi
+
+# Define publishing layers (dependency order)
+# Layer 0: No internal dependencies
+LAYER_0=(
+    "crates/typf-core"
+    "crates/typf-unicode"
+)
+
+# Layer 1: Depends on Layer 0
+LAYER_1=(
+    "crates/typf-fontdb"
+    "crates/typf-input"
+    "crates/typf-export"
+    "backends/typf-shape-none"
+    "backends/typf-render-opixa"
+    "backends/typf-render-json"
+    "backends/typf-render-svg"
+)
+
+# Layer 2: Depends on Layer 1
+LAYER_2=(
+    "crates/typf-export-svg"
+    "backends/typf-shape-hb"
+    "backends/typf-render-color"
+    "backends/typf-render-zeno"
+    "backends/typf-render-skia"
+    "backends/typf-os"
+)
+
+# Layer 3: Depends on Layer 2
+LAYER_3=(
+    "backends/typf-shape-icu-hb"
+    "backends/typf-shape-ct"
+    "backends/typf-render-cg"
+    "backends/typf-os-mac"
+    "backends/typf-os-win"
+)
+
+# Layer 4: Main crate
+LAYER_4=(
+    "crates/typf"
+)
+
+# Layer 5: CLI and bench (depend on main typf)
+LAYER_5=(
+    "crates/typf-cli"
+    "crates/typf-bench"
+)
+
+publish_layer() {
+    local layer_name="$1"
+    shift
+    local crates=("$@")
+
+    echo "==> Publishing $layer_name..."
+    for crate_path in "${crates[@]}"; do
+        crate_name=$(basename "$crate_path")
+        echo "    Publishing $crate_name..."
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            echo "    [DRY RUN] cargo publish -p $crate_name --no-verify"
+        else
+            if [[ -n "${CRATES_IO_TOKEN:-}" ]]; then
+                cargo publish -p "$crate_name" --no-verify --token "$CRATES_IO_TOKEN" || {
+                    echo "    Warning: Failed to publish $crate_name (may already exist)"
+                }
+            else
+                cargo publish -p "$crate_name" --no-verify || {
+                    echo "    Warning: Failed to publish $crate_name (may already exist)"
+                }
+            fi
+        fi
+    done
+    echo ""
+}
+
+wait_for_index() {
+    local seconds="${1:-30}"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "    [DRY RUN] Would wait ${seconds}s for crates.io index update"
+    else
+        echo "    Waiting ${seconds}s for crates.io index update..."
+        sleep "$seconds"
+    fi
+    echo ""
+}
+
+# Publish to crates.io
+if [[ "$PUBLISH_CRATES" == "true" ]]; then
+    echo "========================================"
+    echo "Publishing to crates.io"
+    echo "========================================"
+    echo ""
+
+    publish_layer "Layer 0 (core)" "${LAYER_0[@]}"
+    wait_for_index 30
+
+    publish_layer "Layer 1 (basic)" "${LAYER_1[@]}"
+    wait_for_index 30
+
+    publish_layer "Layer 2 (advanced)" "${LAYER_2[@]}"
+    wait_for_index 30
+
+    publish_layer "Layer 3 (platform)" "${LAYER_3[@]}"
+    wait_for_index 30
+
+    publish_layer "Layer 4 (typf)" "${LAYER_4[@]}"
+    wait_for_index 30
+
+    publish_layer "Layer 5 (binaries)" "${LAYER_5[@]}"
+
+    echo "Crates.io publishing complete"
+    echo ""
+fi
+
+# Publish to PyPI
+if [[ "$PUBLISH_PYPI" == "true" ]]; then
+    echo "========================================"
+    echo "Publishing to PyPI"
+    echo "========================================"
+    echo ""
+
+    if ! command -v maturin &>/dev/null; then
+        echo "Error: maturin not found. Install with: uv tool install maturin"
+        exit 1
+    fi
+
+    echo "==> Building Python wheel..."
+    maturin build --release
+    echo ""
+
+    echo "==> Publishing to PyPI..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "    [DRY RUN] maturin publish"
+    else
+        if [[ -n "${PYPI_API_TOKEN:-}" ]]; then
+            # Use token from environment
+            maturin publish --username __token__ --password "$PYPI_API_TOKEN"
+        else
+            # Rely on ~/.pypirc or interactive auth
+            maturin publish
+        fi
+    fi
+
+    echo ""
+    echo "PyPI publishing complete"
+fi
+
+echo ""
+echo "========================================"
+echo "Publishing complete: typf v$VERSION"
+echo "========================================"
+</document_content>
+</document>
+
+<document index="61">
+<source>scripts/set-version.sh</source>
+<document_content>
+#!/bin/bash
+# set-version.sh - Sync workspace version from git tag
+#
+# Usage:
+#   ./scripts/set-version.sh           # Use latest git tag (e.g., v2.4.0 -> 2.4.0)
+#   ./scripts/set-version.sh 2.4.0     # Set specific version
+#   ./scripts/set-version.sh --check   # Only print current version, don't modify
+#
+# Requires: cargo-edit (cargo install cargo-edit)
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$ROOT_DIR"
+
+# Check if cargo-edit is installed
+if ! cargo set-version --help &>/dev/null; then
+    echo "Error: cargo-edit is required. Install with:"
+    echo "  cargo install cargo-edit"
+    exit 1
+fi
+
+# Handle --check flag
+if [[ "${1:-}" == "--check" ]]; then
+    # Extract version from workspace Cargo.toml
+    VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+    echo "$VERSION"
+    exit 0
+fi
+
+# Get version from argument or git tag
+if [[ -n "${1:-}" ]]; then
+    VERSION="$1"
+    echo "Using provided version: $VERSION"
+else
+    # Try to get version from git tag
+    if git describe --tags --abbrev=0 &>/dev/null; then
+        TAG=$(git describe --tags --abbrev=0)
+        VERSION="${TAG#v}"  # Remove 'v' prefix
+        echo "Extracted version from git tag '$TAG': $VERSION"
+    else
+        echo "Error: No git tag found and no version provided."
+        echo "Usage: $0 [VERSION]"
+        echo "Example: $0 2.4.0"
+        exit 1
+    fi
+fi
+
+# Validate version format (semver)
+if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$ ]]; then
+    echo "Error: Invalid version format '$VERSION'"
+    echo "Expected semver format: MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]"
+    exit 1
+fi
+
+# Update workspace version
+echo "Setting workspace version to $VERSION..."
+cargo set-version --workspace "$VERSION"
+
+# Update pyproject.toml version
+PYPROJECT="$ROOT_DIR/pyproject.toml"
+if [[ -f "$PYPROJECT" ]]; then
+    echo "Updating pyproject.toml version..."
+    # Use sed to update the version line in pyproject.toml
+    if grep -q '^version = ' "$PYPROJECT"; then
+        sed -i.bak "s/^version = .*/version = \"$VERSION\"/" "$PYPROJECT"
+        rm -f "$PYPROJECT.bak"
+        echo "Updated pyproject.toml to version $VERSION"
+    else
+        echo "Note: pyproject.toml uses dynamic versioning, skipping"
+    fi
+fi
+
+echo ""
+echo "Version updated to $VERSION"
+echo ""
+echo "Files modified:"
+git diff --name-only 2>/dev/null || true
+</document_content>
+</document>
+
+<document index="62">
+<source>scripts/test.sh</source>
+<document_content>
+#!/bin/bash
+# test.sh - Run all checks and tests
+#
+# Usage:
+#   ./scripts/test.sh              # Run all checks and tests
+#   ./scripts/test.sh --quick      # Skip slow tests
+#   ./scripts/test.sh --rust       # Run only Rust tests
+#   ./scripts/test.sh --python     # Run only Python tests
+#   ./scripts/test.sh --lint       # Run only linting (no tests)
+#
+# Runs: fmt check, clippy, cargo test, maturin develop, pytest
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$ROOT_DIR"
+
+# Parse arguments
+RUN_RUST=true
+RUN_PYTHON=true
+RUN_LINT=true
+RUN_TESTS=true
+QUICK_MODE=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --quick)
+            QUICK_MODE=true
+            shift
+            ;;
+        --rust)
+            RUN_PYTHON=false
+            shift
+            ;;
+        --python)
+            RUN_RUST=false
+            shift
+            ;;
+        --lint)
+            RUN_TESTS=false
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--quick] [--rust] [--python] [--lint]"
+            exit 1
+            ;;
+    esac
+done
+
+echo "Running typf tests..."
+echo ""
+
+FAILED=false
+
+# Rust formatting check
+if [[ "$RUN_RUST" == "true" ]] && [[ "$RUN_LINT" == "true" ]]; then
+    echo "==> Checking Rust formatting..."
+    if cargo fmt --all --check; then
+        echo "    Formatting OK"
+    else
+        echo "    Formatting FAILED - run 'cargo fmt --all' to fix"
+        FAILED=true
+    fi
+    echo ""
+fi
+
+# Rust clippy
+if [[ "$RUN_RUST" == "true" ]] && [[ "$RUN_LINT" == "true" ]]; then
+    echo "==> Running clippy..."
+    if cargo clippy --workspace --all-features -- -D warnings; then
+        echo "    Clippy OK"
+    else
+        echo "    Clippy FAILED"
+        FAILED=true
+    fi
+    echo ""
+fi
+
+# Rust tests
+if [[ "$RUN_RUST" == "true" ]] && [[ "$RUN_TESTS" == "true" ]]; then
+    echo "==> Running Rust tests..."
+    if [[ "$QUICK_MODE" == "true" ]]; then
+        if cargo test --workspace; then
+            echo "    Rust tests OK (quick mode)"
+        else
+            echo "    Rust tests FAILED"
+            FAILED=true
+        fi
+    else
+        if cargo test --workspace --all-features; then
+            echo "    Rust tests OK"
+        else
+            echo "    Rust tests FAILED"
+            FAILED=true
+        fi
+    fi
+    echo ""
+fi
+
+# Python linting
+if [[ "$RUN_PYTHON" == "true" ]] && [[ "$RUN_LINT" == "true" ]]; then
+    if command -v uv &>/dev/null; then
+        echo "==> Running Python linting (ruff via uvx)..."
+        if [[ -d "bindings/python/python" ]]; then
+            if uvx ruff check bindings/python/python bindings/python/tests 2>/dev/null; then
+                echo "    Ruff OK"
+            else
+                echo "    Ruff found issues"
+                # Don't fail on Python lint issues for now
+            fi
+        fi
+        echo ""
+    elif command -v ruff &>/dev/null; then
+        echo "==> Running Python linting (ruff)..."
+        if [[ -d "bindings/python/python" ]]; then
+            if ruff check bindings/python/python; then
+                echo "    Ruff OK"
+            else
+                echo "    Ruff found issues"
+            fi
+        fi
+        echo ""
+    fi
+fi
+
+# Python tests
+if [[ "$RUN_PYTHON" == "true" ]] && [[ "$RUN_TESTS" == "true" ]]; then
+    if command -v uv &>/dev/null; then
+        echo "==> Running Python tests (uv)..."
+        cd bindings/python
+        if uv run --isolated --with pytest pytest tests/ -v 2>&1 | tail -20; then
+            echo "    Python tests OK"
+        else
+            echo "    Python tests FAILED"
+            # Don't fail the whole build for Python test issues
+        fi
+        cd "$ROOT_DIR"
+        echo ""
+    elif command -v maturin &>/dev/null && command -v pytest &>/dev/null; then
+        echo "==> Building Python extension for testing..."
+        if maturin develop --release 2>&1 | tail -5; then
+            echo ""
+            echo "==> Running Python tests..."
+            if pytest bindings/python/tests -v 2>/dev/null; then
+                echo "    Python tests OK"
+            else
+                echo "    Python tests FAILED (or no tests found)"
+            fi
+        else
+            echo "    Python build FAILED"
+            FAILED=true
+        fi
+        echo ""
+    else
+        echo "==> Skipping Python tests (uv or maturin+pytest not installed)"
+        echo ""
+    fi
+fi
+
+# Summary
+echo "========================================"
+if [[ "$FAILED" == "true" ]]; then
+    echo "FAILED: Some checks did not pass"
+    exit 1
+else
+    echo "SUCCESS: All checks passed"
+    exit 0
+fi
+</document_content>
+</document>
+
+<document index="63">
+<source>zensical.toml</source>
+<document_content>
+[project]
+site_name = "Typf"
+site_url = "https://fontlab.org/typf/"
+site_description = "Typf: A production-ready text rendering pipeline framework with six-stage architecture, multi-backend support, and first-class Python bindings"
+# Build configuration - source and output directories
+docs_dir = "./src_docs"
+site_dir = "./docs"
+# Repository
+repo_name = "fontlaborg/typf"
+repo_url = "https://github.com/fontlaborg/typf"
+edit_uri = "https://github.com/fontlaborg/typf/edit/main/src_docs/"
+# Copyright
+copyright = "Copyright &copy; 2025 Fontlab Ltd"
+# Navigation - Typf v2.0 Comprehensive Documentation
+nav = [
+  "index.md",
+  { "Getting Started" = [
+    "01-introduction.md",
+    "02-quick-start.md",
+    "03-architecture-overview.md",
+    "04-installation.md"
+  ] },
+  { "Core Concepts" = [
+    "05-six-stage-pipeline.md",
+    "06-backend-architecture.md",
+    "07-memory-management.md",
+    "08-performance-fundamentals.md"
+  ] },
+  { "Shaping Backends" = [
+    "09-harfbuzz-shaping.md",
+    "10-platform-shapers.md",
+    "11-icu-harfbuzz-composition.md",
+    "12-none-shaper.md"
+  ] },
+  { "Rendering Backends" = [
+    "13-skia-renderer.md",
+    "14-opixa-renderer.md",
+    "15-platform-renderers.md",
+    "16-zeno-renderer.md"
+  ] },
+  { "Output & Export" = ["17-export-formats.md"] },
+  { "API Reference" = [
+    "18-rust-api.md",
+    "19-python-api.md",
+    "20-cli-interface.md"
+  ] },
+  { "Advanced Topics" = [
+    "21-webassembly-integration.md",
+    "22-performance-optimization.md",
+    "23-deployment-integration.md",
+    "24-troubleshooting-best-practices.md"
+  ] }
+]
+
+# Theme configuration - NO TABS
+[project.theme]
+features = [
+  "announce.dismiss",
+  "content.action.edit",
+  "content.action.view",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.code.select",
+  "content.footnote.tooltips",
+  "content.tooltips",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "search.highlight"
+]
+
+# Palette configuration with automatic, light, and dark modes
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+
+[project.theme.palette.toggle]
+icon = "lucide/sun-moon"
+name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "blue"
+accent = "blue"
+
+[project.theme.palette.toggle]
+icon = "lucide/sun"
+name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "blue"
+accent = "orange"
+
+[project.theme.palette.toggle]
+icon = "lucide/moon-star"
+name = "Switch to system preference"
+
+# Additional configuration
+[project.extra]
+homepage = "https://fontlab.org/typf/"
+scope = "/"
+
+[project.extra.status]
+new = "Recently added"
+deprecated = "Deprecated"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/fontlaborg/typf"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/typf/"
+
+[project.extra.tags]
+default = "default"
+
+# Markdown extensions configuration
+[project.markdown_extensions]
+abbr = {  }
+admonition = {  }
+attr_list = {  }
+def_list = {  }
+footnotes = {  }
+md_in_html = {  }
+
+[project.markdown_extensions.toc]
+permalink = true
+
+[project.markdown_extensions.pymdownx]
+caret = {  }
+details = {  }
+emoji = {  }
+inlinehilite = {  }
+keys = {  }
+mark = {  }
+smartsymbols = {  }
+snippets = {  }
+tilde = {  }
+
+[project.markdown_extensions.pymdownx.arithmatex]
+generic = true
+
+[project.markdown_extensions.pymdownx.betterem]
+smart_enable = "all"
+
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+
+[project.markdown_extensions.pymdownx.magiclink]
+normalize_issue_symbols = true
+repo_url_shorthand = true
+user = "fontlaborg"
+repo = "typf"
+
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [{ name = "mermaid", class = "mermaid" }]
+
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+
+# Plugins configuration (zensical equivalents)
+[project.plugins]
+search = {  }
+tags = {  }
+</document_content>
+</document>
+
+</documents>
