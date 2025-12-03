@@ -1,5 +1,6 @@
 //! Integration tests for the Typf pipeline
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use typf_core::{
@@ -8,8 +9,20 @@ use typf_core::{
     Color, RenderParams, ShapingParams,
 };
 use typf_export::{PnmExporter, PnmFormat};
+use typf_fontdb::TypfFontFace;
 use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
+
+/// Get path to test font fixtures
+fn test_font_path(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("test-fonts")
+        .join(name)
+}
 
 /// Mock font for testing
 struct MockFont;
@@ -263,5 +276,166 @@ fn test_pipeline_with_colors() {
         let exporter = PnmExporter::ppm();
         let exported = exporter.export(&rendered).unwrap();
         assert!(!exported.is_empty());
+    }
+}
+
+// =============================================================================
+// Real Font Integration Tests
+// =============================================================================
+
+#[test]
+fn test_real_font_noto_sans_latin() {
+    let font_path = test_font_path("NotoSans-Regular.ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load real font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load NotoSans");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Verify font properties
+    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+    assert!(
+        font.glyph_id('A').is_some(),
+        "Font should contain glyph for 'A'"
+    );
+
+    // Shape text
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 24.0,
+        direction: Direction::LeftToRight,
+        ..Default::default()
+    };
+
+    let text = "Hello, World!";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping should succeed with real font");
+
+    assert_eq!(shaped.glyphs.len(), text.chars().count());
+    assert!(shaped.advance_width > 0.0);
+
+    // Render
+    let renderer = OpixaRenderer::new();
+    let render_params = RenderParams {
+        foreground: Color::black(),
+        background: Some(Color::white()),
+        padding: 10,
+        ..Default::default()
+    };
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Rendering should succeed with real font");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 100, "Bitmap should have reasonable width");
+            assert!(bitmap.height > 20, "Bitmap should have reasonable height");
+            assert!(!bitmap.data.is_empty(), "Bitmap should have pixel data");
+        }
+        _ => panic!("Expected bitmap output"),
+    }
+
+    // Export
+    let exporter = PnmExporter::ppm();
+    let exported = exporter.export(&rendered).expect("Export should succeed");
+    assert!(!exported.is_empty());
+}
+
+#[test]
+fn test_real_font_arabic_rtl() {
+    let font_path = test_font_path("NotoNaskhArabic-Regular.ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load Arabic font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load Arabic font");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Shape with RTL direction
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 24.0,
+        direction: Direction::RightToLeft,
+        language: Some("ar".to_string()),
+        ..Default::default()
+    };
+
+    // Arabic text "مرحبا" (Hello)
+    let text = "مرحبا";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping should succeed with Arabic font");
+
+    assert!(!shaped.glyphs.is_empty(), "Should produce glyphs for Arabic");
+    assert_eq!(shaped.direction, Direction::RightToLeft);
+
+    // Render
+    let renderer = OpixaRenderer::new();
+    let render_params = RenderParams::default();
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Rendering should succeed with Arabic font");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 0);
+            assert!(bitmap.height > 0);
+        }
+        _ => panic!("Expected bitmap output"),
+    }
+}
+
+#[test]
+fn test_real_font_variable() {
+    let font_path = test_font_path("Kalnia[wdth,wght].ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load variable font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load variable font");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Shape with variation settings
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 32.0,
+        variations: vec![
+            ("wght".to_string(), 700.0), // Bold
+            ("wdth".to_string(), 100.0), // Normal width
+        ],
+        ..Default::default()
+    };
+
+    let text = "Variable";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping should succeed with variable font");
+
+    assert_eq!(shaped.glyphs.len(), text.chars().count());
+
+    // Render
+    let renderer = OpixaRenderer::new();
+    let render_params = RenderParams::default();
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Rendering should succeed with variable font");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 0);
+            assert!(bitmap.height > 0);
+        }
+        _ => panic!("Expected bitmap output"),
     }
 }

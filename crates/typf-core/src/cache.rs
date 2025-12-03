@@ -56,6 +56,15 @@ pub struct L1Cache<K: Hash + Eq + Clone, V: Clone> {
     max_size: usize,
 }
 
+impl<K: Hash + Eq + Clone, V: Clone> std::fmt::Debug for L1Cache<K, V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("L1Cache")
+            .field("max_size", &self.max_size)
+            .field("current_size", &self.cache.read().len())
+            .finish()
+    }
+}
+
 impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
     /// Create a new L1 cache with the specified capacity
     pub fn new(max_size: usize) -> Self {
@@ -114,10 +123,19 @@ impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
     }
 }
 
-/// The marathon runner: bigger, smart about what to fopixat
+/// The marathon runner: bigger, smart about what to forget
 pub struct L2Cache<K: Hash + Eq + Clone, V: Clone> {
     cache: Arc<RwLock<LruCache<K, CachedValue<V>>>>,
     capacity: NonZeroUsize,
+}
+
+impl<K: Hash + Eq + Clone, V: Clone> std::fmt::Debug for L2Cache<K, V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("L2Cache")
+            .field("capacity", &self.capacity)
+            .field("current_size", &self.cache.read().len())
+            .finish()
+    }
 }
 
 /// Default L2 cache capacity
@@ -178,6 +196,16 @@ pub struct MultiLevelCache<K: Hash + Eq + Clone, V: Clone> {
     l1: L1Cache<K, V>,
     l2: L2Cache<K, V>,
     stats: Arc<RwLock<CacheMetrics>>,
+}
+
+impl<K: Hash + Eq + Clone, V: Clone> std::fmt::Debug for MultiLevelCache<K, V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MultiLevelCache")
+            .field("l1", &self.l1)
+            .field("l2", &self.l2)
+            .field("hit_rate", &self.hit_rate())
+            .finish()
+    }
 }
 
 impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {

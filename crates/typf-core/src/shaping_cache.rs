@@ -89,6 +89,14 @@ pub struct ShapingCache {
     cache: MultiLevelCache<ShapingCacheKey, ShapingResult>,
 }
 
+impl std::fmt::Debug for ShapingCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ShapingCache")
+            .field("cache", &self.cache)
+            .finish()
+    }
+}
+
 impl ShapingCache {
     /// Create a new shaping cache with default capacities
     ///

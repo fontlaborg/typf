@@ -19,6 +19,15 @@ path = "../backends/typf-shape-hb"
 [dependencies.typf-core]
 path = "../crates/typf-core"
 
+[dependencies.typf-fontdb]
+path = "../crates/typf-fontdb"
+
+[dependencies.read-fonts]
+version = "0.36"
+
+[dependencies.skrifa]
+version = "0.39"
+
 # Prevent this from interfering with workspaces
 [[bin]]
 name = "fuzz_unicode_process"
@@ -35,5 +44,11 @@ doc = false
 [[bin]]
 name = "fuzz_pipeline"
 path = "fuzz_targets/fuzz_pipeline.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_font_parse"
+path = "fuzz_targets/fuzz_font_parse.rs"
 test = false
 doc = false
