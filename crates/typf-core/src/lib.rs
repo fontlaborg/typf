@@ -102,6 +102,22 @@ pub use error::{Result, TypfError};
 pub use pipeline::{Pipeline, PipelineBuilder};
 pub use traits::{Exporter, Renderer, Shaper, Stage};
 
+// =============================================================================
+// Security Limits
+// =============================================================================
+
+/// Maximum font size in pixels to prevent DoS attacks
+///
+/// Set very high (100K px) to catch only obvious attacks while
+/// allowing legitimate large-format rendering use cases.
+pub const MAX_FONT_SIZE: f32 = 100_000.0;
+
+/// Maximum number of glyphs to render in a single operation
+///
+/// Set very high (10M glyphs) to catch only obvious attacks while
+/// allowing legitimate bulk text processing.
+pub const MAX_GLYPH_COUNT: usize = 10_000_000;
+
 /// The data structures that power the pipeline
 pub mod types {
     /// Unique identifier for a glyph within a font
@@ -175,6 +191,53 @@ pub mod types {
         Pdf,
     }
 
+    /// The source type of glyph data in a font
+    ///
+    /// Different glyph types require different rendering approaches:
+    /// - Outlines can be scaled and exported to SVG paths
+    /// - Bitmaps are pre-rendered at specific sizes
+    /// - COLR/SVG glyphs contain color information
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum GlyphType {
+        /// Standard vector outline (glyf/CFF/CFF2 tables)
+        Outline,
+        /// Color glyph using COLR/CPAL tables (v0 or v1)
+        Colr,
+        /// Color glyph using embedded SVG documents
+        Svg,
+        /// Embedded bitmap glyph (CBDT/CBLC tables - Google format)
+        BitmapCbdt,
+        /// Embedded bitmap glyph (EBDT/EBLC tables - legacy format)
+        BitmapEbdt,
+        /// Embedded bitmap glyph (sbix table - Apple format)
+        BitmapSbix,
+        /// Glyph with no data (space, missing glyph, etc.)
+        Empty,
+    }
+
+    impl GlyphType {
+        /// Returns true if this glyph type contains vector outline data
+        pub fn has_outline(&self) -> bool {
+            matches!(self, GlyphType::Outline | GlyphType::Colr)
+        }
+
+        /// Returns true if this glyph type contains bitmap data
+        pub fn is_bitmap(&self) -> bool {
+            matches!(
+                self,
+                GlyphType::BitmapCbdt | GlyphType::BitmapEbdt | GlyphType::BitmapSbix
+            )
+        }
+
+        /// Returns true if this glyph type contains color information
+        pub fn is_color(&self) -> bool {
+            matches!(
+                self,
+                GlyphType::Colr | GlyphType::Svg | GlyphType::BitmapCbdt | GlyphType::BitmapSbix
+            )
+        }
+    }
+
     /// How text gets broken into manageable pieces
     #[derive(Debug, Clone)]
     pub struct SegmentOptions {
@@ -231,6 +294,63 @@ impl Default for ShapingParams {
             letter_spacing: 0.0,
         }
     }
+}
+
+impl ShapingParams {
+    /// Validate shaping parameters against security limits
+    ///
+    /// Returns an error if:
+    /// - Font size exceeds [`MAX_FONT_SIZE`] (currently 100,000 pixels)
+    /// - Font size is negative or zero
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use typf_core::ShapingParams;
+    ///
+    /// let params = ShapingParams { size: 48.0, ..Default::default() };
+    /// params.validate().expect("valid params");
+    ///
+    /// let bad_params = ShapingParams { size: 200_000.0, ..Default::default() };
+    /// assert!(bad_params.validate().is_err());
+    /// ```
+    pub fn validate(&self) -> Result<(), error::ShapingError> {
+        if self.size <= 0.0 {
+            return Err(error::ShapingError::BackendError(
+                "Font size must be positive".to_string(),
+            ));
+        }
+        if self.size > MAX_FONT_SIZE {
+            return Err(error::ShapingError::FontSizeTooLarge(
+                self.size,
+                MAX_FONT_SIZE,
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Validate glyph count against security limits
+///
+/// Returns an error if glyph count exceeds [`MAX_GLYPH_COUNT`] (currently 10M).
+/// Call this before rendering to prevent resource exhaustion from malicious input.
+///
+/// # Example
+///
+/// ```
+/// use typf_core::{validate_glyph_count, types::ShapingResult};
+///
+/// // In a renderer, before processing:
+/// // validate_glyph_count(shaped.glyphs.len())?;
+/// ```
+pub fn validate_glyph_count(count: usize) -> Result<(), error::RenderError> {
+    if count > MAX_GLYPH_COUNT {
+        return Err(error::RenderError::GlyphCountTooLarge(
+            count,
+            MAX_GLYPH_COUNT,
+        ));
+    }
+    Ok(())
 }
 
 /// Which glyph data sources are allowed and in what order

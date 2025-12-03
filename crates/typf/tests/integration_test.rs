@@ -11,6 +11,8 @@ use typf_core::{
 use typf_export::{PnmExporter, PnmFormat};
 use typf_fontdb::TypfFontFace;
 use typf_render_opixa::OpixaRenderer;
+use typf_render_skia::SkiaRenderer;
+use typf_render_zeno::ZenoRenderer;
 use typf_shape_none::NoneShaper;
 
 /// Get path to test font fixtures
@@ -437,5 +439,287 @@ fn test_real_font_variable() {
             assert!(bitmap.height > 0);
         }
         _ => panic!("Expected bitmap output"),
+    }
+}
+
+// =============================================================================
+// Color Font Integration Tests
+// =============================================================================
+
+#[test]
+fn test_color_font_colr() {
+    let font_path = test_font_path("Nabla-Regular-COLR.ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: COLR font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load COLR color font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load COLR font");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Verify font loads correctly
+    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+
+    // Shape text
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 48.0,
+        ..Default::default()
+    };
+
+    let text = "ABC";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping COLR font should succeed");
+
+    assert_eq!(shaped.glyphs.len(), text.chars().count());
+    assert!(shaped.advance_width > 0.0);
+
+    // Render - color fonts should produce larger bitmaps due to color data
+    let renderer = OpixaRenderer::new();
+    let render_params = RenderParams {
+        foreground: Color::black(),
+        background: Some(Color::white()),
+        padding: 5,
+        ..Default::default()
+    };
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Rendering COLR font should succeed");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 0, "COLR bitmap should have width");
+            assert!(bitmap.height > 0, "COLR bitmap should have height");
+            assert!(!bitmap.data.is_empty(), "COLR bitmap should have data");
+        }
+        _ => panic!("Expected bitmap output"),
+    }
+
+    // Export should work
+    let exporter = PnmExporter::ppm();
+    let exported = exporter.export(&rendered).expect("Export should succeed");
+    assert!(!exported.is_empty());
+}
+
+#[test]
+fn test_color_font_svg() {
+    let font_path = test_font_path("Nabla-Regular-SVG.ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: SVG color font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load SVG color font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load SVG color font");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Verify font loads correctly
+    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+
+    // Shape text
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 48.0,
+        ..Default::default()
+    };
+
+    let text = "XYZ";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping SVG color font should succeed");
+
+    assert_eq!(shaped.glyphs.len(), text.chars().count());
+
+    // Render
+    let renderer = OpixaRenderer::new();
+    let render_params = RenderParams::default();
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Rendering SVG color font should succeed");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 0);
+            assert!(bitmap.height > 0);
+        }
+        _ => panic!("Expected bitmap output"),
+    }
+}
+
+#[test]
+fn test_color_font_sbix() {
+    let font_path = test_font_path("Nabla-Regular-sbix.ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: sbix color font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load sbix (Apple bitmap) color font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load sbix color font");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Verify font loads correctly
+    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+
+    // Shape text
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 48.0,
+        ..Default::default()
+    };
+
+    let text = "123";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping sbix color font should succeed");
+
+    assert_eq!(shaped.glyphs.len(), text.chars().count());
+
+    // Render - sbix fonts contain embedded bitmaps
+    let renderer = OpixaRenderer::new();
+    let render_params = RenderParams::default();
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Rendering sbix color font should succeed");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 0, "sbix bitmap should have width");
+            assert!(bitmap.height > 0, "sbix bitmap should have height");
+        }
+        _ => panic!("Expected bitmap output"),
+    }
+}
+
+#[test]
+fn test_color_font_cbdt() {
+    let font_path = test_font_path("Nabla-Regular-CBDT.ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: CBDT color font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load CBDT (Google bitmap) color font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load CBDT color font");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Verify font loads correctly
+    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+
+    // Shape text
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 48.0,
+        ..Default::default()
+    };
+
+    let text = "DEF";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping CBDT color font should succeed");
+
+    assert_eq!(shaped.glyphs.len(), text.chars().count());
+
+    // Render - CBDT fonts contain embedded PNG bitmaps
+    let renderer = OpixaRenderer::new();
+    let render_params = RenderParams::default();
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Rendering CBDT color font should succeed");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 0, "CBDT bitmap should have width");
+            assert!(bitmap.height > 0, "CBDT bitmap should have height");
+        }
+        _ => panic!("Expected bitmap output"),
+    }
+}
+
+#[test]
+fn test_color_font_cbdt_skia() {
+    let font_path = test_font_path("Nabla-Regular-CBDT.ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: CBDT color font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load CBDT (Google bitmap) color font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load CBDT color font");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Shape text
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 48.0,
+        ..Default::default()
+    };
+
+    let text = "DEF";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping CBDT color font should succeed");
+
+    // Render with Skia - CBDT fonts contain embedded PNG bitmaps
+    let renderer = SkiaRenderer::new();
+    let render_params = RenderParams::default();
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Skia rendering CBDT color font should succeed");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 0, "Skia CBDT bitmap should have width");
+            assert!(bitmap.height > 0, "Skia CBDT bitmap should have height");
+        }
+        _ => panic!("Expected bitmap output from Skia"),
+    }
+}
+
+#[test]
+fn test_color_font_cbdt_zeno() {
+    let font_path = test_font_path("Nabla-Regular-CBDT.ttf");
+    if !font_path.exists() {
+        eprintln!("Skipping test: CBDT color font not found at {:?}", font_path);
+        return;
+    }
+
+    // Load CBDT (Google bitmap) color font
+    let font_face = TypfFontFace::from_file(&font_path).expect("Failed to load CBDT color font");
+    let font: Arc<dyn FontRef> = Arc::new(font_face);
+
+    // Shape text
+    let shaper = NoneShaper::new();
+    let shaping_params = ShapingParams {
+        size: 48.0,
+        ..Default::default()
+    };
+
+    let text = "DEF";
+    let shaped = shaper
+        .shape(text, font.clone(), &shaping_params)
+        .expect("Shaping CBDT color font should succeed");
+
+    // Render with Zeno - CBDT fonts contain embedded PNG bitmaps
+    let renderer = ZenoRenderer::new();
+    let render_params = RenderParams::default();
+
+    let rendered = renderer
+        .render(&shaped, font, &render_params)
+        .expect("Zeno rendering CBDT color font should succeed");
+
+    match &rendered {
+        RenderOutput::Bitmap(bitmap) => {
+            assert!(bitmap.width > 0, "Zeno CBDT bitmap should have width");
+            assert!(bitmap.height > 0, "Zeno CBDT bitmap should have height");
+        }
+        _ => panic!("Expected bitmap output from Zeno"),
     }
 }

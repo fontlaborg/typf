@@ -62,6 +62,7 @@ Performance: ~50ns per glyph with SIMD, multi-level caching, zero-copy font load
 - [22 - Performance](22-performance-optimization.md) - Production tuning
 - [23 - Deployment](23-deployment-integration.md) - Production patterns
 - [24 - Troubleshooting](24-troubleshooting-best-practices.md) - Problem solving
+- [25 - Benchmark Analysis](25-benchmark-analysis.md) - Performance data and insights
 
 ---
 

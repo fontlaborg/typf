@@ -16,7 +16,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use std::sync::Arc;
-use typf_core::{Pipeline, RenderParams, ShapingParams, traits::{FontRef, Shaper, Renderer, Exporter}, types::{RenderOutput, ShapingResult}};
+use typf_core::{Pipeline, RenderParams, ShapingParams, traits::{FontRef, Shaper, Renderer, Exporter}, types::{BitmapData, BitmapFormat, GlyphId, RenderOutput, ShapingResult}};
 
 /// Minimal shaper that never crashes but exercises pipeline logic
 struct FuzzShaper;
@@ -51,11 +51,12 @@ impl Renderer for FuzzRenderer {
     fn name(&self) -> &'static str { "fuzz" }
     fn render(&self, _result: &ShapingResult, _font: Arc<dyn FontRef>, _params: &RenderParams) -> typf_core::Result<RenderOutput> {
         // Return a simple but valid bitmap
-        Ok(RenderOutput {
+        Ok(RenderOutput::Bitmap(BitmapData {
             width: 100,
             height: 100,
+            format: BitmapFormat::Rgba8,
             data: vec![0; 100 * 100 * 4], // RGBA bitmap
-        })
+        }))
     }
 }
 
@@ -80,8 +81,10 @@ impl Exporter for FuzzExporter {
 struct FuzzFont;
 impl FontRef for FuzzFont {
     fn data(&self) -> &[u8] { &[] } // No font data needed
-    fn glyph_count(&self) -> usize { 100 } // Reasonable glyph count
     fn units_per_em(&self) -> u16 { 1000 } // Standard units
+    fn glyph_id(&self, _ch: char) -> Option<GlyphId> { Some(0) } // Return notdef for all chars
+    fn advance_width(&self, _glyph_id: GlyphId) -> f32 { 600.0 } // Standard monospace width
+    // glyph_count has default impl returning None
 }
 
 fuzz_target!(|data: &[u8]| {

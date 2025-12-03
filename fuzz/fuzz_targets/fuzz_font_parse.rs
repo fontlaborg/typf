@@ -14,6 +14,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
+use read_fonts::TableProvider;
 
 fuzz_target!(|data: &[u8]| {
     // Skip very small inputs that can't be valid fonts
@@ -53,7 +54,7 @@ fn test_read_fonts(data: &[u8]) {
 
         // Try glyph-related tables
         let _ = font.glyf();
-        let _ = font.loca();
+        let _ = font.loca(None);
         let _ = font.cff();
         let _ = font.cff2();
         let _ = font.colr();
@@ -80,12 +81,11 @@ fn test_read_fonts(data: &[u8]) {
         let _ = font.mvar();
 
         // Try to enumerate table tags
-        if let Ok(table_directory) = font.table_directory() {
-            for record in table_directory.table_records() {
-                let _ = record.tag();
-                let _ = record.offset();
-                let _ = record.length();
-            }
+        let table_directory = font.table_directory();
+        for record in table_directory.table_records() {
+            let _ = record.tag();
+            let _ = record.offset();
+            let _ = record.length();
         }
     }
 
@@ -106,55 +106,47 @@ fn test_read_fonts(data: &[u8]) {
 
 /// Test skrifa higher-level parsing
 fn test_skrifa(data: &[u8]) {
-    use skrifa::FontRef;
+    use skrifa::MetadataProvider;
 
-    if let Ok(font) = FontRef::new(data) {
-        // Get basic font info
-        let _ = font.head();
-        let _ = font.hhea();
-        let _ = font.maxp();
-
+    if let Ok(font) = skrifa::FontRef::new(data) {
         // Try charmap operations
-        if let Ok(charmap) = font.charmap() {
-            // Test some common codepoints
-            let _ = charmap.map('A');
-            let _ = charmap.map('a');
-            let _ = charmap.map('0');
-            let _ = charmap.map(' ');
-            let _ = charmap.map('🙂');
-            let _ = charmap.map('你');
-            let _ = charmap.map('م');
-        }
+        let charmap = font.charmap();
+        // Test some common codepoints
+        let _ = charmap.map('A');
+        let _ = charmap.map('a');
+        let _ = charmap.map('0');
+        let _ = charmap.map(' ');
+        let _ = charmap.map('🙂');
+        let _ = charmap.map('你');
+        let _ = charmap.map('م');
 
         // Try glyph metrics
-        if let Ok(glyph_metrics) = font.glyph_metrics(skrifa::instance::Size::unscaled(), &[]) {
-            for gid in 0..font.maxp().map(|m| m.num_glyphs()).unwrap_or(0).min(100) {
-                let _ = glyph_metrics.advance_width(skrifa::GlyphId::new(gid));
-                let _ = glyph_metrics.left_side_bearing(skrifa::GlyphId::new(gid));
-            }
+        let glyph_metrics = font.glyph_metrics(skrifa::instance::Size::unscaled(), skrifa::instance::LocationRef::default());
+        let num_glyphs = font.maxp().map(|m| m.num_glyphs()).unwrap_or(0).min(100);
+        for gid in 0..num_glyphs {
+            let _ = glyph_metrics.advance_width(skrifa::GlyphId::new(gid as u32));
+            let _ = glyph_metrics.left_side_bearing(skrifa::GlyphId::new(gid as u32));
         }
 
         // Try font metrics
-        if let Ok(metrics) = font.metrics(skrifa::instance::Size::unscaled(), &[]) {
-            let _ = metrics.units_per_em;
-            let _ = metrics.ascent;
-            let _ = metrics.descent;
-            let _ = metrics.leading;
-            let _ = metrics.cap_height;
-            let _ = metrics.x_height;
-        }
+        let metrics = font.metrics(skrifa::instance::Size::unscaled(), skrifa::instance::LocationRef::default());
+        let _ = metrics.units_per_em;
+        let _ = metrics.ascent;
+        let _ = metrics.descent;
+        let _ = metrics.leading;
+        let _ = metrics.cap_height;
+        let _ = metrics.x_height;
 
         // Try outline extraction for a few glyphs
-        if let Ok(outlines) = font.outline_glyphs() {
-            for gid in 0..5u16 {
-                let _ = outlines.get(skrifa::GlyphId::new(gid));
-            }
+        let outlines = font.outline_glyphs();
+        for gid in 0..5u32 {
+            let _ = outlines.get(skrifa::GlyphId::new(gid));
         }
 
-        // Try color glyph access
-        if let Some(colr) = font.colr() {
-            for gid in 0..5u16 {
-                let _ = colr.base_glyph(skrifa::GlyphId::new(gid));
+        // Try color glyph access via COLR table
+        if let Ok(colr) = font.colr() {
+            for gid in 0..5u32 {
+                let _ = colr.v0_base_glyph(skrifa::GlyphId::new(gid));
             }
         }
     }
@@ -187,6 +179,6 @@ fn test_fontdb(data: &[u8]) {
 
     // Try loading with specific face index
     for index in 0..3u32 {
-        let _ = TypfFontFace::from_data_with_index(data.to_vec(), index);
+        let _ = TypfFontFace::from_data_index(data.to_vec(), index);
     }
 }

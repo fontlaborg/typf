@@ -60,6 +60,12 @@ fn print_renderers() {
     #[cfg(feature = "render-zeno")]
     println!("  zeno              - Zeno (cross-platform vector rasterizer)");
 
+    #[cfg(feature = "render-vello-cpu")]
+    println!("  vello-cpu         - Vello CPU (high-quality rasterizer, no GPU)");
+
+    #[cfg(feature = "render-vello")]
+    println!("  vello             - Vello GPU (wgpu-accelerated, cross-platform)");
+
     #[cfg(all(target_os = "macos", feature = "render-mac"))]
     println!("  mac               - CoreGraphics (macOS native)");
 

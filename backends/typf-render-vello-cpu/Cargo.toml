@@ -1,0 +1,25 @@
+[package]
+name = "typf-render-vello-cpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Vello CPU renderer backend for typf"
+repository.workspace = true
+
+[dependencies]
+typf-core = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+
+# Vello dependencies (from external/)
+vello_cpu = { path = "../../external/vello/sparse_strips/vello_cpu", default-features = false, features = ["std", "png", "text"] }
+vello_common = { path = "../../external/vello/sparse_strips/vello_common", default-features = false, features = ["std", "text"] }
+
+[dev-dependencies]
+typf-fontdb = { workspace = true }
+
+[features]
+default = []
+
+[lints]
+workspace = true

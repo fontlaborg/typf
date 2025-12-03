@@ -37,8 +37,8 @@
 //! - `full` - Everything unlocked and ready to go
 
 pub use typf_core::{
-    error, traits, Color, GlyphSource, GlyphSourcePreference, Pipeline, RenderMode, RenderParams,
-    ShapingParams,
+    error, traits, validate_glyph_count, Color, GlyphSource, GlyphSourcePreference,
+    Pipeline, RenderMode, RenderParams, ShapingParams, MAX_FONT_SIZE, MAX_GLYPH_COUNT,
 };
 
 #[cfg(feature = "input")]
@@ -81,6 +81,9 @@ pub use typf_render_cg as render_cg;
 
 #[cfg(feature = "render-skia")]
 pub use typf_render_skia as render_skia;
+
+#[cfg(feature = "render-vello-cpu")]
+pub use typf_render_vello_cpu as render_vello_cpu;
 
 #[cfg(feature = "render-zeno")]
 pub use typf_render_zeno as render_zeno;

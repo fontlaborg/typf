@@ -61,6 +61,8 @@ typf-render-cg = { workspace = true, optional = true }
 typf-render-json = { workspace = true, optional = true }
 typf-render-opixa = { workspace = true, optional = true }
 typf-render-skia = { workspace = true, optional = true }
+typf-render-vello-cpu = { workspace = true, optional = true }
+typf-render-vello = { workspace = true, optional = true }
 typf-render-zeno = { workspace = true, optional = true }
 typf-shape-ct = { workspace = true, optional = true }
 typf-shape-hb = { workspace = true, optional = true }
@@ -74,6 +76,8 @@ wasm-bindgen = { version = "0.2", optional = true }
 criterion = "0.5"
 typf-export = { workspace = true }
 typf-render-opixa = { workspace = true }
+typf-render-skia = { workspace = true }
+typf-render-zeno = { workspace = true }
 typf-shape-none = { workspace = true }
 
 [features]
@@ -95,6 +99,7 @@ full = [
   "render-json",
   "render-opixa",
   "render-skia",
+  "render-vello-cpu",
   "render-zeno",
   "shaping-ct",
   "shaping-hb",
@@ -112,6 +117,8 @@ render-json = ["dep:typf-render-json"]
 render-mac = ["render-cg"]  # Alias for CoreGraphics
 render-opixa = ["dep:typf-render-opixa"]
 render-skia = ["dep:typf-render-skia"]
+render-vello-cpu = ["dep:typf-render-vello-cpu"]
+render-vello = ["dep:typf-render-vello"]
 render-win = []  # Future: ["dep:typf-render-win"] - requires Windows
 render-zeno = ["dep:typf-render-zeno"]
 shaping-ct = ["dep:typf-shape-ct"]

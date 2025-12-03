@@ -394,11 +394,16 @@ impl Renderer for OpixaRenderer {
 
         // Sanity check: prevent impossible canvas sizes
         if width == 0 || height == 0 {
-            return Err(RenderError::InvalidDimensions { width, height }.into());
+            return Err(RenderError::ZeroDimensions { width, height }.into());
         }
 
         if width > self.max_size || height > self.max_size {
-            return Err(RenderError::InvalidDimensions { width, height }.into());
+            return Err(RenderError::DimensionsTooLarge {
+                width,
+                height,
+                max: self.max_size,
+            }
+            .into());
         }
 
         // Allocate our pristine canvas with proper RGBA layout

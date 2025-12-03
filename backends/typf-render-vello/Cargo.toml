@@ -1,0 +1,24 @@
+[package]
+name = "typf-render-vello"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Vello GPU renderer backend for typf"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+log = { workspace = true }
+typf-core = { workspace = true }
+vello_hybrid = { path = "../../external/vello/sparse_strips/vello_hybrid", default-features = false, features = ["wgpu"] }
+vello_common = { path = "../../external/vello/sparse_strips/vello_common", default-features = false, features = ["std", "text"] }
+wgpu = { version = "27", default-features = false, features = ["std", "wgsl", "metal", "vulkan", "dx12"] }
+pollster = "0.4"
+thiserror = { workspace = true }
+
+[dev-dependencies]
+typf-fontdb = { workspace = true }
+typf-shape-none = { workspace = true }
+
+[lints]
+workspace = true

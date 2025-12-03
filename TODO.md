@@ -1,91 +1,113 @@
-# TODO
+# TODO: Advanced Rendering Backends
 
-## Completed
+## Phase S.1: SDF Core & CPU Renderer (Priority: Medium)
 
-- [x] Phase 1: Core API for Glyph Source Selection
-- [x] Phase 2: SVG Emission from tiny-skia and zeno (via SvgRenderer delegation)
-- [x] Phase 3: resvg/usvg Integration for SVG table
-- [x] Phase 4: COLRv0/COLRv1 Support via skrifa
-- [x] Phase 5: Renderer Wiring & CLI UX (GlyphSourcePreference, logging, CLI help)
-- [x] Remove unused objc2/objc2-foundation dependencies from typf-shape-ct
-- [x] Fix clippy warnings across workspace
-- [x] Phase 6: QA, Performance, and Documentation
-  - [x] Benchmarks in typf-bench with resvg + COLR impact
-  - [x] Fix color glyph fallback bug in skia/zeno renderers
-  - [x] Update README.md with new capabilities (glyph-source flags, color support)
-  - [x] Update ARCHITECTURE.md with glyph source flow
+### S.1.1 typf-sdf-core Crate Setup
+- [ ] Create `crates/typf-sdf-core/` directory
+- [ ] Create `Cargo.toml` with skrifa dependency
+- [ ] Add crate to workspace members
 
-## Quality Improvements (Dec 3, 2025)
+### S.1.2 Core Types
+- [ ] Implement `SdfGlyph` struct
+- [ ] Implement `SizeBand` enum
+- [ ] Implement `SdfGlyphKey` for caching
+- [ ] Implement `SdfAtlas` struct
+- [ ] Implement `SdfGlyphEntry` for atlas placement
 
-- [x] Python bindings: direction auto-detect (was forced LTR)
-- [x] Python bindings: workspace version instead of hard-coded "2.0.0-dev"
-- [x] Trait defaults: `supports_script`/`supports_format` now return `false` (capability honesty)
-- [x] Fix glyph ID truncation in typf-export-svg (u16 → u32)
-- [x] Python bindings: TTC face index support
-- [x] JSON schema version in typf-render-json output
-- [x] Deprecate render_simple with warning (stub font masks errors)
-- [x] Remove trivial add() placeholder from typf-cli lib.rs
-- [x] Add workspace-level lint configuration
-- [x] Fix unwrap() in L2Cache with const fallback
+### S.1.3 SDF Generation
+- [ ] Implement outline extraction from skrifa
+- [ ] Implement signed distance calculation for line segments
+- [ ] Implement signed distance calculation for quadratic Beziers
+- [ ] Implement signed distance calculation for cubic Beziers
+- [ ] Implement winding number calculation for sign
+- [ ] Implement distance normalization to [-1, +1]
+- [ ] Add unit tests for known shapes (circle, square)
+
+### S.1.4 Atlas Packing
+- [ ] Implement `SkylineNode` struct
+- [ ] Implement `AtlasPacker` with skyline algorithm
+- [ ] Add unit tests for packing
+
+### S.1.5 typf-render-sdf Backend
+- [ ] Create `backends/typf-render-sdf/` directory
+- [ ] Implement `SdfRenderer` struct
+- [ ] Implement `Renderer` trait
+- [ ] Implement bilinear SDF sampling
+- [ ] Implement smoothstep distance→coverage conversion
+
+### S.1.6 Testing & Validation
+- [ ] Unit tests for SDF sampler
+- [ ] Integration test with NotoSans
+- [ ] Quality comparison vs Opixa at various sizes
 
 ---
 
-## Pending
+## Phase S.2: GPU SDF Renderer (Future)
 
-### Phase 1: Security & Reliability
+- [ ] Create `backends/typf-render-sdf-gpu/` with wgpu
+- [ ] Implement WGSL shaders for SDF sampling
+- [ ] Add MSDF support for sharp corners
 
-- [ ] Add fuzz target for skrifa font parsing (fuzz/fuzz_targets/fuzz_font_parse.rs)
-- [ ] Add fuzz target for read-fonts table parsing
-- [ ] Add corpus of malformed font files (fuzz/corpus/malformed/)
-- [ ] Integrate font fuzzing with CI (cargo-fuzz)
-- [ ] Add font size limits to prevent DoS (max 10000px)
-- [ ] Add glyph count limits for rendering (max 100K glyphs)
-- [ ] Improve dimension validation error messages
-- [ ] Add timeout configuration for font operations
-- [ ] Add configurable memory limits for font loading
-- [ ] Add operation timeout configuration to RenderParams
-- [ ] Document resource limit configuration in README
+---
 
-### Phase 2: Windows Backend Completion
+## Deferred / Future Tasks
 
-- [ ] Audit feature gaps: typf-os-win vs typf-os-mac
-- [ ] Add missing DirectWrite features (variable fonts, color glyphs)
-- [ ] Add Windows CI runner to GitHub Actions
-- [ ] Add Windows-specific documentation
-- [ ] Evaluate need for Direct2D standalone renderer
-- [ ] Implement typf-render-win if valuable for non-linra use cases
+### Performance & Quality
+- [ ] Quality comparison: Vello vs Opixa (PSNR metrics)
+- [ ] Performance benchmark: Vello GPU vs Opixa at large sizes
+- [ ] Add performance benchmarks to docs
 
-### Phase 3: Testing Infrastructure
+### Platform Support
+- [ ] Test Vello GPU on Linux (Vulkan)
+- [ ] Test Vello GPU on Windows (DX12/Vulkan)
+- [ ] Add WASM/WebGPU support for Vello
 
-- [ ] Add image comparison library (pixelmatch-rs or similar)
-- [ ] Generate golden images for all test fonts
-- [ ] Add visual diff CI step
-- [ ] Add script rendering tests (Arabic, CJK, Devanagari)
-- [ ] Add Windows CI runner (GitHub Actions)
-- [ ] Add Linux CI runner
-- [ ] Verify macOS CI runner configuration
-- [ ] Test all backends on each platform
-- [ ] Add criterion benchmark baselines
-- [ ] Add CI step to detect performance regressions (>10% slowdown)
-- [ ] Document performance expectations per backend
+### Integration
+- [ ] Add `sdf` to CLI `--renderer` options
+- [ ] Add `sdf` to Python bindings
+- [ ] Update Python type hints
 
-### Phase 4: Developer Experience
+---
 
-- [ ] Add API stability markers (stable/experimental) to public items
-- [ ] Add backend development guide (CONTRIBUTING_BACKENDS.md)
-- [ ] Add troubleshooting FAQ
-- [ ] Add migration guide template
-- [ ] Audit feature flag dependencies
-- [ ] Remove unused feature combinations
-- [ ] Document recommended feature sets
-- [ ] Consider feature flag presets (minimal, standard, full)
-- [ ] Add optional tracing integration
-- [ ] Add structured logging option
-- [ ] Add metrics export option (prometheus-compatible)
+## Completed
 
-### Backlog (Low Priority)
+### Phase V.1: Vello CPU Backend ✓
+- [x] Create `typf-render-vello-cpu` crate
+- [x] Implement `Renderer` trait using `vello_cpu::RenderContext`
+- [x] Add CLI integration (`--renderer vello-cpu`)
+- [x] Add Python bindings (`Typf(renderer="vello-cpu")`)
+- [x] 16 tests passing (4 unit + 12 integration including color fonts)
 
-- [ ] Memory profiling integration (heaptrack)
-- [ ] Third-party extension examples
-- [ ] WASM target improvements
-- [ ] PDF export backend
+### Phase V.2: Vello GPU Backend ✓
+- [x] Create `typf-render-vello` crate with wgpu
+- [x] Implement `Renderer` trait with GPU context
+- [x] Add GPU→CPU readback for bitmap export
+- [x] Add CLI integration (`--renderer vello`)
+- [x] Add Python bindings (`Typf(renderer="vello")`)
+- [x] 15 tests passing (3 unit + 12 integration including color fonts)
+
+### Documentation ✓
+- [x] Update README with Vello renderers
+- [x] Add renderer comparison table
+- [x] Document when to use each renderer
+- [x] Update src_docs/06-backend-architecture.md
+
+### Previous Work ✓
+- [x] CBDT Bitmap Font Support
+- [x] Security & Reliability (fuzzing, input validation)
+- [x] Color font support (COLR, SVG, sbix, CBDT)
+- [x] Real font integration tests
+- [x] Benchmark infrastructure
+
+---
+
+## Notes
+
+### Testing
+- Vello CPU: 16 tests (4 unit + 12 integration)
+- Vello GPU: 15 tests (3 unit + 12 integration)
+- Total workspace: 378+ tests
+
+### Dependencies
+- Vello requires external/vello submodule
+- wgpu backends: metal (macOS), vulkan (Linux), dx12 (Windows)

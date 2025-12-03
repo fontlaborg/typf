@@ -22,10 +22,13 @@ typf-render-opixa = { workspace = true }
 typf-render-cg = { workspace = true, optional = true }
 typf-render-skia = { workspace = true, optional = true }
 typf-render-zeno = { workspace = true, optional = true }
+typf-render-vello-cpu = { workspace = true, optional = true }
+typf-render-vello = { workspace = true, optional = true }
 typf-os-mac = { workspace = true, optional = true }
 typf-export = { workspace = true }
 
 clap = { version = "4.5", features = ["derive"] }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 env_logger = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -41,6 +44,8 @@ shaping-win = []
 render-cg = ["dep:typf-render-cg"]
 render-skia = ["dep:typf-render-skia"]
 render-zeno = ["dep:typf-render-zeno"]
+render-vello-cpu = ["dep:typf-render-vello-cpu"]
+render-vello = ["dep:typf-render-vello"]
 render-mac = ["render-cg"]
 render-win = []
 linra-os-mac = ["dep:typf-os-mac"]

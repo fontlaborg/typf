@@ -24,6 +24,10 @@ use typf_render_cg::CoreGraphicsRenderer;
 use typf_render_skia::SkiaRenderer;
 #[cfg(feature = "render-zeno")]
 use typf_render_zeno::ZenoRenderer;
+#[cfg(feature = "render-vello-cpu")]
+use typf_render_vello_cpu::VelloCpuRenderer;
+#[cfg(feature = "render-vello")]
+use typf_render_vello::VelloRenderer;
 #[cfg(feature = "shaping-ct")]
 use typf_shape_ct::CoreTextShaper;
 #[cfg(feature = "shaping-hb")]
@@ -149,35 +153,50 @@ struct Args {
     /// Benchmark intensity level (1-5, higher = more extensive)
     #[arg(short = 'l', long = "level", default_value = "1")]
     level: u8,
+
+    /// Output results as JSON (for CI comparison)
+    #[arg(short = 'j', long = "json")]
+    json_output: bool,
+
+    /// Output file for JSON results (default: stdout)
+    #[arg(short = 'o', long = "output")]
+    output_file: Option<String>,
 }
 
 /// Benchmark result for a single combination
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 struct BenchmarkResult {
     shaper_name: String,
     renderer_name: String,
-    #[allow(dead_code)]
     font_name: String,
     text_sample: String,
     font_size: f32,
     text_length: usize,
-    #[allow(dead_code)]
     render_size: (u32, u32),
     ns_per_op: f64,
-    #[allow(dead_code)]
     total_time_ns: u128,
-    #[allow(dead_code)]
     iterations: u32,
+}
+
+/// JSON output structure for benchmark results
+#[derive(Debug, serde::Serialize)]
+struct BenchmarkOutput {
+    version: String,
+    timestamp: String,
+    level: u8,
+    results: Vec<BenchmarkResult>,
 }
 
 /// Main benchmark runner
 struct BenchmarkRunner {
     fonts: Vec<Arc<TypfFontFace>>,
     config: BenchmarkConfig,
+    json_output: bool,
+    level: u8,
 }
 
 impl BenchmarkRunner {
-    fn new(input_dir: &str, config: BenchmarkConfig) -> Result<Self, TypfError> {
+    fn new(input_dir: &str, config: BenchmarkConfig, json_output: bool, level: u8) -> Result<Self, TypfError> {
         let mut fonts = Vec::new();
         let font_dir = Path::new(input_dir);
 
@@ -203,15 +222,19 @@ impl BenchmarkRunner {
                     ) {
                         match TypfFontFace::from_file(&path) {
                             Ok(font) => {
-                                println!("{}", format!("Loaded font: {}", path.display()).green());
+                                if !json_output {
+                                    println!("{}", format!("Loaded font: {}", path.display()).green());
+                                }
                                 fonts.push(Arc::new(font));
                             },
                             Err(e) => {
-                                eprintln!(
-                                    "{}",
-                                    format!("Warning: Failed to load {}: {}", path.display(), e)
-                                        .yellow()
-                                );
+                                if !json_output {
+                                    eprintln!(
+                                        "{}",
+                                        format!("Warning: Failed to load {}: {}", path.display(), e)
+                                            .yellow()
+                                    );
+                                }
                             },
                         }
                     }
@@ -227,12 +250,14 @@ impl BenchmarkRunner {
             ));
         }
 
-        println!(
-            "{}",
-            format!("Loaded {} fonts for benchmarking", fonts.len()).cyan()
-        );
+        if !json_output {
+            println!(
+                "{}",
+                format!("Loaded {} fonts for benchmarking", fonts.len()).cyan()
+            );
+        }
 
-        Ok(Self { fonts, config })
+        Ok(Self { fonts, config, json_output, level })
     }
 
     #[allow(clippy::vec_init_then_push)]
@@ -267,6 +292,14 @@ impl BenchmarkRunner {
 
         #[cfg(feature = "render-cg")]
         renderers.push(Arc::new(CoreGraphicsRenderer::new()));
+
+        #[cfg(feature = "render-vello-cpu")]
+        renderers.push(Arc::new(VelloCpuRenderer::new()));
+
+        #[cfg(feature = "render-vello")]
+        if let Ok(renderer) = VelloRenderer::new() {
+            renderers.push(Arc::new(renderer));
+        }
 
         renderers
     }
@@ -362,29 +395,31 @@ impl BenchmarkRunner {
         })
     }
 
-    fn run_benchmarks(&self) -> Result<(), TypfError> {
+    fn run_benchmarks(&self) -> Result<Vec<BenchmarkResult>, TypfError> {
         let shapers = self.get_shapers();
         let renderers = self.get_renderers();
 
-        println!(
-            "\n{}",
-            "Starting comprehensive benchmark suite...".bold().cyan()
-        );
-        println!(
-            "{} shapers × {} renderers × {} fonts × {} sizes × {} texts × {} lengths = {} combinations",
-            shapers.len(),
-            renderers.len(),
-            self.fonts.len(),
-            self.config.font_sizes.len(),
-            self.config.sample_texts.len(),
-            self.config.text_lengths.len(),
-            shapers.len() * renderers.len() * self.fonts.len() * self.config.font_sizes.len() * self.config.sample_texts.len() * self.config.text_lengths.len()
-        );
+        if !self.json_output {
+            println!(
+                "\n{}",
+                "Starting comprehensive benchmark suite...".bold().cyan()
+            );
+            println!(
+                "{} shapers × {} renderers × {} fonts × {} sizes × {} texts × {} lengths = {} combinations",
+                shapers.len(),
+                renderers.len(),
+                self.fonts.len(),
+                self.config.font_sizes.len(),
+                self.config.sample_texts.len(),
+                self.config.text_lengths.len(),
+                shapers.len() * renderers.len() * self.fonts.len() * self.config.font_sizes.len() * self.config.sample_texts.len() * self.config.text_lengths.len()
+            );
 
-        println!("{}", "\nBenchmark Results:".bold());
-        println!("{}", "─".repeat(80));
+            println!("{}", "\nBenchmark Results:".bold());
+            println!("{}", "─".repeat(80));
+        }
 
-        let mut total_combinations = 0;
+        let mut all_results = Vec::new();
 
         for font in &self.fonts {
             for shaper in &shapers {
@@ -402,28 +437,31 @@ impl BenchmarkRunner {
                                     font_size,
                                 ) {
                                     Ok(result) => {
-                                        // Output progressive result and flush
-                                        println!(
-                                            "{}",
-                                            format!(
-                                                "S: {:12} | R: {:12} | Size: {:6.1} | Text: {:20} | Length: {:4} | ns/op: {:10.1}",
-                                                result.shaper_name,
-                                                result.renderer_name,
-                                                result.font_size,
-                                                result.text_sample,
-                                                result.text_length,
-                                                result.ns_per_op
-                                            ).bright_black()
-                                        );
-                                        std::io::Write::flush(&mut std::io::stdout()).unwrap();
-
-                                        total_combinations += 1;
+                                        if !self.json_output {
+                                            // Output progressive result and flush
+                                            println!(
+                                                "{}",
+                                                format!(
+                                                    "S: {:12} | R: {:12} | Size: {:6.1} | Text: {:20} | Length: {:4} | ns/op: {:10.1}",
+                                                    result.shaper_name,
+                                                    result.renderer_name,
+                                                    result.font_size,
+                                                    result.text_sample,
+                                                    result.text_length,
+                                                    result.ns_per_op
+                                                ).bright_black()
+                                            );
+                                            std::io::Write::flush(&mut std::io::stdout()).unwrap();
+                                        }
+                                        all_results.push(result);
                                     },
                                     Err(e) => {
-                                        eprintln!(
-                                            "{}",
-                                            format!("Error in combination: {}", e).red()
-                                        );
+                                        if !self.json_output {
+                                            eprintln!(
+                                                "{}",
+                                                format!("Error in combination: {}", e).red()
+                                            );
+                                        }
                                     },
                                 }
                             }
@@ -433,13 +471,40 @@ impl BenchmarkRunner {
             }
         }
 
-        println!("{}", "─".repeat(80));
-        println!(
-            "{}",
-            format!("Completed {} benchmark combinations", total_combinations)
-                .bold()
-                .green()
-        );
+        if !self.json_output {
+            println!("{}", "─".repeat(80));
+            println!(
+                "{}",
+                format!("Completed {} benchmark combinations", all_results.len())
+                    .bold()
+                    .green()
+            );
+        }
+
+        Ok(all_results)
+    }
+
+    /// Output results as JSON
+    fn output_json(&self, results: Vec<BenchmarkResult>, output_file: Option<&str>) -> Result<(), TypfError> {
+        let output = BenchmarkOutput {
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            level: self.level,
+            results,
+        };
+
+        let json = serde_json::to_string_pretty(&output)
+            .map_err(|e| TypfError::Other(format!("JSON serialization failed: {}", e)))?;
+
+        match output_file {
+            Some(path) => {
+                fs::write(path, &json)
+                    .map_err(TypfError::Io)?;
+            }
+            None => {
+                println!("{}", json);
+            }
+        }
 
         Ok(())
     }
@@ -544,18 +609,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let config = BenchmarkConfig::get(args.level);
 
-    println!("{}", "Typf Comprehensive Benchmark Tool".bold().cyan());
-    println!(
-        "Input directory: {} | Level: {}",
-        args.input_dir, args.level
-    );
+    if !args.json_output {
+        println!("{}", "Typf Comprehensive Benchmark Tool".bold().cyan());
+        println!(
+            "Input directory: {} | Level: {}",
+            args.input_dir, args.level
+        );
+    }
 
-    let runner = BenchmarkRunner::new(&args.input_dir, config)?;
-    runner.run_benchmarks()?;
+    let runner = BenchmarkRunner::new(&args.input_dir, config, args.json_output, args.level)?;
+    let results = runner.run_benchmarks()?;
 
-    // Run linra renderer benchmark if available
+    // Output JSON if requested
+    if args.json_output {
+        runner.output_json(results, args.output_file.as_deref())?;
+    }
+
+    // Run linra renderer benchmark if available (not in JSON mode for now)
     #[cfg(all(feature = "linra-os-mac", target_os = "macos"))]
-    {
+    if !args.json_output {
         runner.run_linra_benchmarks()?;
     }
 

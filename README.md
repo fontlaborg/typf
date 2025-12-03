@@ -66,8 +66,29 @@ That's it. Your text is rendered.
 | **opixa** | Monochrome | No | Bitmap | 2K ops/sec | All (pure Rust) |
 | **skia** | 256 levels | Yes (COLR/SVG/bitmap) | Bitmap/SVG | 3.5K ops/sec | All |
 | **zeno** | 256 levels | Yes (COLR/SVG/bitmap) | Bitmap/SVG | 3K ops/sec | All (pure Rust) |
+| **vello-cpu** | 256 levels | Yes (COLR/bitmap) | Bitmap | 3.5K ops/sec | All (pure Rust) |
+| **vello** | 256 levels | Yes (COLR/bitmap) | Bitmap | 10K+ ops/sec | GPU required |
 | **coregraphics** | 256 levels | Yes (sbix/COLR) | Bitmap | 4K ops/sec | macOS only |
 | **json** | N/A | N/A | JSON data | 25K ops/sec | All |
+
+### GPU Renderers (Vello)
+
+The Vello renderers use compute-centric GPU rendering for maximum performance:
+
+| Backend | Hardware | Performance | Use Case |
+|---------|----------|-------------|----------|
+| **vello** | GPU (Metal/Vulkan/DX12) | 10K+ ops/sec | High-throughput, large text |
+| **vello-cpu** | CPU only | 3.5K ops/sec | Server, no GPU |
+
+```bash
+# GPU rendering (requires GPU)
+typf render "Hello" --renderer vello -o out.png
+
+# CPU rendering (pure Rust, no GPU)
+typf render "Hello" --renderer vello-cpu -o out.png
+```
+
+Both use the [Vello](https://github.com/linebender/vello) engine with skrifa for font parsing. Build with `--features render-vello` or `--features render-vello-cpu`.
 
 ### Linra Renderers (Single-Pass)
 
@@ -99,20 +120,20 @@ The linra renderer bypasses the intermediate glyph extraction step, allowing Cor
 
 ### Glyph Format Support
 
-| Format | opixa | skia | zeno | coregraphics | svg |
-|--------|-------|------|------|--------------|-----|
-| TrueType outlines (glyf) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| CFF outlines (CFF ) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| CFF2 outlines (CFF2) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Variable fonts (gvar) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| COLR v0 (layered colors) | ❌ | ✅ | ✅ | ⚠️ | ❌ |
-| COLR v1 (gradients) | ❌ | ✅ | ✅ | ⚠️ | ❌ |
-| SVG glyphs (SVG table) | ❌ | ✅ | ✅ | ⚠️ | ❌ |
-| Bitmap glyphs (CBDT/sbix) | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Format | opixa | skia | zeno | vello-cpu | vello | coregraphics | svg |
+|--------|-------|------|------|-----------|-------|--------------|-----|
+| TrueType outlines (glyf) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CFF outlines (CFF ) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CFF2 outlines (CFF2) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Variable fonts (gvar) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| COLR v0 (layered colors) | ❌ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| COLR v1 (gradients) | ❌ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| SVG glyphs (SVG table) | ❌ | ✅ | ✅ | ❌ | ❌ | ⚠️ | ❌ |
+| Bitmap glyphs (CBDT/sbix) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 
 **Legend:** ✅ Full support | ⚠️ Partial/via OS | ❌ Not supported
 
-> **Note:** Color glyph support in skia/zeno requires the `resvg` feature for SVG glyphs and `bitmap` feature for CBDT/sbix.
+> **Note:** Color glyph support in skia/zeno requires the `resvg` feature for SVG glyphs and `bitmap` feature for CBDT/sbix. Vello renderers use skrifa's native color font support.
 
 ## Build options
 
@@ -238,23 +259,42 @@ python typfme.py bench
 
 Tests all backend combos on your hardware. Results go to `output/`.
 
+### Benchmark CLI
+
+For comprehensive performance testing with JSON output:
+
+```bash
+# Quick sanity check (level 0)
+cargo run -p typf-bench --release -- -i test-fonts -l 0
+
+# Full benchmark (level 1-5, higher = more extensive)
+cargo run -p typf-bench --release -- -i /path/to/fonts -l 2
+
+# JSON output for CI comparison
+cargo run -p typf-bench --release -- -i test-fonts -l 1 --json -o benchmark.json
+```
+
+The benchmark tool tests all shaper × renderer combinations across fonts, sizes, and text samples.
+
 ## Status
 
-**v2.4.x** - Production ready. All features work:
+**v2.5.x** - Production ready. All features work:
 
 - ✅ 6-stage pipeline
-- ✅ 4 shapers, 5 renderers (20 combinations)
+- ✅ 4 shapers, 7 renderers (28 combinations)
 - ✅ PNM, PNG, SVG, JSON export
 - ✅ Linra CLI (Rust + Python)
 - ✅ Python bindings (PyO3)
 - ✅ Linux, macOS, Windows, WASM
-- ✅ 446 total tests passing (206 unit + 240 integration)
+- ✅ 348+ tests passing across workspace
 - ✅ macOS native backends (CoreText + CoreGraphics)
 - ✅ Comprehensive backend documentation and examples
-- ✅ COLR v0/v1 color glyph support (skia/zeno)
+- ✅ COLR v0/v1 color glyph support (skia/zeno/vello)
 - ✅ SVG table glyph support via resvg (skia/zeno)
 - ✅ Bitmap glyph support (sbix/CBDT/EBDT)
 - ✅ Configurable glyph source selection (`--glyph-source`)
+- ✅ GPU-accelerated rendering via Vello (Metal/Vulkan/DX12)
+- ✅ High-quality CPU rendering via Vello CPU
 
 ## Limits
 

@@ -97,7 +97,7 @@ impl Typf {
     ///
     /// Choose your weapons:
     /// - Shapers: "none" (debug), "harfbuzz" (professional), "coretext" (macOS), "icu-hb" (Unicode perfect)
-    /// - Renderers: "opixa" (pure Rust), "json" (data), "coregraphics" (macOS), "skia" (pro), "zeno" (pure Rust)
+    /// - Renderers: "opixa" (pure Rust), "json" (data), "coregraphics" (macOS), "skia" (pro), "zeno" (pure Rust), "vello-cpu" (high-quality), "vello" (GPU)
     #[new]
     #[pyo3(signature = (shaper="harfbuzz", renderer="opixa"))]
     fn new(shaper: &str, renderer: &str) -> PyResult<Self> {
@@ -129,9 +129,17 @@ impl Typf {
             "skia" => Arc::new(typf_render_skia::SkiaRenderer::new()),
             #[cfg(feature = "render-zeno")]
             "zeno" => Arc::new(typf_render_zeno::ZenoRenderer::new()),
+            #[cfg(feature = "render-vello-cpu")]
+            "vello-cpu" => Arc::new(typf_render_vello_cpu::VelloCpuRenderer::new()),
+            #[cfg(feature = "render-vello")]
+            "vello" => {
+                typf_render_vello::VelloRenderer::new()
+                    .map(|r| Arc::new(r) as Arc<dyn Renderer + Send + Sync>)
+                    .map_err(|e| PyRuntimeError::new_err(format!("Failed to create GPU renderer: {}", e)))?
+            }
             _ => {
                 return Err(PyValueError::new_err(format!(
-                    "Unknown renderer: {}. Available: json, opixa, coregraphics, skia, zeno",
+                    "Unknown renderer: {}. Available: json, opixa, coregraphics, skia, zeno, vello-cpu, vello",
                     renderer
                 )))
             },

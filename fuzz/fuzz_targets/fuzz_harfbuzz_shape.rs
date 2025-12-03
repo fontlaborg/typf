@@ -16,7 +16,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use std::sync::Arc;
-use typf_core::{ShapingParams, traits::{FontRef, Shaper}};
+use typf_core::{ShapingParams, types::GlyphId, traits::{FontRef, Shaper}};
 use typf_shape_hb::HarfBuzzShaper;
 
 /// Minimal font for HarfBuzz fuzzing - we care about text handling, not fonts
@@ -29,13 +29,18 @@ impl FontRef for MockFont {
         &self.data // Empty font data - still exercises text handling
     }
 
-    fn glyph_count(&self) -> usize {
-        100 // Arbitrary size to prevent panics
-    }
-
     fn units_per_em(&self) -> u16 {
         1000 // Standard font coordinate space
     }
+
+    fn glyph_id(&self, _ch: char) -> Option<GlyphId> {
+        Some(0) // Return notdef for all chars
+    }
+
+    fn advance_width(&self, _glyph_id: GlyphId) -> f32 {
+        600.0 // Standard monospace width
+    }
+    // glyph_count has default impl returning None
 }
 
 fuzz_target!(|data: &[u8]| {

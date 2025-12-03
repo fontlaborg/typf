@@ -80,7 +80,8 @@ pub struct RenderArgs {
     #[arg(long = "shaper", default_value = "auto")]
     pub shaper: String,
 
-    /// Rendering backend: auto, opixa, skia, zeno, mac, win, json, linra-mac, linra-win
+    /// Rendering backend: auto, opixa, skia, zeno, vello, vello-cpu, mac, win, json, linra-mac, linra-win
+    /// vello uses GPU acceleration via wgpu; vello-cpu is CPU-only
     /// Linra backends (linra-mac, linra-win) perform shaping AND rendering in one pass
     #[arg(long = "renderer", default_value = "auto")]
     pub renderer: String,

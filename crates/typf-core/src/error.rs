@@ -63,6 +63,9 @@ pub enum ShapingError {
     #[error("Invalid text input")]
     InvalidText,
 
+    #[error("Font size {0} exceeds maximum allowed ({1}). Use a smaller font size for security.")]
+    FontSizeTooLarge(f32, f32),
+
     #[error("Script not supported: {0}")]
     ScriptNotSupported(String),
 
@@ -79,8 +82,18 @@ pub enum ShapingError {
 /// When rendering fails
 #[derive(Debug, Error)]
 pub enum RenderError {
+    #[error("Zero bitmap dimensions: {width}x{height}. This usually means empty text or all whitespace. Check that your text contains renderable characters.")]
+    ZeroDimensions { width: u32, height: u32 },
+
+    #[error("Bitmap dimensions {width}x{height} exceed maximum ({max} pixels per side). Use smaller font sizes, implement line wrapping, or use SVG export for large renders.")]
+    DimensionsTooLarge { width: u32, height: u32, max: u32 },
+
+    /// Legacy variant for backwards compatibility - prefer ZeroDimensions or DimensionsTooLarge
     #[error("Invalid bitmap dimensions: {width}x{height} (max 65,535 pixels per dimension). For long texts, use smaller font sizes, implement line wrapping, or use SVG export instead of bitmap rendering.")]
     InvalidDimensions { width: u32, height: u32 },
+
+    #[error("Glyph count {0} exceeds maximum allowed ({1}). Split text into smaller chunks for security.")]
+    GlyphCountTooLarge(usize, usize),
 
     #[error("Out of memory")]
     OutOfMemory,

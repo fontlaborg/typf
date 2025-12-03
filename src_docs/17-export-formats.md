@@ -96,6 +96,34 @@ let print_png = png_exporter.export(&output)?;
 
 SVG creates scalable vector graphics perfect for web and print.
 
+### Important Limitations
+
+**CBDT Font Issue**: SVG export fails for CBDT bitmap fonts because they contain bitmap data, not vector outlines that can be converted to SVG paths.
+
+```rust
+// Error you'll see: "Glyph X not found"
+// This happens because the SVG exporter looks for outline data that doesn't exist in CBDT fonts
+```
+
+**Solution**: Detect CBDT fonts and handle them appropriately:
+```rust
+fn safe_svg_export(output: &RenderOutput, font: &Font) -> Result<String> {
+    if is_cbdt_font(font) {
+        // Option 1: Return error with helpful message
+        return Err(ExportError::CbdtNotSupported {
+            message: "CBDT bitmap fonts cannot be exported as SVG paths".to_string(),
+            suggestion: "Use PNG export for CBDT fonts or convert to COLR format".to_string(),
+        });
+        
+        // Option 2: Embed bitmap as base64 images
+        // return embed_cbdt_as_base64_png(output, font);
+    }
+    
+    // Normal SVG export for outline fonts
+    svg_exporter.export(output)
+}
+```
+
 ### SVG Options
 
 ```rust
@@ -105,6 +133,15 @@ pub struct SvgOptions {
     pub embed_fonts: bool,        // Include font data
     pub pretty_print: bool,       // Human-readable formatting
     pub viewbox: Option<Rect>,    // Custom viewbox
+    pub handle_bitmap_fonts: BitmapFontStrategy, // New option
+}
+
+#[derive(Debug, Clone)]
+pub enum BitmapFontStrategy {
+    Error,        // Fail with descriptive error (default)
+    Skip,         // Skip bitmap glyphs entirely
+    EmbedAsPng,   // Embed bitmap glyphs as base64 PNG images
+    Placeholder,  // Replace with placeholder rectangles
 }
 
 impl SvgOptions {
@@ -115,6 +152,18 @@ impl SvgOptions {
             embed_fonts: false,
             pretty_print: true,
             viewbox: None,
+            handle_bitmap_fonts: BitmapFontStrategy::Error,
+        }
+    }
+    
+    pub fn cbdt_compatible() -> Self {
+        Self {
+            precision: 6,
+            optimize_paths: true,
+            embed_fonts: false,
+            pretty_print: true,
+            viewbox: None,
+            handle_bitmap_fonts: BitmapFontStrategy::EmbedAsPng,
         }
     }
     
@@ -125,6 +174,7 @@ impl SvgOptions {
             embed_fonts: true,
             pretty_print: true,
             viewbox: None,
+            handle_bitmap_fonts: BitmapFontStrategy::Error,
         }
     }
 }
@@ -141,10 +191,19 @@ let svg_content = svg_exporter.export_with_options(&output, standalone_svg)?;
 let web_svg = SvgOptions::web();
 let optimized = svg_exporter.export_with_options(&output, web_svg)?;
 
+// CBDT-compatible SVG (embeds bitmaps as PNG)
+let cbdt_svg = SvgOptions::cbdt_compatible();
+let bitmap_svg = svg_exporter.export_with_options(&output, cbdt_svg)?;
+
 // SVG with custom dimensions
 let mut custom_svg = SvgOptions::web();
 custom_svg.viewbox = Some(Rect::new(0.0, 0.0, 800.0, 600.0));
 let sized_svg = svg_exporter.export_with_options(&output, custom_svg)?;
+
+// SVG that gracefully handles bitmap fonts
+let mut safe_svg = SvgOptions::web();
+safe_svg.handle_bitmap_fonts = BitmapFontStrategy::Placeholder;
+let robust_svg = svg_exporter.export_with_options(&output, safe_svg)?;
 ```
 
 ## PDF Export
@@ -388,6 +447,34 @@ pub enum ExportError {
     
     #[error("Invalid options: {0}")]
     InvalidOptions(String),
+    
+    #[error("CBDT font not compatible with SVG export: {message}")]
+    CbdtNotSupported {
+        message: String,
+        suggestion: String,
+    },
+    
+    #[error("Bitmap font glyph not found for SVG paths: glyph {glyph_id}")]
+    BitmapGlyphNotFound {
+        glyph_id: u32,
+        font_name: String,
+    },
+}
+
+// Enhanced error handling for font compatibility
+fn safe_export_with_fallback(output: &RenderOutput, format: ExportFormat, font: &Font) -> Result<Vec<u8>> {
+    match format {
+        ExportFormat::SVG if is_cbdt_font(font) => {
+            // Try PNG instead for CBDT fonts
+            info!("CBDT font detected, falling back to PNG export");
+            let png_exporter = PngExporter::new();
+            png_exporter.export(output)
+        }
+        _ => {
+            // Use requested format
+            format.exporter().export(output)
+        }
+    }
 }
 ```
 
@@ -418,6 +505,39 @@ fn test_svg_validity() {
     
     // Verify paths present
     assert!(svg_content.contains("<path"));
+}
+
+#[test]
+fn test_cbdt_svg_error_handling() {
+    let exporter = SvgExporter::new();
+    let cbdt_output = create_cbdt_test_output();
+    let cbdt_font = load_cbdt_font();
+    
+    let result = exporter.export(&cbdt_output);
+    assert!(result.is_err());
+    
+    match result.unwrap_err() {
+        ExportError::CbdtNotSupported { message, suggestion } => {
+            assert!(message.contains("CBDT"));
+            assert!(suggestion.contains("PNG"));
+        }
+        _ => panic!("Expected CBDT-specific error"),
+    }
+}
+
+#[test]
+fn test_cbdt_embed_as_png() {
+    let mut exporter = SvgExporter::new();
+    let cbdt_output = create_cbdt_test_output();
+    let cbdt_font = load_cbdt_font();
+    
+    // Configure to embed bitmaps as PNG
+    let options = SvgOptions::cbdt_compatible();
+    let svg_content = exporter.export_with_options(&cbdt_output, options)?;
+    
+    // Should contain base64 PNG data instead of paths
+    assert!(svg_content.contains("data:image/png;base64,"));
+    assert!(!svg_content.contains("<path")); // No vector paths for CBDT
 }
 
 #[test]

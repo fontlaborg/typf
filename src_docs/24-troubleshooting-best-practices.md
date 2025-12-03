@@ -4,12 +4,61 @@ Solve common Typf problems and avoid pitfalls.
 
 ## Common Issues
 
+### CBDT Font Rendering Failures
+
+**Problem**: CBDT bitmap fonts fail to render or cause errors
+```rust
+// Symptoms you might see:
+// [CoreText] "Failed to create CGFont from data"
+// [CoreGraphics] "CoreGraphics rejected our font data"
+// [Skia/Zeno] "Rendering failed: Glyph not found: 93"
+// [SVG Export] "Glyph 37 not found"
+```
+
+**Root Cause**: CBDT (Color Bitmap Data Table) is a Google/Android format. Apple's CoreText/CoreGraphics don't support it natively, and most renderers expect outline data, not bitmap data.
+
+**Solutions**:
+```rust
+// 1. Detect CBDT fonts before processing
+fn is_cbdt_font(font: &Font) -> bool {
+    font.tables().contains_key(b"CBDT")
+}
+
+// 2. Use compatible backends only
+fn safe_backend_for_cbdt(font: &Font) -> (ShaperBackend, RendererBackend) {
+    if is_cbdt_font(font) {
+        // Only HarfBuzz can shape CBDT, Opixa can handle it (blank rendering)
+        (ShaperBackend::HarfBuzz, RendererBackend::Opixa)
+    } else {
+        // Use optimal backends for regular fonts
+        get_optimal_backends()
+    }
+}
+
+// 3. Graceful degradation for CBDT
+pub fn render_with_fallback(text: &str, font: &Font, options: &RenderOptions) -> Result<RenderOutput> {
+    if is_cbdt_font(font) {
+        warn!("CBDT font detected - rendering may be incomplete");
+        // Try HarfBuzz + Opixa, but expect blank glyphs
+        match pipeline.render_text(text, &font, &options) {
+            Ok(result) => Ok(result),
+            Err(_) => {
+                // Fallback to placeholder rendering
+                render_placeholder_text(text, options)
+            }
+        }
+    } else {
+        pipeline.render_text(text, &font, &options)
+    }
+}
+```
+
 ### Font Loading Problems
 
 **Problem**: "Font file not found" error
 ```rust
 // Wrong: Relative path
-let font = TypfFontFace::from_file("Roboto.ttf")?; 
+let font = TypfFontFace::from_file("Roboto.ttf")?;
 
 // Right: Absolute or well-known path
 let font = TypfFontFace::from_file("/usr/share/fonts/Roboto.ttf")?;
@@ -114,6 +163,24 @@ let rendered = pipeline.render_shaped(&shaped, &options)?;
 let render_time = start.elapsed();
 
 println!("Shaping: {:?}, Rendering: {:?}", shaping_time, render_time);
+
+// Check against benchmark expectations
+fn validate_performance(shaping_time: Duration, render_time: Duration) {
+    if shaping_time.as_millis() > 1 {
+        warn!("Shaping slower than expected (>1ms). Expected: ~0.05ms");
+    }
+    
+    let expected_render_time = match get_backend_combo() {
+        (ShaperBackend::HarfBuzz, RendererBackend::Opixa) => Duration::from_micros(1021),
+        (ShaperBackend::HarfBuzz, RendererBackend::Skia) => Duration::from_micros(1762),
+        (ShaperBackend::CoreText, RendererBackend::CoreGraphics) => Duration::from_micros(367),
+        _ => Duration::from_micros(2000), // Conservative default
+    };
+    
+    if render_time > expected_render_time * 2 {
+        warn!("Rendering 2x+ slower than benchmark. Investigate regressions.");
+    }
+}
 
 // If shaping is slow, try a different shaper
 // If rendering is slow, try GPU acceleration
@@ -505,9 +572,35 @@ impl ResourceMonitor {
 
 - [ ] **Render Success Rate**: Should be >95%
 - [ ] **Average Render Time**: Should be <100ms for typical text
+  - **Expected**: HarfBuzz+CoreGraphics ~0.367ms, HarfBuzz+Opixa ~1.021ms
 - [ ] **Memory Usage**: Stable, not growing continuously
 - [ ] **Cache Hit Rate**: Should be >80% for repeated workloads
 - [ ] **Error Distribution**: No single error type dominating
+- [ ] **CBDT Font Rate**: Track percentage of CBDT fonts processed
+- [ ] **Backend Performance**: Monitor for regressions >10% from baseline
+
+### Performance Regression Detection
+
+```rust
+// Monitor for known regressions
+fn check_performance_regressions(current_metrics: &PerformanceMetrics) {
+    // Zeno regression detected in benchmarks
+    if matches!(current_metrics.renderer, RendererBackend::Zeno) {
+        let baseline_ms = if current_metrics.script.contains("mixed") { 1.7 } else { 1.4 };
+        if current_metrics.render_time.as_millis() as f64 > baseline_ms * 1.1 {
+            alert!("Zeno renderer showing potential regression");
+        }
+    }
+    
+    // CoreText JSON anomalies
+    if matches!(current_metrics.shaper, ShaperBackend::CoreText) &&
+       current_metrics.output_format == OutputFormat::JSON {
+        if current_metrics.shaping_time.as_micros() > 100 {
+            warn!("CoreText JSON export slower than expected - possible measurement issue");
+        }
+    }
+}
+```
 
 ### Alert Conditions
 

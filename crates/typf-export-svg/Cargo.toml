@@ -12,7 +12,14 @@ name = "integration"
 path = "tests/integration.rs"
 
 [dependencies]
+base64 = { version = "0.22", optional = true }
 read-fonts = "0.36"
 skrifa = "0.39"
 thiserror.workspace = true
 typf-core = { workspace = true }
+typf-render-color = { workspace = true, optional = true }
+
+[features]
+default = []
+# Enable embedding bitmap glyphs as base64 PNG images in SVG
+bitmap-embed = ["dep:base64", "dep:typf-render-color", "typf-render-color/bitmap"]

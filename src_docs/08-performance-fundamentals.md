@@ -40,10 +40,50 @@ impl PerformanceMetrics {
 ```
 
 Focus on:
-- **Latency** - Time from text to pixels
-- **Throughput** - Characters per second
+- **Latency** - Time from text to pixels (measured in ns/op)
+- **Throughput** - Operations per second (ops/sec)
 - **Memory** - Peak and average usage
 - **Cache efficiency** - Hit rates across all caches
+
+### Understanding Benchmark Metrics
+
+**ns/op** = nanoseconds per operation - the standard benchmark metric measuring rendering speed. Lower is better.
+
+| Value | Human-readable | Assessment |
+|-------|----------------|------------|
+| 100 ns/op | 0.1ms | Excellent |
+| 1,000 ns/op | 1ms | Good |
+| 10,000 ns/op | 10ms | Acceptable |
+| 100,000 ns/op | 100ms | Slow |
+| 1,000,000+ ns/op | 1s+ | Problem |
+
+**Ops/sec** = operations per second = `1,000,000,000 / ns_per_op`. Higher is better.
+
+### Real-World Performance Rankings
+
+Based on comprehensive benchmark testing:
+
+**Shaping Performance** (JSON output isolates shaping cost):
+| Shaper | Avg Time | Ops/sec | Notes |
+|--------|----------|---------|-------|
+| none | 0.041ms | 24,673 | Fastest (no-op shaper) |
+| HarfBuzz | 0.050ms | 20,630 | Best real shaper |
+| ICU-HarfBuzz | 0.061ms | 17,368 | Unicode-accurate |
+| CoreText | 0.065ms | 22,799 | macOS native |
+
+**Rendering Performance** (shaping + rendering):
+| Backend Combo | Avg Time | Ops/sec | Notes |
+|---------------|----------|---------|-------|
+| none + coregraphics | 0.353ms | 5,045 | Fastest rasterizer |
+| HarfBuzz + coregraphics | 0.367ms | 4,487 | Best real combo |
+| none + opixa | 1.125ms | 2,538 | Pure Rust |
+| HarfBuzz + opixa | 1.021ms | 2,584 | Good cross-platform |
+| coretext + coregraphics | 0.956ms | 1,866 | macOS native |
+| HarfBuzz + skia | 1.762ms | 913 | Color support |
+| HarfBuzz + zeno | 1.738ms | 785 | Pure Rust alt |
+| coretext + skia | 4.471ms | 349 | Slowest |
+
+**Winner**: HarfBuzz + CoreGraphics for macOS; HarfBuzz + Opixa for cross-platform.
 
 ## Shaping Optimization
 

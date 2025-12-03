@@ -69,9 +69,32 @@ impl SkiaRenderer {
         let glyph_id = skrifa::GlyphId::new(glyph_id);
 
         // Find the specific glyph we need to render
-        let glyph = outlines
-            .get(glyph_id)
-            .ok_or_else(|| RenderError::GlyphNotFound(glyph_id.to_u32()))?;
+        // For bitmap-only fonts (like CBDT), glyphs may not have outlines
+        let glyph = outlines.get(glyph_id);
+        let has_outline = glyph.is_some();
+
+        // If no outline and color sources are allowed, try bitmap/color rendering first
+        if !has_outline && color_allowed {
+            let fallback_size = font_size.max(1.0);
+            let width = fallback_size.ceil() as u32;
+            let height = fallback_size.ceil() as u32;
+            let bbox = kurbo::Rect::new(0.0, 0.0, fallback_size as f64, fallback_size as f64);
+
+            if let Some(color_bitmap) = self.try_color_glyph(
+                font,
+                glyph_id.to_u32(),
+                width,
+                height,
+                font_size,
+                &bbox,
+                params,
+            )? {
+                return Ok(color_bitmap);
+            }
+        }
+
+        // Now require outline for non-color rendering
+        let glyph = glyph.ok_or_else(|| RenderError::GlyphNotFound(glyph_id.to_u32()))?;
 
         // Build a kurbo path from the glyph's outline data
         let mut path = BezPath::new();
@@ -444,11 +467,16 @@ impl Renderer for SkiaRenderer {
 
         // Validate dimensions
         if width == 0 || height == 0 {
-            return Err(RenderError::InvalidDimensions { width, height }.into());
+            return Err(RenderError::ZeroDimensions { width, height }.into());
         }
 
         if width > self.max_size || height > self.max_size {
-            return Err(RenderError::InvalidDimensions { width, height }.into());
+            return Err(RenderError::DimensionsTooLarge {
+                width,
+                height,
+                max: self.max_size,
+            }
+            .into());
         }
 
         // Create premultiplied RGBA canvas

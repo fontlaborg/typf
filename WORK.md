@@ -1,72 +1,38 @@
 # Current Work Session
 
-## Session Summary (Dec 3, 2025)
+## Session: Dec 3, 2025 - Benchmark Integration
 
-Completed quality improvements addressing REVIEW.md findings.
+### Completed
 
-### Work Done
+1. **Vello Benchmark Integration** ✓
+   - Added `typf-render-vello-cpu` and `typf-render-vello` to typf-bench
+   - Feature flags: `render-vello-cpu`, `render-vello`
+   - Successfully ran benchmark with all 4 renderers
 
-1. **Python bindings: Direction auto-detect** (was forcing LTR)
-   - Added `typf-unicode` dependency
-   - Created `detect_direction()` and `parse_direction()` helpers
-   - Updated all render methods to accept `direction` param with default `"auto"`
-   - Added optional `language` param for RTL language hints
+### Benchmark Results Summary (24px, 20 chars)
 
-2. **Python bindings: Workspace version**
-   - Removed hard-coded `"2.0.0-dev"` string
-   - Now uses `env!("CARGO_PKG_VERSION")` from workspace
+| Renderer | Standard Fonts | Color Fonts (SVG) | Notes |
+|----------|---------------|-------------------|-------|
+| **Opixa** | 230-280 μs | 350-440 μs | Fastest for standard text |
+| **Vello CPU** | 500-1000 μs | 700-750 μs | Good color font handling |
+| **Vello GPU** | ~10 ms | ~10-14 ms | GPU sync overhead dominates |
+| **Skia** | 900-1500 μs | 700+ ms! | Very slow for SVG fonts |
 
-3. **Trait capability honesty**
-   - Changed `Shaper::supports_script()` default from `true` to `false`
-   - Changed `Renderer::supports_format()` default from `true` to `false`
+**Key Insights:**
+- Opixa remains fastest for standard text rendering (2-4x faster than alternatives)
+- Vello CPU handles color fonts better than Skia
+- Vello GPU overhead is constant (~10ms) - better suited for batch/large renders
+- Skia has severe performance issues with SVG color fonts
 
-4. **Fix glyph ID truncation in typf-export-svg**
-   - Changed `GlyphId::from(glyph_id as u16)` to `GlyphId::new(glyph_id)`
-   - Now supports fonts with >65535 glyphs
+### Test Summary
 
-5. **Python bindings: TTC face index support**
-   - Added `face_index` param to `render_text`, `shape_text`, `render_to_svg`, linra `render_text`
-   - Added `face_index` to `FontInfo` class
-   - Created `load_font()` helper for consistent TTC handling
+| Backend | Unit Tests | Integration Tests | Total |
+|---------|------------|-------------------|-------|
+| Vello CPU | 4 | 12 | 16 |
+| Vello GPU | 3 | 12 | 15 |
+| **Workspace** | - | - | **378** |
 
-6. **JSON schema version in typf-render-json**
-   - Added `JSON_SCHEMA_VERSION` constant ("1.0")
-   - Added `schema_version` field to `JsonOutput` struct
-   - Updated `render()` to populate the field
-   - Updated tests to verify schema version presence
+### Next Up
 
-7. **Deprecate render_simple stub font**
-   - Added deprecation notice to docstring (RST format)
-   - Emits `DeprecationWarning` at runtime via Python warnings module
-   - Warns users to use `Typf.render_text()` with real font instead
-
-8. **Remove trivial add() from typf-cli lib.rs**
-   - Replaced placeholder function with proper crate documentation
-   - lib.rs now documents the binary-focused nature of the crate
-
-9. **Add workspace-level lint configuration**
-   - Added `[workspace.lints.rust]` with `unsafe_code = "warn"`
-   - Added `[workspace.lints.clippy]` for unwrap/expect/panic warnings
-   - Added `lints.workspace = true` to typf-core as example
-
-10. **Fix unwrap() in L2Cache**
-    - Replaced nested unwrap with const DEFAULT_L2_CAPACITY
-    - Uses const match pattern for compile-time safe NonZeroUsize
-
-### Tests Passing
-
-- `cargo test --workspace --quiet` - all pass
-- `cargo clippy --workspace -- -D warnings` - clean
-
-### Files Modified
-
-- `bindings/python/Cargo.toml` - added typf-unicode dependency
-- `bindings/python/src/lib.rs` - direction, version, TTC index, render_simple deprecation
-- `crates/typf-core/src/traits.rs` - capability honesty defaults
-- `crates/typf-core/src/cache.rs` - const DEFAULT_L2_CAPACITY
-- `crates/typf-core/Cargo.toml` - lints.workspace = true
-- `crates/typf-cli/src/lib.rs` - removed trivial add(), added docs
-- `crates/typf-export-svg/src/lib.rs` - glyph ID fix
-- `backends/typf-render-json/src/lib.rs` - JSON schema version
-- `Cargo.toml` - workspace lints configuration
-- `TODO.md` - mark tasks complete
+- Phase S.1: SDF Core & CPU Renderer (medium priority)
+- Add Math font (STIX2Math) test to Vello backends

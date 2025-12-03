@@ -16,6 +16,10 @@ Make Typf fast through strategic optimization techniques.
 
 ## Backend Performance
 
+### Comprehensive Performance Rankings
+
+Based on extensive benchmark testing across different scripts, sizes, and font types:
+
 | Backend | Performance | Quality | Use Case |
 |---------|-------------|---------|----------|
 | JSON Export | 15,506-22,661 ops/sec | Data only | Analysis, debug |
@@ -23,6 +27,46 @@ Make Typf fast through strategic optimization techniques.
 | Zeno | 3,048-3,675 ops/sec | High | Vector quality |
 | Opixa | 1,959-2,302 ops/sec | Medium | Pure Rust, SIMD |
 | Skia | 1,611-1,829 ops/sec | High quality | Cross-platform |
+
+### Shaper Performance Analysis
+
+| Shaper | Avg Time | Ops/sec | Recommendations |
+|--------|----------|---------|----------------|
+| none | 0.041ms | 24,673 | Testing/debug only |
+| HarfBuzz | 0.050ms | 20,630 | **Best overall choice** |
+| ICU-HarfBuzz | 0.061ms | 17,368 | Complex scripts only |
+| CoreText | 0.065ms | 22,799 | macOS native apps |
+
+**Key Insight**: HarfBuzz provides the best balance of speed and correctness for cross-platform applications.
+
+### Renderer Performance Analysis
+
+| Renderer | Avg Time | Ops/sec | Strengths | Weaknesses |
+|----------|----------|---------|-----------|------------|
+| CoreGraphics | 0.353ms | 5,045 | Fastest rasterization | macOS only |
+| Opixa | 1.125ms | 2,538 | Pure Rust, portable | Medium quality |
+| Zeno | 1.738ms | 785 | Vector quality | Slower rasterization |
+| Skia | 1.762ms | 913 | Cross-platform, color | Larger dependency |
+
+### Platform-Specific Recommendations
+
+**macOS**: CoreText + CoreGraphics = Native performance (~4,500 ops/sec)
+**Cross-platform**: HarfBuzz + Opixa = Best balance (~2,500 ops/sec)
+**Linux**: HarfBuzz + Skia = Most compatible (~900 ops/sec)
+**Windows**: DirectWrite + Direct2D = Native performance (when available)
+
+### Performance Regressions Detected
+
+Recent benchmarks identified several performance regressions requiring attention:
+
+| Backend | Script | Size | Slowdown | Likely Cause |
+|---------|--------|------|----------|--------------|
+| coretext + JSON | arab | 128px | **+786%** | May be measurement noise |
+| coretext + JSON | latn | 64px | +136% | Possible CoreText issue |
+| HarfBuzz + zeno | mixd | 64px | +129% | Zeno backend regression |
+| HarfBuzz + zeno | mixd | 128px | +101% | Mixed script overhead |
+
+**Action Required**: Profile the Zeno backend and validate CoreText measurements.
 
 ## Quick Wins
 
@@ -42,26 +86,48 @@ pipeline.load_font("OpenSans-Regular.ttf")?;
 
 ### Backend Selection
 
+Based on benchmark results, here are the optimal backend configurations:
+
 ```rust
-// Use platform backends for better performance
+// macOS - Best performance (native)
 #[cfg(target_os = "macos")]
 let pipeline = PipelineBuilder::new()
-    .shaper(ShaperBackend::CoreText)
-    .renderer(RendererBackend::CoreGraphics)
+    .shaper(ShaperBackend::CoreText)  // 22,799 ops/sec
+    .renderer(RendererBackend::CoreGraphics)  // 5,045 ops/sec
     .build()?;
 
-#[cfg(target_os = "windows")]
+// Cross-platform - Best balance
 let pipeline = PipelineBuilder::new()
-    .shaper(ShaperBackend::DirectWrite)
-    .renderer(RendererBackend::DirectWrite)
+    .shaper(ShaperBackend::HarfBuzz)  // 20,630 ops/sec
+    .renderer(RendererBackend::Opixa)  // 2,584 ops/sec
     .build()?;
 
-// Fallback for other platforms
+// High quality - When quality > speed
 let pipeline = PipelineBuilder::new()
     .shaper(ShaperBackend::HarfBuzz)
-    .renderer(RendererBackend::Skia)
+    .renderer(RendererBackend::Skia)  // Color font support
+    .build()?;
+
+// Vector output - For SVG/PDF workflows
+let pipeline = PipelineBuilder::new()
+    .shaper(ShaperBackend::HarfBuzz)
+    .renderer(RendererBackend::Zeno)  // Best vector quality
     .build()?;
 ```
+
+### Font Format Compatibility
+
+Based on testing with emoji, CBDT, sbix, COLR and mixed SVG fonts:
+
+| Shaper | Renderer | COLR | SVG | sbix | CBDT | Notes |
+|--------|----------|------|-----|------|------|-------|
+| HarfBuzz | opixa | ✓ | ✓ | ✓ | ⚠️ | CBDT renders blank |
+| HarfBuzz | skia | ✓ | ✓ | ✓ | ✗ | CBDT fails entirely |
+| HarfBuzz | zeno | ✓ | ✓ | ✓ | ✗ | CBDT fails entirely |
+| HarfBuzz | coregraphics | ✓ | ✓ | ✓ | ✗ | CBDT fails entirely |
+| CoreText | opixa | ✓ | ✓ | ✓ | ✗ | CBDT can't shape |
+
+**Recommendation**: Use HarfBuzz + Opixa for maximum compatibility. Avoid CBDT fonts for production use.
 
 ### Memory Efficiency
 
@@ -531,6 +597,210 @@ pub fn debug_pipeline_performance(pipeline: &Pipeline) {
 - [ ] Track cache effectiveness
 - [ ] Alert on performance regression
 
+## Comprehensive Performance Recommendations
+
+### Backend Selection Guide
+
+Based on benchmark analysis, here are data-driven recommendations for different use cases:
+
+#### Production Systems
+
+```rust
+// High-performance web service (cross-platform)
+fn production_web_pipeline() -> Pipeline {
+    PipelineBuilder::new()
+        .shaper(ShaperBackend::HarfBuzz)     // 20,630 ops/sec
+        .renderer(RendererBackend::Opixa)   // 2,584 ops/sec
+        .enable_font_cache(true)
+        .cache_size(500 * 1024 * 1024)      // 500MB
+        .enable_simd(true)
+        .build()
+        .expect("Production pipeline must initialize")
+}
+
+// macOS native application (optimal performance)
+#[cfg(target_os = "macos")]
+fn macos_native_pipeline() -> Pipeline {
+    PipelineBuilder::new()
+        .shaper(ShaperBackend::CoreText)     // 22,799 ops/sec
+        .renderer(RendererBackend::CoreGraphics)  // 5,045 ops/sec
+        .enable_coretext_optimization(true)
+        .build()
+        .expect("macOS pipeline must initialize")
+}
+
+// High-quality print production
+fn print_production_pipeline() -> Pipeline {
+    PipelineBuilder::new()
+        .shaper(ShaperBackend::HarfBuzz)
+        .renderer(RendererBackend::Skia)    // Color font support
+        .enable_high_quality(true)
+        .build()
+        .expect("Print pipeline must initialize")
+}
+```
+
+#### Font Format Compatibility Matrix
+
+| Font Type | Recommended Backend | Performance | Notes |
+|-----------|-------------------|-------------|-------|
+| Standard TTF/OTF | HarfBuzz + Opixa | 2,584 ops/sec | Best balance |
+| Color Fonts (COLR) | HarfBuzz + Skia | 913 ops/sec | Full color support |
+| SVG Fonts | HarfBuzz + Zeno | 785 ops/sec | Best vector output |
+| CBDT Bitmap | HarfBuzz + Opixa | ~1,000 ops/sec | Limited support |
+| Emoji Fonts | HarfBuzz + Skia | 913 ops/sec | Color essential |
+
+### Performance Budget Guidelines
+
+| Operation | Target | Maximum |
+|-----------|--------|---------|
+| Simple shaping (Latin) | 50µs | 100µs |
+| Complex shaping (Arabic) | 100µs | 200µs |
+| Rasterization (16px) | 500µs | 1ms |
+| Color font rendering | 1ms | 2ms |
+| Total pipeline | 2ms | 5ms |
+
+**Note**: These targets are based on the benchmark analysis showing optimal backend combinations achieving 2,500-4,500 ops/sec.
+
+### Advanced Optimization Strategies
+
+#### Multi-level Caching Strategy
+
+```rust
+pub struct AdvancedCacheManager {
+    l1_cache: LruCache<TextHash, ShapedText>,   // Memory L1
+    l2_cache: DiskCache<TextHash, ShapedText>,  // SSD L2
+    font_metrics: FontMetricsCache,
+    glyph_cache: GlyphRasterCache,
+}
+
+impl AdvancedCacheManager {
+    pub fn get_or_shape<F>(&mut self, text: &str, font: &Font, shaper: F) -> Result<ShapedText>
+    where F: FnOnce(&str, &Font) -> Result<ShapedText>
+    {
+        let hash = hash_text_and_font(text, font);
+        
+        // L1 cache (fastest)
+        if let Some(cached) = self.l1_cache.get(&hash) {
+            return Ok(cached.clone());
+        }
+        
+        // L2 cache (medium speed)
+        if let Some(cached) = self.l2_cache.get(&hash)? {
+            self.l1_cache.put(hash, cached.clone());
+            return Ok(cached);
+        }
+        
+        // Shape and cache
+        let shaped = shaper(text, font)?;
+        self.l1_cache.put(hash, shaped.clone());
+        self.l2_cache.put(hash, shaped.clone())?;
+        
+        Ok(shaped)
+    }
+}
+```
+
+#### Intelligent Backend Selection
+
+```rust
+pub struct AdaptivePipeline {
+    performance_monitor: PerformanceMonitor,
+    backend_pool: BackendPool,
+}
+
+impl AdaptivePipeline {
+    pub fn render_optimal(&mut self, text: &str, font: &Font, options: &RenderOptions) -> Result<Bitmap> {
+        let backend_combo = self.choose_optimal_backend(text, font, options);
+        
+        match self.backend_pool.render(&backend_combo, text, font, options) {
+            Ok(result) => {
+                self.performance_monitor.record_success(&backend_combo);
+                Ok(result)
+            }
+            Err(e) => {
+                self.performance_monitor.record_failure(&backend_combo, &e);
+                self.try_fallback_backend(text, font, options)
+            }
+        }
+    }
+    
+    fn choose_optimal_backend(&self, text: &str, font: &Font, options: &RenderOptions) -> BackendCombo {
+        // Consider: text complexity, font type, output format, recent performance
+        if is_cbdt_font(font) {
+            BackendCombo::HarfBuzzOpixa
+        } else if options.requires_color {
+            BackendCombo::HarfBuzzSkia
+        } else if cfg!(target_os = "macos") {
+            BackendCombo::CoreTextCoreGraphics
+        } else {
+            BackendCombo::HarfBuzzOpixa
+        }
+    }
+}
+```
+
+### Performance Regression Detection
+
+```rust
+// Real-time performance monitoring
+pub struct ProductionMonitor {
+    metrics_collector: MetricsCollector,
+    alert_thresholds: AlertThresholds,
+    regression_detector: RegressionDetector,
+}
+
+#[derive(Debug)]
+pub struct AlertThresholds {
+    pub max_render_time_ms: f64,      // Alert if slower than this
+    pub min_success_rate: f64,        // Alert if success rate below this
+    pub max_memory_growth_mb: u64,    // Alert if memory grows too fast
+    pub performance_regression_pct: f64, // Alert if performance drops
+}
+
+impl ProductionMonitor {
+    pub fn check_performance(&self, current_metrics: &PerformanceMetrics) -> Vec<Alert> {
+        let mut alerts = Vec::new();
+        
+        // Check render time against benchmark expectations
+        let expected_time = self.get_expected_time(&current_metrics.backend_combo);
+        if current_metrics.render_time.as_millis() as f64 > expected_time * 2.0 {
+            alerts.push(Alert::PerformanceRegression {
+                current: current_metrics.render_time,
+                expected: Duration::from_millis(expected_time as u64),
+            });
+        }
+        
+        // Check for specific regressions identified in benchmarks
+        if self.is_zeno_regression(current_metrics) {
+            alerts.push(Alert::KnownRegression {
+                backend: "Zeno".to_string(),
+                description: "Zeno backend shows >100% regression for mixed scripts".to_string(),
+            });
+        }
+        
+        alerts
+    }
+}
+```
+
+### Optimization Roadmap
+
+#### Short-term (1-2 weeks)
+- [ ] Fix Zeno performance regression (mixed scripts +100% slower)
+- [ ] Implement CBDT font detection and graceful handling
+- [ ] Add performance regression alerts to monitoring
+
+#### Medium-term (1-2 months)
+- [ ] Implement multi-level caching (memory + disk)
+- [ ] Add automatic backend selection based on content
+- [ ] Optimize HarfBuzz + Skia combination for color fonts
+
+#### Long-term (3-6 months)
+- [ ] Develop GPU-accelerated renderers for batch processing
+- [ ] Implement predictive caching based on usage patterns
+- [ ] Add CBDT bitmap rendering support to all backends
+
 ---
 
-Performance optimization starts with measurement. Profile first, then optimize the bottlenecks. Use platform-specific backends when available, implement smart caching, and monitor continuously to maintain speed.
+Performance optimization starts with measurement. The benchmark analysis provides clear guidance: use HarfBuzz + CoreGraphics on macOS, HarfBuzz + Opixa cross-platform, and avoid CBDT fonts in production. Profile first, optimize the bottlenecks, implement smart caching, and monitor continuously to maintain speed.

@@ -33,6 +33,7 @@ jobs:
           - fuzz_unicode_process
           - fuzz_harfbuzz_shape
           - fuzz_pipeline
+          - fuzz_font_parse
 
     steps:
     - uses: actions/checkout@v4
@@ -76,6 +77,20 @@ jobs:
               ;;
             fuzz_pipeline)
               echo "Test" > fuzz/corpus/${{ matrix.target }}/simple.txt
+              ;;
+            fuzz_font_parse)
+              # Use existing font corpus directories (valid and malformed fonts)
+              if [ -d "fuzz/corpus/valid" ]; then
+                cp -r fuzz/corpus/valid/* fuzz/corpus/${{ matrix.target }}/ 2>/dev/null || true
+              fi
+              if [ -d "fuzz/corpus/malformed" ]; then
+                cp -r fuzz/corpus/malformed/* fuzz/corpus/${{ matrix.target }}/ 2>/dev/null || true
+              fi
+              # Also use test fonts as seed corpus
+              if [ -d "test-fonts" ]; then
+                cp test-fonts/*.ttf fuzz/corpus/${{ matrix.target }}/ 2>/dev/null || true
+                cp test-fonts/*.otf fuzz/corpus/${{ matrix.target }}/ 2>/dev/null || true
+              fi
               ;;
           esac
         fi

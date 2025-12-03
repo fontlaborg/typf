@@ -193,6 +193,67 @@ impl Renderer for SkiaRenderer {
 
 **Features:** GPU rendering, complex effects, cross-platform.
 
+### Vello Renderer
+Modern compute-centric GPU renderer using wgpu.
+
+```rust
+pub struct VelloRenderer {
+    gpu: GpuContext,       // wgpu Device + Queue
+    config: VelloConfig,
+}
+
+impl Renderer for VelloRenderer {
+    fn render(&self, glyphs: &[Glyph], options: &RenderOptions) -> Result<RenderOutput> {
+        let mut scene = Scene::new(options.width, options.height);
+        scene.set_paint(options.foreground_color);
+
+        // Build glyph run from shaped glyphs
+        let font_data = FontData::from_bytes(font.data());
+        let glyph_run = scene.glyph_run(&font_data)
+            .font_size(options.font_size)
+            .glyphs(glyphs.iter().map(to_vello_glyph));
+
+        scene.fill(glyph_run);
+
+        // GPU render and readback
+        let bitmap = self.render_to_bitmap(&scene)?;
+        Ok(RenderOutput::Bitmap(bitmap))
+    }
+}
+```
+
+**Use when:** You need maximum throughput on GPU-equipped systems.
+
+**Features:** GPU compute rendering, COLR/bitmap color fonts, glyph caching.
+
+### Vello CPU Renderer
+Pure Rust CPU renderer using vello_cpu. No GPU required.
+
+```rust
+pub struct VelloCpuRenderer {
+    config: VelloCpuConfig,
+}
+
+impl Renderer for VelloCpuRenderer {
+    fn render(&self, glyphs: &[Glyph], options: &RenderOptions) -> Result<RenderOutput> {
+        let mut ctx = RenderContext::new();
+        let mut pixmap = Pixmap::new(options.width, options.height);
+
+        // Render glyphs via RenderContext
+        ctx.glyph_run(&font_data)
+            .font_size(options.font_size)
+            .glyphs(glyphs.iter().map(to_vello_glyph))
+            .render_into(&mut pixmap);
+
+        Ok(RenderOutput::Bitmap(pixmap.into()))
+    }
+}
+```
+
+**Use when:** You need high-quality rendering without GPU dependencies.
+
+**Features:** Pure Rust, no GPU, server-friendly, COLR/bitmap color fonts.
+
 ## Backend Registry
 
 Find and create backends by name:
@@ -273,9 +334,11 @@ Common combinations:
 | Use Case | Shaper | Renderer | Exporter | Performance |
 |----------|--------|----------|----------|-------------|
 | Fastest data | none | json | json | 25K ops/sec |
+| GPU high-throughput | harfbuzz | vello | png | 10K+ ops/sec |
+| Pure Rust quality | harfbuzz | vello-cpu | png | 3.5K ops/sec |
 | Complex scripts | harfbuzz | zeno | png | 3K ops/sec |
 | macOS best | mac | mac | png | 4K ops/sec |
-| Pure Rust | harfbuzz | opixa | pnm | 2K ops/sec |
+| Pure Rust minimal | harfbuzz | opixa | pnm | 2K ops/sec |
 | Web rendering | harfbuzz | skia | svg | 3.5K ops/sec |
 | Mobile apps | mac | skia | png | 4K ops/sec |
 
@@ -290,6 +353,8 @@ Common combinations:
 | Opixa | Low | 2K ops/sec | Medium | All |
 | Skia | High | 3.5K ops/sec | High | All |
 | Zeno | Medium | 3K ops/sec | High | All |
+| Vello CPU | Medium | 3.5K ops/sec | High | All (pure Rust) |
+| Vello GPU | Medium | 10K+ ops/sec | High | GPU required |
 | CoreGraphics (mac) | High | 4K ops/sec | High | macOS only |
 | JSON | Low | 25K ops/sec | Data only | All |
 

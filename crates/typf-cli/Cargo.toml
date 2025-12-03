@@ -24,6 +24,8 @@ typf-render-svg = { workspace = true }
 typf-render-cg = { workspace = true, optional = true }
 typf-render-skia = { workspace = true, optional = true }
 typf-render-zeno = { workspace = true, optional = true }
+typf-render-vello-cpu = { workspace = true, optional = true }
+typf-render-vello = { workspace = true, optional = true }
 typf-os = { workspace = true, optional = true }
 typf-os-mac = { workspace = true, optional = true }
 typf-os-win = { workspace = true, optional = true }
@@ -47,6 +49,8 @@ shaping-win = []
 render-cg = ["dep:typf-render-cg", "typf/render-cg"]
 render-skia = ["dep:typf-render-skia", "typf/render-skia"]
 render-zeno = ["dep:typf-render-zeno", "typf/render-zeno"]
+render-vello-cpu = ["dep:typf-render-vello-cpu", "typf/render-vello-cpu"]
+render-vello = ["dep:typf-render-vello", "typf/render-vello"]
 render-mac = ["render-cg"]
 render-win = []
 linra = ["dep:typf-os"]
