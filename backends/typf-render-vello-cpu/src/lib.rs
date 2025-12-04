@@ -177,9 +177,23 @@ impl Renderer for VelloCpuRenderer {
         let padding = params.padding as f32;
         let font_size = shaped.advance_height;
 
-        // Calculate canvas dimensions
+        // Get actual font metrics for proper baseline and height calculation
+        let font_bytes = font.data();
+        let (ascent, descent) = if let Ok(font_ref) = skrifa::FontRef::new(font_bytes) {
+            let size = skrifa::instance::Size::new(font_size);
+            let location = skrifa::instance::LocationRef::default();
+            let metrics = font_ref.metrics(size, location);
+            // ascent is positive (above baseline), descent is negative (below baseline)
+            (metrics.ascent, metrics.descent.abs())
+        } else {
+            // Fallback to approximate values if font parsing fails
+            (font_size * 0.8, font_size * 0.2)
+        };
+
+        // Calculate canvas dimensions using actual font metrics
         let width = (shaped.advance_width + padding * 2.0).ceil() as u32;
-        let height = (font_size * 1.5 + padding * 2.0).ceil() as u32; // Approximate with 1.5x for ascent+descent
+        // Height covers full ascent + descent + padding on both sides
+        let height = (ascent + descent + padding * 2.0).ceil() as u32;
 
         // Sanity check dimensions
         if width == 0 || height == 0 {
@@ -206,8 +220,9 @@ impl Renderer for VelloCpuRenderer {
         // Set foreground color
         context.set_paint(Self::to_vello_color(params.foreground));
 
-        // Calculate baseline position (approximate)
-        let baseline_y = padding + font_size * 0.8; // Rough baseline estimate
+        // Calculate baseline position using actual font ascent
+        // Baseline is at padding + ascent (top of canvas + space for ascenders)
+        let baseline_y = padding + ascent;
 
         // Set transform for glyph positioning
         context.set_transform(Affine::translate((padding as f64, baseline_y as f64)));

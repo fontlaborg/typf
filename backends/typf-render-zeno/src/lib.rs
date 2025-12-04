@@ -175,17 +175,29 @@ impl ZenoRenderer {
         // Add +1 pixel padding to height to prevent bottom cutoff from rounding
         let height = ((max_y - min_y).ceil() as u32).max(1) + 1;
 
-        // Try color sources, BUT skip if outline is empty.
-        // COLR glyphs are based on outlines - an empty outline means no actual content,
-        // just a bounding box fill. This prevents space characters from rendering as colored squares.
-        if allows_color_sources(&params.glyph_sources) && !outline_empty {
+        // Try color sources (COLR, SVG, sbix, CBDT)
+        // Note: We try color glyphs even if outline is empty - bitmap/SVG sources don't need outlines.
+        // If no color data exists for this glyph, try_color_glyph returns None and we fall through
+        // to outline rendering (which will handle empty outlines appropriately).
+        if allows_color_sources(&params.glyph_sources) {
+            // Expand bbox for COLR rendering - COLR glyphs can extend beyond outline bounds
+            // due to paint effects (shadows, 3D perspective, etc.). Add 50% padding for 3D fonts.
+            let bbox_width = max_x - min_x;
+            let bbox_height = max_y - min_y;
+            let color_padding = bbox_height.max(bbox_width) * 0.5;
+            let color_min_x = min_x - color_padding;
+            let color_min_y = min_y - color_padding;
+            let color_max_x = max_x + color_padding;
+            let color_max_y = max_y + color_padding;
+            let color_width = ((color_max_x - color_min_x).ceil() as u32).max(1);
+            let color_height = ((color_max_y - color_min_y).ceil() as u32).max(1);
             if let Some(color_bitmap) = self.try_color_glyph(
                 font,
                 glyph_id.to_u32(),
-                width,
-                height,
+                color_width,
+                color_height,
                 font_size,
-                (min_x, min_y, max_x, max_y),
+                (color_min_x, color_min_y, color_max_x, color_max_y),
                 params,
             )? {
                 return Ok(color_bitmap);
@@ -339,10 +351,14 @@ impl ZenoRenderer {
                     }
                 };
 
-                // Flip vertically: typf-render-color outputs in font coords (Y-up),
-                // but we need bitmap coords (Y-down) for compositing
+                // Flip vertically for COLR and bitmap sources: typf-render-color outputs
+                // these in font coords (Y-up), but we need bitmap coords (Y-down) for compositing.
+                // SVG glyphs from resvg are already in screen coordinates (Y-down), so skip flip.
                 let mut rgba_data = pixmap_data.to_vec();
-                flip_vertical_rgba(&mut rgba_data, pixmap.width(), pixmap.height());
+                let needs_flip = !matches!(source_used, typf_core::GlyphSource::Svg);
+                if needs_flip {
+                    flip_vertical_rgba(&mut rgba_data, pixmap.width(), pixmap.height());
+                }
 
                 Ok(Some(GlyphBitmap {
                     width: pixmap.width(),

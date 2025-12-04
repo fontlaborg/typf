@@ -274,20 +274,13 @@ fn extract_glyph_svg(
         .ok_or(SvgRenderError::ParseFailed("malformed glyph group".into()))?;
 
     // Build a new standalone SVG document with just this glyph
-    // For OpenType-SVG, coordinates are in font units. We set a viewBox
-    // that covers the em-square: from y=-upem (top) to y=0 (baseline)
-    // and from x=0 to x=upem (full width).
-    // This ensures the SVG tree has proper dimensions for scaling.
+    // For OpenType-SVG, coordinates are in font units (Y-up, origin at baseline).
+    // Y=0 is the baseline, positive Y is above baseline (ascenders), negative Y is below (descenders).
+    // We use viewBox covering -upem to +upem in Y to capture both ascenders and descenders.
+    // The viewBox height is 2*upem to cover this full range.
     let standalone_svg = format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg"{} viewBox="0 -{} {} {}">{}{}</svg>"#,
-        namespaces, upem, upem, upem, defs_section, glyph_content
-    );
-
-    eprintln!(
-        "DEBUG extract_glyph_svg: glyph_id={}, namespaces='{}', result_len={}",
-        glyph_id,
-        namespaces,
-        standalone_svg.len()
+        r#"<svg xmlns="http://www.w3.org/2000/svg"{} viewBox="0 -{upem} {upem} {double_upem}">{}{}</svg>"#,
+        namespaces, defs_section, glyph_content, upem = upem, double_upem = upem * 2
     );
 
     Ok(standalone_svg)
@@ -417,13 +410,6 @@ pub fn render_svg_glyph_with_palette_and_ppem(
     let options = usvg::Options::default();
     let tree = usvg::Tree::from_str(&processed_svg, &options)
         .map_err(|e| SvgRenderError::ParseFailed(e.to_string()))?;
-
-    eprintln!(
-        "DEBUG render: glyph_id={}, tree_size={}x{}",
-        glyph_id,
-        tree.size().width(),
-        tree.size().height()
-    );
 
     // Calculate scale to convert from font units to pixels
     // SVG documents are designed to fill 1em x 1em in font units
@@ -597,8 +583,11 @@ mod tests {
                         result.err()
                     );
                     let pixmap = result.unwrap();
-                    assert_eq!(pixmap.width(), 128);
-                    assert_eq!(pixmap.height(), 128);
+                    // Output size is now computed from tree dimensions, not passed params.
+                    // Width should match the em-square scaled to ppem (128).
+                    // Height is 2x em-square to cover both ascenders and descenders.
+                    assert_eq!(pixmap.width(), 128, "Width should match ppem");
+                    assert_eq!(pixmap.height(), 256, "Height should be 2x ppem for full em-square");
                     println!("Successfully rendered SVG glyph at gid {}", gid);
                     return; // Test passed
                 }

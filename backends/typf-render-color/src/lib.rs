@@ -161,6 +161,28 @@ impl<'a> TinySkiaColorPainter<'a> {
         }
     }
 
+    /// Create a new color painter with an initial transform
+    ///
+    /// This is useful when the COLR paint commands need to be transformed from
+    /// font coordinates to pixmap coordinates (scaling + translation).
+    pub fn with_transform(
+        pixmap: &'a mut Pixmap,
+        palette: &'a [skrifa::color::Color],
+        font: &'a skrifa::FontRef<'a>,
+        size: f32,
+        initial_transform: tiny_skia::Transform,
+    ) -> Self {
+        Self {
+            pixmap,
+            transform_stack: vec![initial_transform],
+            clip_stack: vec![None],
+            layer_stack: Vec::new(),
+            palette,
+            font,
+            size,
+        }
+    }
+
     /// Get the current transformation matrix
     fn current_transform(&self) -> tiny_skia::Transform {
         self.transform_stack
@@ -735,12 +757,56 @@ pub fn render_color_glyph_with_variations(
     // Build location from variation settings
     let location = font.axes().location(variations.iter().copied());
 
-    // Create output pixmap
-    let mut pixmap = Pixmap::new(width, height).ok_or(ColorRenderError::PixmapCreationFailed)?;
+    // Get the actual COLR glyph bounding box in font units
+    // This is critical because COLR glyphs can extend beyond the outline bounds
+    let upem = font.head().map(|h| h.units_per_em()).unwrap_or(1000) as f32;
+    let scale = size / upem;
 
-    // Create painter and render
+    // Try to get the COLR bounds; fall back to the passed width/height if unavailable
+    let location_ref = skrifa::instance::LocationRef::new(&[]);
+    let colr_bbox = color_glyph.bounding_box(location_ref, skrifa::instance::Size::unscaled());
+
+    let (pix_width, pix_height, translate_x, translate_y) = if let Some(bbox) = colr_bbox {
+        // COLR bbox is in font units; scale to pixels
+        // The bbox can have negative coordinates, so we need to translate
+        let scaled_x0 = bbox.x_min * scale;
+        let scaled_y0 = bbox.y_min * scale;
+        let scaled_x1 = bbox.x_max * scale;
+        let scaled_y1 = bbox.y_max * scale;
+
+        let w = ((scaled_x1 - scaled_x0).ceil() as u32).max(1);
+        let h = ((scaled_y1 - scaled_y0).ceil() as u32).max(1);
+
+        // Translation to shift content so bbox starts at (0, 0)
+        // After scaling, the top-left of content is at (scaled_x0, scaled_y0)
+        // We need to translate by -scaled_x0, -scaled_y0 to bring it to origin
+        // But since font coords are Y-up and pixmap is Y-down, we flip Y
+        let tx = -scaled_x0;
+        // For Y: in font coords, y_max is the top. After flip, it becomes the bottom.
+        // We want the top (y_max in font coords) to be at y=0 in pixmap.
+        // So translate_y = scaled_y1 (which brings y_max to 0 in flipped coords)
+        let ty = scaled_y1;
+
+        (w, h, tx, ty)
+    } else {
+        // Fallback to passed dimensions
+        (width, height, 0.0, size)
+    };
+
+    // Create output pixmap at the calculated size
+    let mut pixmap =
+        Pixmap::new(pix_width, pix_height).ok_or(ColorRenderError::PixmapCreationFailed)?;
+
+    // Create transform: scale from font units to pixels, flip Y, translate to origin
+    // Font coords: Y-up, origin at baseline
+    // Pixmap coords: Y-down, origin at top-left
+    let transform = tiny_skia::Transform::from_scale(scale, -scale)
+        .post_translate(translate_x, translate_y);
+
+    // Create painter with transform and render
     {
-        let mut painter = TinySkiaColorPainter::new(&mut pixmap, colors, &font, size);
+        let mut painter =
+            TinySkiaColorPainter::with_transform(&mut pixmap, colors, &font, size, transform);
         color_glyph.paint(&location, &mut painter)?;
     }
 
@@ -1083,28 +1149,26 @@ pub fn render_glyph_with_variations(
     {
         // Try scaled bitmap first (preserves bearing info)
         match bitmap::render_bitmap_glyph_scaled(font_data, glyph_id, size) {
-            Ok(scaled) => {
-                return Ok(RenderResult {
-                    pixmap: scaled.pixmap,
-                    method: RenderMethod::Bitmap,
-                    bearing_x: Some(scaled.bearing_x),
-                    bearing_y: Some(scaled.bearing_y),
-                });
-            }
+            Ok(scaled) => Ok(RenderResult {
+                pixmap: scaled.pixmap,
+                method: RenderMethod::Bitmap,
+                bearing_x: Some(scaled.bearing_x),
+                bearing_y: Some(scaled.bearing_y),
+            }),
             Err(bitmap::BitmapRenderError::NoBitmapTable)
             | Err(bitmap::BitmapRenderError::GlyphNotFound)
             | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {
                 // Fall back to outline rendering
                 let (pixmap, _used_bitmap) =
                     bitmap::render_bitmap_glyph_or_outline(font_data, glyph_id, width, height, size)?;
-                return Ok(RenderResult {
+                Ok(RenderResult {
                     pixmap,
                     method: RenderMethod::Outline,
                     bearing_x: None,
                     bearing_y: None,
-                });
+                })
             }
-            Err(e) => return Err(e.into()),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -1212,12 +1276,16 @@ pub fn render_glyph_with_preference(
                         &palette_colors,
                         size, // Pass font size as ppem for proper scaling
                     ) {
+                        // SVG viewBox is "0 -{upem} {upem} {upem}", meaning:
+                        // - Content origin (0,0) in SVG/font coords maps to bottom-left of pixmap
+                        // - bearing_x = 0 (content starts at x=0 in font coords)
+                        // - bearing_y = size (top of em-square is 'size' pixels above baseline)
                         return Ok((
                             RenderResult {
                                 pixmap,
                                 method: RenderMethod::Svg,
-                                bearing_x: None,
-                                bearing_y: None,
+                                bearing_x: Some(0.0),
+                                bearing_y: Some(size),
                             },
                             GlyphSource::Svg,
                         ));

@@ -62,6 +62,7 @@ impl SkiaRenderer {
         let font_data = font.data();
         let font_ref = skrifa::FontRef::new(font_data).map_err(|_| RenderError::InvalidFont)?;
         let color_allowed = allows_color_sources(&params.glyph_sources);
+        log::debug!("Skia: color_allowed={}", color_allowed);
 
         // Navigate to the outline glyph collection
         let outlines = font_ref.outline_glyphs();
@@ -155,17 +156,30 @@ impl SkiaRenderer {
         );
 
         // Prefer color/SVG/bitmap glyph sources when requested
-        // BUT: If outline is empty, skip COLR sources. COLR glyphs are based on outlines,
-        // so an empty outline means no actual content - just a bounding box fill.
-        // This prevents space characters from rendering as colored squares.
-        if color_allowed && !outline_empty {
+        // Note: We try color glyphs even if outline is empty - bitmap/SVG sources don't
+        // need outlines. If no color data exists for this glyph, try_color_glyph returns None
+        // and we fall through to outline rendering (which will handle empty outlines).
+        log::debug!("Skia: checking color path: color_allowed={}, outline_empty={}", color_allowed, outline_empty);
+        if color_allowed {
+            log::debug!("Skia: calling try_color_glyph");
+            // Expand bbox for COLR rendering - COLR glyphs can extend beyond outline bounds
+            // due to paint effects (shadows, 3D perspective, etc.). Add 50% padding for 3D fonts.
+            let color_padding = bbox.height().max(bbox.width()) * 0.5;
+            let color_bbox = kurbo::Rect::new(
+                bbox.x0 - color_padding,
+                bbox.y0 - color_padding,
+                bbox.x1 + color_padding,
+                bbox.y1 + color_padding,
+            );
+            let color_width = (color_bbox.width().ceil() as u32).max(1);
+            let color_height = (color_bbox.height().ceil() as u32).max(1);
             if let Some(color_bitmap) = self.try_color_glyph(
                 font,
                 glyph_id.to_u32(),
-                width,
-                height,
+                color_width,
+                color_height,
                 font_size,
-                &bbox,
+                &color_bbox,
                 params,
             )? {
                 return Ok(color_bitmap);
@@ -270,6 +284,7 @@ impl SkiaRenderer {
             .map(|(tag, value)| (tag.as_str(), *value))
             .collect();
 
+        log::debug!("Skia try_color_glyph: calling render_glyph_with_preference for gid={}, size={}x{}", glyph_id, width, height);
         match render_glyph_with_preference(
             font.data(),
             glyph_id,
@@ -281,6 +296,7 @@ impl SkiaRenderer {
             &params.glyph_sources,
         ) {
             Ok((rendered, source_used)) => {
+                log::debug!("Skia try_color_glyph: success via {:?}, pixmap={}x{}", source_used, rendered.pixmap.width(), rendered.pixmap.height());
                 let pixmap = rendered.pixmap;
                 let pixmap_data = pixmap.data();
 
@@ -355,10 +371,14 @@ impl SkiaRenderer {
                     }
                 };
 
-                // Flip vertically: typf-render-color outputs in font coords (Y-up),
-                // but we need bitmap coords (Y-down) for compositing
+                // Flip vertically for COLR and bitmap sources: typf-render-color outputs
+                // these in font coords (Y-up), but we need bitmap coords (Y-down) for compositing.
+                // SVG glyphs from resvg are already in screen coordinates (Y-down), so skip flip.
                 let mut rgba_data = pixmap_data.to_vec();
-                flip_vertical_rgba(&mut rgba_data, pixmap.width(), pixmap.height());
+                let needs_flip = !matches!(source_used, typf_core::GlyphSource::Svg);
+                if needs_flip {
+                    flip_vertical_rgba(&mut rgba_data, pixmap.width(), pixmap.height());
+                }
 
                 Ok(Some(GlyphBitmap {
                     width: pixmap.width(),
