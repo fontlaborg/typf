@@ -73,6 +73,23 @@ fn main() {
                 println!("Original SVG first 500 chars:");
                 println!("{}", &svg[..svg.len().min(500)]);
 
+                // Check for viewBox
+                if let Some(start) = svg.find("viewBox=") {
+                    let end = svg[start..].find('"').unwrap_or(0)
+                        + svg[start+8..].find('"').unwrap_or(0) + 10;
+                    println!("Original viewBox: {}", &svg[start..start+end.min(100)]);
+                } else {
+                    println!("Original viewBox: NONE");
+                }
+
+                // Check the glyph group's attributes (transform)
+                let glyph_tag = format!(r#"<g id="glyph{}""#, gid);
+                if let Some(start) = svg.find(&glyph_tag) {
+                    let tag_end = start + svg[start..].find('>').unwrap_or(100) + 1;
+                    let group_preview_end = (tag_end + 300).min(svg.len());
+                    println!("Glyph group: {}", &svg[start..group_preview_end]);
+                }
+
                 // Parse full document
                 let options = usvg::Options::default();
                 match usvg::Tree::from_str(&svg, &options) {
@@ -86,6 +103,13 @@ fn main() {
                 if let Some(glyph_svg) = extract_glyph_svg_debug(&svg, gid) {
                     println!("Extracted glyph SVG length: {} bytes", glyph_svg.len());
                     println!("First 500 chars: {}", &glyph_svg[..glyph_svg.len().min(500)]);
+
+                    // Find the glyph content after defs (look for </defs>)
+                    if let Some(defs_end) = glyph_svg.find("</defs>") {
+                        let content_start = defs_end + 7;
+                        let content_preview = &glyph_svg[content_start..glyph_svg.len().min(content_start + 500)];
+                        println!("Glyph content after defs: {}", content_preview);
+                    }
 
                     match usvg::Tree::from_str(&glyph_svg, &options) {
                         Ok(tree) => {

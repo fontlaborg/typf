@@ -232,7 +232,13 @@ pub fn render_svg_glyph_with_palette(
 /// OpenType-SVG documents may contain multiple glyphs. Each glyph is identified
 /// by a `<g id="glyphXX">` element where XX is the glyph ID. This function
 /// extracts just that glyph's content and wraps it in a standalone SVG.
-fn extract_glyph_svg(svg_document: &str, glyph_id: u32) -> Result<String, SvgRenderError> {
+///
+/// The `upem` parameter is used to set a proper viewBox in font units.
+fn extract_glyph_svg(
+    svg_document: &str,
+    glyph_id: u32,
+    upem: u16,
+) -> Result<String, SvgRenderError> {
     // Look for the glyph's group element: <g id="glyphXX">...</g>
     let glyph_pattern = format!(r#"id="glyph{}""#, glyph_id);
 
@@ -268,14 +274,17 @@ fn extract_glyph_svg(svg_document: &str, glyph_id: u32) -> Result<String, SvgRen
         .ok_or(SvgRenderError::ParseFailed("malformed glyph group".into()))?;
 
     // Build a new standalone SVG document with just this glyph
-    // We don't set a viewBox - let usvg calculate it from the content bounds
+    // For OpenType-SVG, coordinates are in font units. We set a viewBox
+    // that covers the em-square: from y=-upem (top) to y=0 (baseline)
+    // and from x=0 to x=upem (full width).
+    // This ensures the SVG tree has proper dimensions for scaling.
     let standalone_svg = format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg"{}>{}{}</svg>"#,
-        namespaces, defs_section, glyph_content
+        r#"<svg xmlns="http://www.w3.org/2000/svg"{} viewBox="0 -{} {} {}">{}{}</svg>"#,
+        namespaces, upem, upem, upem, defs_section, glyph_content
     );
 
-    log::debug!(
-        "extract_glyph_svg: glyph_id={}, namespaces='{}', result_len={}",
+    eprintln!(
+        "DEBUG extract_glyph_svg: glyph_id={}, namespaces='{}', result_len={}",
         glyph_id,
         namespaces,
         standalone_svg.len()
@@ -364,6 +373,13 @@ pub fn render_svg_glyph_with_palette_and_ppem(
     ppem: f32,
 ) -> Result<Pixmap, SvgRenderError> {
     let font = skrifa::FontRef::new(font_data).map_err(|_| SvgRenderError::FontParseFailed)?;
+
+    // Get font's units per em - needed for proper viewBox in extracted SVG
+    let upem = font
+        .head()
+        .map(|h| h.units_per_em())
+        .unwrap_or(1000);
+
     let svg_document = get_svg_document(font_data, glyph_id)?;
 
     log::debug!(
@@ -375,7 +391,7 @@ pub fn render_svg_glyph_with_palette_and_ppem(
     );
 
     // Extract just this glyph's content from the shared SVG document
-    let glyph_svg = extract_glyph_svg(&svg_document, glyph_id)?;
+    let glyph_svg = extract_glyph_svg(&svg_document, glyph_id, upem)?;
 
     log::debug!(
         "SVG extraction: original_len={}, glyph_len={}",
@@ -402,17 +418,17 @@ pub fn render_svg_glyph_with_palette_and_ppem(
     let tree = usvg::Tree::from_str(&processed_svg, &options)
         .map_err(|e| SvgRenderError::ParseFailed(e.to_string()))?;
 
-    // Get font's units per em for proper scaling
-    // OpenType-SVG documents are in font units, we need to convert to pixels
-    let upem = font
-        .head()
-        .map(|h| h.units_per_em() as f32)
-        .unwrap_or(1000.0);
+    eprintln!(
+        "DEBUG render: glyph_id={}, tree_size={}x{}",
+        glyph_id,
+        tree.size().width(),
+        tree.size().height()
+    );
 
     // Calculate scale to convert from font units to pixels
     // SVG documents are designed to fill 1em x 1em in font units
     // ppem = pixels per em, so scale = ppem / upem
-    let scale = ppem / upem;
+    let scale = ppem / upem as f32;
 
     // Calculate the output pixmap size based on SVG tree dimensions and scale
     // The SVG tree dimensions are in font units, so we scale them to pixels
