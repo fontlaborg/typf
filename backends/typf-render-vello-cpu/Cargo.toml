@@ -10,6 +10,7 @@ repository.workspace = true
 typf-core = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
+skrifa = { workspace = true }
 
 # Vello dependencies (from external/)
 vello_cpu = { path = "../../external/vello/sparse_strips/vello_cpu", default-features = false, features = ["std", "png", "text"] }

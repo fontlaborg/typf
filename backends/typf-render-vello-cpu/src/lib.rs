@@ -24,6 +24,7 @@
 
 use std::sync::Arc;
 
+use skrifa::MetadataProvider;
 use thiserror::Error;
 use typf_core::{
     error::{RenderError, Result},
@@ -116,6 +117,40 @@ impl VelloCpuRenderer {
     }
 }
 
+/// Vello's normalized coordinate type (plain i16, 2.14 fixed-point format)
+type VelloNormalizedCoord = i16;
+
+/// Build normalized variation coordinates from user-specified variations.
+///
+/// Converts variation settings like `[("wght", 700.0), ("wdth", 100.0)]` into
+/// normalized coordinates suitable for Vello's glyph rendering.
+///
+/// Note: Vello uses raw i16 values in 2.14 fixed-point format, while skrifa
+/// uses the F2Dot14 wrapper type. We convert by extracting the raw bits.
+fn build_normalized_coords(
+    font_data: &[u8],
+    variations: &[(String, f32)],
+) -> Vec<VelloNormalizedCoord> {
+    if variations.is_empty() {
+        return Vec::new();
+    }
+
+    let font_ref = match skrifa::FontRef::new(font_data) {
+        Ok(f) => f,
+        Err(_) => return Vec::new(),
+    };
+
+    let axes = font_ref.axes();
+    let settings: Vec<(&str, f32)> = variations
+        .iter()
+        .map(|(tag, value)| (tag.as_str(), *value))
+        .collect();
+
+    let location = axes.location(settings);
+    // Convert F2Dot14 to raw i16 values for Vello
+    location.coords().iter().map(|c| c.to_bits()).collect()
+}
+
 impl Default for VelloCpuRenderer {
     fn default() -> Self {
         Self::new()
@@ -154,7 +189,10 @@ impl Renderer for VelloCpuRenderer {
         // Create font data from raw bytes
         // FontData requires Vec<u8> (not &[u8]) and a font collection index
         let font_bytes = font.data().to_vec();
-        let font_data = FontData::new(font_bytes.into(), 0);
+        let font_data = FontData::new(font_bytes.clone().into(), 0);
+
+        // Build normalized variation coordinates for variable fonts
+        let normalized_coords = build_normalized_coords(&font_bytes, &params.variations);
 
         // Create render context
         let mut context = RenderContext::new(width as u16, height as u16);
@@ -178,11 +216,17 @@ impl Renderer for VelloCpuRenderer {
         let glyphs = Self::convert_glyphs(shaped);
 
         // Build and render glyph run using RenderContext's built-in glyph support
-        context
+        let mut glyph_run = context
             .glyph_run(&font_data)
             .font_size(font_size)
-            .hint(self.config.hinting)
-            .fill_glyphs(glyphs.into_iter());
+            .hint(self.config.hinting);
+
+        // Apply variable font coordinates if specified
+        if !normalized_coords.is_empty() {
+            glyph_run = glyph_run.normalized_coords(&normalized_coords);
+        }
+
+        glyph_run.fill_glyphs(glyphs.into_iter());
 
         // Flush and render to pixmap
         context.flush();

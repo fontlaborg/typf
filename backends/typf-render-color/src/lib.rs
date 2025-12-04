@@ -57,11 +57,14 @@ pub mod svg;
 #[cfg(feature = "bitmap")]
 pub use bitmap::{
     get_bitmap_sizes, has_bitmap_glyphs, render_bitmap_glyph, render_bitmap_glyph_or_outline,
-    BitmapRenderError,
+    render_bitmap_glyph_scaled, BitmapRenderError, ScaledBitmapGlyph,
 };
 
 #[cfg(feature = "svg")]
-pub use svg::{get_svg_document, has_svg_glyphs, render_svg_glyph, SvgRenderError};
+pub use svg::{
+    get_svg_document, has_svg_glyphs, render_svg_glyph, render_svg_glyph_with_palette,
+    render_svg_glyph_with_palette_and_ppem, SvgRenderError,
+};
 
 use skrifa::color::{Brush, ColorPainter, ColorStop, CompositeMode, Extend, Transform};
 // ColorGlyphFormat is pub use'd below for re-export
@@ -876,6 +879,12 @@ pub struct RenderResult {
     pub pixmap: Pixmap,
     /// Which rendering method was used
     pub method: RenderMethod,
+    /// Bearing_x: horizontal offset from glyph origin to left edge (pixels)
+    /// For bitmap glyphs, from font metrics. For COLR/SVG, computed from pixmap content bounds.
+    pub bearing_x: Option<f32>,
+    /// Bearing_y: vertical offset from baseline to top edge (pixels, positive = above baseline)
+    /// For bitmap glyphs, from font metrics. For COLR/SVG, computed from pixmap content bounds.
+    pub bearing_y: Option<f32>,
 }
 
 /// Method used for rendering a glyph
@@ -891,6 +900,70 @@ pub enum RenderMethod {
     Bitmap,
     /// Outline fallback (monochrome)
     Outline,
+}
+
+/// Content bounds within a pixmap (in pixel coordinates)
+#[derive(Debug, Clone, Copy)]
+pub struct ContentBounds {
+    /// Leftmost column with non-transparent content (0-indexed)
+    pub min_x: u32,
+    /// Rightmost column with non-transparent content (0-indexed, inclusive)
+    pub max_x: u32,
+    /// Topmost row with non-transparent content (0-indexed)
+    pub min_y: u32,
+    /// Bottommost row with non-transparent content (0-indexed, inclusive)
+    pub max_y: u32,
+}
+
+impl ContentBounds {
+    /// Returns content width in pixels
+    pub fn width(&self) -> u32 {
+        self.max_x.saturating_sub(self.min_x) + 1
+    }
+
+    /// Returns content height in pixels
+    pub fn height(&self) -> u32 {
+        self.max_y.saturating_sub(self.min_y) + 1
+    }
+}
+
+/// Compute the bounding box of non-transparent content in a pixmap
+///
+/// Returns None if the pixmap is fully transparent (no content).
+/// The bounds are in pixel coordinates with (0,0) at top-left.
+pub fn compute_content_bounds(pixmap: &Pixmap) -> Option<ContentBounds> {
+    let width = pixmap.width();
+    let height = pixmap.height();
+    let data = pixmap.data();
+
+    let mut min_x = width;
+    let mut max_x = 0;
+    let mut min_y = height;
+    let mut max_y = 0;
+
+    for y in 0..height {
+        for x in 0..width {
+            let idx = ((y * width + x) * 4 + 3) as usize; // Alpha channel
+            if data[idx] > 0 {
+                min_x = min_x.min(x);
+                max_x = max_x.max(x);
+                min_y = min_y.min(y);
+                max_y = max_y.max(y);
+            }
+        }
+    }
+
+    if min_x > max_x || min_y > max_y {
+        // Fully transparent
+        None
+    } else {
+        Some(ContentBounds {
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+        })
+    }
 }
 
 /// Unified glyph renderer that auto-selects the best available method
@@ -950,6 +1023,8 @@ pub fn render_glyph_with_variations(
         return Ok(RenderResult {
             pixmap,
             method: RenderMethod::ColrV1,
+            bearing_x: None,
+            bearing_y: None,
         });
     }
 
@@ -971,33 +1046,66 @@ pub fn render_glyph_with_variations(
         return Ok(RenderResult {
             pixmap,
             method: RenderMethod::ColrV0,
+            bearing_x: None,
+            bearing_y: None,
         });
     }
 
-    // Try SVG
+    // Try SVG with proper font-unit to pixel scaling
     #[cfg(feature = "svg")]
     {
-        if let Ok(pixmap) = svg::render_svg_glyph(font_data, glyph_id, width, height) {
+        // Get palette colors for CSS variable substitution
+        let palettes = ColorPalettes::new(&font);
+        let palette_colors: Vec<skrifa::color::Color> = palettes
+            .get(palette_index)
+            .map(|p| p.colors().to_vec())
+            .unwrap_or_default();
+
+        if let Ok(pixmap) = svg::render_svg_glyph_with_palette_and_ppem(
+            font_data,
+            glyph_id,
+            width,
+            height,
+            &palette_colors,
+            size, // Pass font size as ppem for correct scaling
+        ) {
             return Ok(RenderResult {
                 pixmap,
                 method: RenderMethod::Svg,
+                bearing_x: None,
+                bearing_y: None,
             });
         }
     }
 
-    // Try bitmap with outline fallback
+    // Try bitmap with outline fallback - get bearing info from scaled result
     #[cfg(feature = "bitmap")]
     {
-        let (pixmap, used_bitmap) =
-            bitmap::render_bitmap_glyph_or_outline(font_data, glyph_id, width, height, size)?;
-        Ok(RenderResult {
-            pixmap,
-            method: if used_bitmap {
-                RenderMethod::Bitmap
-            } else {
-                RenderMethod::Outline
-            },
-        })
+        // Try scaled bitmap first (preserves bearing info)
+        match bitmap::render_bitmap_glyph_scaled(font_data, glyph_id, size) {
+            Ok(scaled) => {
+                return Ok(RenderResult {
+                    pixmap: scaled.pixmap,
+                    method: RenderMethod::Bitmap,
+                    bearing_x: Some(scaled.bearing_x),
+                    bearing_y: Some(scaled.bearing_y),
+                });
+            }
+            Err(bitmap::BitmapRenderError::NoBitmapTable)
+            | Err(bitmap::BitmapRenderError::GlyphNotFound)
+            | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {
+                // Fall back to outline rendering
+                let (pixmap, _used_bitmap) =
+                    bitmap::render_bitmap_glyph_or_outline(font_data, glyph_id, width, height, size)?;
+                return Ok(RenderResult {
+                    pixmap,
+                    method: RenderMethod::Outline,
+                    bearing_x: None,
+                    bearing_y: None,
+                });
+            }
+            Err(e) => return Err(e.into()),
+        }
     }
 
     // Final fallback: outline only (no bitmap feature)
@@ -1050,6 +1158,8 @@ pub fn render_glyph_with_preference(
                         RenderResult {
                             pixmap,
                             method: RenderMethod::ColrV1,
+                            bearing_x: None,
+                            bearing_y: None,
                         },
                         GlyphSource::Colr1,
                     ));
@@ -1076,6 +1186,8 @@ pub fn render_glyph_with_preference(
                         RenderResult {
                             pixmap,
                             method: RenderMethod::ColrV0,
+                            bearing_x: None,
+                            bearing_y: None,
                         },
                         GlyphSource::Colr0,
                     ));
@@ -1084,11 +1196,28 @@ pub fn render_glyph_with_preference(
             GlyphSource::Svg => {
                 #[cfg(feature = "svg")]
                 {
-                    if let Ok(pixmap) = svg::render_svg_glyph(font_data, glyph_id, width, height) {
+                    // Get palette colors for CSS variable substitution
+                    let palettes = ColorPalettes::new(&font);
+                    let palette_colors: Vec<skrifa::color::Color> = palettes
+                        .get(palette_index)
+                        .map(|p| p.colors().to_vec())
+                        .unwrap_or_default();
+
+                    // Use ppem-aware SVG rendering for correct font-unit to pixel scaling
+                    if let Ok(pixmap) = svg::render_svg_glyph_with_palette_and_ppem(
+                        font_data,
+                        glyph_id,
+                        width,
+                        height,
+                        &palette_colors,
+                        size, // Pass font size as ppem for proper scaling
+                    ) {
                         return Ok((
                             RenderResult {
                                 pixmap,
                                 method: RenderMethod::Svg,
+                                bearing_x: None,
+                                bearing_y: None,
                             },
                             GlyphSource::Svg,
                         ));
@@ -1098,23 +1227,24 @@ pub fn render_glyph_with_preference(
             GlyphSource::Sbix | GlyphSource::Cbdt | GlyphSource::Ebdt => {
                 #[cfg(feature = "bitmap")]
                 {
-                    match bitmap::render_bitmap_glyph_or_outline(
-                        font_data, glyph_id, width, height, size,
-                    ) {
-                        Ok((pixmap, used_bitmap)) => {
-                            if used_bitmap {
-                                return Ok((
-                                    RenderResult {
-                                        pixmap,
-                                        method: RenderMethod::Bitmap,
-                                    },
-                                    source,
-                                ));
-                            }
-                        },
+                    // Use render_bitmap_glyph_scaled to preserve bearing info
+                    match bitmap::render_bitmap_glyph_scaled(font_data, glyph_id, size) {
+                        Ok(scaled) => {
+                            return Ok((
+                                RenderResult {
+                                    pixmap: scaled.pixmap,
+                                    method: RenderMethod::Bitmap,
+                                    bearing_x: Some(scaled.bearing_x),
+                                    bearing_y: Some(scaled.bearing_y),
+                                },
+                                source,
+                            ));
+                        }
                         Err(bitmap::BitmapRenderError::NoBitmapTable)
                         | Err(bitmap::BitmapRenderError::GlyphNotFound)
-                        | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {},
+                        | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {
+                            // No bitmap for this glyph - continue to next source
+                        }
                         Err(e) => return Err(e.into()),
                     }
                 }

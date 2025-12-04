@@ -36,7 +36,7 @@ use typf_core::{
     types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult, VectorFormat},
     GlyphSource, GlyphSourcePreference, RenderMode, RenderParams,
 };
-use typf_render_color::render_glyph_with_preference;
+use typf_render_color::{compute_content_bounds, render_glyph_with_preference};
 use typf_render_svg::SvgRenderer;
 
 /// Pure Rust renderer that punches above its weight
@@ -93,8 +93,8 @@ impl ZenoRenderer {
             let fallback_size = font_size.max(1.0);
             let width = fallback_size.ceil() as u32;
             let height = fallback_size.ceil() as u32;
-            // Bearings for bitmap-only glyphs: x=0, y=font_size (baseline offset)
-            let bearings = (0.0, fallback_size);
+            // BBox for bitmap-only glyphs: origin at (0,0), size = font_size
+            let bbox = (0.0f32, 0.0f32, fallback_size, fallback_size);
 
             if let Some(color_bitmap) = self.try_color_glyph(
                 font,
@@ -102,7 +102,7 @@ impl ZenoRenderer {
                 width,
                 height,
                 font_size,
-                bearings,
+                bbox,
                 params,
             )? {
                 return Ok(color_bitmap);
@@ -154,13 +154,16 @@ impl ZenoRenderer {
         let mut max_x = bbox.x1 as f32;
         let mut max_y = bbox.y1 as f32;
 
-        if (max_x - min_x == 0.0 || max_y - min_y == 0.0) && color_allowed {
+        // Track if the outline is empty (zero-area bbox)
+        let outline_empty = max_x - min_x == 0.0 || max_y - min_y == 0.0;
+
+        if outline_empty && color_allowed {
             let fallback = font_size.max(1.0);
             min_x = 0.0;
             max_x = fallback;
             min_y = 0.0;
             max_y = fallback;
-        } else if max_x - min_x == 0.0 || max_y - min_y == 0.0 {
+        } else if outline_empty {
             return Err(RenderError::InvalidDimensions {
                 width: 0,
                 height: 0,
@@ -169,16 +172,20 @@ impl ZenoRenderer {
         }
 
         let width = ((max_x - min_x).ceil() as u32).max(1);
-        let height = ((max_y - min_y).ceil() as u32).max(1);
+        // Add +1 pixel padding to height to prevent bottom cutoff from rounding
+        let height = ((max_y - min_y).ceil() as u32).max(1) + 1;
 
-        if allows_color_sources(&params.glyph_sources) {
+        // Try color sources, BUT skip if outline is empty.
+        // COLR glyphs are based on outlines - an empty outline means no actual content,
+        // just a bounding box fill. This prevents space characters from rendering as colored squares.
+        if allows_color_sources(&params.glyph_sources) && !outline_empty {
             if let Some(color_bitmap) = self.try_color_glyph(
                 font,
                 glyph_id.to_u32(),
                 width,
                 height,
                 font_size,
-                (min_x, max_y),
+                (min_x, min_y, max_x, max_y),
                 params,
             )? {
                 return Ok(color_bitmap);
@@ -223,8 +230,8 @@ impl ZenoRenderer {
             width,
             height,
             data: GlyphBitmapData::Mask(mask),
-            bearing_x: min_x as i32,
-            bearing_y: max_y as i32, // Distance from baseline to top edge
+            bearing_x: min_x.floor() as i32,
+            bearing_y: max_y.ceil() as i32, // Distance from baseline to top edge (use ceil for proper alignment)
         })
     }
 
@@ -241,7 +248,7 @@ impl ZenoRenderer {
         width: u32,
         height: u32,
         font_size: f32,
-        bearings: (f32, f32),
+        bbox: (f32, f32, f32, f32), // (min_x, min_y, max_x, max_y) in font coords
         params: &RenderParams,
     ) -> Result<Option<GlyphBitmap>> {
         if width == 0 || height == 0 {
@@ -266,6 +273,19 @@ impl ZenoRenderer {
         ) {
             Ok((rendered, source_used)) => {
                 let pixmap = rendered.pixmap;
+                let pixmap_data = pixmap.data();
+
+                // Check for fully-transparent color glyphs (spaces, empty glyphs)
+                // to avoid compositing black squares
+                if is_fully_transparent(pixmap_data) {
+                    log::debug!(
+                        "Zeno: color glyph {} via {:?} is fully transparent, skipping",
+                        glyph_id,
+                        source_used
+                    );
+                    return Ok(None);
+                }
+
                 log::debug!(
                     "Zeno: rendered glyph {} via {:?} into {}x{}",
                     glyph_id,
@@ -274,12 +294,62 @@ impl ZenoRenderer {
                     pixmap.height()
                 );
 
+                // Use bearing info from RenderResult if available (bitmap glyphs),
+                // otherwise compute from actual pixmap content bounds (COLR/SVG)
+                let (bearing_x, bearing_y) = if let (Some(bx), Some(by)) =
+                    (rendered.bearing_x, rendered.bearing_y)
+                {
+                    // Bitmap glyphs: use computed bearings from font metrics
+                    (bx.floor() as i32, by.ceil() as i32)
+                } else {
+                    // COLR/SVG: compute bearings from actual rendered content
+                    // This ensures vertical positioning matches the actual color glyph content,
+                    // not the outline bbox which may differ.
+                    let (min_x, min_y, max_x, max_y) = bbox;
+                    if let Some(bounds) = compute_content_bounds(&pixmap) {
+                        // Content bounds are in pixmap coords (Y-down, origin at top-left)
+                        // The pixmap is positioned at the outline bbox origin
+                        //
+                        // Font coords Y range: [min_y, max_y]
+                        // Pixmap row 0 = max_y (top of bbox in font coords)
+                        // Pixmap row (height-1) = min_y (bottom of bbox in font coords)
+                        //
+                        // So: font_y = max_y - pixmap_y * (max_y - min_y) / (height - 1)
+                        let height = pixmap.height() as f32;
+                        let height_scale = if height > 1.0 {
+                            (max_y - min_y) / (height - 1.0)
+                        } else {
+                            1.0
+                        };
+                        let content_top_font_y = max_y - (bounds.min_y as f32) * height_scale;
+
+                        // bearing_x: left edge of content
+                        let width = pixmap.width() as f32;
+                        let width_scale = if width > 1.0 {
+                            (max_x - min_x) / (width - 1.0)
+                        } else {
+                            1.0
+                        };
+                        let content_left_font_x = min_x + (bounds.min_x as f32) * width_scale;
+
+                        (content_left_font_x.floor() as i32, content_top_font_y.ceil() as i32)
+                    } else {
+                        // Fully transparent - use outline bbox as fallback
+                        (min_x.floor() as i32, max_y.ceil() as i32)
+                    }
+                };
+
+                // Flip vertically: typf-render-color outputs in font coords (Y-up),
+                // but we need bitmap coords (Y-down) for compositing
+                let mut rgba_data = pixmap_data.to_vec();
+                flip_vertical_rgba(&mut rgba_data, pixmap.width(), pixmap.height());
+
                 Ok(Some(GlyphBitmap {
                     width: pixmap.width(),
                     height: pixmap.height(),
-                    data: GlyphBitmapData::RgbaPremul(pixmap.data().to_vec()),
-                    bearing_x: bearings.0.floor() as i32,
-                    bearing_y: bearings.1.ceil() as i32,
+                    data: GlyphBitmapData::RgbaPremul(rgba_data),
+                    bearing_x,
+                    bearing_y,
                 }))
             },
             Err(typf_render_color::ColorRenderError::GlyphNotFound) => {
@@ -312,6 +382,26 @@ impl Default for ZenoRenderer {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Flip a bitmap vertically (convert between Y-up and Y-down coordinate systems)
+///
+/// Color glyphs from typf-render-color are rendered in font coordinate space (Y-up),
+/// but we need them in bitmap coordinate space (Y-down) for compositing.
+fn flip_vertical_rgba(data: &mut [u8], width: u32, height: u32) {
+    let row_bytes = (width * 4) as usize;
+    for y in 0..(height / 2) {
+        let top_start = y as usize * row_bytes;
+        let bottom_start = (height - 1 - y) as usize * row_bytes;
+        for x in 0..row_bytes {
+            data.swap(top_start + x, bottom_start + x);
+        }
+    }
+}
+
+/// Check if a premultiplied RGBA buffer is fully transparent
+fn is_fully_transparent(data: &[u8]) -> bool {
+    data.chunks_exact(4).all(|px| px[3] == 0)
 }
 
 /// Whether preference allows any color/bitmap/SVG sources.
@@ -523,13 +613,14 @@ impl Renderer for ZenoRenderer {
                             let dst_a = canvas[canvas_idx + 3] as u32;
                             let inv_a = 255 - src_a;
 
+                            // Premultiplied over: out = src + dst * (1 - src_a/255)
                             canvas[canvas_idx] =
-                                ((src_r + canvas[canvas_idx] as u32 * inv_a) / 255) as u8;
+                                (src_r + canvas[canvas_idx] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 1] =
-                                ((src_g + canvas[canvas_idx + 1] as u32 * inv_a) / 255) as u8;
+                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 2] =
-                                ((src_b + canvas[canvas_idx + 2] as u32 * inv_a) / 255) as u8;
-                            canvas[canvas_idx + 3] = ((src_a + dst_a * inv_a / 255).min(255)) as u8;
+                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255) as u8;
+                            canvas[canvas_idx + 3] = (src_a + dst_a * inv_a / 255).min(255) as u8;
                         }
                     }
                 },
@@ -557,13 +648,14 @@ impl Renderer for ZenoRenderer {
                             let dst_a = canvas[canvas_idx + 3] as u32;
                             let inv_a = 255 - src_a;
 
+                            // Premultiplied over: out = src + dst * (1 - src_a/255)
                             canvas[canvas_idx] =
-                                ((src_r + canvas[canvas_idx] as u32 * inv_a) / 255) as u8;
+                                (src_r + canvas[canvas_idx] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 1] =
-                                ((src_g + canvas[canvas_idx + 1] as u32 * inv_a) / 255) as u8;
+                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 2] =
-                                ((src_b + canvas[canvas_idx + 2] as u32 * inv_a) / 255) as u8;
-                            canvas[canvas_idx + 3] = ((src_a + dst_a * inv_a / 255).min(255)) as u8;
+                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255) as u8;
+                            canvas[canvas_idx + 3] = (src_a + dst_a * inv_a / 255).min(255) as u8;
                         }
                     }
                 },

@@ -6,7 +6,7 @@ with multiple sample texts, font sizes, and output formats.
 
 Backends tested:
   Shapers: none, harfbuzz, coretext, icu-hb
-  Renderers: json, opixa, coregraphics, skia, zeno
+  Renderers: json, opixa, coregraphics, skia, zeno, vello, vello-cpu
   Linra (OS): coretext-linra (macOS), directwrite-linra (Windows)
   Color: COLR v0/v1, SVG, bitmap (sbix, CBDT)
 
@@ -173,16 +173,18 @@ class TypfTester:
             "icu-hb",  # ICU normalization + HarfBuzz
         ]
 
-        # Rendering backends (5):
+        # Rendering backends (7):
         renderers = [
             "json",  # JSON output (for analysis/debugging)
             "opixa",  # Pure Rust bitmap rasterizer
             "coregraphics",  # macOS CoreGraphics (native)
             "skia",  # tiny-skia rendering
             "zeno",  # Zeno rendering
+            "vello",  # Vello GPU renderer
+            "vello-cpu",  # Vello CPU renderer
         ]
 
-        # Test all 4 × 5 = 20 combinations!
+        # Test all 4 × 7 = 28 combinations!
         for shaper in shapers:
             for renderer in renderers:
                 desc = f"{shaper.upper()} + {renderer.upper()}"

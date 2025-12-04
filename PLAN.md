@@ -1,289 +1,422 @@
-# Typf Advanced Rendering Backends Plan
+# Typf Rendering Quality & Backend Integration Plan
 
-**Version:** 2.5.0
-**Status:** Implementation Phase
-
-## Executive Summary
-
-This plan introduces two breakthrough rendering improvements for typf:
-
-1. **Vello Integration** - GPU compute-centric 2D rendering via the Vello engine (already in `external/vello`)
-2. **SDF/MSDF Backend** - Signed Distance Field rendering for size-independent text
-
-Both approaches complement the existing Opixa rasterizer rather than replacing it.
+**Version:** 2.5.1
+**Status:** Active Development
+**Reference Renderer:** CoreText + CoreGraphics (linra-mac)
 
 ---
 
-## Part 1: Vello Integration (Priority: High)
+## Executive Summary
 
-Vello is a modern GPU compute-centric 2D renderer written in Rust. It's already available in `external/vello` and provides:
+This plan addresses rendering quality issues across typf backends and completes Vello integration:
 
-- **GPU rendering** via wgpu (cross-platform: Vulkan, Metal, DX12, WebGPU)
-- **CPU fallback** via `vello_cpu` (pure Rust, no GPU required)
-- **Glyph caching** with outline caches and hinting support
-- **Full color font support** (outline, bitmap, COLR)
-- **Uses skrifa** (same font library as typf)
+1. **Bitmap Color Font Fixes** - Fix CBDT/sbix scaling and orientation issues
+2. **COLR Space Glyph Fixes** - Fix yellow square rendering for space glyphs
+3. **SVG Scaling Fixes** - Fix OpenType-SVG tiny rendering on Skia/Zeno
+4. **Vertical Placement Consistency** - Fix shifted "T", "y" characters
+5. **Vello Backend Finalization** - Complete vello and vello-cpu integration into typf-tester
 
-### Why Vello?
+---
 
-| Feature | Opixa | Vello GPU | Vello CPU |
-|---------|-------|-----------|-----------|
-| Platform | All | GPU required | All |
-| Performance | Good | Excellent (10-100x) | Very Good |
-| Color fonts | Via typf-render-color | Native | Native |
-| Complex effects | Limited | Full (gradients, blend modes) | Full |
-| Memory efficiency | Per-size bitmaps | Glyph caching | Glyph caching |
+## Part 0: Critical Rendering Fixes (Priority: CRITICAL)
 
-### Architecture
+### Visual Inspection Results (Dec 4, 2025)
 
-```
-backends/
-├── typf-render-vello/          # GPU renderer (wgpu)
-│   ├── src/
-│   │   ├── lib.rs              # VelloRenderer implementation
-│   │   ├── scene.rs            # Scene construction from ShapingResult
-│   │   └── context.rs          # wgpu context management
-│   └── Cargo.toml
-│
-└── typf-render-vello-cpu/      # CPU renderer (no GPU)
-    ├── src/
-    │   ├── lib.rs              # VelloCpuRenderer implementation
-    │   └── context.rs          # RenderContext wrapper
-    └── Cargo.toml
-```
+| Format | CoreGraphics | Opixa | Skia | Zeno | Vello-CPU | Vello-GPU |
+|--------|--------------|-------|------|------|-----------|-----------|
+| **CBDT** | N/A | N/A | ⚠️ Vertical shift | ⚠️ Vertical shift | ✅ Best | ❌ Nothing |
+| **COLR** | N/A (outline) | N/A (outline) | ⚠️ Vertical shift | ⚠️ Same as Skia | ⚠️ "y" cut off | ❌ Nothing |
+| **sbix** | ✅ Perfect | N/A (outline) | ❌ Nothing | ❌ Nothing | ⚠️ "y" shifted | ❌ Nothing |
+| **SVG** | ✅ Good | ✅ Mono fallback | ❌ Tiny artifacts | ❌ Same as Skia | ✅ Mono fallback | ✅ Mono fallback |
 
-### Implementation Phases
+**Legend:** ✅ Works | ⚠️ Partial/Issues | ❌ Broken | N/A Expected
 
-#### Phase V.1: Vello CPU Backend (Simpler, No GPU) ✓ COMPLETE
+---
 
-**Goal:** Integrate `vello_cpu` as a high-quality CPU renderer.
+### Problem 0.1: SVG Glyphs Render as Tiny Artifacts (CRITICAL)
 
-**Implementation:** `backends/typf-render-vello-cpu/src/lib.rs`
+**Observed Issue:**
+- `render-nabla-svg-coretext-skia-latn.png` shows tiny colorful dots instead of glyphs
+- `render-nabla-svg-coretext-zeno-latn.png` has identical problem
+- CoreGraphics renders correctly as reference
 
+**Visual:** Tiny scattered colored dots across the canvas instead of full glyphs.
+
+**Root Cause:**
+OpenType-SVG documents use font units (e.g., 2048 UPM), but the SVG scaling in `svg.rs` calculates scale from the SVG tree size rather than font metrics. When the SVG viewBox is 2048x2048 font units and we try to fit it into a small glyph cell, the scale becomes extremely small (e.g., 0.06), making glyphs nearly invisible.
+
+**Correct Scaling:**
 ```rust
-pub struct VelloCpuRenderer {
-    config: VelloCpuConfig,
-}
-
-impl Renderer for VelloCpuRenderer {
-    fn name(&self) -> &'static str { "vello-cpu" }
-    // Uses RenderContext.glyph_run() for text rendering
-    // Supports font hinting, foreground/background colors
-}
+// Get font's units per em
+let upem = font.head()?.units_per_em() as f32;
+// Target is: font_size pixels = 1em = upem font units
+// SVG document is in font units, so scale = font_size / upem
+let scale = font_size / upem;
 ```
 
-**Completed Tasks:**
-- [x] Create `typf-render-vello-cpu` crate
-- [x] Implement `Renderer` trait using `vello_cpu::RenderContext`
-- [x] Convert `ShapingResult` glyphs to Vello `Glyph` format
-- [x] Handle font data conversion (typf FontRef → peniko FontData)
-- [x] Add glyph caching integration (via RenderContext)
-- [x] Add tests with real fonts (13 tests passing)
-- [x] Add CLI integration (`--renderer vello-cpu`)
-- [x] Add Python bindings (`Typf(renderer="vello-cpu")`)
+**Files to modify:**
+- `backends/typf-render-color/src/svg.rs`
 
-#### Phase V.2: Vello GPU Backend ✓ COMPLETE
+**Tasks:**
+- [ ] Fix SVG scaling to use ppem/upem ratio instead of tree size ratio
+- [ ] Ensure SVG viewBox is properly handled (may be in font units)
+- [ ] Test with Nabla-Regular-SVG.ttf - glyphs should be full-size
 
-**Goal:** Integrate full Vello GPU renderer for maximum performance.
+---
 
+### Problem 0.2: sbix Bitmap Fonts Not Rendering in Skia/Zeno
+
+**Observed Issue:**
+- `render-nabla-sbix-coretext-skia-latn.png` renders nothing (blank)
+- `render-nabla-sbix-coretext-zeno-latn.png` renders nothing (blank)
+- CoreGraphics renders perfectly as reference
+- vello-cpu renders correctly (proves sbix data is valid)
+
+**Root Cause:**
+Skia and Zeno are not attempting sbix rendering at all, or the sbix path is failing silently. Since CBDT works (same bitmap concept), the issue is likely in sbix-specific detection or extraction.
+
+**Files to modify:**
+- `backends/typf-render-skia/src/lib.rs`
+- `backends/typf-render-zeno/src/lib.rs`
+- `backends/typf-render-color/src/bitmap.rs`
+
+**Tasks:**
+- [ ] Add debug logging to trace sbix detection in Skia/Zeno
+- [ ] Verify `try_color_glyph()` checks for sbix tables
+- [ ] Ensure sbix bitmap extraction path is being called
+- [ ] Test with Nabla-Regular-sbix.ttf
+
+---
+
+### Problem 0.3: CBDT/COLR Vertical Shifting in Skia/Zeno
+
+**Observed Issue:**
+- In CBDT renders, individual glyphs shift up/down relative to each other
+- In COLR renders, same vertical inconsistency between adjacent glyphs
+- Skia and Zeno exhibit identical behavior (shared root cause)
+- vello-cpu renders with consistent baseline
+
+**Root Cause:**
+Color glyph bearings are calculated from the rendered bitmap bounds, but the positioning calculation doesn't account for the difference between outline glyph bounds and color glyph bounds. Each glyph's bearing_y is computed independently, leading to inconsistent vertical placement.
+
+**Solution:**
+Use font-level baseline metrics instead of per-glyph computed bearings for vertical positioning. The color glyph should be positioned relative to a consistent baseline, not its individual bounds.
+
+**Files to modify:**
+- `backends/typf-render-skia/src/lib.rs`
+- `backends/typf-render-zeno/src/lib.rs`
+
+**Tasks:**
+- [ ] Calculate baseline from font metrics (ascender), not glyph bounds
+- [ ] Position color glyphs relative to baseline, not their individual bearing_y
+- [ ] Add visual comparison test: all glyphs should sit on same baseline
+
+---
+
+### Problem 0.4: Vello-CPU Glyph Cutoff ("y" bottom/shift)
+
+**Observed Issue:**
+- COLR: Bottom of "y" glyph is cut off
+- sbix: Final "y" glyph is shifted up relative to others
+- Other glyphs render correctly
+
+**Root Cause:**
+Vello-cpu's bitmap height calculation or compositing position has an off-by-one or rounding error specifically affecting descenders (glyphs that extend below baseline).
+
+**Files to modify:**
+- `backends/typf-render-vello-cpu/src/lib.rs`
+
+**Tasks:**
+- [ ] Review descender handling in vello-cpu bitmap allocation
+- [ ] Add padding for descender glyphs (g, j, p, q, y)
+- [ ] Verify bearing_y calculation includes descender extent
+
+---
+
+### Problem 0.5: Vello-GPU Renders Nothing for Color Fonts
+
+**Observed Issue:**
+- All CBDT, COLR, sbix, SVG renders produce ~600 byte blank images
+- Monochrome fonts render correctly
+
+**Root Cause (KNOWN):**
+GPU Vello (`vello_hybrid`) has stub implementations for color glyphs:
 ```rust
-// backends/typf-render-vello/src/lib.rs
-pub struct VelloRenderer {
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    renderer: vello::Renderer,
-    config: VelloConfig,
-}
+// external/vello/sparse_strips/vello_hybrid/src/scene.rs
+GlyphType::Bitmap(_) => {}  // Empty stub!
+GlyphType::Colr(_) => {}    // Empty stub!
+```
 
-impl Renderer for VelloRenderer {
-    fn name(&self) -> &'static str { "vello" }
+This is an **upstream vello_hybrid limitation**, not a typf bug.
 
-    fn render(
-        &self,
-        shaped: &ShapingResult,
-        font: Arc<dyn FontRef>,
-        params: &RenderParams,
-    ) -> Result<RenderOutput> {
-        // 1. Create vello::Scene
-        // 2. Build glyph run and fill/stroke
-        // 3. Render to texture via render_to_texture
-        // 4. Read back to CPU bitmap (for export)
-        // 5. Return as RenderOutput::Bitmap
+**Status:** DEFERRED - Requires upstream vello_hybrid work
+
+**Workaround:** Use vello-cpu for color font rendering
+
+---
+
+## Part 1: Vertical Placement Consistency (Priority: HIGH)
+
+### Problem Description
+
+Different renderers place glyphs at inconsistent vertical positions:
+- **CoreGraphics** (reference): Correct baseline positioning
+- **Opixa/Skia/Zeno**: Glyphs shifted vertically relative to CoreGraphics
+
+### Root Cause Analysis
+
+Each renderer calculates `baseline_y` differently:
+- CoreGraphics uses native macOS text layout metrics
+- Other renderers compute from `max_y` (highest ascent) but may have off-by-one errors
+
+### Implementation
+
+#### Phase 1.1: Analyze Baseline Calculations
+
+**Files to modify:**
+- `backends/typf-render-opixa/src/lib.rs`
+- `backends/typf-render-skia/src/lib.rs`
+- `backends/typf-render-zeno/src/lib.rs`
+
+**Tasks:**
+- [ ] Add debug logging for baseline_y calculation in each renderer
+- [ ] Compare glyph bounds (min_y, max_y) across renderers for same input
+- [ ] Identify the delta between CoreGraphics and other renderers
+
+#### Phase 1.2: Standardize Baseline Calculation
+
+**Approach:** Use consistent formula across all renderers:
+```rust
+// Standard baseline calculation matching CoreGraphics behavior:
+// 1. Get font metrics (ascender, descender) from skrifa
+// 2. Scale to font_size
+// 3. Position baseline at: padding + scaled_ascender
+let baseline_y = padding + (font_metrics.ascender * scale);
+```
+
+**Tasks:**
+- [ ] Extract font metrics (ascender, descender) via skrifa in each renderer
+- [ ] Replace per-glyph bounds-based baseline with font-metrics-based baseline
+- [ ] Add tests comparing output positions across renderers
+
+---
+
+## Part 2: Color Font Rendering Fixes (Priority: HIGH)
+
+### Problem Description
+
+Nabla COLR font via Skia and Zeno shows:
+1. **Vertically flipped glyphs** - Glyphs appear upside down
+2. **Black squares for spaces** - Empty glyphs render as black rectangles
+
+### Root Cause Analysis
+
+The `typf-render-color` module renders COLR glyphs in font coordinate space (Y-up). When Skia/Zeno composite these into their canvas (Y-down), the Y-flip is not applied.
+
+**Coordinate Systems:**
+- Font coordinates: Y increases upward (origin at baseline)
+- Bitmap coordinates: Y increases downward (origin at top-left)
+- `typf-render-color` outputs in font coordinates
+- Skia/Zeno expect Y-down for compositing
+
+### Implementation
+
+#### Phase 2.1: Fix COLR Y-Flip
+
+**Files to modify:**
+- `backends/typf-render-skia/src/lib.rs` (`try_color_glyph` and compositing)
+- `backends/typf-render-zeno/src/lib.rs` (`try_color_glyph` and compositing)
+
+**Solution:** Apply vertical flip to color glyph bitmaps before compositing:
+```rust
+// After receiving color bitmap from typf-render-color:
+fn flip_vertical(data: &mut [u8], width: u32, height: u32) {
+    for y in 0..(height / 2) {
+        let top_row = y as usize * (width * 4) as usize;
+        let bottom_row = (height - 1 - y) as usize * (width * 4) as usize;
+        for x in 0..(width * 4) as usize {
+            data.swap(top_row + x, bottom_row + x);
+        }
     }
 }
 ```
 
 **Tasks:**
-- [x] Create `typf-render-vello` crate
-- [x] Add wgpu context initialization (via GpuContext)
-- [x] Implement scene construction from ShapingResult
-- [x] Add GPU→CPU readback for bitmap export (256-byte row alignment)
-- [x] Add CLI and Python bindings integration
-- [ ] Add async rendering option (future)
-- [ ] Add WASM/WebGPU support (future)
+- [x] Add vertical flip to Skia's `RgbaPremul` compositing path
+- [x] Add vertical flip to Zeno's `RgbaPremul` compositing path
+- [x] Add tests with Nabla-Regular-COLR.ttf
 
----
+#### Phase 2.2: Fix Black Square Spaces
 
-## Part 2: SDF/MSDF Backend (Priority: Medium)
+**Root cause:** Empty glyphs (spaces) have zero-dimension bitmaps but the fallback code creates 1x1 black pixels.
 
-SDF rendering provides resolution-independent text with near-constant rendering cost across all sizes.
-
-### Why SDF?
-
-| Aspect | Traditional Scanline | SDF/MSDF |
-|--------|---------------------|----------|
-| Scaling cost | O(size²) | O(1) |
-| GPU integration | Complex | Trivial (texture sampling) |
-| Effects (outline, glow) | Expensive | Single shader uniform |
-| Memory per glyph | O(resolution²) | O(fixed SDF size²) |
-
-### Architecture
-
-```
-crates/
-└── typf-sdf-core/              # SDF math, types, atlas management
-    ├── src/
-    │   ├── lib.rs              # Module exports
-    │   ├── types.rs            # SdfGlyph, SdfAtlas, SizeBand
-    │   ├── generator.rs        # SDF generation from outlines
-    │   ├── atlas.rs            # Skyline packing
-    │   └── cache.rs            # SdfAtlasManager
-    └── Cargo.toml
-
-backends/
-└── typf-render-sdf/            # CPU SDF renderer
-    ├── src/
-    │   ├── lib.rs              # SdfRenderer implementation
-    │   ├── sampler.rs          # Bilinear sampling, smoothstep
-    │   └── compositor.rs       # Glyph composition
-    └── Cargo.toml
-```
-
-### Core Types
-
+**Solution:** Handle empty color glyphs gracefully:
 ```rust
-/// Single-channel signed distance field for a glyph
-pub struct SdfGlyph {
-    pub glyph_id: u32,
-    pub width: u16,
-    pub height: u16,
-    pub bearing_x: f32,
-    pub bearing_y: f32,
-    pub advance: f32,
-    pub data: Vec<f32>,         // Signed distances [-range, +range]
-    pub range: f32,             // Max distance (in SDF pixels)
-    pub scale: f32,             // SDF pixels per font unit
-}
-
-/// Size bands for atlas organization
-#[derive(Hash, Eq, PartialEq, Clone, Copy)]
-pub enum SizeBand {
-    Small,    // 8-24px output, 32x32 SDF
-    Medium,   // 24-64px output, 48x48 SDF
-    Large,    // 64-200px output, 64x64 SDF
-}
-
-/// Atlas containing multiple SDF glyphs
-pub struct SdfAtlas {
-    pub texture_width: u32,
-    pub texture_height: u32,
-    pub glyphs: HashMap<SdfGlyphKey, SdfGlyphEntry>,
-    pub data: Vec<f32>,
+// In try_color_glyph:
+if pixmap.data().iter().all(|&b| b == 0) {
+    // Empty color glyph - skip, don't composite black
+    return Ok(None);
 }
 ```
 
-### Implementation Phases
-
-#### Phase S.1: CPU SDF Prototype
-
 **Tasks:**
-- [ ] Create `typf-sdf-core` crate with types
-- [ ] Implement SDF generation from glyph outlines
-- [ ] Implement skyline atlas packing
-- [ ] Create `typf-render-sdf` with CPU renderer
-- [ ] Add quality validation vs Opixa
+- [x] Check for fully-transparent color glyphs and return None
+- [x] Ensure space glyphs fall through to outline path (which correctly returns empty bitmap)
 
-#### Phase S.2: GPU SDF (Future)
+#### Phase 2.3: OpenType-SVG Rendering ✓ COMPLETED
 
-**Tasks:**
-- [ ] Create `typf-render-sdf-gpu` with wgpu
-- [ ] Implement WGSL fragment shader for SDF sampling
-- [ ] Add MSDF support for sharp corners
+**Files modified:**
+- `backends/typf-render-color/src/svg.rs`
+- `backends/typf-render-color/src/lib.rs`
+- `backends/typf-render-skia/src/lib.rs`
+- `backends/typf-render-zeno/src/lib.rs`
+
+**Completed Tasks:**
+- [x] Implemented CSS variable substitution (`substitute_css_variables()`) for OpenType-SVG
+  - Replaces `var(--colorN, fallback)` with CPAL palette colors
+  - Supports color indices 0-15
+- [x] Added `render_svg_glyph_with_palette()` function to pass palette colors to SVG renderer
+- [x] Updated render pipeline to pass CPAL colors to SVG glyph rendering
+- [x] Fixed Skia/Zeno compositing formula bug (incorrect division by 255 was zeroing colors)
+- [x] Added unit tests for CSS variable substitution
+- [x] Verified with Nabla-Regular-SVG.ttf - colors now display correctly
 
 ---
 
-## Workspace Integration
+## Part 3: Zeno Glyph Precision Fixes (Priority: MEDIUM)
 
-### Feature Flags
+### Problem Description
 
-```toml
-# Cargo.toml (workspace)
-[workspace.metadata.features]
-render-vello = []           # GPU renderer
-render-vello-cpu = []       # CPU renderer (no GPU)
-render-sdf = []             # SDF CPU renderer
-render-sdf-gpu = []         # SDF GPU renderer (future)
+Zeno renderer cuts off the bottom 1-2 pixels of glyphs and shifts them down slightly.
 
-[workspace.dependencies]
-typf-render-vello = { path = "backends/typf-render-vello", version = "2.0.0" }
-typf-render-vello-cpu = { path = "backends/typf-render-vello-cpu", version = "2.0.0" }
-typf-sdf-core = { path = "crates/typf-sdf-core", version = "2.0.0" }
-typf-render-sdf = { path = "backends/typf-render-sdf", version = "2.0.0" }
+Comparison:
+- TinySkia: Glyphs fully visible, correct position
+- Zeno: Bottom of S, a, o, e cut off, shifted down
 
-# External Vello
-vello = { path = "external/vello/vello" }
-vello_cpu = { path = "external/vello/sparse_strips/vello_cpu" }
-vello_common = { path = "external/vello/sparse_strips/vello_common" }
+### Root Cause Analysis
+
+Zeno's bounding box calculation or bitmap placement has an off-by-one error:
+1. The `bearing_y` calculation may be ceiling/flooring incorrectly
+2. The Y position calculation in compositing may have rounding errors
+3. The vertical flip loop may miss the last row
+
+### Implementation
+
+#### Phase 3.1: Audit Zeno Positioning
+
+**File:** `backends/typf-render-zeno/src/lib.rs`
+
+**Investigation:**
+```rust
+// Current code at line 227:
+bearing_y: max_y as i32,  // Should this be ceil()?
+
+// Compositing at line 496:
+let y = (baseline_y + rg.glyph_y) as i32 - bitmap.bearing_y;
 ```
 
-### CLI Extension
+**Tasks:**
+- [x] Add +1 pixel padding to height calculation: `height = ((max_y - min_y).ceil() as u32).max(1) + 1`
+- [x] Review bearing_y calculation - use `max_y.ceil() as i32`
+- [ ] Compare canvas dimensions with Skia for same input
+- [ ] Add visual regression test comparing Zeno vs Skia output
 
-```bash
-# New renderer options
-typf render --renderer vello "Hello World" --output hello.png
-typf render --renderer vello-cpu "Hello World" --output hello.png
-typf render --renderer sdf "Hello World" --output hello.png
+#### Phase 3.2: Fix Vertical Flip
 
-# List available renderers
-typf info --renderers
+**Current code (lines 209-217):**
+```rust
+for y in 0..(height / 2) {
+    // This misses middle row for odd heights
+}
 ```
 
-### Python Bindings
+**Fix:** Ensure complete flip including middle row handling.
 
-```python
-from typf import Typf
+---
 
-# GPU rendering
-t = Typf(renderer="vello")
-result = t.render_text("Hello", font_path, size=48)
+## Part 4: Vello Backend Finalization (Priority: HIGH)
 
-# CPU rendering (Vello)
-t = Typf(renderer="vello-cpu")
-result = t.render_text("Hello", font_path, size=48)
+### Current Status
 
-# SDF rendering
-t = Typf(renderer="sdf")
-result = t.render_text("Hello", font_path, size=48)
-```
+- **typf-render-vello-cpu**: ✓ Implemented, 16 tests passing
+- **typf-render-vello**: ✓ Implemented, 15 tests passing
+- **typf-tester integration**: ✓ COMPLETE
+
+### Implementation
+
+#### Phase 4.1: Add Vello to typf-tester ✓ COMPLETE
+
+**File:** `typf-tester/typfme.py`
+
+**Completed Tasks:**
+- [x] Add "vello" and "vello-cpu" to renderer list in `_detect_available_backends()`
+- [x] Add vello features to Python bindings `pyproject.toml`
+- [x] Test Vello renderers with all font types (Latin, Arabic, Variable, Color)
+- [x] Vello renderings now appear in typf-tester output
+
+**Note:** GPU `vello` renders color fonts as ~600 byte blank images while `vello-cpu` renders them correctly (33KB). This suggests GPU path needs color font support work.
+
+#### Phase 4.2: Verify Vello Color Font Support
+
+**Files:**
+- `backends/typf-render-vello-cpu/src/lib.rs`
+- `backends/typf-render-vello/src/lib.rs`
+
+**Tasks:**
+- [ ] Verify COLR rendering works via vello's native color font support
+- [ ] Compare output quality with CoreGraphics reference
+- [ ] Add color font tests to Vello test suites
+
+#### Phase 4.3: Performance Benchmarks ✓ COMPLETE
+
+**Benchmark Results (Dec 4, 2025, 50 iterations):**
+
+| Renderer | Avg Time (ms) | Ops/sec | Notes |
+|----------|--------------|---------|-------|
+| JSON | 0.05 | 20,800 | Fastest (no rasterization) |
+| CoreGraphics | 0.38 | 3,700 | macOS native, excellent |
+| Zeno | 0.76 | 1,880 | Pure Rust, good |
+| Opixa | 1.02 | 2,540 | Pure Rust, SIMD |
+| Skia | 1.05 | 1,600 | tiny-skia |
+| **Vello-CPU** | **2.20** | **995** | High-quality 256-level AA |
+| **Vello-GPU** | **11.5** | **87** | GPU overhead for small text |
+
+**Key Findings:**
+- Vello-CPU: ~2ms/render, good quality, ~2x slower than Opixa but 256-level AA
+- Vello-GPU: ~12ms/render, significant overhead - best for large batch/GPU workloads
+- GPU vello has high per-render overhead; not suitable for single small text renders
+- For typical use, prefer vello-cpu over vello (GPU) for small text operations
 
 ---
 
 ## Testing Strategy
 
+### Visual Regression Tests
+
+Create reference images from CoreGraphics and compare:
+```bash
+# Generate reference
+typf render --shaper coretext --renderer coregraphics "Test" -o ref.png
+
+# Generate test output
+typf render --shaper coretext --renderer zeno "Test" -o test.png
+
+# Compare (using image diff tool)
+compare ref.png test.png diff.png
+```
+
 ### Unit Tests
-- Glyph conversion: typf → Vello format
-- SDF distance calculation accuracy
-- Atlas packing correctness
+
+- Baseline position consistency across renderers
+- Color glyph Y-flip correctness
+- Empty glyph handling (no black squares)
+- Glyph bounds accuracy
 
 ### Integration Tests
-- Full pipeline with real fonts
-- Quality comparison vs Opixa/CoreGraphics
-- Memory limits and cache behavior
 
-### Benchmarks
-- Scaling behavior across sizes
-- Comparison: Opixa vs Vello CPU vs Vello GPU vs SDF
-- Memory usage patterns
+- Full pipeline with all font types
+- All shaper × renderer combinations
+- Color font rendering (COLR, SVG, sbix, CBDT)
 
 ---
 
@@ -291,35 +424,28 @@ result = t.render_text("Hello", font_path, size=48)
 
 | Metric | Target |
 |--------|--------|
-| Vello CPU quality | Comparable to Opixa (PSNR > 35 dB) |
-| Vello GPU performance | > 10x faster than Opixa at 128px |
-| SDF scaling | < 2x slowdown from 16px to 128px |
-| Integration | Full CLI/Python/Rust API support |
-
----
-
-## Non-Goals
-
-- **Replacing Opixa**: These backends are complementary
-- **Complex text effects**: Focus on rendering, not animation
-- **Async-first API**: Sync API sufficient for current use cases
-
----
-
-## References
-
-1. [Vello - GPU 2D renderer](https://github.com/linebender/vello)
-2. [Vello CPU thesis](https://ethz.ch/content/dam/ethz/special-interest/infk/inst-pls/plf-dam/documents/StudentProjects/MasterTheses/2025-Laurenz-Thesis.pdf)
-3. [Valve's SDF Paper (2007)](https://steamcdn-a.akamaihd.net/apps/valve/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf)
-4. [msdfgen](https://github.com/Chlumsky/msdfgen)
+| Vertical placement | ±1 pixel vs CoreGraphics baseline |
+| COLR rendering | Correct orientation, no black squares |
+| Zeno precision | No bottom cutoff, aligned with Skia |
+| Vello integration | Full typf-tester support |
 
 ---
 
 ## Implementation Order
 
-1. **Phase V.1**: `typf-render-vello-cpu` (highest value, no GPU dependency)
-2. **Phase V.2**: `typf-render-vello` (GPU acceleration)
-3. **Phase S.1**: `typf-sdf-core` + `typf-render-sdf` (alternative approach)
-4. **Phase S.2**: GPU SDF (future, if needed)
+1. **Phase 2.1**: Fix COLR Y-flip (most visible issue)
+2. **Phase 2.2**: Fix black square spaces
+3. **Phase 3.1-3.2**: Fix Zeno precision
+4. **Phase 1.1-1.2**: Standardize vertical placement
+5. **Phase 4.1-4.3**: Complete Vello integration
 
-All phases follow existing typf patterns: `thiserror` for errors, comprehensive tests, clippy clean.
+---
+
+## References
+
+- CoreGraphics rendering: `backends/typf-render-cg/src/lib.rs`
+- Skia rendering: `backends/typf-render-skia/src/lib.rs`
+- Zeno rendering: `backends/typf-render-zeno/src/lib.rs`
+- Color rendering: `backends/typf-render-color/src/lib.rs`
+- Vello CPU: `backends/typf-render-vello-cpu/src/lib.rs`
+- Vello GPU: `backends/typf-render-vello/src/lib.rs`

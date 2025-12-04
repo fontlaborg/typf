@@ -42,4 +42,4 @@ typfpy = "typfpy.cli:main"
 [tool.maturin]
 module-name = "typfpy.typf"
 python-source = "python"
-features = ["pyo3/extension-module", "shaping-hb", "render-opixa", "export-png", "export-svg", "linra-mac"]
+features = ["pyo3/extension-module", "shaping-hb", "render-opixa", "export-png", "export-svg", "linra-mac", "render-vello-cpu", "render-vello"]

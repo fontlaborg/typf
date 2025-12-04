@@ -22,7 +22,7 @@ use typf_core::{
     types::{BitmapData, BitmapFormat, RenderOutput, ShapingResult, VectorFormat},
     GlyphSource, GlyphSourcePreference, RenderMode, RenderParams,
 };
-use typf_render_color::render_glyph_with_preference;
+use typf_render_color::{compute_content_bounds, render_glyph_with_preference};
 use typf_render_svg::SvgRenderer;
 
 /// tiny-skia powered renderer for pristine glyph output
@@ -155,7 +155,10 @@ impl SkiaRenderer {
         );
 
         // Prefer color/SVG/bitmap glyph sources when requested
-        if color_allowed {
+        // BUT: If outline is empty, skip COLR sources. COLR glyphs are based on outlines,
+        // so an empty outline means no actual content - just a bounding box fill.
+        // This prevents space characters from rendering as colored squares.
+        if color_allowed && !outline_empty {
             if let Some(color_bitmap) = self.try_color_glyph(
                 font,
                 glyph_id.to_u32(),
@@ -279,6 +282,19 @@ impl SkiaRenderer {
         ) {
             Ok((rendered, source_used)) => {
                 let pixmap = rendered.pixmap;
+                let pixmap_data = pixmap.data();
+
+                // Check for fully-transparent color glyphs (spaces, empty glyphs)
+                // to avoid compositing black squares
+                if is_fully_transparent(pixmap_data) {
+                    log::debug!(
+                        "Skia: color glyph {} via {:?} is fully transparent, skipping",
+                        glyph_id,
+                        source_used
+                    );
+                    return Ok(None);
+                }
+
                 log::debug!(
                     "Skia: rendered glyph {} via {:?} into {}x{}",
                     glyph_id,
@@ -287,12 +303,69 @@ impl SkiaRenderer {
                     pixmap.height()
                 );
 
+                // Use bearing info from RenderResult if available (bitmap glyphs),
+                // otherwise compute from actual pixmap content bounds (COLR/SVG)
+                let (bearing_x, bearing_y) = if let (Some(bx), Some(by)) =
+                    (rendered.bearing_x, rendered.bearing_y)
+                {
+                    // Bitmap glyphs: use computed bearings from font metrics
+                    (bx.floor() as i32, by.ceil() as i32)
+                } else {
+                    // COLR/SVG: compute bearings from actual rendered content
+                    // This ensures vertical positioning matches the actual color glyph content,
+                    // not the outline bbox which may differ.
+                    if let Some(bounds) = compute_content_bounds(&pixmap) {
+                        // Content bounds are in pixmap coords (Y-down, origin at top-left)
+                        // The pixmap is positioned at (bbox.x0, bbox.y0) in font coords
+                        // bearing_x = left edge of content in font coords
+                        // bearing_y = top edge of content in font coords (Y-up)
+                        //
+                        // In the pixmap (before flip):
+                        // - min_y is the topmost row with content
+                        // - This corresponds to the highest Y value in font coords
+                        //
+                        // Font coords Y range: [bbox.y0, bbox.y1]
+                        // Pixmap row 0 = bbox.y1 (top of bbox in font coords)
+                        // Pixmap row (height-1) = bbox.y0 (bottom of bbox in font coords)
+                        //
+                        // So: font_y = bbox.y1 - pixmap_y * (bbox.y1 - bbox.y0) / (height - 1)
+                        // For the topmost content (min_y in pixmap):
+                        // font_y_top = bbox.y1 - min_y * height_scale
+                        let height = pixmap.height() as f64;
+                        let height_scale = if height > 1.0 {
+                            (bbox.y1 - bbox.y0) / (height - 1.0)
+                        } else {
+                            1.0
+                        };
+                        let content_top_font_y = bbox.y1 - (bounds.min_y as f64) * height_scale;
+
+                        // bearing_x: left edge of content
+                        let width = pixmap.width() as f64;
+                        let width_scale = if width > 1.0 {
+                            (bbox.x1 - bbox.x0) / (width - 1.0)
+                        } else {
+                            1.0
+                        };
+                        let content_left_font_x = bbox.x0 + (bounds.min_x as f64) * width_scale;
+
+                        (content_left_font_x.floor() as i32, content_top_font_y.ceil() as i32)
+                    } else {
+                        // Fully transparent - use outline bbox as fallback
+                        (bbox.x0.floor() as i32, bbox.y1.ceil() as i32)
+                    }
+                };
+
+                // Flip vertically: typf-render-color outputs in font coords (Y-up),
+                // but we need bitmap coords (Y-down) for compositing
+                let mut rgba_data = pixmap_data.to_vec();
+                flip_vertical_rgba(&mut rgba_data, pixmap.width(), pixmap.height());
+
                 Ok(Some(GlyphBitmap {
                     width: pixmap.width(),
                     height: pixmap.height(),
-                    data: GlyphBitmapData::RgbaPremul(pixmap.data().to_vec()),
-                    bearing_x: bbox.x0.floor() as i32,
-                    bearing_y: bbox.y1.ceil() as i32,
+                    data: GlyphBitmapData::RgbaPremul(rgba_data),
+                    bearing_x,
+                    bearing_y,
                 }))
             },
             Err(typf_render_color::ColorRenderError::GlyphNotFound) => {
@@ -325,6 +398,26 @@ impl Default for SkiaRenderer {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Flip a bitmap vertically (convert between Y-up and Y-down coordinate systems)
+///
+/// Color glyphs from typf-render-color are rendered in font coordinate space (Y-up),
+/// but we need them in bitmap coordinate space (Y-down) for compositing.
+fn flip_vertical_rgba(data: &mut [u8], width: u32, height: u32) {
+    let row_bytes = (width * 4) as usize;
+    for y in 0..(height / 2) {
+        let top_start = y as usize * row_bytes;
+        let bottom_start = (height - 1 - y) as usize * row_bytes;
+        for x in 0..row_bytes {
+            data.swap(top_start + x, bottom_start + x);
+        }
+    }
+}
+
+/// Check if a premultiplied RGBA buffer is fully transparent
+fn is_fully_transparent(data: &[u8]) -> bool {
+    data.chunks_exact(4).all(|px| px[3] == 0)
 }
 
 /// Whether preference allows any color/bitmap/SVG sources.
@@ -533,6 +626,7 @@ impl Renderer for SkiaRenderer {
                                 continue;
                             }
 
+                            // Apply coverage to foreground color, creating premultiplied values
                             let fg = &params.foreground;
                             let src_a = coverage * fg.a as u32 / 255;
                             let src_r = fg.r as u32 * src_a / 255;
@@ -542,13 +636,14 @@ impl Renderer for SkiaRenderer {
                             let dst_a = canvas[canvas_idx + 3] as u32;
                             let inv_a = 255 - src_a;
 
+                            // Premultiplied over: out = src + dst * (1 - src_a/255)
                             canvas[canvas_idx] =
-                                ((src_r + canvas[canvas_idx] as u32 * inv_a) / 255) as u8;
+                                (src_r + canvas[canvas_idx] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 1] =
-                                ((src_g + canvas[canvas_idx + 1] as u32 * inv_a) / 255) as u8;
+                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 2] =
-                                ((src_b + canvas[canvas_idx + 2] as u32 * inv_a) / 255) as u8;
-                            canvas[canvas_idx + 3] = ((src_a + dst_a * inv_a / 255).min(255)) as u8;
+                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255) as u8;
+                            canvas[canvas_idx + 3] = (src_a + dst_a * inv_a / 255).min(255) as u8;
                         }
                     }
                 },
@@ -578,16 +673,18 @@ impl Renderer for SkiaRenderer {
                             let src_r = rgba[glyph_idx] as u32;
                             let src_g = rgba[glyph_idx + 1] as u32;
                             let src_b = rgba[glyph_idx + 2] as u32;
+
                             let dst_a = canvas[canvas_idx + 3] as u32;
                             let inv_a = 255 - src_a;
 
+                            // Premultiplied over: out = src + dst * (1 - src_a/255)
                             canvas[canvas_idx] =
-                                ((src_r + canvas[canvas_idx] as u32 * inv_a) / 255) as u8;
+                                (src_r + canvas[canvas_idx] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 1] =
-                                ((src_g + canvas[canvas_idx + 1] as u32 * inv_a) / 255) as u8;
+                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 2] =
-                                ((src_b + canvas[canvas_idx + 2] as u32 * inv_a) / 255) as u8;
-                            canvas[canvas_idx + 3] = ((src_a + dst_a * inv_a / 255).min(255)) as u8;
+                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255) as u8;
+                            canvas[canvas_idx + 3] = (src_a + dst_a * inv_a / 255).min(255) as u8;
                         }
                     }
                 },
