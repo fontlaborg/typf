@@ -48,13 +48,13 @@ done
 echo "Building typf ($PROFILE profile)..."
 echo ""
 
-# Build Rust workspace
+# Build Rust workspace (excluding Python bindings which need maturin)
 if [[ "$BUILD_RUST" == "true" ]]; then
     echo "==> Building Rust workspace..."
     if [[ "$PROFILE" == "release" ]]; then
-        cargo build --workspace --release
+        cargo build --workspace --exclude typf-py --release
     else
-        cargo build --workspace
+        cargo build --workspace --exclude typf-py
     fi
     echo "    Rust build complete"
     echo ""
