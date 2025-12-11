@@ -706,15 +706,21 @@ mod tests {
 
     #[test]
     fn test_shaper_with_cache() {
+        // Enable global caching (disabled by default)
+        // Note: re-enable before each operation due to potential parallel test interference
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = HarfBuzzShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
         let params = ShapingParams::default();
 
-        // First shape - cache miss
+        // First shape - cache miss (ensure caching enabled)
+        typf_core::cache_config::set_caching_enabled(true);
         let result1 = shaper.shape("Hello", font.clone(), &params).unwrap();
         assert_eq!(result1.glyphs.len(), 5);
 
-        // Second shape - should hit cache
+        // Second shape - should hit cache (ensure caching still enabled)
+        typf_core::cache_config::set_caching_enabled(true);
         let result2 = shaper.shape("Hello", font.clone(), &params).unwrap();
         assert_eq!(result2.glyphs.len(), 5);
 
@@ -727,6 +733,9 @@ mod tests {
             hit_rate > 0.0,
             "Cache hit rate should be > 0 after repeat query"
         );
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 
     #[test]
@@ -740,6 +749,10 @@ mod tests {
 
     #[test]
     fn test_cache_stats() {
+        // Enable global caching (disabled by default)
+        // Note: re-enable before each operation due to potential parallel test interference
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = HarfBuzzShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
         let params = ShapingParams::default();
@@ -749,18 +762,26 @@ mod tests {
         assert_eq!(stats.hits, 0);
         assert_eq!(stats.misses, 0);
 
-        // First query - miss
+        // First query - miss (ensure caching enabled)
+        typf_core::cache_config::set_caching_enabled(true);
         shaper.shape("Test", font.clone(), &params).unwrap();
 
-        // Second query (same text) - hit
+        // Second query (same text) - should hit (ensure caching still enabled)
+        typf_core::cache_config::set_caching_enabled(true);
         shaper.shape("Test", font.clone(), &params).unwrap();
 
         let stats = shaper.cache_stats().unwrap();
         assert!(stats.hits >= 1, "Should have at least one hit");
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 
     #[test]
     fn test_shared_cache_across_shapers() {
+        // Enable global caching (disabled by default)
+        typf_core::cache_config::set_caching_enabled(true);
+
         use std::sync::RwLock;
 
         // Create a shared cache
@@ -789,10 +810,16 @@ mod tests {
             shared_stats.hits >= 1,
             "Shared cache should have at least one hit"
         );
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 
     #[test]
     fn test_clear_cache() {
+        // Enable global caching (disabled by default)
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = HarfBuzzShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
         let params = ShapingParams::default();
@@ -811,10 +838,16 @@ mod tests {
         let stats_after = shaper.cache_stats().unwrap();
         assert_eq!(stats_after.hits, 0);
         assert_eq!(stats_after.misses, 0);
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 
     #[test]
     fn test_cache_different_params() {
+        // Enable global caching (disabled by default)
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = HarfBuzzShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
 
@@ -839,5 +872,8 @@ mod tests {
         // Both should be cache misses (different cache keys)
         let stats = shaper.cache_stats().unwrap();
         assert!(stats.misses >= 2);
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 }

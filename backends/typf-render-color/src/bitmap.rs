@@ -175,10 +175,10 @@ pub fn render_bitmap_glyph_scaled(
         BitmapData::Png(png_data) => decode_png_to_pixmap(png_data)?,
         BitmapData::Bgra(bgra_data) => {
             decode_bgra_to_pixmap(bgra_data, bitmap_glyph.width, bitmap_glyph.height)?
-        }
+        },
         BitmapData::Mask(mask_data) => {
             decode_mask_to_pixmap(mask_data.data, bitmap_glyph.width, bitmap_glyph.height)?
-        }
+        },
     };
 
     // Get the native ppem of this strike
@@ -243,14 +243,14 @@ pub fn render_bitmap_glyph_scaled(
                 bearing_x - bitmap_glyph.inner_bearing_x * scale_x,
                 bearing_y - bitmap_glyph.inner_bearing_y * scale_y,
             )
-        }
+        },
         Origin::BottomLeft => {
             // Adjust for bottom-left origin
             (
                 bearing_x - bitmap_glyph.inner_bearing_x * scale_x,
                 bearing_y - bitmap_glyph.inner_bearing_y * scale_y + output_pixmap.height() as f32,
             )
-        }
+        },
     };
 
     Ok(ScaledBitmapGlyph {
@@ -328,7 +328,8 @@ fn flip_pixmap_vertical(src: &Pixmap) -> Result<Pixmap, BitmapRenderError> {
     for y in 0..height {
         let src_row = y * row_bytes;
         let dst_row = (height - 1 - y) * row_bytes;
-        dst_data[dst_row..dst_row + row_bytes].copy_from_slice(&src_data[src_row..src_row + row_bytes]);
+        dst_data[dst_row..dst_row + row_bytes]
+            .copy_from_slice(&src_data[src_row..src_row + row_bytes]);
     }
 
     Pixmap::from_vec(
@@ -370,7 +371,7 @@ pub fn render_bitmap_glyph_or_outline(
             // Fall back to outline rendering
             render_outline_glyph(font_data, glyph_id, width, height, ppem)
                 .map(|pixmap| (pixmap, false))
-        }
+        },
         Err(e) => Err(e),
     }
 }

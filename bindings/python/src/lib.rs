@@ -40,14 +40,17 @@ fn detect_direction(text: &str, language: Option<&str>) -> Direction {
             // Find first run with explicit RTL direction
             runs.iter()
                 .find_map(|run| {
-                    if matches!(run.direction, Direction::RightToLeft | Direction::BottomToTop) {
+                    if matches!(
+                        run.direction,
+                        Direction::RightToLeft | Direction::BottomToTop
+                    ) {
                         Some(run.direction)
                     } else {
                         None
                     }
                 })
                 .unwrap_or(Direction::LeftToRight)
-        }
+        },
         Err(_) => Direction::LeftToRight,
     }
 }
@@ -696,6 +699,39 @@ fn render_simple(py: Python, text: &str, size: f32, direction: &str) -> PyResult
     }
 }
 
+/// Enable or disable all caching globally
+///
+/// Caching is disabled by default. Call this with True to enable caching
+/// for improved performance when rendering the same text/font combinations
+/// repeatedly.
+///
+/// Args:
+///     enabled: True to enable caching, False to disable
+///
+/// Example:
+///     >>> import typf
+///     >>> typf.set_caching_enabled(True)   # Enable caching
+///     >>> # ... do some rendering ...
+///     >>> typf.set_caching_enabled(False)  # Disable caching again
+#[pyfunction]
+fn set_caching_enabled(enabled: bool) {
+    typf_core::cache_config::set_caching_enabled(enabled);
+}
+
+/// Check if caching is globally enabled
+///
+/// Returns:
+///     bool: True if caching is enabled, False otherwise (default is False)
+///
+/// Example:
+///     >>> import typf
+///     >>> typf.is_caching_enabled()
+///     False
+#[pyfunction]
+fn is_caching_enabled() -> bool {
+    typf_core::cache_config::is_caching_enabled()
+}
+
 /// Brings Typf's power into the Python ecosystem
 ///
 /// This is the bridge that makes all our Rust magic available to Python.
@@ -709,6 +745,8 @@ fn typf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TypfLinra>()?;
     m.add_function(wrap_pyfunction!(export_image, m)?)?;
     m.add_function(wrap_pyfunction!(render_simple, m)?)?;
+    m.add_function(wrap_pyfunction!(set_caching_enabled, m)?)?;
+    m.add_function(wrap_pyfunction!(is_caching_enabled, m)?)?;
     m.add("__version__", VERSION)?;
     m.add("__linra_available__", cfg!(feature = "linra"))?;
     Ok(())

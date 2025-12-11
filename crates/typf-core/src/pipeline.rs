@@ -62,19 +62,15 @@ pub struct Pipeline {
 }
 
 /// Controls runtime caching behaviour for pipelines.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// **Note:** Caching is disabled by default. Enable it via:
+/// - `PipelineBuilder::enable_shaping_cache(true)` and/or
+/// - `PipelineBuilder::enable_glyph_cache(true)`
+/// - Or globally via `cache_config::set_caching_enabled(true)`
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CachePolicy {
     pub shaping: bool,
     pub glyph: bool,
-}
-
-impl Default for CachePolicy {
-    fn default() -> Self {
-        Self {
-            shaping: true,
-            glyph: true,
-        }
-    }
 }
 
 impl Pipeline {
@@ -206,13 +202,13 @@ impl PipelineBuilder {
         self
     }
 
-    /// Enable or disable shaping cache (default: enabled)
+    /// Enable or disable shaping cache (default: disabled)
     pub fn enable_shaping_cache(mut self, enabled: bool) -> Self {
         self.cache_policy.shaping = enabled;
         self
     }
 
-    /// Enable or disable glyph/render cache (default: enabled)
+    /// Enable or disable glyph/render cache (default: disabled)
     pub fn enable_glyph_cache(mut self, enabled: bool) -> Self {
         self.cache_policy.glyph = enabled;
         self

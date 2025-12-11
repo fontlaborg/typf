@@ -598,11 +598,9 @@ fn select_renderer(renderer_name: &str) -> Result<Arc<dyn Renderer + Send + Sync
         "vello-cpu" => Ok(Arc::new(typf_render_vello_cpu::VelloCpuRenderer::new())),
 
         #[cfg(feature = "render-vello")]
-        "vello" => {
-            typf_render_vello::VelloRenderer::new()
-                .map(|r| Arc::new(r) as Arc<dyn Renderer + Send + Sync>)
-                .map_err(|e| TypfError::Other(format!("Failed to create GPU renderer: {}", e)))
-        }
+        "vello" => typf_render_vello::VelloRenderer::new()
+            .map(|r| Arc::new(r) as Arc<dyn Renderer + Send + Sync>)
+            .map_err(|e| TypfError::Other(format!("Failed to create GPU renderer: {}", e))),
 
         _ => Err(TypfError::Other(format!(
             "Unknown or unavailable renderer: {}",

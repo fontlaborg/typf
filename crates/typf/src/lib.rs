@@ -37,7 +37,7 @@
 //! - `full` - Everything unlocked and ready to go
 
 pub use typf_core::{
-    error, traits, validate_glyph_count, Color, GlyphSource, GlyphSourcePreference,
+    cache_config, error, traits, validate_glyph_count, Color, GlyphSource, GlyphSourcePreference,
     Pipeline, RenderMode, RenderParams, ShapingParams, MAX_FONT_SIZE, MAX_GLYPH_COUNT,
 };
 

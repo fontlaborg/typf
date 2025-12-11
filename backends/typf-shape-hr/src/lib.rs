@@ -246,7 +246,7 @@ impl Shaper for HarfrustShaper {
                     }
                 }
                 return Ok(result);
-            }
+            },
         };
 
         // Create ShaperData - this caches font tables and is expensive
@@ -547,6 +547,9 @@ mod tests {
 
     #[test]
     fn test_shaper_with_cache() {
+        // Enable global caching (disabled by default)
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = HarfrustShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
         let params = ShapingParams::default();
@@ -568,6 +571,9 @@ mod tests {
             hit_rate > 0.0,
             "Cache hit rate should be > 0 after repeat query"
         );
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 
     #[test]
@@ -581,6 +587,9 @@ mod tests {
 
     #[test]
     fn test_clear_cache() {
+        // Enable global caching (disabled by default)
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = HarfrustShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
         let params = ShapingParams::default();
@@ -599,5 +608,8 @@ mod tests {
         let stats_after = shaper.cache_stats().unwrap();
         assert_eq!(stats_after.hits, 0);
         assert_eq!(stats_after.misses, 0);
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 }

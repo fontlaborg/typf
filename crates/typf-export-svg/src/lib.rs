@@ -129,7 +129,7 @@ impl SvgExporter {
                         y
                     )
                     .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
-                }
+                },
                 Ok(_) => {
                     // Empty path - try bitmap embedding if enabled
                     #[cfg(feature = "bitmap-embed")]
@@ -146,7 +146,7 @@ impl SvgExporter {
                         }
                     }
                     // If bitmap embedding disabled or failed, skip the glyph
-                }
+                },
                 Err(_) => {
                     // Glyph extraction failed - try bitmap as fallback
                     #[cfg(feature = "bitmap-embed")]
@@ -164,7 +164,7 @@ impl SvgExporter {
                         }
                     }
                     // No bitmap fallback available - skip silently
-                }
+                },
             }
         }
 
@@ -210,7 +210,7 @@ impl SvgExporter {
                     glyph_id
                 ))
                 .into());
-            }
+            },
         };
 
         // Extract at units_per_em size, then apply scale in the path builder

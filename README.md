@@ -135,13 +135,59 @@ The linra renderer bypasses the intermediate glyph extraction step, allowing Cor
 
 > **Note:** Color glyph support in skia/zeno requires the `resvg` feature for SVG glyphs and `bitmap` feature for CBDT/sbix. Vello renderers use skrifa's native color font support.
 
+## Caching
+
+Typf includes two-level caches for shaping and rendering results. **Caching is disabled by default** to ensure predictable behavior and memory usage.
+
+### Enable caching
+
+**Rust:**
+```rust
+use typf::cache_config;
+
+// Enable caching for repeated operations
+cache_config::set_caching_enabled(true);
+
+// Check status
+if cache_config::is_caching_enabled() {
+    println!("Caching is ON");
+}
+
+// Disable when done
+cache_config::set_caching_enabled(false);
+```
+
+**Python:**
+```python
+import typf
+
+typf.set_caching_enabled(True)   # Enable
+typf.is_caching_enabled()        # Check: returns True/False
+typf.set_caching_enabled(False)  # Disable
+```
+
+**Environment variable:**
+```bash
+TYPF_CACHE=1 ./your_app          # Enable at startup
+```
+
+### When to use caching
+
+| Scenario | Caching | Reason |
+|----------|---------|--------|
+| One-shot CLI renders | Off (default) | No repeated work |
+| Interactive UI | On | Same text re-rendered often |
+| Batch processing different texts | Off | Each text unique |
+| Batch processing same text/fonts | On | Cache hits save time |
+| Memory-constrained environment | Off | Caches use memory |
+
 ## Build options
 
 ```bash
 # Minimal (500KB)
 cargo build --release --no-default-features --features minimal
 
-# Everything  
+# Everything
 cargo build --release --all-features
 
 # SVG export (23× faster than PNG)
@@ -318,6 +364,7 @@ Fix: Use smaller fonts, line wrapping, or SVG (no width limit).
 
 ## Learn more
 
+- [Quickstart](QUICKSTART.md) - Use typf in your Rust project
 - [Architecture](ARCHITECTURE.md) - Pipeline, backends, and data flow
 - [Documentation](src_docs/) - 24 chapters
 - [Examples](examples/README.md) - Working code samples

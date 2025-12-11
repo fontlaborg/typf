@@ -337,6 +337,9 @@ mod tests {
 
     #[test]
     fn test_shaper_with_cache() {
+        // Enable global caching (disabled by default)
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = IcuHarfBuzzShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
         let params = ShapingParams::default();
@@ -355,6 +358,9 @@ mod tests {
             hit_rate > 0.0,
             "Cache hit rate should be > 0 after repeat query"
         );
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 
     #[test]
@@ -368,6 +374,9 @@ mod tests {
 
     #[test]
     fn test_clear_cache() {
+        // Enable global caching (disabled by default)
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = IcuHarfBuzzShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
         let params = ShapingParams::default();
@@ -386,10 +395,16 @@ mod tests {
         let stats_after = shaper.cache_stats().unwrap();
         assert_eq!(stats_after.hits, 0);
         assert_eq!(stats_after.misses, 0);
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 
     #[test]
     fn test_normalization_before_caching() {
+        // Enable global caching (disabled by default)
+        typf_core::cache_config::set_caching_enabled(true);
+
         let shaper = IcuHarfBuzzShaper::with_cache();
         let font = Arc::new(TestFont { data: vec![] });
         let params = ShapingParams::default();
@@ -408,5 +423,8 @@ mod tests {
         // Second query with either form should hit cache
         let stats = shaper.cache_stats().unwrap();
         assert!(stats.hits >= 1, "Second query should hit cache");
+
+        // Reset to default state
+        typf_core::cache_config::set_caching_enabled(false);
     }
 }

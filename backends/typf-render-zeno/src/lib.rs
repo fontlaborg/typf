@@ -308,48 +308,50 @@ impl ZenoRenderer {
 
                 // Use bearing info from RenderResult if available (bitmap glyphs),
                 // otherwise compute from actual pixmap content bounds (COLR/SVG)
-                let (bearing_x, bearing_y) = if let (Some(bx), Some(by)) =
-                    (rendered.bearing_x, rendered.bearing_y)
-                {
-                    // Bitmap glyphs: use computed bearings from font metrics
-                    (bx.floor() as i32, by.ceil() as i32)
-                } else {
-                    // COLR/SVG: compute bearings from actual rendered content
-                    // This ensures vertical positioning matches the actual color glyph content,
-                    // not the outline bbox which may differ.
-                    let (min_x, min_y, max_x, max_y) = bbox;
-                    if let Some(bounds) = compute_content_bounds(&pixmap) {
-                        // Content bounds are in pixmap coords (Y-down, origin at top-left)
-                        // The pixmap is positioned at the outline bbox origin
-                        //
-                        // Font coords Y range: [min_y, max_y]
-                        // Pixmap row 0 = max_y (top of bbox in font coords)
-                        // Pixmap row (height-1) = min_y (bottom of bbox in font coords)
-                        //
-                        // So: font_y = max_y - pixmap_y * (max_y - min_y) / (height - 1)
-                        let height = pixmap.height() as f32;
-                        let height_scale = if height > 1.0 {
-                            (max_y - min_y) / (height - 1.0)
-                        } else {
-                            1.0
-                        };
-                        let content_top_font_y = max_y - (bounds.min_y as f32) * height_scale;
-
-                        // bearing_x: left edge of content
-                        let width = pixmap.width() as f32;
-                        let width_scale = if width > 1.0 {
-                            (max_x - min_x) / (width - 1.0)
-                        } else {
-                            1.0
-                        };
-                        let content_left_font_x = min_x + (bounds.min_x as f32) * width_scale;
-
-                        (content_left_font_x.floor() as i32, content_top_font_y.ceil() as i32)
+                let (bearing_x, bearing_y) =
+                    if let (Some(bx), Some(by)) = (rendered.bearing_x, rendered.bearing_y) {
+                        // Bitmap glyphs: use computed bearings from font metrics
+                        (bx.floor() as i32, by.ceil() as i32)
                     } else {
-                        // Fully transparent - use outline bbox as fallback
-                        (min_x.floor() as i32, max_y.ceil() as i32)
-                    }
-                };
+                        // COLR/SVG: compute bearings from actual rendered content
+                        // This ensures vertical positioning matches the actual color glyph content,
+                        // not the outline bbox which may differ.
+                        let (min_x, min_y, max_x, max_y) = bbox;
+                        if let Some(bounds) = compute_content_bounds(&pixmap) {
+                            // Content bounds are in pixmap coords (Y-down, origin at top-left)
+                            // The pixmap is positioned at the outline bbox origin
+                            //
+                            // Font coords Y range: [min_y, max_y]
+                            // Pixmap row 0 = max_y (top of bbox in font coords)
+                            // Pixmap row (height-1) = min_y (bottom of bbox in font coords)
+                            //
+                            // So: font_y = max_y - pixmap_y * (max_y - min_y) / (height - 1)
+                            let height = pixmap.height() as f32;
+                            let height_scale = if height > 1.0 {
+                                (max_y - min_y) / (height - 1.0)
+                            } else {
+                                1.0
+                            };
+                            let content_top_font_y = max_y - (bounds.min_y as f32) * height_scale;
+
+                            // bearing_x: left edge of content
+                            let width = pixmap.width() as f32;
+                            let width_scale = if width > 1.0 {
+                                (max_x - min_x) / (width - 1.0)
+                            } else {
+                                1.0
+                            };
+                            let content_left_font_x = min_x + (bounds.min_x as f32) * width_scale;
+
+                            (
+                                content_left_font_x.floor() as i32,
+                                content_top_font_y.ceil() as i32,
+                            )
+                        } else {
+                            // Fully transparent - use outline bbox as fallback
+                            (min_x.floor() as i32, max_y.ceil() as i32)
+                        }
+                    };
 
                 // Flip vertically for COLR and bitmap sources: typf-render-color outputs
                 // these in font coords (Y-up), but we need bitmap coords (Y-down) for compositing.
@@ -370,7 +372,10 @@ impl ZenoRenderer {
             },
             Err(typf_render_color::ColorRenderError::GlyphNotFound) => {
                 // No color glyph available - allow outline fallback
-                log::debug!("Zeno: no color glyph for {}, falling back to outline", glyph_id);
+                log::debug!(
+                    "Zeno: no color glyph for {}, falling back to outline",
+                    glyph_id
+                );
                 Ok(None)
             },
             Err(typf_render_color::ColorRenderError::NoColrTable) => {
@@ -379,7 +384,10 @@ impl ZenoRenderer {
             },
             Err(typf_render_color::ColorRenderError::NoPalette) => {
                 // No palette available - allow outline fallback
-                log::debug!("Zeno: no palette for glyph {}, falling back to outline", glyph_id);
+                log::debug!(
+                    "Zeno: no palette for glyph {}, falling back to outline",
+                    glyph_id
+                );
                 Ok(None)
             },
             Err(err) => {
@@ -633,9 +641,11 @@ impl Renderer for ZenoRenderer {
                             canvas[canvas_idx] =
                                 (src_r + canvas[canvas_idx] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 1] =
-                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255) as u8;
+                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255)
+                                    as u8;
                             canvas[canvas_idx + 2] =
-                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255) as u8;
+                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255)
+                                    as u8;
                             canvas[canvas_idx + 3] = (src_a + dst_a * inv_a / 255).min(255) as u8;
                         }
                     }
@@ -668,9 +678,11 @@ impl Renderer for ZenoRenderer {
                             canvas[canvas_idx] =
                                 (src_r + canvas[canvas_idx] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 1] =
-                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255) as u8;
+                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255)
+                                    as u8;
                             canvas[canvas_idx + 2] =
-                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255) as u8;
+                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255)
+                                    as u8;
                             canvas[canvas_idx + 3] = (src_a + dst_a * inv_a / 255).min(255) as u8;
                         }
                     }

@@ -173,13 +173,21 @@ impl typf_core::traits::Exporter for DummyExporter {
 
 #[test]
 fn caches_hit_when_enabled() {
+    // Enable global caching (disabled by default)
+    typf_core::cache_config::set_caching_enabled(true);
+
     let shaper_calls = Arc::new(AtomicUsize::new(0));
     let renderer_calls = Arc::new(AtomicUsize::new(0));
 
-    let pipeline = build_pipeline(
-        Arc::new(CountingShaper::new(shaper_calls.clone())),
-        Arc::new(CountingRenderer::new(renderer_calls.clone())),
-    );
+    // Build pipeline with caching explicitly enabled
+    let pipeline = Pipeline::builder()
+        .enable_shaping_cache(true)
+        .enable_glyph_cache(true)
+        .shaper(Arc::new(CountingShaper::new(shaper_calls.clone())))
+        .renderer(Arc::new(CountingRenderer::new(renderer_calls.clone())))
+        .exporter(Arc::new(DummyExporter))
+        .build()
+        .expect("pipeline build");
 
     let font: Arc<dyn FontRef> = Arc::new(TestFont);
     let shaping = ShapingParams::default();
@@ -200,6 +208,9 @@ fn caches_hit_when_enabled() {
         renderer_calls.load(Ordering::SeqCst),
         "renderer should hit cache"
     );
+
+    // Reset to default state
+    typf_core::cache_config::set_caching_enabled(false);
 }
 
 #[test]

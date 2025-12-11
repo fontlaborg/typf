@@ -1,6 +1,6 @@
 # Typf Rendering Quality & Backend Integration Plan
 
-**Version:** 2.5.4
+**Version:** 2.5.0
 **Status:** All Critical Issues Resolved
 **Reference Renderer:** CoreText + CoreGraphics (linra-mac)
 
@@ -118,7 +118,7 @@ Cross-renderer baseline consistency using font metrics instead of per-glyph boun
 
 ## Test Coverage
 
-- **Workspace total:** 385 tests
+- **Workspace total:** 410 tests
 - **Vello CPU:** 17 tests (4 unit + 13 integration)
 - **Vello GPU:** 15 tests (3 unit + 12 integration)
 - **Color fonts:** All 4 formats tested (COLR, SVG, sbix, CBDT)

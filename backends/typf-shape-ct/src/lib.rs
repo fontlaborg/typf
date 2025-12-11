@@ -36,6 +36,10 @@ use parking_lot::RwLock;
 // Thread-local font cache to avoid cross-thread CTFont destruction.
 // CoreText fonts have thread affinity - destroying a CTFont on a different
 // thread than it was created causes memory corruption in OTL::Lookup.
+//
+// Note: We use Arc here even though CFRetained<CTFont> is not Send+Sync
+// because the cache is thread-local and Arcs never cross thread boundaries.
+// This allows cloning the Arc within the same thread's cache operations.
 thread_local! {
     static FONT_CACHE: RefCell<LruCache<FontCacheKey, Arc<CFRetained<CTFont>>>> =
         RefCell::new(LruCache::new(std::num::NonZeroUsize::new(50).unwrap()));
@@ -176,6 +180,10 @@ impl CoreTextShaper {
 
             // Create the font from our data
             let ct_font = Self::create_ct_font_from_data(font.data(), params)?;
+            // Arc is used even though CTFont isn't Send+Sync because this cache is
+            // thread-local - the Arc never crosses thread boundaries, it just enables
+            // cheap cloning within the same thread's cache operations.
+            #[allow(clippy::arc_with_non_send_sync)]
             let arc_font = Arc::new(ct_font);
 
             // Save it for next time (on this thread only)

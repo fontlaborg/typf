@@ -134,10 +134,7 @@ fn substitute_css_variables(svg: &str, palette_colors: &[skrifa::color::Color]) 
 
         // Get the color from palette, or use a default
         let color_hex = if let Some(color) = palette_colors.get(i as usize) {
-            format!(
-                "#{:02X}{:02X}{:02X}",
-                color.red, color.green, color.blue
-            )
+            format!("#{:02X}{:02X}{:02X}", color.red, color.green, color.blue)
         } else {
             // No palette color available, we'll let the fallback be used
             continue;
@@ -280,7 +277,11 @@ fn extract_glyph_svg(
     // The viewBox height is 2*upem to cover this full range.
     let standalone_svg = format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg"{} viewBox="0 -{upem} {upem} {double_upem}">{}{}</svg>"#,
-        namespaces, defs_section, glyph_content, upem = upem, double_upem = upem * 2
+        namespaces,
+        defs_section,
+        glyph_content,
+        upem = upem,
+        double_upem = upem * 2
     );
 
     Ok(standalone_svg)
@@ -368,10 +369,7 @@ pub fn render_svg_glyph_with_palette_and_ppem(
     let font = skrifa::FontRef::new(font_data).map_err(|_| SvgRenderError::FontParseFailed)?;
 
     // Get font's units per em - needed for proper viewBox in extracted SVG
-    let upem = font
-        .head()
-        .map(|h| h.units_per_em())
-        .unwrap_or(1000);
+    let upem = font.head().map(|h| h.units_per_em()).unwrap_or(1000);
 
     let svg_document = get_svg_document(font_data, glyph_id)?;
 
@@ -587,7 +585,11 @@ mod tests {
                     // Width should match the em-square scaled to ppem (128).
                     // Height is 2x em-square to cover both ascenders and descenders.
                     assert_eq!(pixmap.width(), 128, "Width should match ppem");
-                    assert_eq!(pixmap.height(), 256, "Height should be 2x ppem for full em-square");
+                    assert_eq!(
+                        pixmap.height(),
+                        256,
+                        "Height should be 2x ppem for full em-square"
+                    );
                     println!("Successfully rendered SVG glyph at gid {}", gid);
                     return; // Test passed
                 }

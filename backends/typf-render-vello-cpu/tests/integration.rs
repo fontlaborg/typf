@@ -101,7 +101,7 @@ fn test_vello_cpu_render_with_real_font() {
         None => {
             eprintln!("Skipping test: NotoSans-Regular.ttf not found");
             return;
-        }
+        },
     };
 
     let renderer = VelloCpuRenderer::new();
@@ -152,7 +152,7 @@ fn test_vello_cpu_render_empty_text() {
         Ok(RenderOutput::Bitmap(bitmap)) => {
             // If it succeeds, verify basic structure
             assert_eq!(bitmap.format, BitmapFormat::Rgba8);
-        }
+        },
         Err(e) => {
             // Zero dimensions error is acceptable for zero-width canvas
             let err_str = e.to_string();
@@ -161,7 +161,7 @@ fn test_vello_cpu_render_empty_text() {
                 "Should fail with dimension error, got: {}",
                 err_str
             );
-        }
+        },
         _ => panic!("Unexpected result type"),
     }
 }
@@ -251,22 +251,20 @@ fn test_vello_cpu_render_arabic_font() {
         None => {
             eprintln!("Skipping test: NotoNaskhArabic-Regular.ttf not found");
             return;
-        }
+        },
     };
 
     let renderer = VelloCpuRenderer::new();
 
     // Create RTL shaping result (simplified - real RTL would have different glyph positions)
     let shaped = ShapingResult {
-        glyphs: vec![
-            PositionedGlyph {
-                id: 100, // Arabic glyph
-                x: 0.0,
-                y: 0.0,
-                advance: 80.0,
-                cluster: 0,
-            },
-        ],
+        glyphs: vec![PositionedGlyph {
+            id: 100, // Arabic glyph
+            x: 0.0,
+            y: 0.0,
+            advance: 80.0,
+            cluster: 0,
+        }],
         advance_width: 80.0,
         advance_height: 48.0,
         direction: Direction::RightToLeft,
@@ -274,7 +272,11 @@ fn test_vello_cpu_render_arabic_font() {
 
     let params = RenderParams::default();
     let result = renderer.render(&shaped, font, &params);
-    assert!(result.is_ok(), "Arabic font should render: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Arabic font should render: {:?}",
+        result.err()
+    );
 }
 
 #[test]
@@ -284,7 +286,7 @@ fn test_vello_cpu_render_variable_font() {
         None => {
             eprintln!("Skipping test: Kalnia[wdth,wght].ttf not found");
             return;
-        }
+        },
     };
 
     let renderer = VelloCpuRenderer::new();
@@ -306,7 +308,7 @@ fn test_vello_cpu_render_colr_color_font() {
         None => {
             eprintln!("Skipping test: Nabla-Regular-COLR.ttf not found");
             return;
-        }
+        },
     };
 
     let renderer = VelloCpuRenderer::new();
@@ -334,7 +336,7 @@ fn test_vello_cpu_render_cbdt_color_font() {
         None => {
             eprintln!("Skipping test: Nabla-Regular-CBDT.ttf not found");
             return;
-        }
+        },
     };
 
     let renderer = VelloCpuRenderer::new();
@@ -356,7 +358,7 @@ fn test_vello_cpu_render_sbix_color_font() {
         None => {
             eprintln!("Skipping test: Nabla-Regular-sbix.ttf not found");
             return;
-        }
+        },
     };
 
     let renderer = VelloCpuRenderer::new();
@@ -378,7 +380,7 @@ fn test_vello_cpu_render_math_font() {
         None => {
             eprintln!("Skipping test: STIX2Math.otf not found");
             return;
-        }
+        },
     };
 
     let renderer = VelloCpuRenderer::new();

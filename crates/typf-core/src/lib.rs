@@ -89,6 +89,7 @@
 use std::collections::HashSet;
 
 pub mod cache;
+pub mod cache_config;
 pub mod context;
 pub mod error;
 pub mod glyph_cache;

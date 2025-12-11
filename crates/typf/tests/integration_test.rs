@@ -298,7 +298,10 @@ fn test_real_font_noto_sans_latin() {
     let font: Arc<dyn FontRef> = Arc::new(font_face);
 
     // Verify font properties
-    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+    assert!(
+        font.units_per_em() > 0,
+        "Font should have valid units_per_em"
+    );
     assert!(
         font.glyph_id('A').is_some(),
         "Font should contain glyph for 'A'"
@@ -338,7 +341,7 @@ fn test_real_font_noto_sans_latin() {
             assert!(bitmap.width > 100, "Bitmap should have reasonable width");
             assert!(bitmap.height > 20, "Bitmap should have reasonable height");
             assert!(!bitmap.data.is_empty(), "Bitmap should have pixel data");
-        }
+        },
         _ => panic!("Expected bitmap output"),
     }
 
@@ -375,7 +378,10 @@ fn test_real_font_arabic_rtl() {
         .shape(text, font.clone(), &shaping_params)
         .expect("Shaping should succeed with Arabic font");
 
-    assert!(!shaped.glyphs.is_empty(), "Should produce glyphs for Arabic");
+    assert!(
+        !shaped.glyphs.is_empty(),
+        "Should produce glyphs for Arabic"
+    );
     assert_eq!(shaped.direction, Direction::RightToLeft);
 
     // Render
@@ -390,7 +396,7 @@ fn test_real_font_arabic_rtl() {
         RenderOutput::Bitmap(bitmap) => {
             assert!(bitmap.width > 0);
             assert!(bitmap.height > 0);
-        }
+        },
         _ => panic!("Expected bitmap output"),
     }
 }
@@ -437,7 +443,7 @@ fn test_real_font_variable() {
         RenderOutput::Bitmap(bitmap) => {
             assert!(bitmap.width > 0);
             assert!(bitmap.height > 0);
-        }
+        },
         _ => panic!("Expected bitmap output"),
     }
 }
@@ -459,7 +465,10 @@ fn test_color_font_colr() {
     let font: Arc<dyn FontRef> = Arc::new(font_face);
 
     // Verify font loads correctly
-    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+    assert!(
+        font.units_per_em() > 0,
+        "Font should have valid units_per_em"
+    );
 
     // Shape text
     let shaper = NoneShaper::new();
@@ -494,7 +503,7 @@ fn test_color_font_colr() {
             assert!(bitmap.width > 0, "COLR bitmap should have width");
             assert!(bitmap.height > 0, "COLR bitmap should have height");
             assert!(!bitmap.data.is_empty(), "COLR bitmap should have data");
-        }
+        },
         _ => panic!("Expected bitmap output"),
     }
 
@@ -517,7 +526,10 @@ fn test_color_font_svg() {
     let font: Arc<dyn FontRef> = Arc::new(font_face);
 
     // Verify font loads correctly
-    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+    assert!(
+        font.units_per_em() > 0,
+        "Font should have valid units_per_em"
+    );
 
     // Shape text
     let shaper = NoneShaper::new();
@@ -545,7 +557,7 @@ fn test_color_font_svg() {
         RenderOutput::Bitmap(bitmap) => {
             assert!(bitmap.width > 0);
             assert!(bitmap.height > 0);
-        }
+        },
         _ => panic!("Expected bitmap output"),
     }
 }
@@ -554,7 +566,10 @@ fn test_color_font_svg() {
 fn test_color_font_sbix() {
     let font_path = test_font_path("Nabla-Regular-sbix.ttf");
     if !font_path.exists() {
-        eprintln!("Skipping test: sbix color font not found at {:?}", font_path);
+        eprintln!(
+            "Skipping test: sbix color font not found at {:?}",
+            font_path
+        );
         return;
     }
 
@@ -563,7 +578,10 @@ fn test_color_font_sbix() {
     let font: Arc<dyn FontRef> = Arc::new(font_face);
 
     // Verify font loads correctly
-    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+    assert!(
+        font.units_per_em() > 0,
+        "Font should have valid units_per_em"
+    );
 
     // Shape text
     let shaper = NoneShaper::new();
@@ -591,7 +609,7 @@ fn test_color_font_sbix() {
         RenderOutput::Bitmap(bitmap) => {
             assert!(bitmap.width > 0, "sbix bitmap should have width");
             assert!(bitmap.height > 0, "sbix bitmap should have height");
-        }
+        },
         _ => panic!("Expected bitmap output"),
     }
 }
@@ -600,7 +618,10 @@ fn test_color_font_sbix() {
 fn test_color_font_cbdt() {
     let font_path = test_font_path("Nabla-Regular-CBDT.ttf");
     if !font_path.exists() {
-        eprintln!("Skipping test: CBDT color font not found at {:?}", font_path);
+        eprintln!(
+            "Skipping test: CBDT color font not found at {:?}",
+            font_path
+        );
         return;
     }
 
@@ -609,7 +630,10 @@ fn test_color_font_cbdt() {
     let font: Arc<dyn FontRef> = Arc::new(font_face);
 
     // Verify font loads correctly
-    assert!(font.units_per_em() > 0, "Font should have valid units_per_em");
+    assert!(
+        font.units_per_em() > 0,
+        "Font should have valid units_per_em"
+    );
 
     // Shape text
     let shaper = NoneShaper::new();
@@ -637,7 +661,7 @@ fn test_color_font_cbdt() {
         RenderOutput::Bitmap(bitmap) => {
             assert!(bitmap.width > 0, "CBDT bitmap should have width");
             assert!(bitmap.height > 0, "CBDT bitmap should have height");
-        }
+        },
         _ => panic!("Expected bitmap output"),
     }
 }
@@ -646,7 +670,10 @@ fn test_color_font_cbdt() {
 fn test_color_font_cbdt_skia() {
     let font_path = test_font_path("Nabla-Regular-CBDT.ttf");
     if !font_path.exists() {
-        eprintln!("Skipping test: CBDT color font not found at {:?}", font_path);
+        eprintln!(
+            "Skipping test: CBDT color font not found at {:?}",
+            font_path
+        );
         return;
     }
 
@@ -678,7 +705,7 @@ fn test_color_font_cbdt_skia() {
         RenderOutput::Bitmap(bitmap) => {
             assert!(bitmap.width > 0, "Skia CBDT bitmap should have width");
             assert!(bitmap.height > 0, "Skia CBDT bitmap should have height");
-        }
+        },
         _ => panic!("Expected bitmap output from Skia"),
     }
 }
@@ -687,7 +714,10 @@ fn test_color_font_cbdt_skia() {
 fn test_color_font_cbdt_zeno() {
     let font_path = test_font_path("Nabla-Regular-CBDT.ttf");
     if !font_path.exists() {
-        eprintln!("Skipping test: CBDT color font not found at {:?}", font_path);
+        eprintln!(
+            "Skipping test: CBDT color font not found at {:?}",
+            font_path
+        );
         return;
     }
 
@@ -719,7 +749,7 @@ fn test_color_font_cbdt_zeno() {
         RenderOutput::Bitmap(bitmap) => {
             assert!(bitmap.width > 0, "Zeno CBDT bitmap should have width");
             assert!(bitmap.height > 0, "Zeno CBDT bitmap should have height");
-        }
+        },
         _ => panic!("Expected bitmap output from Zeno"),
     }
 }

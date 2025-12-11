@@ -9,6 +9,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
 
 use crate::cache::MultiLevelCache;
+use crate::cache_config;
 use crate::types::{RenderOutput, ShapingResult};
 use crate::RenderParams;
 
@@ -117,11 +118,23 @@ impl GlyphCache {
         }
     }
 
+    /// Get a cached render output
+    ///
+    /// Returns `None` if not found or if caching is globally disabled.
     pub fn get(&self, key: &GlyphCacheKey) -> Option<RenderOutput> {
+        if !cache_config::is_caching_enabled() {
+            return None;
+        }
         self.cache.get(key)
     }
 
+    /// Insert a render output into the cache
+    ///
+    /// Does nothing if caching is globally disabled.
     pub fn insert(&self, key: GlyphCacheKey, output: RenderOutput) {
+        if !cache_config::is_caching_enabled() {
+            return;
+        }
         self.cache.insert(key, output);
     }
 
@@ -178,6 +191,9 @@ mod tests {
 
     #[test]
     fn cache_stores_and_retrieves() {
+        // Enable caching for this test (caching is disabled by default)
+        crate::cache_config::set_caching_enabled(true);
+
         let cache = GlyphCache::new();
         let key = GlyphCacheKey::new("r1", b"font", &shaped(), &render_params());
         let output = RenderOutput::Json("x".into());
@@ -188,5 +204,8 @@ mod tests {
             RenderOutput::Json(body) => assert_eq!(body, "x"),
             _ => panic!("expected json"),
         }
+
+        // Reset to default state
+        crate::cache_config::set_caching_enabled(false);
     }
 }

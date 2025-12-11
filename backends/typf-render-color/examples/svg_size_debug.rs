@@ -1,5 +1,5 @@
-use typf_render_color::svg::{get_svg_document, render_svg_glyph_with_palette_and_ppem};
 use skrifa::raw::TableProvider;
+use typf_render_color::svg::{get_svg_document, render_svg_glyph_with_palette_and_ppem};
 
 /// Extracts just the glyph content - mirrors the internal extract_glyph_svg function
 fn extract_glyph_svg_debug(svg_document: &str, glyph_id: u32) -> Option<String> {
@@ -17,7 +17,9 @@ fn extract_glyph_svg_debug(svg_document: &str, glyph_id: u32) -> Option<String> 
             let abs_end = abs_start + end + 7;
             defs_content.push_str(&svg_document[abs_start..abs_end]);
             search_from = abs_end;
-        } else { break; }
+        } else {
+            break;
+        }
     }
 
     // Find glyph group
@@ -31,15 +33,18 @@ fn extract_glyph_svg_debug(svg_document: &str, glyph_id: u32) -> Option<String> 
     let mut pos = 0;
     let bytes = after_tag.as_bytes();
     while pos < bytes.len() && depth > 0 {
-        if pos + 2 < bytes.len() && &bytes[pos..pos+2] == b"<g" {
-            if pos + 3 >= bytes.len() || bytes[pos+2] == b' ' || bytes[pos+2] == b'>' {
+        if pos + 2 < bytes.len() && &bytes[pos..pos + 2] == b"<g" {
+            if pos + 3 >= bytes.len() || bytes[pos + 2] == b' ' || bytes[pos + 2] == b'>' {
                 depth += 1;
             }
-        } else if pos + 3 < bytes.len() && &bytes[pos..pos+4] == b"</g>" {
+        } else if pos + 3 < bytes.len() && &bytes[pos..pos + 4] == b"</g>" {
             depth -= 1;
             if depth == 0 {
                 let content = &after_tag[..pos];
-                return Some(format!(r#"<svg xmlns="http://www.w3.org/2000/svg">{}{}</svg>"#, defs_content, content));
+                return Some(format!(
+                    r#"<svg xmlns="http://www.w3.org/2000/svg">{}{}</svg>"#,
+                    defs_content, content
+                ));
             }
         }
         pos += 1;
@@ -48,7 +53,10 @@ fn extract_glyph_svg_debug(svg_document: &str, glyph_id: u32) -> Option<String> 
 }
 
 fn main() {
-    let font_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../test-fonts/Nabla-Regular-SVG.ttf");
+    let font_path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../test-fonts/Nabla-Regular-SVG.ttf"
+    );
     let font_data = std::fs::read(font_path).expect("Failed to read font");
     let font = skrifa::FontRef::new(&font_data).expect("Failed to parse font");
 
@@ -76,8 +84,9 @@ fn main() {
                 // Check for viewBox
                 if let Some(start) = svg.find("viewBox=") {
                     let end = svg[start..].find('"').unwrap_or(0)
-                        + svg[start+8..].find('"').unwrap_or(0) + 10;
-                    println!("Original viewBox: {}", &svg[start..start+end.min(100)]);
+                        + svg[start + 8..].find('"').unwrap_or(0)
+                        + 10;
+                    println!("Original viewBox: {}", &svg[start..start + end.min(100)]);
                 } else {
                     println!("Original viewBox: NONE");
                 }
@@ -94,35 +103,49 @@ fn main() {
                 let options = usvg::Options::default();
                 match usvg::Tree::from_str(&svg, &options) {
                     Ok(tree) => {
-                        println!("Full tree size: {}x{}", tree.size().width(), tree.size().height());
-                    }
+                        println!(
+                            "Full tree size: {}x{}",
+                            tree.size().width(),
+                            tree.size().height()
+                        );
+                    },
                     Err(e) => println!("Full parse error: {}", e),
                 }
 
                 // Now extract just this glyph
                 if let Some(glyph_svg) = extract_glyph_svg_debug(&svg, gid) {
                     println!("Extracted glyph SVG length: {} bytes", glyph_svg.len());
-                    println!("First 500 chars: {}", &glyph_svg[..glyph_svg.len().min(500)]);
+                    println!(
+                        "First 500 chars: {}",
+                        &glyph_svg[..glyph_svg.len().min(500)]
+                    );
 
                     // Find the glyph content after defs (look for </defs>)
                     if let Some(defs_end) = glyph_svg.find("</defs>") {
                         let content_start = defs_end + 7;
-                        let content_preview = &glyph_svg[content_start..glyph_svg.len().min(content_start + 500)];
+                        let content_preview =
+                            &glyph_svg[content_start..glyph_svg.len().min(content_start + 500)];
                         println!("Glyph content after defs: {}", content_preview);
                     }
 
                     match usvg::Tree::from_str(&glyph_svg, &options) {
                         Ok(tree) => {
-                            println!("Extracted tree size: {}x{}", tree.size().width(), tree.size().height());
+                            println!(
+                                "Extracted tree size: {}x{}",
+                                tree.size().width(),
+                                tree.size().height()
+                            );
 
                             // Calculate expected output at ppem=48
                             let ppem = 48.0;
                             let scale = ppem / upem as f32;
                             println!("Scale at ppem={}: {}", ppem, scale);
-                            println!("Expected from extracted: {}x{}",
+                            println!(
+                                "Expected from extracted: {}x{}",
                                 (tree.size().width() * scale).ceil(),
-                                (tree.size().height() * scale).ceil());
-                        }
+                                (tree.size().height() * scale).ceil()
+                            );
+                        },
                         Err(e) => println!("Extracted parse error: {}", e),
                     }
                 }
@@ -130,11 +153,15 @@ fn main() {
                 // Actually render
                 match render_svg_glyph_with_palette_and_ppem(&font_data, gid, 100, 100, &[], 48.0) {
                     Ok(pixmap) => {
-                        println!("Final rendered pixmap: {}x{}", pixmap.width(), pixmap.height());
-                    }
+                        println!(
+                            "Final rendered pixmap: {}x{}",
+                            pixmap.width(),
+                            pixmap.height()
+                        );
+                    },
                     Err(e) => println!("Render error: {:?}", e),
                 }
-            }
+            },
             Err(e) => println!("Not found: {:?}", e),
         }
     }

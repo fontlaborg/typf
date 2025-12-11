@@ -11,6 +11,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
 
 use crate::cache::MultiLevelCache;
+use crate::cache_config;
 use crate::types::ShapingResult;
 
 /// Key for caching shaping results
@@ -118,15 +119,22 @@ impl ShapingCache {
     /// Get a cached shaping result
     ///
     /// Returns `Some(result)` if the key exists in either cache level,
-    /// `None` if not found.
+    /// `None` if not found or if caching is globally disabled.
     pub fn get(&self, key: &ShapingCacheKey) -> Option<ShapingResult> {
+        if !cache_config::is_caching_enabled() {
+            return None;
+        }
         self.cache.get(key)
     }
 
     /// Insert a shaping result into the cache
     ///
     /// The result is stored in both L1 and L2 caches for maximum availability.
+    /// Does nothing if caching is globally disabled.
     pub fn insert(&self, key: ShapingCacheKey, result: ShapingResult) {
+        if !cache_config::is_caching_enabled() {
+            return;
+        }
         self.cache.insert(key, result);
     }
 
@@ -196,6 +204,9 @@ mod tests {
 
     #[test]
     fn test_cache_insert_and_get() {
+        // Enable caching for this test (caching is disabled by default)
+        crate::cache_config::set_caching_enabled(true);
+
         let cache = ShapingCache::new();
 
         let key = ShapingCacheKey::new("Test", "hb", b"font", 12.0, None, None, vec![], vec![]);
@@ -218,6 +229,9 @@ mod tests {
 
         assert!(cached.is_some());
         assert_eq!(cached.unwrap().glyphs.len(), 1);
+
+        // Reset to default state
+        crate::cache_config::set_caching_enabled(false);
     }
 
     #[test]
@@ -230,6 +244,9 @@ mod tests {
 
     #[test]
     fn test_cache_stats() {
+        // Enable caching for this test (caching is disabled by default)
+        crate::cache_config::set_caching_enabled(true);
+
         let cache = ShapingCache::new();
 
         let key = ShapingCacheKey::new("Text", "hb", b"font", 16.0, None, None, vec![], vec![]);
@@ -253,6 +270,9 @@ mod tests {
         let stats = cache.stats();
         // Stats track hits and misses
         assert!(stats.hit_rate >= 0.0);
+
+        // Reset to default state
+        crate::cache_config::set_caching_enabled(false);
     }
 
     #[test]

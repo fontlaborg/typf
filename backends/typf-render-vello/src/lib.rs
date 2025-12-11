@@ -43,6 +43,9 @@ pub enum VelloError {
     /// Rendering failed.
     #[error("Rendering failed: {0}")]
     RenderFailed(String),
+    /// GPU poll/readback failed.
+    #[error("GPU readback failed: {0}")]
+    ReadbackFailed(String),
 }
 
 impl From<VelloError> for RenderError {
@@ -213,7 +216,14 @@ impl VelloRenderer {
         });
 
         renderer
-            .render(scene, device, queue, &mut encoder, &render_size, &texture_view)
+            .render(
+                scene,
+                device,
+                queue,
+                &mut encoder,
+                &render_size,
+                &texture_view,
+            )
             .map_err(|e| VelloError::RenderFailed(format!("{:?}", e)))?;
 
         // Create buffer for readback (with row padding to 256 bytes)
@@ -257,7 +267,7 @@ impl VelloRenderer {
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
         device
             .poll(wgpu::PollType::wait_indefinitely())
-            .expect("GPU poll failed");
+            .map_err(|e| VelloError::ReadbackFailed(format!("{:?}", e)))?;
 
         // Read data and remove row padding
         let mapped = buffer_slice.get_mapped_range();
@@ -283,10 +293,7 @@ impl Renderer for VelloRenderer {
         font: Arc<dyn FontRef>,
         params: &RenderParams,
     ) -> Result<RenderOutput> {
-        log::debug!(
-            "VelloRenderer: Rendering {} glyphs",
-            shaped.glyphs.len()
-        );
+        log::debug!("VelloRenderer: Rendering {} glyphs", shaped.glyphs.len());
 
         let padding = params.padding as f32;
         let font_size = shaped.advance_height;

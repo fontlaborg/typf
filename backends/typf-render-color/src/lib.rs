@@ -800,8 +800,8 @@ pub fn render_color_glyph_with_variations(
     // Create transform: scale from font units to pixels, flip Y, translate to origin
     // Font coords: Y-up, origin at baseline
     // Pixmap coords: Y-down, origin at top-left
-    let transform = tiny_skia::Transform::from_scale(scale, -scale)
-        .post_translate(translate_x, translate_y);
+    let transform =
+        tiny_skia::Transform::from_scale(scale, -scale).post_translate(translate_x, translate_y);
 
     // Create painter with transform and render
     {
@@ -1159,15 +1159,16 @@ pub fn render_glyph_with_variations(
             | Err(bitmap::BitmapRenderError::GlyphNotFound)
             | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {
                 // Fall back to outline rendering
-                let (pixmap, _used_bitmap) =
-                    bitmap::render_bitmap_glyph_or_outline(font_data, glyph_id, width, height, size)?;
+                let (pixmap, _used_bitmap) = bitmap::render_bitmap_glyph_or_outline(
+                    font_data, glyph_id, width, height, size,
+                )?;
                 Ok(RenderResult {
                     pixmap,
                     method: RenderMethod::Outline,
                     bearing_x: None,
                     bearing_y: None,
                 })
-            }
+            },
             Err(e) => Err(e.into()),
         }
     }
@@ -1307,12 +1308,12 @@ pub fn render_glyph_with_preference(
                                 },
                                 source,
                             ));
-                        }
+                        },
                         Err(bitmap::BitmapRenderError::NoBitmapTable)
                         | Err(bitmap::BitmapRenderError::GlyphNotFound)
                         | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {
                             // No bitmap for this glyph - continue to next source
-                        }
+                        },
                         Err(e) => return Err(e.into()),
                     }
                 }

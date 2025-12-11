@@ -94,14 +94,17 @@ fn test_svg_output_structure() {
 #[test]
 fn test_cbdt_bitmap_font_graceful_handling() {
     // Load the CBDT test font
-    let font_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../test-fonts/Nabla-Regular-CBDT.ttf");
+    let font_path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../test-fonts/Nabla-Regular-CBDT.ttf"
+    );
 
     let font_data = match std::fs::read(font_path) {
         Ok(data) => data,
         Err(_) => {
             // Skip test if font file not found (CI environment)
             return;
-        }
+        },
     };
 
     // Create a simple real font wrapper
@@ -132,15 +135,13 @@ fn test_cbdt_bitmap_font_graceful_handling() {
 
     // Create shaped result with glyphs that exist in the font
     let shaped = ShapingResult {
-        glyphs: vec![
-            typf_core::types::PositionedGlyph {
-                id: 1,  // Glyph ID that exists but has no outline
-                x: 0.0,
-                y: 0.0,
-                advance: 600.0,
-                cluster: 0,
-            },
-        ],
+        glyphs: vec![typf_core::types::PositionedGlyph {
+            id: 1, // Glyph ID that exists but has no outline
+            x: 0.0,
+            y: 0.0,
+            advance: 600.0,
+            cluster: 0,
+        }],
         advance_width: 600.0,
         advance_height: 2048.0,
         direction: Direction::LeftToRight,
@@ -152,7 +153,10 @@ fn test_cbdt_bitmap_font_graceful_handling() {
     // Export should succeed - bitmap glyphs are skipped gracefully
     let result = exporter.export(&shaped, font, foreground);
 
-    assert!(result.is_ok(), "CBDT font export should succeed with graceful skip");
+    assert!(
+        result.is_ok(),
+        "CBDT font export should succeed with graceful skip"
+    );
 
     if let Ok(svg) = result {
         // SVG should be valid (has header/footer)
@@ -171,14 +175,17 @@ fn test_cbdt_bitmap_font_graceful_handling() {
 #[cfg(feature = "bitmap-embed")]
 fn test_cbdt_bitmap_font_embedding() {
     // Load the CBDT test font
-    let font_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../test-fonts/Nabla-Regular-CBDT.ttf");
+    let font_path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../test-fonts/Nabla-Regular-CBDT.ttf"
+    );
 
     let font_data = match std::fs::read(font_path) {
         Ok(data) => data,
         Err(_) => {
             // Skip test if font file not found (CI environment)
             return;
-        }
+        },
     };
 
     // Create a real font wrapper
@@ -208,15 +215,13 @@ fn test_cbdt_bitmap_font_embedding() {
 
     // Create shaped result with a glyph that exists in the font
     let shaped = ShapingResult {
-        glyphs: vec![
-            typf_core::types::PositionedGlyph {
-                id: 36,  // Glyph ID for 'A' in Nabla
-                x: 0.0,
-                y: 0.0,
-                advance: 600.0,
-                cluster: 0,
-            },
-        ],
+        glyphs: vec![typf_core::types::PositionedGlyph {
+            id: 36, // Glyph ID for 'A' in Nabla
+            x: 0.0,
+            y: 0.0,
+            advance: 600.0,
+            cluster: 0,
+        }],
         advance_width: 600.0,
         advance_height: 48.0, // Reasonable font size for bitmap lookup
         direction: Direction::LeftToRight,
@@ -228,7 +233,11 @@ fn test_cbdt_bitmap_font_embedding() {
     // Export should succeed with bitmap embedding
     let result = exporter.export(&shaped, font, foreground);
 
-    assert!(result.is_ok(), "CBDT font export with bitmap embedding should succeed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "CBDT font export with bitmap embedding should succeed: {:?}",
+        result.err()
+    );
 
     if let Ok(svg) = result {
         // SVG should be valid
@@ -239,8 +248,14 @@ fn test_cbdt_bitmap_font_embedding() {
         // With bitmap embedding enabled, we should see <image> elements with base64 data
         // (if the bitmap was successfully rendered)
         if svg.contains("<image") {
-            assert!(svg.contains("data:image/png;base64,"), "Image should have base64 PNG data URI");
-            assert!(svg.contains("href=\"data:"), "Image should use href attribute");
+            assert!(
+                svg.contains("data:image/png;base64,"),
+                "Image should have base64 PNG data URI"
+            );
+            assert!(
+                svg.contains("href=\"data:"),
+                "Image should use href attribute"
+            );
         }
     }
 }

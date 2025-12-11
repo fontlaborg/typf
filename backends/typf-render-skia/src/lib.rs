@@ -159,7 +159,11 @@ impl SkiaRenderer {
         // Note: We try color glyphs even if outline is empty - bitmap/SVG sources don't
         // need outlines. If no color data exists for this glyph, try_color_glyph returns None
         // and we fall through to outline rendering (which will handle empty outlines).
-        log::debug!("Skia: checking color path: color_allowed={}, outline_empty={}", color_allowed, outline_empty);
+        log::debug!(
+            "Skia: checking color path: color_allowed={}, outline_empty={}",
+            color_allowed,
+            outline_empty
+        );
         if color_allowed {
             log::debug!("Skia: calling try_color_glyph");
             // Expand bbox for COLR rendering - COLR glyphs can extend beyond outline bounds
@@ -284,7 +288,12 @@ impl SkiaRenderer {
             .map(|(tag, value)| (tag.as_str(), *value))
             .collect();
 
-        log::debug!("Skia try_color_glyph: calling render_glyph_with_preference for gid={}, size={}x{}", glyph_id, width, height);
+        log::debug!(
+            "Skia try_color_glyph: calling render_glyph_with_preference for gid={}, size={}x{}",
+            glyph_id,
+            width,
+            height
+        );
         match render_glyph_with_preference(
             font.data(),
             glyph_id,
@@ -296,7 +305,12 @@ impl SkiaRenderer {
             &params.glyph_sources,
         ) {
             Ok((rendered, source_used)) => {
-                log::debug!("Skia try_color_glyph: success via {:?}, pixmap={}x{}", source_used, rendered.pixmap.width(), rendered.pixmap.height());
+                log::debug!(
+                    "Skia try_color_glyph: success via {:?}, pixmap={}x{}",
+                    source_used,
+                    rendered.pixmap.width(),
+                    rendered.pixmap.height()
+                );
                 let pixmap = rendered.pixmap;
                 let pixmap_data = pixmap.data();
 
@@ -321,55 +335,57 @@ impl SkiaRenderer {
 
                 // Use bearing info from RenderResult if available (bitmap glyphs),
                 // otherwise compute from actual pixmap content bounds (COLR/SVG)
-                let (bearing_x, bearing_y) = if let (Some(bx), Some(by)) =
-                    (rendered.bearing_x, rendered.bearing_y)
-                {
-                    // Bitmap glyphs: use computed bearings from font metrics
-                    (bx.floor() as i32, by.ceil() as i32)
-                } else {
-                    // COLR/SVG: compute bearings from actual rendered content
-                    // This ensures vertical positioning matches the actual color glyph content,
-                    // not the outline bbox which may differ.
-                    if let Some(bounds) = compute_content_bounds(&pixmap) {
-                        // Content bounds are in pixmap coords (Y-down, origin at top-left)
-                        // The pixmap is positioned at (bbox.x0, bbox.y0) in font coords
-                        // bearing_x = left edge of content in font coords
-                        // bearing_y = top edge of content in font coords (Y-up)
-                        //
-                        // In the pixmap (before flip):
-                        // - min_y is the topmost row with content
-                        // - This corresponds to the highest Y value in font coords
-                        //
-                        // Font coords Y range: [bbox.y0, bbox.y1]
-                        // Pixmap row 0 = bbox.y1 (top of bbox in font coords)
-                        // Pixmap row (height-1) = bbox.y0 (bottom of bbox in font coords)
-                        //
-                        // So: font_y = bbox.y1 - pixmap_y * (bbox.y1 - bbox.y0) / (height - 1)
-                        // For the topmost content (min_y in pixmap):
-                        // font_y_top = bbox.y1 - min_y * height_scale
-                        let height = pixmap.height() as f64;
-                        let height_scale = if height > 1.0 {
-                            (bbox.y1 - bbox.y0) / (height - 1.0)
-                        } else {
-                            1.0
-                        };
-                        let content_top_font_y = bbox.y1 - (bounds.min_y as f64) * height_scale;
-
-                        // bearing_x: left edge of content
-                        let width = pixmap.width() as f64;
-                        let width_scale = if width > 1.0 {
-                            (bbox.x1 - bbox.x0) / (width - 1.0)
-                        } else {
-                            1.0
-                        };
-                        let content_left_font_x = bbox.x0 + (bounds.min_x as f64) * width_scale;
-
-                        (content_left_font_x.floor() as i32, content_top_font_y.ceil() as i32)
+                let (bearing_x, bearing_y) =
+                    if let (Some(bx), Some(by)) = (rendered.bearing_x, rendered.bearing_y) {
+                        // Bitmap glyphs: use computed bearings from font metrics
+                        (bx.floor() as i32, by.ceil() as i32)
                     } else {
-                        // Fully transparent - use outline bbox as fallback
-                        (bbox.x0.floor() as i32, bbox.y1.ceil() as i32)
-                    }
-                };
+                        // COLR/SVG: compute bearings from actual rendered content
+                        // This ensures vertical positioning matches the actual color glyph content,
+                        // not the outline bbox which may differ.
+                        if let Some(bounds) = compute_content_bounds(&pixmap) {
+                            // Content bounds are in pixmap coords (Y-down, origin at top-left)
+                            // The pixmap is positioned at (bbox.x0, bbox.y0) in font coords
+                            // bearing_x = left edge of content in font coords
+                            // bearing_y = top edge of content in font coords (Y-up)
+                            //
+                            // In the pixmap (before flip):
+                            // - min_y is the topmost row with content
+                            // - This corresponds to the highest Y value in font coords
+                            //
+                            // Font coords Y range: [bbox.y0, bbox.y1]
+                            // Pixmap row 0 = bbox.y1 (top of bbox in font coords)
+                            // Pixmap row (height-1) = bbox.y0 (bottom of bbox in font coords)
+                            //
+                            // So: font_y = bbox.y1 - pixmap_y * (bbox.y1 - bbox.y0) / (height - 1)
+                            // For the topmost content (min_y in pixmap):
+                            // font_y_top = bbox.y1 - min_y * height_scale
+                            let height = pixmap.height() as f64;
+                            let height_scale = if height > 1.0 {
+                                (bbox.y1 - bbox.y0) / (height - 1.0)
+                            } else {
+                                1.0
+                            };
+                            let content_top_font_y = bbox.y1 - (bounds.min_y as f64) * height_scale;
+
+                            // bearing_x: left edge of content
+                            let width = pixmap.width() as f64;
+                            let width_scale = if width > 1.0 {
+                                (bbox.x1 - bbox.x0) / (width - 1.0)
+                            } else {
+                                1.0
+                            };
+                            let content_left_font_x = bbox.x0 + (bounds.min_x as f64) * width_scale;
+
+                            (
+                                content_left_font_x.floor() as i32,
+                                content_top_font_y.ceil() as i32,
+                            )
+                        } else {
+                            // Fully transparent - use outline bbox as fallback
+                            (bbox.x0.floor() as i32, bbox.y1.ceil() as i32)
+                        }
+                    };
 
                 // Flip vertically for COLR and bitmap sources: typf-render-color outputs
                 // these in font coords (Y-up), but we need bitmap coords (Y-down) for compositing.
@@ -390,7 +406,10 @@ impl SkiaRenderer {
             },
             Err(typf_render_color::ColorRenderError::GlyphNotFound) => {
                 // No color glyph available - allow outline fallback
-                log::debug!("Skia: no color glyph for {}, falling back to outline", glyph_id);
+                log::debug!(
+                    "Skia: no color glyph for {}, falling back to outline",
+                    glyph_id
+                );
                 Ok(None)
             },
             Err(typf_render_color::ColorRenderError::NoColrTable) => {
@@ -399,7 +418,10 @@ impl SkiaRenderer {
             },
             Err(typf_render_color::ColorRenderError::NoPalette) => {
                 // No palette available - allow outline fallback
-                log::debug!("Skia: no palette for glyph {}, falling back to outline", glyph_id);
+                log::debug!(
+                    "Skia: no palette for glyph {}, falling back to outline",
+                    glyph_id
+                );
                 Ok(None)
             },
             Err(err) => {
@@ -660,9 +682,11 @@ impl Renderer for SkiaRenderer {
                             canvas[canvas_idx] =
                                 (src_r + canvas[canvas_idx] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 1] =
-                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255) as u8;
+                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255)
+                                    as u8;
                             canvas[canvas_idx + 2] =
-                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255) as u8;
+                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255)
+                                    as u8;
                             canvas[canvas_idx + 3] = (src_a + dst_a * inv_a / 255).min(255) as u8;
                         }
                     }
@@ -701,9 +725,11 @@ impl Renderer for SkiaRenderer {
                             canvas[canvas_idx] =
                                 (src_r + canvas[canvas_idx] as u32 * inv_a / 255).min(255) as u8;
                             canvas[canvas_idx + 1] =
-                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255) as u8;
+                                (src_g + canvas[canvas_idx + 1] as u32 * inv_a / 255).min(255)
+                                    as u8;
                             canvas[canvas_idx + 2] =
-                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255) as u8;
+                                (src_b + canvas[canvas_idx + 2] as u32 * inv_a / 255).min(255)
+                                    as u8;
                             canvas[canvas_idx + 3] = (src_a + dst_a * inv_a / 255).min(255) as u8;
                         }
                     }

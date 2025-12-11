@@ -1,7 +1,7 @@
 # TODO: Typf Rendering Quality & Backend Integration
 
-**Version:** 2.5.4
-**Updated:** Dec 4, 2025
+**Version:** 2.5.0
+**Updated:** Dec 11, 2025
 **Reference:** See PLAN.md for detailed specifications
 
 ---
@@ -85,6 +85,16 @@ All critical rendering issues have been resolved:
 - **bearing_y** - Using `max_y.ceil()` for proper alignment
 - **Vertical flip** - Verified correct for odd/even heights
 
+### Cache System ✓
+- **Default disabled** - Caching now opt-in via `set_caching_enabled(true)` or `TYPF_CACHE=1`
+- **Pipeline policy** - `CachePolicy` defaults to `false` for both shaping and glyph caches
+- **Python bindings** - `typf.set_caching_enabled()` and `typf.is_caching_enabled()` exposed
+- **Clippy clean** - Fixed derivable impl, Arc lint, and expect() warnings
+
+### Documentation ✓
+- **README.md** - Added caching section with Rust/Python/env var examples
+- **QUICKSTART.md** - Created comprehensive Rust usage guide with caching docs
+
 ---
 
 ## 5. Performance Reference
@@ -103,7 +113,7 @@ All critical rendering issues have been resolved:
 
 ## 6. Test Coverage
 
-- **Workspace total:** 385 tests
+- **Workspace total:** 410 tests
 - **Vello CPU:** 17 tests (4 unit + 13 integration)
 - **Vello GPU:** 15 tests (3 unit + 12 integration)
 - **Color fonts:** All 4 formats tested (COLR, SVG, sbix, CBDT)

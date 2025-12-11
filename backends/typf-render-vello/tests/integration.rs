@@ -96,7 +96,7 @@ fn try_create_renderer() -> Option<VelloRenderer> {
         Err(e) => {
             eprintln!("Skipping GPU test: {}", e);
             None
-        }
+        },
     }
 }
 
@@ -108,10 +108,10 @@ fn test_vello_renderer_creation() {
     match result {
         Ok(renderer) => {
             assert_eq!(renderer.name(), "vello");
-        }
+        },
         Err(e) => {
             eprintln!("GPU renderer creation failed (expected in CI): {}", e);
-        }
+        },
     }
 }
 
@@ -127,7 +127,7 @@ fn test_vello_render_with_real_font() {
         None => {
             eprintln!("Skipping test: NotoSans-Regular.ttf not found");
             return;
-        }
+        },
     };
 
     let shaped = simple_shaping_result();
@@ -181,7 +181,7 @@ fn test_vello_render_empty_text() {
         Ok(RenderOutput::Bitmap(bitmap)) => {
             // If it succeeds, verify basic structure
             assert_eq!(bitmap.format, BitmapFormat::Rgba8);
-        }
+        },
         Err(e) => {
             // Zero dimensions error is acceptable for zero-width canvas
             let err_str = e.to_string();
@@ -190,7 +190,7 @@ fn test_vello_render_empty_text() {
                 "Should fail with dimension error, got: {}",
                 err_str
             );
-        }
+        },
         _ => panic!("Unexpected result type"),
     }
 }
@@ -268,7 +268,7 @@ fn test_vello_supports_format() {
             // Even without GPU, we can test the trait implementation
             // by checking default behavior
             return;
-        }
+        },
     };
 
     assert!(renderer.supports_format("bitmap"));
@@ -286,10 +286,13 @@ fn test_vello_with_custom_config() {
     match VelloRenderer::with_config(config) {
         Ok(renderer) => {
             assert_eq!(renderer.name(), "vello");
-        }
+        },
         Err(e) => {
-            eprintln!("GPU renderer with custom config failed (expected in CI): {}", e);
-        }
+            eprintln!(
+                "GPU renderer with custom config failed (expected in CI): {}",
+                e
+            );
+        },
     }
 }
 
@@ -305,7 +308,7 @@ fn test_vello_render_arabic_font() {
         None => {
             eprintln!("Skipping test: NotoNaskhArabic-Regular.ttf not found");
             return;
-        }
+        },
     };
 
     // Create RTL shaping result (simplified - real RTL would have different glyph positions)
@@ -324,7 +327,11 @@ fn test_vello_render_arabic_font() {
 
     let params = RenderParams::default();
     let result = renderer.render(&shaped, font, &params);
-    assert!(result.is_ok(), "Arabic font should render: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Arabic font should render: {:?}",
+        result.err()
+    );
 }
 
 #[test]
@@ -339,7 +346,7 @@ fn test_vello_render_variable_font() {
         None => {
             eprintln!("Skipping test: Kalnia[wdth,wght].ttf not found");
             return;
-        }
+        },
     };
 
     let shaped = simple_shaping_result();
@@ -365,7 +372,7 @@ fn test_vello_render_colr_color_font() {
         None => {
             eprintln!("Skipping test: Nabla-Regular-COLR.ttf not found");
             return;
-        }
+        },
     };
 
     let shaped = simple_shaping_result();
@@ -397,7 +404,7 @@ fn test_vello_render_cbdt_color_font() {
         None => {
             eprintln!("Skipping test: Nabla-Regular-CBDT.ttf not found");
             return;
-        }
+        },
     };
 
     let shaped = simple_shaping_result();
@@ -423,7 +430,7 @@ fn test_vello_render_sbix_color_font() {
         None => {
             eprintln!("Skipping test: Nabla-Regular-sbix.ttf not found");
             return;
-        }
+        },
     };
 
     let shaped = simple_shaping_result();
@@ -449,7 +456,7 @@ fn test_vello_render_math_font() {
         None => {
             eprintln!("Skipping test: STIX2Math.otf not found");
             return;
-        }
+        },
     };
 
     let shaped = simple_shaping_result();

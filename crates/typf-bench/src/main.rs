@@ -22,12 +22,12 @@ use typf_shape_none::NoneShaper;
 use typf_render_cg::CoreGraphicsRenderer;
 #[cfg(feature = "render-skia")]
 use typf_render_skia::SkiaRenderer;
-#[cfg(feature = "render-zeno")]
-use typf_render_zeno::ZenoRenderer;
-#[cfg(feature = "render-vello-cpu")]
-use typf_render_vello_cpu::VelloCpuRenderer;
 #[cfg(feature = "render-vello")]
 use typf_render_vello::VelloRenderer;
+#[cfg(feature = "render-vello-cpu")]
+use typf_render_vello_cpu::VelloCpuRenderer;
+#[cfg(feature = "render-zeno")]
+use typf_render_zeno::ZenoRenderer;
 #[cfg(feature = "shaping-ct")]
 use typf_shape_ct::CoreTextShaper;
 #[cfg(feature = "shaping-hb")]
@@ -196,7 +196,12 @@ struct BenchmarkRunner {
 }
 
 impl BenchmarkRunner {
-    fn new(input_dir: &str, config: BenchmarkConfig, json_output: bool, level: u8) -> Result<Self, TypfError> {
+    fn new(
+        input_dir: &str,
+        config: BenchmarkConfig,
+        json_output: bool,
+        level: u8,
+    ) -> Result<Self, TypfError> {
         let mut fonts = Vec::new();
         let font_dir = Path::new(input_dir);
 
@@ -223,7 +228,10 @@ impl BenchmarkRunner {
                         match TypfFontFace::from_file(&path) {
                             Ok(font) => {
                                 if !json_output {
-                                    println!("{}", format!("Loaded font: {}", path.display()).green());
+                                    println!(
+                                        "{}",
+                                        format!("Loaded font: {}", path.display()).green()
+                                    );
                                 }
                                 fonts.push(Arc::new(font));
                             },
@@ -231,8 +239,12 @@ impl BenchmarkRunner {
                                 if !json_output {
                                     eprintln!(
                                         "{}",
-                                        format!("Warning: Failed to load {}: {}", path.display(), e)
-                                            .yellow()
+                                        format!(
+                                            "Warning: Failed to load {}: {}",
+                                            path.display(),
+                                            e
+                                        )
+                                        .yellow()
                                     );
                                 }
                             },
@@ -257,7 +269,12 @@ impl BenchmarkRunner {
             );
         }
 
-        Ok(Self { fonts, config, json_output, level })
+        Ok(Self {
+            fonts,
+            config,
+            json_output,
+            level,
+        })
     }
 
     #[allow(clippy::vec_init_then_push)]
@@ -485,7 +502,11 @@ impl BenchmarkRunner {
     }
 
     /// Output results as JSON
-    fn output_json(&self, results: Vec<BenchmarkResult>, output_file: Option<&str>) -> Result<(), TypfError> {
+    fn output_json(
+        &self,
+        results: Vec<BenchmarkResult>,
+        output_file: Option<&str>,
+    ) -> Result<(), TypfError> {
         let output = BenchmarkOutput {
             version: env!("CARGO_PKG_VERSION").to_string(),
             timestamp: chrono::Utc::now().to_rfc3339(),
@@ -498,12 +519,11 @@ impl BenchmarkRunner {
 
         match output_file {
             Some(path) => {
-                fs::write(path, &json)
-                    .map_err(TypfError::Io)?;
-            }
+                fs::write(path, &json).map_err(TypfError::Io)?;
+            },
             None => {
                 println!("{}", json);
-            }
+            },
         }
 
         Ok(())
