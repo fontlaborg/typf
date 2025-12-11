@@ -6,6 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Font database and loading utilities for Typf"
 
 [dependencies]
 typf-core = { workspace = true }

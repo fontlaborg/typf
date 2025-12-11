@@ -5,6 +5,7 @@ authors.workspace = true
 edition.workspace = true
 description = "CoreGraphics rendering backend for Typf"
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 log = { workspace = true }

@@ -4,6 +4,8 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "HarfBuzz shaping backend for Typf"
+repository.workspace = true
 
 [dependencies]
 typf-core = { workspace = true }
