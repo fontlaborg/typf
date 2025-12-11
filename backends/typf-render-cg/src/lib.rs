@@ -7,6 +7,7 @@
 
 #![cfg(target_os = "macos")]
 
+use std::ptr::NonNull;
 use std::sync::Arc;
 use typf_core::{
     error::{RenderError, Result, TypfError},
@@ -15,21 +16,15 @@ use typf_core::{
     Color, RenderParams,
 };
 
-use core_foundation::base::{CFType, TCFType, TCFTypeRef};
-use core_foundation::dictionary::CFDictionary;
-use core_foundation::number::CFNumber;
-use core_foundation::string::CFString;
-use core_graphics::base::CGFloat;
-use core_graphics::{
-    color_space::CGColorSpace,
-    context::{CGContext, CGTextDrawingMode},
-    data_provider::CGDataProvider,
-    font::{CGFont, CGGlyph},
-    geometry::{CGPoint, CGRect, CGSize},
+use objc2_core_foundation::{
+    CFDictionary, CFNumber, CFRetained, CFString, CGAffineTransform, CGPoint, CGRect, CGSize,
 };
-use core_text::font::CTFont;
-use core_text::font_descriptor::kCTFontVariationAttribute;
-use foreign_types::ForeignType;
+use objc2_core_graphics::{
+    CGBitmapContextCreate, CGColorSpace, CGContext, CGDataProvider, CGFont, CGGlyph,
+    CGTextDrawingMode,
+};
+use objc2_core_text::{kCTFontVariationAttribute, CTFont, CTFontDescriptor};
+use std::ffi::c_void;
 use std::ptr;
 
 /// Bridge between our font bytes and CoreGraphics' data expectations
@@ -38,12 +33,6 @@ use std::ptr;
 /// This wrapper keeps our font data alive with proper reference counting.
 struct ProviderData {
     bytes: Arc<[u8]>,
-}
-
-impl AsRef<[u8]> for ProviderData {
-    fn as_ref(&self) -> &[u8] {
-        &self.bytes
-    }
 }
 
 /// Direct access to macOS's professional text rendering pipeline
@@ -64,23 +53,50 @@ impl CoreGraphicsRenderer {
     /// This is where we bridge Typf's font loading with CoreGraphics' expectations.
     /// The data provider pattern ensures the font data stays alive as long as
     /// CoreGraphics needs it.
-    fn create_cg_font(data: &[u8]) -> Result<CGFont> {
+    fn create_cg_font(data: &[u8]) -> Result<CFRetained<CGFont>> {
         // Wrap our font data in an Arc for proper lifetime management
         let provider_data = Arc::new(ProviderData {
             bytes: Arc::from(data),
         });
 
-        // Hand the data to CoreGraphics through its provider interface
-        let provider = CGDataProvider::from_buffer(provider_data);
+        // Create data provider from bytes
+        let data_ptr = provider_data.bytes.as_ptr();
+        let data_len = provider_data.bytes.len();
 
-        // Let CoreGraphics parse and validate the font data
-        let cg_font = CGFont::from_data_provider(provider).map_err(|_| {
+        // Use CGDataProvider::with_data with a release callback that drops our Arc
+        let provider = unsafe {
+            let boxed = Box::into_raw(Box::new(provider_data));
+            extern "C-unwind" fn release_callback(
+                info: *mut c_void,
+                _data: NonNull<c_void>,
+                _size: usize,
+            ) {
+                unsafe {
+                    let _ = Box::from_raw(info as *mut Arc<ProviderData>);
+                }
+            }
+            CGDataProvider::with_data(
+                boxed as *mut c_void,
+                data_ptr as *const c_void,
+                data_len,
+                Some(release_callback),
+            )
+        };
+
+        let provider = provider.ok_or_else(|| {
             TypfError::RenderingFailed(RenderError::BackendError(
-                "CoreGraphics rejected our font data".to_string(),
+                "Failed to create CGDataProvider".to_string(),
             ))
         })?;
 
-        Ok(cg_font)
+        // Let CoreGraphics parse and validate the font data
+        let cg_font = CGFont::with_data_provider(&provider);
+
+        cg_font.ok_or_else(|| {
+            TypfError::RenderingFailed(RenderError::BackendError(
+                "CoreGraphics rejected our font data".to_string(),
+            ))
+        })
     }
 
     /// Figures out how much canvas space our shaped text needs
@@ -165,16 +181,11 @@ impl CoreGraphicsRenderer {
     /// For variable fonts, this applies the specified axis values to produce
     /// the correct glyph outlines. Without this, variable fonts would always
     /// render at their default axis values regardless of shaping parameters.
-    ///
-    /// IMPORTANT: CoreText's variation dictionary requires axis identifiers as
-    /// CFNumber keys (32-bit integers), NOT string tags. The core-text crate's
-    /// `new_from_CGFont_with_variations` incorrectly uses CFString keys which
-    /// CoreText silently ignores. We must call the raw API directly.
     fn create_ct_font_with_variations(
         data: &[u8],
         font_size: f64,
         variations: &[(String, f32)],
-    ) -> Result<CTFont> {
+    ) -> Result<CFRetained<CTFont>> {
         // Create CGFont from raw data - this keeps our loaded font data
         let cg_font = Self::create_cg_font(data)?;
 
@@ -188,8 +199,7 @@ impl CoreGraphicsRenderer {
             // CoreText's variation dictionary requires:
             // - Keys: CFNumber representing axis identifier (32-bit integer from 4-char tag)
             // - Values: CFNumber representing axis value
-            // Example: "wght" tag becomes axis ID 2003265652 (0x77676874)
-            let var_pairs: Vec<(CFNumber, CFNumber)> = variations
+            let var_pairs: Vec<(CFRetained<CFNumber>, CFRetained<CFNumber>)> = variations
                 .iter()
                 .filter_map(|(tag, value)| {
                     Self::tag_to_axis_id(tag).map(|axis_id| {
@@ -199,52 +209,61 @@ impl CoreGraphicsRenderer {
                             axis_id,
                             value
                         );
-                        (CFNumber::from(axis_id), CFNumber::from(*value as f64))
+                        let key = CFNumber::new_i64(axis_id);
+                        let val = CFNumber::new_f64(*value as f64);
+                        (key, val)
                     })
                 })
                 .collect();
 
             if !var_pairs.is_empty() {
-                // Create variation dictionary with CFNumber keys (axis IDs as integers)
-                let var_dict: CFDictionary<CFNumber, CFNumber> =
-                    CFDictionary::from_CFType_pairs(&var_pairs);
+                // Create variation dictionary
+                let keys: Vec<&CFNumber> = var_pairs.iter().map(|(k, _)| k.as_ref()).collect();
+                let values: Vec<&CFNumber> = var_pairs.iter().map(|(_, v)| v.as_ref()).collect();
+
+                let var_dict: CFRetained<CFDictionary<CFNumber, CFNumber>> =
+                    CFDictionary::from_slices(&keys, &values);
 
                 // Create font descriptor with variations attribute
-                // We must use raw CoreText API because the core-text crate's
-                // new_from_CGFont_with_variations incorrectly expects CFString keys
-                unsafe {
-                    let var_key = CFString::wrap_under_get_rule(kCTFontVariationAttribute);
-                    let var_val = CFType::wrap_under_get_rule(var_dict.as_CFTypeRef());
-                    let attrs: CFDictionary<CFString, CFType> =
-                        CFDictionary::from_CFType_pairs(&[(var_key, var_val)]);
+                // kCTFontVariationAttribute is a *const CFString, we need to retain it
+                let var_key_ptr: *const CFString = unsafe { kCTFontVariationAttribute };
+                let var_key = unsafe {
+                    CFRetained::retain(NonNull::new(var_key_ptr as *mut CFString).unwrap())
+                };
+                let keys_for_attrs: Vec<&CFString> = vec![&var_key];
+                // Cast var_dict to untyped CFDictionary for use as attribute value
+                let var_dict_untyped: CFRetained<CFDictionary> =
+                    unsafe { CFRetained::cast_unchecked(var_dict) };
+                let values_for_attrs: Vec<&CFDictionary> = vec![&var_dict_untyped];
 
-                    let desc = core_text::font_descriptor::new_from_attributes(&attrs);
+                let attrs: CFRetained<CFDictionary<CFString, CFDictionary>> =
+                    CFDictionary::from_slices(&keys_for_attrs, &values_for_attrs);
 
-                    // Link to CoreText's CTFontCreateWithGraphicsFont
-                    #[link(name = "CoreText", kind = "framework")]
-                    extern "C" {
-                        fn CTFontCreateWithGraphicsFont(
-                            graphicsFont: core_graphics::sys::CGFontRef,
-                            size: CGFloat,
-                            matrix: *const core_graphics::geometry::CGAffineTransform,
-                            attributes: core_text::font_descriptor::CTFontDescriptorRef,
-                        ) -> core_text::font::CTFontRef;
-                    }
+                // Cast to untyped dictionary for CTFontDescriptor
+                let attrs_untyped: CFRetained<CFDictionary> =
+                    unsafe { CFRetained::cast_unchecked(attrs) };
 
-                    let font_ref = CTFontCreateWithGraphicsFont(
-                        cg_font.as_ptr(),
-                        font_size as CGFloat,
-                        ptr::null(),
-                        desc.as_concrete_TypeRef(),
-                    );
+                let desc = unsafe { CTFontDescriptor::with_attributes(&attrs_untyped) };
 
-                    return Ok(CTFont::wrap_under_create_rule(font_ref));
-                }
+                let ct_font = unsafe {
+                    CTFont::with_graphics_font(
+                        &cg_font,
+                        font_size,
+                        ptr::null::<CGAffineTransform>(),
+                        Some(&desc),
+                    )
+                };
+
+                return Ok(ct_font);
             }
         }
 
         // No variations - create CTFont directly from CGFont
-        Ok(core_text::font::new_from_CGFont(&cg_font, font_size))
+        let ct_font = unsafe {
+            CTFont::with_graphics_font(&cg_font, font_size, ptr::null::<CGAffineTransform>(), None)
+        };
+
+        Ok(ct_font)
     }
 }
 
@@ -296,44 +315,68 @@ impl Renderer for CoreGraphicsRenderer {
         let mut buffer = vec![0u8; height as usize * bytes_per_row];
 
         // Create CGContext
-        let color_space = CGColorSpace::create_device_rgb();
-        let context = CGContext::create_bitmap_context(
-            Some(buffer.as_mut_ptr() as *mut _),
-            width as usize,
-            height as usize,
-            8, // bits per component
-            bytes_per_row,
-            &color_space,
-            core_graphics::base::kCGImageAlphaPremultipliedLast,
-        );
+        let color_space = CGColorSpace::new_device_rgb();
+        let color_space = color_space.ok_or_else(|| {
+            TypfError::RenderingFailed(RenderError::BackendError(
+                "Failed to create CGColorSpace".to_string(),
+            ))
+        })?;
+
+        // kCGImageAlphaPremultipliedLast = 1
+        let bitmap_info = 1u32;
+        let context = unsafe {
+            CGBitmapContextCreate(
+                buffer.as_mut_ptr() as *mut c_void,
+                width as usize,
+                height as usize,
+                8, // bits per component
+                bytes_per_row,
+                Some(&color_space),
+                bitmap_info,
+            )
+        };
+
+        let context = context.ok_or_else(|| {
+            TypfError::RenderingFailed(RenderError::BackendError(
+                "Failed to create CGContext".to_string(),
+            ))
+        })?;
 
         // Configure antialiasing
-        context.set_should_antialias(params.antialias);
-        if params.antialias {
-            context.set_should_smooth_fonts(true);
-        } else {
-            context.set_should_smooth_fonts(false);
-        }
+        CGContext::set_should_antialias(Some(&context), params.antialias);
+        CGContext::set_should_smooth_fonts(Some(&context), params.antialias);
 
         // Fill background (default to transparent if not specified)
         if let Some(bg_color) = &params.background {
             let (r, g, b, a) = Self::color_to_rgb(bg_color);
-            context.set_rgb_fill_color(r, g, b, a);
-            context.fill_rect(CGRect::new(
-                &CGPoint::new(0.0, 0.0),
-                &CGSize::new(width as f64, height as f64),
-            ));
+            CGContext::set_rgb_fill_color(Some(&context), r, g, b, a);
+            CGContext::fill_rect(
+                Some(&context),
+                CGRect {
+                    origin: CGPoint { x: 0.0, y: 0.0 },
+                    size: CGSize {
+                        width: width as f64,
+                        height: height as f64,
+                    },
+                },
+            );
         } else {
             // Clear to transparent (RGBA all zeros)
-            context.clear_rect(CGRect::new(
-                &CGPoint::new(0.0, 0.0),
-                &CGSize::new(width as f64, height as f64),
-            ));
+            CGContext::clear_rect(
+                Some(&context),
+                CGRect {
+                    origin: CGPoint { x: 0.0, y: 0.0 },
+                    size: CGSize {
+                        width: width as f64,
+                        height: height as f64,
+                    },
+                },
+            );
         }
 
         // Set text color
         let (r, g, b, a) = Self::color_to_rgb(&params.foreground);
-        context.set_rgb_fill_color(r, g, b, a);
+        CGContext::set_rgb_fill_color(Some(&context), r, g, b, a);
 
         // Validate font size before creating CTFont
         // CoreText requires a positive, finite font size
@@ -350,15 +393,6 @@ impl Renderer for CoreGraphicsRenderer {
         // Create CTFont with variation coordinates applied (critical for variable fonts!)
         let ct_font =
             Self::create_ct_font_with_variations(font.data(), font_size, &params.variations)?;
-
-        // Verify CTFont creation succeeded
-        // CoreText might return a CTFont with NULL internal pointer on failure
-        // which would later crash when CFRelease is called during drop
-        if ct_font.as_concrete_TypeRef().as_void_ptr().is_null() {
-            return Err(TypfError::RenderingFailed(RenderError::BackendError(
-                "CTFont creation failed: CoreText returned NULL font object".to_string(),
-            )));
-        }
 
         // Prepare glyph data
         let glyph_ids: Vec<CGGlyph> = shaped
@@ -406,11 +440,21 @@ impl Renderer for CoreGraphicsRenderer {
         }
 
         // Render glyphs using CTFont
-        context.save();
-        context.translate(params.padding as f64, baseline_y);
-        context.set_text_drawing_mode(CGTextDrawingMode::CGTextFill);
-        ct_font.draw_glyphs(&glyph_ids, &glyph_positions, context.clone());
-        context.restore();
+        CGContext::save_g_state(Some(&context));
+        CGContext::translate_ctm(Some(&context), params.padding as f64, baseline_y);
+        CGContext::set_text_drawing_mode(Some(&context), CGTextDrawingMode::Fill);
+
+        // Draw glyphs using CTFont::draw_glyphs
+        unsafe {
+            ct_font.draw_glyphs(
+                NonNull::new_unchecked(glyph_ids.as_ptr() as *mut CGGlyph),
+                NonNull::new_unchecked(glyph_positions.as_ptr() as *mut CGPoint),
+                glyph_ids.len(),
+                &context,
+            );
+        }
+
+        CGContext::restore_g_state(Some(&context));
 
         // Return bitmap data
         Ok(RenderOutput::Bitmap(BitmapData {

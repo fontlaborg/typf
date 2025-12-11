@@ -1,0 +1,19 @@
+[package]
+name = "typf-shape-hr"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pure Rust text shaping backend for typf using harfrust"
+
+[dependencies]
+typf-core = { workspace = true }
+harfrust = "0.3"
+log = { workspace = true }
+thiserror = { workspace = true }
+
+# Pool management
+parking_lot = { workspace = true }
+
+[dev-dependencies]
+read-fonts = { workspace = true }

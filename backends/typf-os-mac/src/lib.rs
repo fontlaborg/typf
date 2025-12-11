@@ -21,34 +21,26 @@
 
 #![cfg(target_os = "macos")]
 
+use std::cell::RefCell;
+use std::ffi::c_void;
+use std::num::NonZeroUsize;
+use std::ptr::{self, NonNull};
 use std::sync::Arc;
 
-use core_foundation::{
-    attributed_string::CFMutableAttributedString,
-    base::{CFRange, TCFType},
-    dictionary::CFDictionary,
-    number::CFNumber,
-    string::CFString,
+use objc2_core_foundation::{
+    CFDictionary, CFMutableAttributedString, CFNumber, CFRange, CFRetained, CFString, CFType,
+    CGFloat, CGPoint, CGRect, CGSize,
 };
-use core_graphics::{
-    base::CGFloat,
-    color_space::CGColorSpace,
-    context::{CGContext, CGTextDrawingMode},
-    data_provider::CGDataProvider,
-    font::CGFont,
-    geometry::{CGPoint, CGRect, CGSize},
+use objc2_core_graphics::{
+    CGBitmapContextCreate, CGColorSpace, CGContext, CGDataProvider, CGFont, CGImageAlphaInfo,
+    CGTextDrawingMode,
 };
-use core_text::{
-    font::{new_from_CGFont, CTFont},
-    font_descriptor::kCTFontVariationAttribute,
-    line::CTLine,
-    string_attributes::{kCTFontAttributeName, kCTKernAttributeName, kCTLigatureAttributeName},
+use objc2_core_text::{
+    kCTFontAttributeName, kCTFontVariationAttribute, kCTKernAttributeName,
+    kCTLigatureAttributeName, CTFont, CTFontDescriptor, CTLine,
 };
-use foreign_types::ForeignType;
+
 use lru::LruCache;
-use parking_lot::RwLock;
-use std::num::NonZeroUsize;
-use std::ptr;
 
 use typf_core::{
     error::{RenderError, Result, TypfError},
@@ -58,14 +50,15 @@ use typf_core::{
     Color,
 };
 
-/// Bridge between font bytes and CoreGraphics' data expectations
-struct ProviderData {
-    bytes: Arc<[u8]>,
-}
-
-impl AsRef<[u8]> for ProviderData {
-    fn as_ref(&self) -> &[u8] {
-        &self.bytes
+/// Callback to release font data when CGDataProvider is done with it
+unsafe extern "C-unwind" fn release_data_callback(
+    info: *mut c_void,
+    _data: NonNull<c_void>,
+    _size: usize,
+) {
+    if !info.is_null() {
+        // Reconstruct the Box to drop it properly
+        let _ = unsafe { Box::from_raw(info as *mut Arc<[u8]>) };
     }
 }
 
@@ -113,10 +106,18 @@ impl FontCacheKey {
 /// ensure the data outlives the CTFont to prevent use-after-free crashes.
 struct CachedFont {
     /// The CTFont itself
-    ct_font: CTFont,
+    ct_font: CFRetained<CTFont>,
     /// Font data kept alive to prevent use-after-free
     /// CGFont/CTFont may hold internal pointers to this data
     _data: Arc<[u8]>,
+}
+
+// Thread-local font cache to avoid cross-thread CTFont destruction.
+// CoreText fonts have thread affinity - destroying a CTFont on a different
+// thread than it was created can cause memory corruption.
+thread_local! {
+    static FONT_CACHE: RefCell<LruCache<FontCacheKey, CachedFont>> =
+        RefCell::new(LruCache::new(NonZeroUsize::new(100).unwrap()));
 }
 
 /// Single-pass text renderer using macOS CoreText
@@ -124,17 +125,13 @@ struct CachedFont {
 /// This renderer combines text shaping and rendering into a single CTLineDraw
 /// call for maximum performance on macOS.
 pub struct CoreTextLinraRenderer {
-    /// CTFont cache to avoid expensive font creation
-    /// Stores both CTFont and font data to ensure data outlives the font
-    font_cache: RwLock<LruCache<FontCacheKey, Arc<CachedFont>>>,
+    // No fields - cache is thread-local
 }
 
 impl CoreTextLinraRenderer {
     /// Creates a new linra renderer
     pub fn new() -> Self {
-        Self {
-            font_cache: RwLock::new(LruCache::new(NonZeroUsize::new(100).unwrap())),
-        }
+        Self {}
     }
 
     /// Validate font data has valid TrueType/OpenType signature
@@ -181,16 +178,34 @@ impl CoreTextLinraRenderer {
     ///
     /// Takes Arc<[u8]> directly to ensure the same Arc is used by both
     /// CGDataProvider and CachedFont, preventing use-after-free.
-    fn create_cg_font(data: Arc<[u8]>) -> Result<CGFont> {
+    fn create_cg_font(data: Arc<[u8]>) -> Result<CFRetained<CGFont>> {
         // Validate font data first to prevent CoreText crashes
         Self::validate_font_data(&data)?;
 
-        // Use the same Arc - don't create a new one!
-        let provider_data = Arc::new(ProviderData { bytes: data });
+        // Create Arc clone for the data provider callback
+        let data_ptr = data.as_ptr();
+        let data_len = data.len();
 
-        let provider = CGDataProvider::from_buffer(provider_data);
+        // Box the Arc so we can pass ownership to the callback
+        let boxed = Box::new(data);
+        let info_ptr = Box::into_raw(boxed) as *mut c_void;
 
-        CGFont::from_data_provider(provider).map_err(|_| {
+        // Create CGDataProvider
+        let provider = unsafe {
+            CGDataProvider::with_data(
+                info_ptr,
+                data_ptr as *const c_void,
+                data_len,
+                Some(release_data_callback),
+            )
+        }
+        .ok_or_else(|| {
+            TypfError::RenderingFailed(RenderError::BackendError(
+                "Failed to create CGDataProvider".to_string(),
+            ))
+        })?;
+
+        CGFont::with_data_provider(&provider).ok_or_else(|| {
             TypfError::RenderingFailed(RenderError::BackendError(
                 "Failed to create CGFont from data".to_string(),
             ))
@@ -218,104 +233,102 @@ impl CoreTextLinraRenderer {
         data: Arc<[u8]>,
         font_size: f64,
         variations: &[(String, f32)],
-    ) -> Result<CTFont> {
+    ) -> Result<CFRetained<CTFont>> {
         let cg_font = Self::create_cg_font(data)?;
 
         if !variations.is_empty() {
             // Build variation dictionary with numeric axis IDs
-            let var_pairs: Vec<(CFNumber, CFNumber)> = variations
+            let var_pairs: Vec<(CFRetained<CFNumber>, CFRetained<CFNumber>)> = variations
                 .iter()
                 .filter_map(|(tag, value)| {
-                    Self::tag_to_axis_id(tag)
-                        .map(|axis_id| (CFNumber::from(axis_id), CFNumber::from(*value as f64)))
+                    Self::tag_to_axis_id(tag).map(|axis_id| {
+                        (CFNumber::new_i64(axis_id), CFNumber::new_f64(*value as f64))
+                    })
                 })
                 .collect();
 
             if !var_pairs.is_empty() {
-                let var_dict: CFDictionary<CFNumber, CFNumber> =
-                    CFDictionary::from_CFType_pairs(&var_pairs);
+                // Build dictionary with axis ID -> value pairs
+                let keys: Vec<&CFNumber> = var_pairs.iter().map(|(k, _)| k.as_ref()).collect();
+                let values: Vec<&CFNumber> = var_pairs.iter().map(|(_, v)| v.as_ref()).collect();
+                let var_dict = CFDictionary::from_slices(&keys, &values);
 
-                unsafe {
-                    use core_foundation::base::CFType;
+                // Create descriptor attributes dictionary with variation attribute
+                let var_key: &CFString = unsafe { kCTFontVariationAttribute };
 
-                    let var_key = CFString::wrap_under_get_rule(kCTFontVariationAttribute);
-                    let var_val = CFType::wrap_under_get_rule(var_dict.as_CFTypeRef());
-                    let attrs: CFDictionary<CFString, CFType> =
-                        CFDictionary::from_CFType_pairs(&[(var_key, var_val)]);
+                // Cast dictionary to CFType for the attributes
+                let var_dict_type = unsafe { CFRetained::cast_unchecked::<CFType>(var_dict) };
 
-                    let desc = core_text::font_descriptor::new_from_attributes(&attrs);
+                let attr_keys: [&CFString; 1] = [var_key];
+                let attr_values: [&CFType; 1] = [&var_dict_type];
+                let attrs_dict = CFDictionary::from_slices(&attr_keys, &attr_values);
 
-                    #[link(name = "CoreText", kind = "framework")]
-                    extern "C" {
-                        fn CTFontCreateWithGraphicsFont(
-                            graphicsFont: core_graphics::sys::CGFontRef,
-                            size: CGFloat,
-                            matrix: *const core_graphics::geometry::CGAffineTransform,
-                            attributes: core_text::font_descriptor::CTFontDescriptorRef,
-                        ) -> core_text::font::CTFontRef;
-                    }
+                // Create font descriptor with variation attributes
+                let attrs_untyped =
+                    unsafe { CFRetained::cast_unchecked::<CFDictionary>(attrs_dict) };
+                let desc = unsafe { CTFontDescriptor::with_attributes(&attrs_untyped) };
 
-                    let font_ref = CTFontCreateWithGraphicsFont(
-                        cg_font.as_ptr(),
+                // Create CTFont with the descriptor
+                return Ok(unsafe {
+                    CTFont::with_graphics_font(
+                        &cg_font,
                         font_size as CGFloat,
                         ptr::null(),
-                        desc.as_concrete_TypeRef(),
-                    );
-
-                    return Ok(CTFont::wrap_under_create_rule(font_ref));
-                }
+                        Some(&desc),
+                    )
+                });
             }
         }
 
-        Ok(new_from_CGFont(&cg_font, font_size))
+        // No variations - create font without descriptor
+        Ok(
+            unsafe {
+                CTFont::with_graphics_font(&cg_font, font_size as CGFloat, ptr::null(), None)
+            },
+        )
     }
 
     /// Get or create a cached CTFont
     ///
-    /// Returns a CachedFont that keeps the font data alive alongside the CTFont.
-    /// This prevents use-after-free crashes in CoreText.
-    fn get_ct_font(
-        &self,
+    /// Uses thread-local cache since CTFont has thread affinity.
+    /// Returns a reference to the CTFont via closure to avoid lifetime issues.
+    fn with_ct_font<R>(
         font: &Arc<dyn FontRef>,
         params: &LinraRenderParams,
-    ) -> Result<Arc<CachedFont>> {
+        f: impl FnOnce(&CTFont) -> Result<R>,
+    ) -> Result<R> {
         let data = font.data();
         let cache_key = FontCacheKey::new(data, params.size, &params.variations);
 
-        // Check cache
-        {
-            let cache = self.font_cache.read();
-            if let Some(cached) = cache.peek(&cache_key) {
-                return Ok(Arc::clone(cached));
+        FONT_CACHE.with(|cache| {
+            let mut cache = cache.borrow_mut();
+
+            // Check cache first
+            if let Some(cached) = cache.get(&cache_key) {
+                return f(&cached.ct_font);
             }
-        }
 
-        // Copy font data to keep it alive with the CTFont
-        // This Arc is passed through create_ct_font -> create_cg_font -> CGDataProvider
-        // ensuring a single Arc instance is used everywhere
-        let data_arc: Arc<[u8]> = Arc::from(data);
+            // Copy font data to keep it alive with the CTFont
+            let data_arc: Arc<[u8]> = Arc::from(data);
 
-        // Create new CTFont - pass Arc clone so CGDataProvider uses the same Arc
-        let ct_font = Self::create_ct_font(
-            Arc::clone(&data_arc),
-            params.size as f64,
-            &params.variations,
-        )?;
+            // Create new CTFont
+            let ct_font = Self::create_ct_font(
+                Arc::clone(&data_arc),
+                params.size as f64,
+                &params.variations,
+            )?;
 
-        // Wrap in CachedFont to ensure data outlives the CTFont
-        // Note: data_arc is now held both here AND in CGDataProvider (same Arc)
-        let cached_font = Arc::new(CachedFont {
-            ct_font,
-            _data: data_arc,
-        });
+            // Wrap in CachedFont
+            let cached_font = CachedFont {
+                ct_font,
+                _data: data_arc,
+            };
 
-        // Cache it
-        {
-            let mut cache = self.font_cache.write();
-            cache.put(cache_key, Arc::clone(&cached_font));
-        }
-
-        Ok(cached_font)
+            // Cache it and call the closure
+            cache.put(cache_key.clone(), cached_font);
+            let cached = cache.get(&cache_key).unwrap();
+            f(&cached.ct_font)
+        })
     }
 
     /// Create attributed string with font and features
@@ -323,57 +336,107 @@ impl CoreTextLinraRenderer {
         text: &str,
         ct_font: &CTFont,
         params: &LinraRenderParams,
-    ) -> CFMutableAttributedString {
-        let cf_string = CFString::new(text);
-        let mut attributed_string = CFMutableAttributedString::new();
-        attributed_string.replace_str(&cf_string, CFRange::init(0, 0));
+    ) -> CFRetained<CFMutableAttributedString> {
+        let cf_string = CFString::from_str(text);
 
-        let range = CFRange::init(0, attributed_string.char_len());
+        // Create empty mutable attributed string
+        let attributed_string = CFMutableAttributedString::new(None, 0)
+            .expect("Failed to create CFMutableAttributedString");
+
+        // Replace content (append to empty string)
+        let len = cf_string.length();
+        unsafe {
+            CFMutableAttributedString::replace_string(
+                Some(&attributed_string),
+                CFRange::new(0, 0),
+                Some(&cf_string),
+            );
+        }
+
+        let range = CFRange::new(0, len);
 
         // Set font attribute
-        attributed_string.set_attribute(range, unsafe { kCTFontAttributeName }, ct_font);
+        let font_key: &CFString = unsafe { kCTFontAttributeName };
+        let ct_font_type: &CFType = unsafe { &*(ct_font as *const CTFont as *const CFType) };
+        unsafe {
+            CFMutableAttributedString::set_attribute(
+                Some(&attributed_string),
+                range,
+                Some(font_key),
+                Some(ct_font_type),
+            );
+        }
 
         // Apply OpenType features
-        Self::apply_features(&mut attributed_string, range, params);
+        Self::apply_features(&attributed_string, range, params);
 
         attributed_string
     }
 
     /// Apply OpenType features and letter spacing to attributed string
     fn apply_features(
-        attr_string: &mut CFMutableAttributedString,
+        attr_string: &CFMutableAttributedString,
         range: CFRange,
         params: &LinraRenderParams,
     ) {
         // Ligatures
         if let Some((_, value)) = params.features.iter().find(|(tag, _)| tag == "liga") {
-            let ligature_value = CFNumber::from(if *value > 0 { 1 } else { 0 });
-            attr_string.set_attribute(range, unsafe { kCTLigatureAttributeName }, &ligature_value);
+            let ligature_value = CFNumber::new_i32(if *value > 0 { 1 } else { 0 });
+            let lig_key: &CFString = unsafe { kCTLigatureAttributeName };
+            let lig_type: &CFType =
+                unsafe { &*(&*ligature_value as *const CFNumber as *const CFType) };
+            unsafe {
+                CFMutableAttributedString::set_attribute(
+                    Some(attr_string),
+                    range,
+                    Some(lig_key),
+                    Some(lig_type),
+                );
+            }
         }
 
         // Kerning feature (disable kerning)
         if let Some((_, value)) = params.features.iter().find(|(tag, _)| tag == "kern") {
             if *value == 0 {
-                let zero = CFNumber::from(0.0f64);
-                attr_string.set_attribute(range, unsafe { kCTKernAttributeName }, &zero);
+                let zero = CFNumber::new_f64(0.0);
+                let kern_key: &CFString = unsafe { kCTKernAttributeName };
+                let kern_type: &CFType = unsafe { &*(&*zero as *const CFNumber as *const CFType) };
+                unsafe {
+                    CFMutableAttributedString::set_attribute(
+                        Some(attr_string),
+                        range,
+                        Some(kern_key),
+                        Some(kern_type),
+                    );
+                }
             }
         }
 
         // Letter spacing (tracking) - applied via kCTKernAttributeName
         // This adds extra spacing between each character pair
         if params.letter_spacing != 0.0 {
-            let kern_value = CFNumber::from(params.letter_spacing as f64);
-            attr_string.set_attribute(range, unsafe { kCTKernAttributeName }, &kern_value);
+            let kern_value = CFNumber::new_f64(params.letter_spacing as f64);
+            let kern_key: &CFString = unsafe { kCTKernAttributeName };
+            let kern_type: &CFType =
+                unsafe { &*(&*kern_value as *const CFNumber as *const CFType) };
+            unsafe {
+                CFMutableAttributedString::set_attribute(
+                    Some(attr_string),
+                    range,
+                    Some(kern_key),
+                    Some(kern_type),
+                );
+            }
         }
     }
 
     /// Convert Color to CoreGraphics normalized floats
-    fn color_to_rgb(color: &Color) -> (f64, f64, f64, f64) {
+    fn color_to_rgb(color: &Color) -> (CGFloat, CGFloat, CGFloat, CGFloat) {
         (
-            color.r as f64 / 255.0,
-            color.g as f64 / 255.0,
-            color.b as f64 / 255.0,
-            color.a as f64 / 255.0,
+            color.r as CGFloat / 255.0,
+            color.g as CGFloat / 255.0,
+            color.b as CGFloat / 255.0,
+            color.a as CGFloat / 255.0,
         )
     }
 }
@@ -411,111 +474,142 @@ impl LinraRenderer for CoreTextLinraRenderer {
             }));
         }
 
-        // Get or create cached font (keeps font data alive to prevent use-after-free)
-        let cached_font = self.get_ct_font(&font, params)?;
+        // Use closure-based approach to work with thread-local cache
+        Self::with_ct_font(&font, params, |ct_font| {
+            // Create attributed string using the CTFont from cache
+            let attr_string = Self::create_attributed_string(text, ct_font, params);
 
-        // Create attributed string using the CTFont from cache
-        let attr_string = Self::create_attributed_string(text, &cached_font.ct_font, params);
+            // Create CTLine - need to cast CFMutableAttributedString to CFAttributedString
+            let attr_str_ref = unsafe {
+                &*(&*attr_string as *const CFMutableAttributedString
+                    as *const objc2_core_foundation::CFAttributedString)
+            };
+            let line = unsafe { CTLine::with_attributed_string(attr_str_ref) };
 
-        // Create CTLine - this performs shaping internally
-        let line = CTLine::new_with_attributed_string(attr_string.as_concrete_TypeRef());
+            // Get line metrics for sizing
+            let mut ascent: CGFloat = 0.0;
+            let mut descent: CGFloat = 0.0;
+            let mut leading: CGFloat = 0.0;
+            let line_width =
+                unsafe { line.typographic_bounds(&mut ascent, &mut descent, &mut leading) };
+            let line_height = ascent + descent;
 
-        // Get line metrics for sizing
-        let typographic_bounds = line.get_typographic_bounds();
-        let line_width = typographic_bounds.width;
-        let ascent = typographic_bounds.ascent;
-        let descent = typographic_bounds.descent;
-        let line_height = ascent + descent;
+            // Validate metrics are finite (corrupt fonts can produce NaN/Inf)
+            if !line_width.is_finite()
+                || !line_height.is_finite()
+                || !ascent.is_finite()
+                || !descent.is_finite()
+            {
+                return Err(TypfError::RenderingFailed(RenderError::BackendError(
+                    format!(
+                        "Invalid typographic bounds from font (width={}, height={}) - font may be corrupt",
+                        line_width, line_height
+                    ),
+                )));
+            }
 
-        // Validate metrics are finite (corrupt fonts can produce NaN/Inf)
-        if !line_width.is_finite()
-            || !line_height.is_finite()
-            || !ascent.is_finite()
-            || !descent.is_finite()
-        {
-            return Err(TypfError::RenderingFailed(RenderError::BackendError(
-                format!(
-                    "Invalid typographic bounds from font (width={}, height={}) - font may be corrupt",
-                    line_width, line_height
-                ),
-            )));
-        }
+            // Calculate canvas dimensions
+            let padding = params.padding as CGFloat;
+            let width = ((line_width + padding * 2.0).ceil().max(1.0) as u32).clamp(1, 16384);
+            let height = ((line_height + padding * 2.0).ceil().max(1.0) as u32).clamp(1, 16384);
 
-        // Calculate canvas dimensions
-        let padding = params.padding as f64;
-        let width = ((line_width + padding * 2.0).ceil().max(1.0) as u32).clamp(1, 16384);
-        let height = ((line_height + padding * 2.0).ceil().max(1.0) as u32).clamp(1, 16384);
+            log::debug!(
+                "CoreTextLinraRenderer: Canvas {}x{}, line width {:.1}",
+                width,
+                height,
+                line_width
+            );
 
-        log::debug!(
-            "CoreTextLinraRenderer: Canvas {}x{}, line width {:.1}",
-            width,
-            height,
-            line_width
-        );
+            // Create bitmap buffer
+            let bytes_per_row = width as usize * 4;
+            let mut buffer = vec![0u8; height as usize * bytes_per_row];
 
-        // Create bitmap buffer
-        let bytes_per_row = width as usize * 4;
-        let mut buffer = vec![0u8; height as usize * bytes_per_row];
+            // Create CGContext
+            let color_space = CGColorSpace::new_device_rgb().ok_or_else(|| {
+                TypfError::RenderingFailed(RenderError::BackendError(
+                    "Failed to create color space".to_string(),
+                ))
+            })?;
 
-        // Create CGContext
-        let color_space = CGColorSpace::create_device_rgb();
-        let context = CGContext::create_bitmap_context(
-            Some(buffer.as_mut_ptr() as *mut _),
-            width as usize,
-            height as usize,
-            8,
-            bytes_per_row,
-            &color_space,
-            core_graphics::base::kCGImageAlphaPremultipliedLast,
-        );
+            let context = unsafe {
+                CGBitmapContextCreate(
+                    buffer.as_mut_ptr() as *mut c_void,
+                    width as usize,
+                    height as usize,
+                    8,
+                    bytes_per_row,
+                    Some(&color_space),
+                    CGImageAlphaInfo::PremultipliedLast.0,
+                )
+            }
+            .ok_or_else(|| {
+                TypfError::RenderingFailed(RenderError::BackendError(
+                    "Failed to create bitmap context".to_string(),
+                ))
+            })?;
 
-        // Configure antialiasing
-        context.set_should_antialias(params.antialias);
-        context.set_should_smooth_fonts(params.antialias);
+            // Configure antialiasing
+            CGContext::set_should_antialias(Some(&context), params.antialias);
+            CGContext::set_should_smooth_fonts(Some(&context), params.antialias);
 
-        // Fill background
-        if let Some(bg_color) = &params.background {
-            let (r, g, b, a) = Self::color_to_rgb(bg_color);
-            context.set_rgb_fill_color(r, g, b, a);
-            context.fill_rect(CGRect::new(
-                &CGPoint::new(0.0, 0.0),
-                &CGSize::new(width as f64, height as f64),
-            ));
-        } else {
-            context.clear_rect(CGRect::new(
-                &CGPoint::new(0.0, 0.0),
-                &CGSize::new(width as f64, height as f64),
-            ));
-        }
+            // Fill background
+            if let Some(bg_color) = &params.background {
+                let (r, g, b, a) = Self::color_to_rgb(bg_color);
+                CGContext::set_rgb_fill_color(Some(&context), r, g, b, a);
+                CGContext::fill_rect(
+                    Some(&context),
+                    CGRect {
+                        origin: CGPoint { x: 0.0, y: 0.0 },
+                        size: CGSize {
+                            width: width as CGFloat,
+                            height: height as CGFloat,
+                        },
+                    },
+                );
+            } else {
+                CGContext::clear_rect(
+                    Some(&context),
+                    CGRect {
+                        origin: CGPoint { x: 0.0, y: 0.0 },
+                        size: CGSize {
+                            width: width as CGFloat,
+                            height: height as CGFloat,
+                        },
+                    },
+                );
+            }
 
-        // Set text color
-        let (r, g, b, a) = Self::color_to_rgb(&params.foreground);
-        context.set_rgb_fill_color(r, g, b, a);
+            // Set text color
+            let (r, g, b, a) = Self::color_to_rgb(&params.foreground);
+            CGContext::set_rgb_fill_color(Some(&context), r, g, b, a);
 
-        // Position text at baseline
-        // CoreGraphics uses bottom-left origin
-        let baseline_y = padding + descent;
-        let text_x = padding;
+            // Position text at baseline
+            // CoreGraphics uses bottom-left origin
+            let baseline_y = padding + descent;
+            let text_x = padding;
 
-        context.save();
-        context.set_text_drawing_mode(CGTextDrawingMode::CGTextFill);
-        context.set_text_position(text_x, baseline_y);
+            unsafe {
+                CGContext::save_g_state(Some(&context));
+                CGContext::set_text_drawing_mode(Some(&context), CGTextDrawingMode::Fill);
+                CGContext::set_text_position(Some(&context), text_x, baseline_y);
 
-        // THE KEY OPERATION: CTLineDraw shapes AND renders in one call
-        line.draw(&context);
+                // THE KEY OPERATION: CTLineDraw shapes AND renders in one call
+                line.draw(&context);
 
-        context.restore();
+                CGContext::restore_g_state(Some(&context));
+            }
 
-        Ok(RenderOutput::Bitmap(BitmapData {
-            width,
-            height,
-            format: BitmapFormat::Rgba8,
-            data: buffer,
-        }))
+            Ok(RenderOutput::Bitmap(BitmapData {
+                width,
+                height,
+                format: BitmapFormat::Rgba8,
+                data: buffer,
+            }))
+        })
     }
 
     fn clear_cache(&self) {
-        self.font_cache.write().clear();
+        FONT_CACHE.with(|cache| cache.borrow_mut().clear());
     }
 
     fn supports_format(&self, format: &str) -> bool {

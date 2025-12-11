@@ -22,6 +22,7 @@ members = [
   "backends/typf-render-zeno",
   "backends/typf-shape-ct",
   "backends/typf-shape-hb",
+  "backends/typf-shape-hr",
   "backends/typf-shape-icu-hb",
   # Shaping backends
   "backends/typf-shape-none",
@@ -54,6 +55,7 @@ env_logger = "0.11"
 flate2 = "1.0"
 # Shaping dependencies
 harfbuzz_rs = "2.0"
+harfrust = "0.3"
 # ICU dependencies (for icu-hb shaping)
 icu = "2.1"
 icu_properties = "2.1"
@@ -61,6 +63,12 @@ icu_segmenter = "2.1"
 kurbo = "0.11"
 log = "0.4"
 lru = "0.16"
+# macOS objc2 ecosystem
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-core-foundation = "0.3"
+objc2-core-graphics = "0.3"
+objc2-core-text = "0.3"
 # Caching and concurrency
 parking_lot = "0.12"
 # Bitmap glyph rendering (PNG decode)
@@ -97,6 +105,7 @@ typf-render-vello = { path = "backends/typf-render-vello", version = "2.0.0" }
 typf-render-zeno = { path = "backends/typf-render-zeno", version = "2.0.0" }
 typf-shape-ct = { path = "backends/typf-shape-ct", version = "2.0.0" }
 typf-shape-hb = { path = "backends/typf-shape-hb", version = "2.0.0" }
+typf-shape-hr = { path = "backends/typf-shape-hr", version = "2.0.0" }
 typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb", version = "2.0.0" }
 # Shaping backends
 typf-shape-none = { path = "backends/typf-shape-none", version = "2.0.0" }
@@ -127,6 +136,7 @@ full = [
 # Shaping backends
 shaping-none = []
 shaping-hb = []
+shaping-hr = []
 shaping-icu-hb = ["shaping-hb"]
 shaping-mac = []
 shaping-win = []

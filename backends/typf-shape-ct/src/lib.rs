@@ -7,7 +7,12 @@
 
 #![cfg(target_os = "macos")]
 
-use std::{cell::RefCell, ptr, sync::Arc};
+use std::{
+    cell::RefCell,
+    ffi::c_void,
+    ptr::{self, NonNull},
+    sync::Arc,
+};
 use typf_core::{
     error::{Result, ShapingError, TypfError},
     traits::{FontRef, Shaper},
@@ -15,27 +20,16 @@ use typf_core::{
     ShapingParams,
 };
 
-use core_foundation::{
-    attributed_string::CFMutableAttributedString,
-    base::{CFRange, CFType, TCFType},
-    dictionary::CFDictionary,
-    number::CFNumber,
-    string::CFString,
+use objc2_core_foundation::{
+    CFDictionary, CFMutableAttributedString, CFNumber, CFRange, CFRetained, CFString, CFType,
+    CGFloat, CGPoint, CGSize,
 };
-use core_graphics::{
-    base::CGFloat,
-    data_provider::CGDataProvider,
-    font::CGFont,
-    geometry::{CGPoint, CGSize},
+use objc2_core_graphics::{CGDataProvider, CGFont};
+use objc2_core_text::{
+    kCTFontAttributeName, kCTFontVariationAttribute, kCTKernAttributeName,
+    kCTLigatureAttributeName, CTFont, CTFontDescriptor, CTLine, CTRun,
 };
-use core_text::{
-    font::{new_from_CGFont, CTFont},
-    font_descriptor::{kCTFontVariationAttribute, new_from_attributes},
-    line::CTLine,
-    run::{CTRun, CTRunRef},
-    string_attributes::{kCTFontAttributeName, kCTKernAttributeName, kCTLigatureAttributeName},
-};
-use foreign_types::ForeignType;
+
 use lru::LruCache;
 use parking_lot::RwLock;
 
@@ -43,7 +37,7 @@ use parking_lot::RwLock;
 // CoreText fonts have thread affinity - destroying a CTFont on a different
 // thread than it was created causes memory corruption in OTL::Lookup.
 thread_local! {
-    static FONT_CACHE: RefCell<LruCache<FontCacheKey, Arc<CTFont>>> =
+    static FONT_CACHE: RefCell<LruCache<FontCacheKey, Arc<CFRetained<CTFont>>>> =
         RefCell::new(LruCache::new(std::num::NonZeroUsize::new(50).unwrap()));
 }
 
@@ -53,14 +47,15 @@ type FontCacheKey = String;
 /// How we identify shaping results in our cache
 type ShapeCacheKey = String;
 
-/// Font data wrapper that CoreGraphics likes
-struct ProviderData {
-    bytes: Arc<[u8]>,
-}
-
-impl AsRef<[u8]> for ProviderData {
-    fn as_ref(&self) -> &[u8] {
-        &self.bytes
+/// Callback to release font data when CGDataProvider is done with it
+unsafe extern "C-unwind" fn release_data_callback(
+    info: *mut c_void,
+    _data: NonNull<c_void>,
+    _size: usize,
+) {
+    if !info.is_null() {
+        // Reconstruct the Box to drop it properly
+        let _ = unsafe { Box::from_raw(info as *mut Arc<[u8]>) };
     }
 }
 
@@ -162,7 +157,7 @@ impl CoreTextShaper {
         &self,
         font: &Arc<dyn FontRef>,
         params: &ShapingParams,
-    ) -> Result<Arc<CTFont>> {
+    ) -> Result<Arc<CFRetained<CTFont>>> {
         // Create cache key to see if we already have this font
         let cache_key = Self::font_cache_key(font, params);
 
@@ -206,17 +201,33 @@ impl CoreTextShaper {
     }
 
     /// Turns raw font bytes into a CoreText CTFont
-    fn create_ct_font_from_data(data: &[u8], params: &ShapingParams) -> Result<CTFont> {
-        // Create Arc from font data
-        let provider_data = Arc::new(ProviderData {
-            bytes: Arc::from(data),
-        });
+    fn create_ct_font_from_data(data: &[u8], params: &ShapingParams) -> Result<CFRetained<CTFont>> {
+        // Create Arc from font data to keep it alive
+        let font_data: Arc<[u8]> = Arc::from(data);
+        let data_ptr = font_data.as_ptr();
+        let data_len = font_data.len();
 
-        // Create CGDataProvider
-        let provider = CGDataProvider::from_buffer(provider_data);
+        // Box the Arc so we can pass ownership to the callback
+        let boxed = Box::new(font_data);
+        let info_ptr = Box::into_raw(boxed) as *mut c_void;
 
-        // Create CGFont from data
-        let cg_font = CGFont::from_data_provider(provider).map_err(|_| {
+        // Create CGDataProvider using the raw callback API
+        let provider = unsafe {
+            CGDataProvider::with_data(
+                info_ptr,
+                data_ptr as *const c_void,
+                data_len,
+                Some(release_data_callback),
+            )
+        }
+        .ok_or_else(|| {
+            TypfError::ShapingFailed(ShapingError::BackendError(
+                "Failed to create CGDataProvider".to_string(),
+            ))
+        })?;
+
+        // Create CGFont from data provider
+        let cg_font = CGFont::with_data_provider(&provider).ok_or_else(|| {
             TypfError::ShapingFailed(ShapingError::BackendError(
                 "Failed to create CGFont from data".to_string(),
             ))
@@ -230,52 +241,53 @@ impl CoreTextShaper {
             );
 
             // Convert variations to CFDictionary<CFNumber(axis_id), CFNumber(value)>
-            let var_pairs: Vec<(CFNumber, CFNumber)> = params
+            let var_pairs: Vec<(CFRetained<CFNumber>, CFRetained<CFNumber>)> = params
                 .variations
                 .iter()
                 .filter_map(|(tag, value)| {
-                    Self::tag_to_axis_id(tag)
-                        .map(|axis_id| (CFNumber::from(axis_id), CFNumber::from(*value as f64)))
+                    Self::tag_to_axis_id(tag).map(|axis_id| {
+                        (CFNumber::new_i64(axis_id), CFNumber::new_f64(*value as f64))
+                    })
                 })
                 .collect();
 
             if !var_pairs.is_empty() {
-                let var_dict: CFDictionary<CFNumber, CFNumber> =
-                    CFDictionary::from_CFType_pairs(&var_pairs);
+                // Build dictionary with axis ID -> value pairs
+                let keys: Vec<&CFNumber> = var_pairs.iter().map(|(k, _)| k.as_ref()).collect();
+                let values: Vec<&CFNumber> = var_pairs.iter().map(|(_, v)| v.as_ref()).collect();
+                let var_dict = CFDictionary::from_slices(&keys, &values);
 
-                // Build descriptor with variation attribute (requires CFNumber keys)
-                let var_key = unsafe { CFString::wrap_under_get_rule(kCTFontVariationAttribute) };
-                let var_val = unsafe { CFType::wrap_under_get_rule(var_dict.as_CFTypeRef()) };
-                let attrs: CFDictionary<CFString, CFType> =
-                    CFDictionary::from_CFType_pairs(&[(var_key, var_val)]);
-                let desc = new_from_attributes(&attrs);
+                // Create descriptor attributes dictionary with variation attribute
+                let var_key: &CFString = unsafe { kCTFontVariationAttribute };
 
-                // Use CoreText API directly so variation axes are honored
-                #[link(name = "CoreText", kind = "framework")]
-                extern "C" {
-                    fn CTFontCreateWithGraphicsFont(
-                        graphicsFont: core_graphics::sys::CGFontRef,
-                        size: CGFloat,
-                        matrix: *const core_graphics::geometry::CGAffineTransform,
-                        attributes: core_text::font_descriptor::CTFontDescriptorRef,
-                    ) -> core_text::font::CTFontRef;
-                }
+                // We need to cast the dictionary to CFType for the attributes
+                let var_dict_type = unsafe { CFRetained::cast_unchecked::<CFType>(var_dict) };
 
-                let font_ref = unsafe {
-                    CTFontCreateWithGraphicsFont(
-                        cg_font.as_ptr(),
+                let attr_keys: [&CFString; 1] = [var_key];
+                let attr_values: [&CFType; 1] = [&var_dict_type];
+                let attrs_dict = CFDictionary::from_slices(&attr_keys, &attr_values);
+
+                // Create font descriptor with variation attributes
+                let attrs_untyped =
+                    unsafe { CFRetained::cast_unchecked::<CFDictionary>(attrs_dict) };
+                let desc = unsafe { CTFontDescriptor::with_attributes(&attrs_untyped) };
+
+                // Create CTFont with the descriptor
+                return Ok(unsafe {
+                    CTFont::with_graphics_font(
+                        &cg_font,
                         params.size as CGFloat,
                         ptr::null(),
-                        desc.as_concrete_TypeRef(),
+                        Some(&desc),
                     )
-                };
-
-                return Ok(unsafe { CTFont::wrap_under_create_rule(font_ref) });
+                });
             }
         }
 
         // No variations or no valid axis tags - use base CGFont
-        Ok(new_from_CGFont(&cg_font, params.size as f64))
+        Ok(unsafe {
+            CTFont::with_graphics_font(&cg_font, params.size as CGFloat, ptr::null(), None)
+        })
     }
 
     /// Create attributed string with font and features
@@ -284,39 +296,80 @@ impl CoreTextShaper {
         text: &str,
         ct_font: &CTFont,
         params: &ShapingParams,
-    ) -> CFMutableAttributedString {
-        let cf_string = CFString::new(text);
-        let mut attributed_string = CFMutableAttributedString::new();
-        attributed_string.replace_str(&cf_string, CFRange::init(0, 0));
+    ) -> CFRetained<CFMutableAttributedString> {
+        let cf_string = CFString::from_str(text);
 
-        let range = CFRange::init(0, attributed_string.char_len());
+        // Create empty mutable attributed string
+        let attributed_string = CFMutableAttributedString::new(None, 0)
+            .expect("Failed to create CFMutableAttributedString");
+
+        // Replace content (append to empty string)
+        let len = cf_string.length();
+        unsafe {
+            CFMutableAttributedString::replace_string(
+                Some(&attributed_string),
+                CFRange::new(0, 0),
+                Some(&cf_string),
+            );
+        }
+
+        let range = CFRange::new(0, len);
 
         // Set font attribute
-        attributed_string.set_attribute(range, unsafe { kCTFontAttributeName }, ct_font);
+        let font_key: &CFString = unsafe { kCTFontAttributeName };
+        // CTFont needs to be cast to CFType
+        let ct_font_type: &CFType = unsafe { &*(ct_font as *const CTFont as *const CFType) };
+        unsafe {
+            CFMutableAttributedString::set_attribute(
+                Some(&attributed_string),
+                range,
+                Some(font_key),
+                Some(ct_font_type),
+            );
+        }
 
         // Apply OpenType features
-        Self::apply_features(&mut attributed_string, range, params);
+        Self::apply_features(&attributed_string, range, params);
 
         attributed_string
     }
 
     /// Apply OpenType features to attributed string
     fn apply_features(
-        attr_string: &mut CFMutableAttributedString,
+        attr_string: &CFMutableAttributedString,
         range: CFRange,
         params: &ShapingParams,
     ) {
         // Apply ligature setting
         if let Some((_, value)) = params.features.iter().find(|(tag, _)| tag == "liga") {
-            let ligature_value = CFNumber::from(if *value > 0 { 1 } else { 0 });
-            attr_string.set_attribute(range, unsafe { kCTLigatureAttributeName }, &ligature_value);
+            let ligature_value = CFNumber::new_i32(if *value > 0 { 1 } else { 0 });
+            let lig_key: &CFString = unsafe { kCTLigatureAttributeName };
+            let lig_type: &CFType =
+                unsafe { &*(&*ligature_value as *const CFNumber as *const CFType) };
+            unsafe {
+                CFMutableAttributedString::set_attribute(
+                    Some(attr_string),
+                    range,
+                    Some(lig_key),
+                    Some(lig_type),
+                );
+            }
         }
 
         // Apply kerning setting
         if let Some((_, value)) = params.features.iter().find(|(tag, _)| tag == "kern") {
             if *value == 0 {
-                let zero = CFNumber::from(0.0f64);
-                attr_string.set_attribute(range, unsafe { kCTKernAttributeName }, &zero);
+                let zero = CFNumber::new_f64(0.0);
+                let kern_key: &CFString = unsafe { kCTKernAttributeName };
+                let kern_type: &CFType = unsafe { &*(&*zero as *const CFNumber as *const CFType) };
+                unsafe {
+                    CFMutableAttributedString::set_attribute(
+                        Some(attr_string),
+                        range,
+                        Some(kern_key),
+                        Some(kern_type),
+                    );
+                }
             }
         }
     }
@@ -327,14 +380,22 @@ impl CoreTextShaper {
         line: &CTLine,
         font: &Arc<dyn FontRef>,
     ) -> Result<Vec<PositionedGlyph>> {
-        let runs = line.glyph_runs();
+        let runs = unsafe { line.glyph_runs() };
         let mut glyphs = Vec::new();
 
         // Get the font's glyph count for validation
         let max_glyph_id = font.glyph_count().unwrap_or(u32::MAX);
 
-        for run in runs.iter() {
-            Self::collect_run_glyphs(&run, &mut glyphs, max_glyph_id);
+        // Iterate over CFArray of CTRun
+        let run_count = runs.len();
+        for i in 0..run_count {
+            // Get run from array - it's a CFType that we cast to CTRun
+            let run_ptr = unsafe { runs.value_at_index(i as isize) };
+            if run_ptr.is_null() {
+                continue;
+            }
+            let run: &CTRun = unsafe { &*(run_ptr as *const CTRun) };
+            Self::collect_run_glyphs(run, &mut glyphs, max_glyph_id);
         }
 
         Ok(glyphs)
@@ -346,35 +407,57 @@ impl CoreTextShaper {
         glyphs: &mut Vec<PositionedGlyph>,
         max_glyph_id: u32,
     ) -> f32 {
-        let glyph_count = run.glyph_count();
-        if glyph_count == 0 {
+        let glyph_count = unsafe { run.glyph_count() };
+        if glyph_count <= 0 {
             return 0.0;
         }
+        let count = glyph_count as usize;
 
-        // Get glyph IDs
-        let glyph_ids = run.glyphs();
+        // Get direct pointers to run data
+        let glyphs_ptr = unsafe { run.glyphs_ptr() };
+        let positions_ptr = unsafe { run.positions_ptr() };
+        let indices_ptr = unsafe { run.string_indices_ptr() };
 
-        // Get positions
-        let positions = run.positions();
-
-        // Get string indices (clusters)
-        let string_indices = run.string_indices();
-
-        // Get advances
-        let advances = Self::run_advances(run);
+        // Get advances - need to allocate buffer and call advances method
+        let mut advances = vec![
+            CGSize {
+                width: 0.0,
+                height: 0.0
+            };
+            count
+        ];
+        if let Some(advances_nonnull) = NonNull::new(advances.as_mut_ptr()) {
+            unsafe {
+                run.advances(CFRange::new(0, 0), advances_nonnull);
+            }
+        }
 
         let mut advance_sum = 0.0f32;
 
-        for idx in 0..(glyph_count as usize) {
-            let raw_glyph_id = *glyph_ids.get(idx).unwrap_or(&0) as u32;
-            let position = positions.get(idx).unwrap_or(&CGPoint { x: 0.0, y: 0.0 });
-            let cluster = string_indices.get(idx).unwrap_or(&0);
-            let advance_size = advances.get(idx).unwrap_or(&CGSize {
-                width: 0.0,
-                height: 0.0,
-            });
+        for idx in 0..count {
+            // Get glyph ID
+            let raw_glyph_id = if !glyphs_ptr.is_null() {
+                (unsafe { *glyphs_ptr.add(idx) }) as u32
+            } else {
+                0
+            };
 
-            let advance = advance_size.width as f32;
+            // Get position
+            let position = if !positions_ptr.is_null() {
+                unsafe { *positions_ptr.add(idx) }
+            } else {
+                CGPoint { x: 0.0, y: 0.0 }
+            };
+
+            // Get cluster (string index)
+            let cluster = if !indices_ptr.is_null() {
+                unsafe { *indices_ptr.add(idx) }
+            } else {
+                0
+            };
+
+            // Get advance
+            let advance = advances.get(idx).map(|s| s.width as f32).unwrap_or(0.0);
 
             // Validate glyph ID and use notdef (0) for invalid glyphs
             let glyph_id = if raw_glyph_id < max_glyph_id {
@@ -393,7 +476,7 @@ impl CoreTextShaper {
                 x: position.x as f32,
                 y: position.y as f32,
                 advance,
-                cluster: (*cluster).max(0) as u32,
+                cluster: cluster.max(0) as u32,
             });
 
             advance_sum += advance;
@@ -401,39 +484,6 @@ impl CoreTextShaper {
 
         advance_sum
     }
-
-    /// Get advances for all glyphs in a run
-    fn run_advances(run: &CTRun) -> Vec<CGSize> {
-        let glyph_count = run.glyph_count();
-        if glyph_count <= 0 {
-            return Vec::new();
-        }
-
-        let mut advances = vec![
-            CGSize {
-                width: 0.0,
-                height: 0.0,
-            };
-            glyph_count as usize
-        ];
-
-        // Use FFI to call CTRunGetAdvances
-        unsafe {
-            CTRunGetAdvances(
-                run.as_concrete_TypeRef(),
-                CFRange::init(0, 0),
-                advances.as_mut_ptr(),
-            );
-        }
-
-        advances
-    }
-}
-
-// FFI declaration for CTRunGetAdvances
-#[link(name = "CoreText", kind = "framework")]
-extern "C" {
-    fn CTRunGetAdvances(run: CTRunRef, range: CFRange, buffer: *mut CGSize);
 }
 
 impl Default for CoreTextShaper {
@@ -473,8 +523,12 @@ impl Shaper for CoreTextShaper {
         // Create attributed string
         let attr_string = self.create_attributed_string(text, &ct_font, params);
 
-        // Create CTLine
-        let line = CTLine::new_with_attributed_string(attr_string.as_concrete_TypeRef());
+        // Create CTLine - need to cast CFMutableAttributedString to CFAttributedString
+        let attr_str_ref = unsafe {
+            &*(&*attr_string as *const CFMutableAttributedString
+                as *const objc2_core_foundation::CFAttributedString)
+        };
+        let line = unsafe { CTLine::with_attributed_string(attr_str_ref) };
 
         // Extract glyphs
         let glyphs = self.extract_glyphs_from_line(&line, &font)?;
@@ -599,9 +653,11 @@ mod tests {
             .expect("failed to create CTFont with variations");
 
         // The font identity must stay the same; losing it would swap in a system font
+        let base_name = unsafe { base.post_script_name() };
+        let vars_name = unsafe { with_vars.post_script_name() };
         assert_eq!(
-            base.postscript_name(),
-            with_vars.postscript_name(),
+            base_name.to_string(),
+            vars_name.to_string(),
             "Applying variations must not change the underlying font",
         );
     }

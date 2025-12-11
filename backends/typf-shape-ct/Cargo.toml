@@ -15,9 +15,8 @@ typf-core = { workspace = true }
 [dev-dependencies]
 env_logger = "0.11"
 
-# macOS-specific dependencies
+# macOS-specific dependencies (objc2 ecosystem)
 [target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = "0.10"
-core-graphics = "0.24"
-core-text = "21.0"
-foreign-types = "0.5"
+objc2-core-foundation = { workspace = true }
+objc2-core-graphics = { workspace = true }
+objc2-core-text = { workspace = true }

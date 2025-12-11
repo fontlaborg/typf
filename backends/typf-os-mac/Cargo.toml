@@ -14,13 +14,12 @@ categories = ["graphics", "text-processing"]
 typf-core = { workspace = true }
 log = { workspace = true }
 lru = { workspace = true }
-parking_lot = { workspace = true }
 
+# macOS-specific dependencies (objc2 ecosystem)
 [target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = "0.10"
-core-graphics = "0.24"
-core-text = "21"
-foreign-types = "0.5"
+objc2-core-foundation = { workspace = true }
+objc2-core-graphics = { workspace = true }
+objc2-core-text = { workspace = true }
 
 [dev-dependencies]
 env_logger = "0.11"

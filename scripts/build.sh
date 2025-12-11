@@ -37,6 +37,9 @@ while [[ $# -gt 0 ]]; do
             BUILD_RUST=false
             shift
             ;;
+        --release)
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
             echo "Usage: $0 [--debug] [--rust] [--python]"
