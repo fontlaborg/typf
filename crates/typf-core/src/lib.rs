@@ -1,18 +1,19 @@
-//! Typf Core: Six stages from text to pixels
+//! Six stages from text to pixels. No magic, just engineering.
 //!
-//! Text enters as characters, exits as rendered images. This crate holds the pipeline
-//! that makes that transformation possible through six distinct stages.
+//! Text enters as Unicode chaos, exits as perfect pixels. This crate is the
+//! engine room that makes text rendering work when half your characters are
+//! Arabic and the other half are emoji.
 //!
-//! ## The Pipeline
+//! ## The Pipeline: Brutal Simplicity
 //!
-//! Every piece of text follows the same journey:
+//! Every text walks this path, no shortcuts:
 //!
-//! 1. **Input Parsing** - Raw text becomes structured data
-//! 2. **Unicode Processing** - Scripts normalize, bidi resolves, segmentation happens
-//! 3. **Font Selection** - The right font finds its way to each character
-//! 4. **Shaping** - Characters transform into positioned glyphs
-//! 5. **Rendering** - Glyphs become pixels or vectors
-//! 6. **Export** - Final output emerges as PNG, SVG, or JSON
+//! 1. **Input Parsing** - Raw strings → structured data
+//! 2. **Unicode Processing** - Bidi, scripts, segmentation dealt with
+//! 3. **Font Selection** - Right font for each character, period
+//! 4. **Shaping** - Characters → positioned glyphs with proper metrics
+//! 5. **Rendering** - Glyphs → pixels/vectors with SIMD muscle
+//! 6. **Export** - Your format, ready to ship
 //!
 //! ## Build Your First Pipeline
 //!

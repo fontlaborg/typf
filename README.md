@@ -5,7 +5,7 @@
 
 Your text looks wrong. Arabic renders backwards, Hindi characters break, Thai glyphs collide. Typf fixes this in under a millisecond.
 
-Render "Hello, مرحبا, 你好!" correctly the first time.
+Render "Hello, مرحبا, 你好!" correctly the first time. No excuses.
 
 > Note: Typf is a community project by [FontLab](https://www.fontlab.org/) and is currently published under an [evaluation license](./LICENSE).
 
