@@ -99,20 +99,30 @@ pub fn clear_all_caches() {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_default_disabled() {
-        // Reset for test (note: this is not fully isolated due to global state)
-        // In practice, run tests with --test-threads=1 if needed
-        set_caching_enabled(false);
-        assert!(!is_caching_enabled());
-    }
+    // Single test to avoid race conditions with other tests that use the global flag.
+    // Tests that set_caching_enabled correctly updates the value returned by is_caching_enabled.
 
     #[test]
-    fn test_enable_disable() {
+    fn test_set_caching_roundtrip() {
+        // Test both directions in sequence within a single test
+        // to minimize race window with parallel tests
+
+        // Enable and verify
         set_caching_enabled(true);
-        assert!(is_caching_enabled());
+        let after_enable = is_caching_enabled();
 
+        // Disable and verify
         set_caching_enabled(false);
-        assert!(!is_caching_enabled());
+        let after_disable = is_caching_enabled();
+
+        // Assert after all operations to reduce race window
+        assert!(
+            after_enable,
+            "caching should be enabled after set_caching_enabled(true)"
+        );
+        assert!(
+            !after_disable,
+            "caching should be disabled after set_caching_enabled(false)"
+        );
     }
 }
