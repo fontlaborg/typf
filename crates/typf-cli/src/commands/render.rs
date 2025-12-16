@@ -2,8 +2,12 @@
 //!
 //! Handles text rendering with full pipeline control.
 //! Supports both traditional (shaper+renderer) and linra (single-pass) modes.
+//
+// this_file: crates/typf-cli/src/commands/render.rs
 
 use crate::cli::{OutputFormat, RenderArgs};
+use skrifa::bitmap::BitmapStrikes;
+use skrifa::raw::TableProvider;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::sync::Arc;
@@ -169,6 +173,8 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         renderer = select_renderer(renderer_name)?;
     }
 
+    warn_if_vello_gpu_with_color_font(renderer_name, font.data(), args.quiet);
+
     // 9. Build pipeline
     let exporter = create_exporter(args.format)?;
     let pipeline = Pipeline::builder()
@@ -213,6 +219,64 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ColorFontSupport {
+    has_colr: bool,
+    has_svg: bool,
+    has_bitmap: bool,
+}
+
+impl ColorFontSupport {
+    fn any(self) -> bool {
+        self.has_colr || self.has_svg || self.has_bitmap
+    }
+
+    fn summary(self) -> String {
+        let mut parts = Vec::new();
+        if self.has_colr {
+            parts.push("COLR");
+        }
+        if self.has_svg {
+            parts.push("SVG");
+        }
+        if self.has_bitmap {
+            parts.push("bitmap");
+        }
+        parts.join(", ")
+    }
+}
+
+fn detect_color_font_support(font_data: &[u8]) -> Option<ColorFontSupport> {
+    let font = skrifa::FontRef::new(font_data).ok()?;
+    let has_colr = font.colr().is_ok();
+    let has_svg = font.svg().is_ok();
+    let has_bitmap = !BitmapStrikes::new(&font).is_empty();
+    Some(ColorFontSupport {
+        has_colr,
+        has_svg,
+        has_bitmap,
+    })
+}
+
+fn warn_if_vello_gpu_with_color_font(renderer_name: &str, font_data: &[u8], quiet: bool) {
+    if quiet || renderer_name != "vello" {
+        return;
+    }
+
+    let Some(support) = detect_color_font_support(font_data) else {
+        return;
+    };
+    if !support.any() {
+        return;
+    }
+
+    eprintln!(
+        "Warning: renderer 'vello' (GPU) has limited color-font support ({}). \
+         If you see blank/missing glyphs, use `--renderer vello-cpu`.",
+        support.summary()
+    );
 }
 
 fn get_input_text(args: &RenderArgs) -> Result<String> {
@@ -683,6 +747,7 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
         },
         antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
         letter_spacing: 0.0,
+        color_palette: args.color_palette as u16,
     };
 
     // 5. Select linra renderer
@@ -835,6 +900,65 @@ fn write_output(args: &RenderArgs, data: &[u8]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+
+    fn test_font(name: &str) -> PathBuf {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.pop(); // crates
+        path.pop(); // root
+        path.push("test-fonts");
+        path.push(name);
+        path
+    }
+
+    fn load_font_bytes(name: &str) -> Vec<u8> {
+        std::fs::read(test_font(name)).expect("test font should be readable")
+    }
+
+    #[test]
+    fn test_detect_color_font_support_when_no_color_tables_then_all_false() {
+        let bytes = load_font_bytes("NotoSans-Regular.ttf");
+        let support = detect_color_font_support(&bytes).expect("font parse should succeed");
+        assert_eq!(
+            support,
+            ColorFontSupport {
+                has_colr: false,
+                has_svg: false,
+                has_bitmap: false
+            },
+            "expected no color tables for NotoSans-Regular.ttf"
+        );
+    }
+
+    #[test]
+    fn test_detect_color_font_support_when_colr_font_then_colr_true() {
+        let bytes = load_font_bytes("Nabla-Regular-COLR.ttf");
+        let support = detect_color_font_support(&bytes).expect("font parse should succeed");
+        assert!(
+            support.has_colr,
+            "expected COLR support for Nabla-Regular-COLR.ttf"
+        );
+    }
+
+    #[test]
+    fn test_detect_color_font_support_when_svg_font_then_svg_true() {
+        let bytes = load_font_bytes("Nabla-Regular-SVG.ttf");
+        let support = detect_color_font_support(&bytes).expect("font parse should succeed");
+        assert!(
+            support.has_svg,
+            "expected SVG table for Nabla-Regular-SVG.ttf"
+        );
+    }
+
+    #[test]
+    fn test_detect_color_font_support_when_bitmap_font_then_bitmap_true() {
+        let bytes = load_font_bytes("Nabla-Regular-CBDT.ttf");
+        let support = detect_color_font_support(&bytes).expect("font parse should succeed");
+        assert!(
+            support.has_bitmap,
+            "expected bitmap strikes for Nabla-Regular-CBDT.ttf"
+        );
+    }
 
     #[test]
     fn direction_auto_detects_rtl_text() {

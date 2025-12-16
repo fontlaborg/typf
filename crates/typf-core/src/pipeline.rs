@@ -1,5 +1,7 @@
 //! The engine that drives text through six stages to become images
 
+// this_file: crates/typf-core/src/pipeline.rs
+
 use crate::{
     context::PipelineContext,
     error::{Result, TypfError},
@@ -619,29 +621,41 @@ mod tests {
 
     #[test]
     fn test_pipeline_process() {
-        let pipeline = Pipeline::builder()
+        let pipeline_result = Pipeline::builder()
             .shaper(Arc::new(MockShaper))
             .renderer(Arc::new(MockRenderer))
             .exporter(Arc::new(MockExporter))
-            .build()
-            .unwrap();
+            .build();
+        let pipeline = match pipeline_result {
+            Ok(pipeline) => pipeline,
+            Err(e) => {
+                unreachable!("pipeline build failed: {e}");
+            },
+        };
 
         let font = Arc::new(MockFont);
         let shaping_params = ShapingParams::default();
         let render_params = RenderParams::default();
 
         let result = pipeline.process("Hello", font, &shaping_params, &render_params);
-        assert!(result.is_ok());
-        assert!(!result.unwrap().is_empty());
+        match result {
+            Ok(bytes) => assert!(!bytes.is_empty()),
+            Err(e) => unreachable!("pipeline process failed: {e}"),
+        }
     }
 
     #[test]
     fn test_pipeline_missing_shaper() {
-        let pipeline = Pipeline::builder()
+        let pipeline_result = Pipeline::builder()
             .renderer(Arc::new(MockRenderer))
             .exporter(Arc::new(MockExporter))
-            .build()
-            .unwrap();
+            .build();
+        let pipeline = match pipeline_result {
+            Ok(pipeline) => pipeline,
+            Err(e) => {
+                unreachable!("pipeline build failed: {e}");
+            },
+        };
 
         let font = Arc::new(MockFont);
         let shaping_params = ShapingParams::default();
@@ -653,11 +667,16 @@ mod tests {
 
     #[test]
     fn test_pipeline_missing_renderer() {
-        let pipeline = Pipeline::builder()
+        let pipeline_result = Pipeline::builder()
             .shaper(Arc::new(MockShaper))
             .exporter(Arc::new(MockExporter))
-            .build()
-            .unwrap();
+            .build();
+        let pipeline = match pipeline_result {
+            Ok(pipeline) => pipeline,
+            Err(e) => {
+                unreachable!("pipeline build failed: {e}");
+            },
+        };
 
         let font = Arc::new(MockFont);
         let shaping_params = ShapingParams::default();
@@ -669,11 +688,16 @@ mod tests {
 
     #[test]
     fn test_pipeline_missing_exporter() {
-        let pipeline = Pipeline::builder()
+        let pipeline_result = Pipeline::builder()
             .shaper(Arc::new(MockShaper))
             .renderer(Arc::new(MockRenderer))
-            .build()
-            .unwrap();
+            .build();
+        let pipeline = match pipeline_result {
+            Ok(pipeline) => pipeline,
+            Err(e) => {
+                unreachable!("pipeline build failed: {e}");
+            },
+        };
 
         let font = Arc::new(MockFont);
         let shaping_params = ShapingParams::default();
@@ -685,12 +709,17 @@ mod tests {
 
     #[test]
     fn test_pipeline_execute_with_context() {
-        let pipeline = Pipeline::builder()
+        let pipeline_result = Pipeline::builder()
             .shaper(Arc::new(MockShaper))
             .renderer(Arc::new(MockRenderer))
             .exporter(Arc::new(MockExporter))
-            .build()
-            .unwrap();
+            .build();
+        let pipeline = match pipeline_result {
+            Ok(pipeline) => pipeline,
+            Err(e) => {
+                unreachable!("pipeline build failed: {e}");
+            },
+        };
 
         let font = Arc::new(MockFont);
         let mut context = PipelineContext::new("Test".to_string(), "test.ttf".to_string());
@@ -702,12 +731,17 @@ mod tests {
 
     #[test]
     fn test_six_stage_pipeline() {
-        let pipeline = Pipeline::builder()
+        let pipeline_result = Pipeline::builder()
             .shaper(Arc::new(MockShaper))
             .renderer(Arc::new(MockRenderer))
             .exporter(Arc::new(MockExporter))
-            .build()
-            .unwrap();
+            .build();
+        let pipeline = match pipeline_result {
+            Ok(pipeline) => pipeline,
+            Err(e) => {
+                unreachable!("pipeline build failed: {e}");
+            },
+        };
 
         // Verify all 6 stages are created
         assert_eq!(pipeline.stages.len(), 6);
@@ -715,9 +749,15 @@ mod tests {
 
     #[test]
     fn test_pipeline_stage_names() {
-        let pipeline = Pipeline::builder().build().unwrap();
+        let pipeline_result = Pipeline::builder().build();
+        let pipeline = match pipeline_result {
+            Ok(pipeline) => pipeline,
+            Err(e) => {
+                unreachable!("pipeline build failed: {e}");
+            },
+        };
 
-        let expected_stages = vec![
+        let expected_stages = [
             "InputParsing",
             "UnicodeProcessing",
             "FontSelection",
@@ -733,12 +773,17 @@ mod tests {
 
     #[test]
     fn test_pipeline_empty_text() {
-        let pipeline = Pipeline::builder()
+        let pipeline_result = Pipeline::builder()
             .shaper(Arc::new(MockShaper))
             .renderer(Arc::new(MockRenderer))
             .exporter(Arc::new(MockExporter))
-            .build()
-            .unwrap();
+            .build();
+        let pipeline = match pipeline_result {
+            Ok(pipeline) => pipeline,
+            Err(e) => {
+                unreachable!("pipeline build failed: {e}");
+            },
+        };
 
         let font = Arc::new(MockFont);
         let shaping_params = ShapingParams::default();

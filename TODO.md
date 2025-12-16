@@ -1,119 +1,56 @@
-# TODO: Typf Rendering Quality & Backend Integration
+<!-- this_file: TODO.md -->
+# TODO (derived from PLAN.md)
 
-**Version:** 2.5.0
-**Updated:** Dec 11, 2025
-**Reference:** See PLAN.md for detailed specifications
+**Version:** 5.0.1  
+**Updated:** 2025-12-16  
+**Source:** `PLANSTEPS/` (split from `PLAN.md`)
 
----
+- [x] Keep `PLAN.md` as an index (TLDR + links) and keep `PLANSTEPS/` authoritative
+- [x] Add/maintain a single flat backlog here; avoid nested lists
+- [x] Add `DEPENDENCIES.md` (major dependencies + rationale)
+- [x] Align Cargo workspace versioning with git tags/docs (v5.0.1)
 
-## 1. Current Status Summary
+- [x] Baseline standardization: inventory baseline math for Opixa/Skia/Zeno/Vello(-cpu) and document deltas vs CoreGraphics
+- [x] Baseline standardization: decide on one baseline contract (font metrics vs per-glyph bounds) and write it down
+- [x] Baseline standardization: implement the chosen contract consistently across renderers (or document why not)
+- [x] Baseline standardization: add regression tests that compare baseline placement across at least 2 renderers using shared fixtures
 
-### Visual Inspection (Dec 4, 2025)
+- [x] Vello-GPU color fonts: confirm current behavior (blank output) and ensure CLI/docs steer users to `vello-cpu` for color fonts
+- [x] Vello-GPU color fonts: add a clear runtime warning/error when `vello` is selected and the chosen glyph source is bitmap/COLR (avoid silent blank renders)
+- [x] Vello-GPU color fonts: track upstream status (issue link + minimal reproduction) and periodically re-test
 
-| Format | CoreGraphics | Opixa | Skia | Zeno | Vello-CPU | Vello-GPU |
-|--------|--------------|-------|------|------|-----------|-----------|
-| **CBDT** | N/A | N/A | ✅ | ✅ | ✅ Best | ❌ Upstream |
-| **COLR** | N/A | N/A | ✅ | ✅ | ✅ | ❌ Upstream |
-| **sbix** | ✅ | N/A | ✅ | ✅ | ✅ | ❌ Upstream |
-| **SVG** | ✅ | ✅ Mono | ✅ | ✅ | ✅ Mono | ✅ Mono |
+- [x] Glyph source model: confirm `GlyphSource` covers `Glyf`, `Cff`, `Cff2`, `Colr0`, `Colr1`, `Svg`, `Sbix`, `Cbdt`, `Ebdt`
+- [x] Glyph source selection: ensure `typf-render-color` tries sources in `GlyphSourcePreference` priority order with correct fallback
+- [x] Bitmap sources: ensure availability checks never depend on outline presence (`sbix`/`CBDT`/`EBDT` often have empty outlines)
+- [x] Bitmap decoding: centralize and harden decoding in `typf-render-color/src/bitmap.rs` (sbix PNG, CBDT/EBDT formats)
+- [x] SVG renderer: add/verify opt-in bitmap embedding so color glyphs can be represented in SVG output when paths are not available
+- [x] SVG renderer: when bitmap embedding disabled, define behavior for color glyphs (outline fallback vs placeholder) and test it
+- [x] Skia/Zeno: verify they delegate complex glyph composition to `typf-render-color` (no duplicated parsing/compositing logic)
+- [ ] Color fixtures: expand regression coverage for COLR(v0/v1), SVG, sbix, CBDT with known-problem glyphs (cutoffs, padding, flips)
 
-**Note:** Minor "T" cutoff at extreme COLR glyph edges is a known limitation.
+- [ ] Stage 4 (shaping) contract: define a stable shaped-glyph output contract for zero-copy consumers (layout + FFI)
+- [ ] Stage 4 output: define a C-ABI-safe glyph struct (repr(C), alignment, no padding surprises) and conversion from internal glyphs
+- [ ] Stage 4 output: add a “decoupled glyph iterator” API so layout engines can consume shaping output without owning the pipeline
 
----
+- [ ] Stage 5 (rendering) contract: define an optional geometry output path (mesh/path ops) for GPU pipelines and vector consumers
+- [ ] Stage 5 output: define a `RenderMesh`/vertex ABI suitable for zero-copy upload (repr(C) + `zerocopy` markers)
+- [ ] Stage 5 output: define a minimal path-op iterator API for external tessellators (avoid new frameworks)
 
-## 2. Active Tasks
+- [x] Font bytes access: ensure `FontRef` exposes raw font bytes without copies for downstream libraries (Stage 3 interop)
+- [x] Font metadata access: expose a minimal, stable font-metrics API surface for consumers (ascent/descent/units_per_em, etc.)
 
-### 2.1. [-] Vello-GPU Color Fonts - DEFERRED (Upstream)
+- [ ] Python FFI: expose a zero-copy shaped-glyph view for Pycairo-style consumers (buffer protocol / NumPy view)
+- [ ] Python FFI: expose vector path primitives for ReportLab-style consumers (minimal command list API)
+- [ ] Python API: expose font metrics/variations metadata for tooling (fontTools auditing, layout decisions)
 
-**Problem:** All color fonts render blank (~600 byte images)
-**Root Cause:** `vello_hybrid` has stub implementations for Bitmap/COLR glyph types
-**Status:** Requires upstream vello_hybrid work - not actionable in typf
-**Workaround:** Use vello-cpu for color font rendering
+- [ ] Rust integration: validate `typf` shaping → `cosmic-text`/`parley` handoff feasibility and document a supported integration boundary
+- [ ] Rust integration: add at least one real example that demonstrates consuming shaped glyphs from `typf` in a layout engine
+- [ ] WGPU integration: prototype a zero-copy mesh upload path (types + example) without committing to a full GPU framework
 
----
+- [ ] SDF: decide whether SDF is in-scope; if yes, define minimal types + one CPU renderer crate (`typf-render-sdf`)
+- [ ] SDF: implement outline→SDF generation with a constrained API and add correctness tests on a small fixture set
 
-## 3. Future Tasks
+- [ ] Platform support: define a minimal test matrix for vello-gpu across Linux/Windows and capture results in docs
+- [ ] Platform support: evaluate WASM/WebGPU constraints and explicitly document what is and is not supported
 
-### 3.1. Baseline Standardization (Priority: LOW)
-
-Cross-renderer baseline consistency improvements:
-- [ ] Analyze baseline_y calculations across Opixa/Skia/Zeno
-- [ ] Compare against CoreGraphics reference
-- [ ] Standardize using font metrics if needed
-
-### 3.2. External Integrations (Priority: LOW)
-
-- [ ] Integrate `vello_svg` for OpenType-SVG in Vello backends
-- [ ] Analyze `parley` and `swash` for script segmentation and multiline layout
-- [ ] Enhance Python bindings with layout capabilities
-
-### 3.3. SDF Rendering (Priority: LOW)
-
-- [ ] Create `typf-sdf-core` crate with SDF types
-- [ ] Implement SDF generation from glyph outlines
-- [ ] Create `typf-render-sdf` CPU renderer
-
-### 3.4. Platform Support (Priority: LOW)
-
-- [ ] Test Vello GPU on Linux (Vulkan)
-- [ ] Test Vello GPU on Windows (DX12/Vulkan)
-- [ ] Add WASM/WebGPU support for Vello
-
----
-
-## 4. Completed Work (Summary)
-
-All critical rendering issues have been resolved:
-
-### Color Font Fixes ✓
-- **SVG scaling** - Fixed viewBox handling in `svg.rs`
-- **sbix rendering** - Removed `!outline_empty` check in Skia/Zeno
-- **CBDT/COLR** - Added 50% bbox padding for paint effects
-- **CSS variables** - Implemented CPAL palette substitution for OpenType-SVG
-- **Y-flip** - Added vertical flip in Skia/Zeno compositing
-- **Black squares** - Fixed empty glyph handling (spaces)
-
-### Vello Integration ✓
-- **typf-tester** - Added vello/vello-cpu to renderer detection
-- **Python bindings** - Added render-vello features to pyproject.toml
-- **Variable fonts** - Fixed normalized coords in vello-cpu
-- **Descenders** - Fixed "y" cutoff using proper font metrics
-- **Benchmarks** - Documented performance (vello-cpu: 995 ops/sec)
-
-### Zeno Precision ✓
-- **Height padding** - Added +1 pixel to height calculation
-- **bearing_y** - Using `max_y.ceil()` for proper alignment
-- **Vertical flip** - Verified correct for odd/even heights
-
-### Cache System ✓
-- **Default disabled** - Caching now opt-in via `set_caching_enabled(true)` or `TYPF_CACHE=1`
-- **Pipeline policy** - `CachePolicy` defaults to `false` for both shaping and glyph caches
-- **Python bindings** - `typf.set_caching_enabled()` and `typf.is_caching_enabled()` exposed
-- **Clippy clean** - Fixed derivable impl, Arc lint, and expect() warnings
-
-### Documentation ✓
-- **README.md** - Added caching section with Rust/Python/env var examples
-- **QUICKSTART.md** - Created comprehensive Rust usage guide with caching docs
-
----
-
-## 5. Performance Reference
-
-| Renderer | Ops/sec | Notes |
-|----------|---------|-------|
-| JSON | 20,800 | No rasterization |
-| CoreGraphics | 3,700 | macOS native |
-| Zeno | 1,880 | Pure Rust |
-| Opixa | 2,540 | Pure Rust, SIMD |
-| Skia | 1,600 | tiny-skia |
-| Vello-CPU | 995 | 256-level AA |
-| Vello-GPU | 87 | High overhead |
-
----
-
-## 6. Test Coverage
-
-- **Workspace total:** 410 tests
-- **Vello CPU:** 17 tests (4 unit + 13 integration)
-- **Vello GPU:** 15 tests (3 unit + 12 integration)
-- **Color fonts:** All 4 formats tested (COLR, SVG, sbix, CBDT)
+- [x] Verification: run full workspace tests + clippy and record results in `WORK.md`

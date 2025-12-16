@@ -1,7 +1,7 @@
 # Code Quality Review: Typf Text Rendering Pipeline
 
-**Review Date:** 2025-12-04
-**Codebase Version:** 2.5.4
+**Review Date:** 2025-12-16
+**Codebase Version:** 5.0.1
 **Reviewer:** Automated codebase analysis
 
 ## Executive Summary
@@ -11,7 +11,7 @@ Typf is a modular text rendering library implementing a six-stage pipeline (Inpu
 **Overall Assessment: A- (88/100)**
 
 ### Key Metrics
-- **Test Count:** 385 tests across workspace
+- **Test Count:** 414 tests across workspace
 - **Real Font Fixtures:** 10 fonts (Latin, Arabic, Variable, COLR/SVG/CBDT/sbix color)
 - **CLI Commands:** 3 (render, info, batch) with comprehensive options
 - **Backends:** 4 shapers, 8 renderers (including Vello GPU/CPU), 2 linra integrations
@@ -157,7 +157,7 @@ pub enum TypfError {
 
 ### 4.1 Test Coverage
 
-**Test Count:** 348 tests across workspace
+**Test Count:** 414 tests across workspace
 
 **Test Categories:**
 - Unit tests in each crate

@@ -77,6 +77,7 @@ criterion = "0.5"
 typf-export = { workspace = true }
 typf-render-opixa = { workspace = true }
 typf-render-skia = { workspace = true }
+typf-render-vello-cpu = { workspace = true }
 typf-render-zeno = { workspace = true }
 typf-shape-none = { workspace = true }
 

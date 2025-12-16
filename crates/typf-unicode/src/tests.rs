@@ -1,3 +1,5 @@
+// this_file: crates/typf-unicode/src/tests.rs
+
 use super::*;
 
 #[test]
@@ -79,7 +81,7 @@ fn test_mixed_scripts() {
     // English + Arabic
     let result = processor.process("Hello مرحبا", &options).unwrap();
     // Should detect script changes
-    assert!(result.len() >= 1);
+    assert!(!result.is_empty());
 }
 
 #[test]
@@ -154,9 +156,9 @@ fn test_normalization_with_scripts() {
     let result = processor.process(text, &options).unwrap();
 
     // Should normalize and detect Latin script
-    assert!(result.len() > 0);
+    assert!(!result.is_empty());
     // Normalized text should be valid
-    assert!(result[0].text.len() > 0);
+    assert!(!result[0].text.is_empty());
 }
 
 #[test]
@@ -189,7 +191,7 @@ fn test_bidi_mixed_text() {
     let result = processor.process(text, &options).unwrap();
 
     // Should create multiple runs with appropriate directions
-    assert!(result.len() >= 1);
+    assert!(!result.is_empty());
 
     // Find RTL run (Arabic)
     let has_rtl = result.iter().any(|r| r.direction == Direction::RightToLeft);

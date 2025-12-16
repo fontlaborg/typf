@@ -85,8 +85,21 @@ pub enum RenderError {
     #[error("Zero bitmap dimensions: {width}x{height}. This usually means empty text or all whitespace. Check that your text contains renderable characters.")]
     ZeroDimensions { width: u32, height: u32 },
 
-    #[error("Bitmap dimensions {width}x{height} exceed maximum ({max} pixels per side). Use smaller font sizes, implement line wrapping, or use SVG export for large renders.")]
-    DimensionsTooLarge { width: u32, height: u32, max: u32 },
+    #[error("Bitmap dimensions {width}x{height} exceed limits (max {max_width}x{max_height}). Use smaller font sizes, implement line wrapping, or use SVG export for large renders.")]
+    DimensionsTooLarge {
+        width: u32,
+        height: u32,
+        max_width: u32,
+        max_height: u32,
+    },
+
+    #[error("Total bitmap pixels {total} exceed maximum ({max}). Requested {width}x{height}. Use smaller font sizes or SVG export.")]
+    TotalPixelsTooLarge {
+        width: u32,
+        height: u32,
+        total: u64,
+        max: u64,
+    },
 
     /// Legacy variant for backwards compatibility - prefer ZeroDimensions or DimensionsTooLarge
     #[error("Invalid bitmap dimensions: {width}x{height} (max 65,535 pixels per dimension). For long texts, use smaller font sizes, implement line wrapping, or use SVG export instead of bitmap rendering.")]

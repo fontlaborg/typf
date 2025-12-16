@@ -68,6 +68,7 @@ Shapers transform text into positioned glyphs, applying OpenType features and sc
 | Backend | Crate | Description |
 |---------|-------|-------------|
 | **HarfBuzz** | `typf-shape-hb` | Industry-standard shaper via harfbuzz-rs |
+| **HarfBuzz Rust** | `typf-shape-hr` | Pure Rust HarfBuzz alternative via harfrust |
 | **ICU+HarfBuzz** | `typf-shape-icu-hb` | HarfBuzz with ICU for enhanced Unicode |
 | **CoreText** | `typf-shape-ct` | macOS native shaping |
 | **None** | `typf-shape-none` | Pass-through (testing only) |
@@ -196,22 +197,33 @@ RenderParams {
 | CoreGraphics rendering | ✓ | - | - |
 | System font discovery | ✓ | ✓ | ✓ |
 
-## Caching
+## Caching (v5.0.1+)
+
+Typf uses the **Moka TinyLFU caching system** for optimal performance:
 
 ### Shaping Cache
 
-The `ShapingCache` avoids re-shaping identical text:
-- Key: text + font ID + size + features + variations
+- Key: text + font ID + size + features + variations + language + script
 - Value: `ShapingResult` (positioned glyphs)
-- Configurable capacity
-- Hit/miss statistics
+- TinyLFU admission tracks frequency of both hits AND misses
+- 10-minute time-to-idle prevents memory leaks
+- Scan-resistant architecture optimized for font matching workloads
 
 ### Glyph Cache
 
-Renderers can cache rasterized glyphs:
-- Key: font ID + glyph ID + size + style
-- Value: rasterized bitmap
-- Per-renderer implementation
+- Key: font ID + glyph ID + size + render params
+- Value: rasterized bitmap or mesh data
+- Per-renderer implementation with shared interface
+- Configurable capacity with automatic eviction
+
+### Scoped Test Control
+
+```rust
+// Prevents cache interference between tests
+cache_config::scoped_caching_enabled(|| {
+    // Test code with isolated caching
+});
+```
 
 ## Error Handling
 

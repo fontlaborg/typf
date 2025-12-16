@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="zensical-0.0.10">
+      <meta name="generator" content="zensical-0.0.11">
     
     
       
@@ -34,7 +34,7 @@
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.eafc6f7f.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.bd6182e7.min.css">
       
         
           
@@ -762,6 +762,56 @@
     <span class="md-ellipsis">
       
         Vello CPU Renderer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baseline-coordinate-contract-renderer-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Baseline &amp; Coordinate Contract (Renderer Output)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Baseline &amp; Coordinate Contract (Renderer Output)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-state-dec-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current state (Dec 2025)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chosen-contract-for-standardization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chosen contract (for standardization)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this matters
       
     </span>
   </a>
@@ -1874,6 +1924,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#baseline-coordinate-contract-renderer-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Baseline &amp; Coordinate Contract (Renderer Output)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Baseline &amp; Coordinate Contract (Renderer Output)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-state-dec-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current state (Dec 2025)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chosen-contract-for-standardization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chosen contract (for standardization)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#backend-registry" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2220,7 +2320,8 @@
 </span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Use when:</strong> You need maximum throughput on GPU-equipped systems.</p>
-<p><strong>Features:</strong> GPU compute rendering, COLR/bitmap color fonts, glyph caching.</p>
+<p><strong>Features:</strong> GPU compute rendering, glyph caching.</p>
+<p><strong>Limitation (current):</strong> The vendored <code>vello_hybrid</code> renderer does not render bitmap/COLR glyph types yet, so color fonts may appear blank or monochrome. Prefer <code>vello-cpu</code> for color fonts until the vendored Vello version is updated (upstream added bitmap/COLR support in <a class="magiclink magiclink-github magiclink-issue" href="https://github.com/fontlaborg/vello/issues/937" title="GitHub Issue: fontlaborg/vello #937">vello#937</a>).</p>
 <h3 id="vello-cpu-renderer">Vello CPU Renderer<a class="headerlink" href="#vello-cpu-renderer" title="Permanent link">&para;</a></h3>
 <p>Pure Rust CPU renderer using vello_cpu. No GPU required.</p>
 <div class="language-rust highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">VelloCpuRenderer</span><span class="w"> </span><span class="p">{</span>
@@ -2244,6 +2345,43 @@
 </span></code></pre></div>
 <p><strong>Use when:</strong> You need high-quality rendering without GPU dependencies.</p>
 <p><strong>Features:</strong> Pure Rust, no GPU, server-friendly, COLR/bitmap color fonts.</p>
+<h2 id="baseline-coordinate-contract-renderer-output">Baseline &amp; Coordinate Contract (Renderer Output)<a class="headerlink" href="#baseline-coordinate-contract-renderer-output" title="Permanent link">&para;</a></h2>
+<p>Typf’s shaping output (<code>PositionedGlyph</code>) is baseline-relative: <code>glyph.x</code>/<code>glyph.y</code> are offsets in <em>font-space</em> where <code>y=0</code> is the baseline. Renderers then rasterize individual glyphs and composite them onto an output bitmap with a top-left origin (<code>+y</code> downward).</p>
+<h3 id="current-state-dec-2025">Current state (Dec 2025)<a class="headerlink" href="#current-state-dec-2025" title="Permanent link">&para;</a></h3>
+<p>Renderers currently use <strong>different baseline strategies</strong>, which makes cross-backend output alignment inconsistent for the same <code>ShapingResult</code> (especially for strings without ascenders/descenders, and for GPU/OS backends that use heuristics).</p>
+<ul>
+<li><strong>Opixa</strong> (<code>backends/typf-render-opixa/src/lib.rs</code>): computes <code>max_y/min_y</code> from per-glyph bitmap metrics (<code>GlyphBitmap.top/left</code>), sets <code>baseline_y = padding + max_y</code>, and composites each glyph at <code>y = baseline_y + glyph.y - glyph.top</code> (inside <code>composite_glyph</code>).</li>
+<li><strong>Skia</strong> (<code>backends/typf-render-skia/src/lib.rs</code>): computes <code>max_y/min_y</code> from per-glyph bounds, sets <code>baseline_y = padding + max_y</code>, and composites at <code>y = baseline_y + glyph.y - bitmap.bearing_y</code>.</li>
+<li><strong>Zeno</strong> (<code>backends/typf-render-zeno/src/lib.rs</code>): same approach as Skia (<code>baseline_y = padding + max_y</code>, composite uses <code>- bitmap.bearing_y</code>).</li>
+<li><strong>Vello CPU</strong> (<code>backends/typf-render-vello-cpu/src/lib.rs</code>): uses <code>skrifa::FontRef::metrics(size)</code> for <code>ascent/descent</code>, sets <code>baseline_y = padding + ascent</code>, and allocates <code>height = ascent + descent + padding*2</code> (no per-string tight bounds).</li>
+<li><strong>Vello GPU</strong> (<code>backends/typf-render-vello/src/lib.rs</code>): uses heuristic <code>baseline_y = padding + font_size*0.8</code> and <code>height = font_size*1.5 + padding*2</code>.</li>
+<li><strong>CoreGraphics (non-linra)</strong> (<code>backends/typf-render-cg/src/lib.rs</code>): uses a fixed ratio (<code>BASELINE_RATIO = 0.75</code>) to place the baseline (<code>baseline_y = height * (1 - ratio)</code>).</li>
+</ul>
+<p>The project’s reference renderer is <strong>linra-mac</strong> (CoreText + CoreGraphics single-pass), which uses OS typography metrics; the non-linra CoreGraphics backend above is not a reliable baseline reference.</p>
+<h3 id="chosen-contract-for-standardization">Chosen contract (for standardization)<a class="headerlink" href="#chosen-contract-for-standardization" title="Permanent link">&para;</a></h3>
+<p>Renderers SHOULD become <strong>metrics-first</strong>:</p>
+<ol>
+<li>Compute <strong>font metrics</strong> at the requested size/variation location (<code>ascent</code>, <code>descent</code>, <code>line_gap</code>).</li>
+<li>Compute <strong>actual glyph extents</strong> for the shaped run (max above baseline, max below baseline) as a safety net.</li>
+<li>Allocate output so it contains both:</li>
+<li>the font’s line box (<code>ascent/descent</code>), and</li>
+<li>any glyphs that exceed the metrics (e.g. color glyph effects, extreme accents).</li>
+</ol>
+<p>Concretely (single line):</p>
+<ul>
+<li><code>top = max(ascent, max_glyph_top_above_baseline)</code></li>
+<li><code>bottom = max(descent, max_glyph_bottom_below_baseline)</code></li>
+<li><code>baseline_y = padding + top</code></li>
+<li><code>height = ceil(top + bottom + padding*2)</code></li>
+<li>composite each glyph at <code>x = padding + glyph.x + bearing_x</code>, <code>y = baseline_y + glyph.y - bearing_y</code> (or the equivalent internal representation, as in Opixa).</li>
+</ul>
+<p>This keeps baseline placement stable across different strings (within normal metrics), while avoiding clipping when glyphs exceed ascent/descent.</p>
+<h3 id="why-this-matters">Why this matters<a class="headerlink" href="#why-this-matters" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Consistency:</strong> the same <code>ShapingResult</code> should render with the same baseline position across backends.</li>
+<li><strong>Interop:</strong> downstream layout engines expect baseline and line-height semantics tied to font metrics, not the particular glyphs in a run.</li>
+<li><strong>Predictability:</strong> “tight bounds” rendering is useful, but should be an explicit opt-in contract once renderers can report origin/baseline offsets.</li>
+</ul>
 <h2 id="backend-registry">Backend Registry<a class="headerlink" href="#backend-registry" title="Permanent link">&para;</a></h2>
 <p>Find and create backends by name:</p>
 <div class="language-rust highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">BackendRegistry</span><span class="w"> </span><span class="p">{</span>

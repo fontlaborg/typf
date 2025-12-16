@@ -143,8 +143,14 @@ impl CoreGraphicsRenderer {
         let width = (content_width + padding * 2.0).ceil().max(1.0) as u32;
         let height = (content_height + padding * 2.0).ceil().max(1.0) as u32;
 
-        // Final sanity check: dimensions must be positive and reasonable
-        if width == 0 || height == 0 || width > 16384 || height > 16384 {
+        // Final sanity check: dimensions must be positive and within limits
+        let max_width = typf_core::get_max_bitmap_width();
+        let max_height = typf_core::get_max_bitmap_height();
+        let max_pixels = typf_core::get_max_bitmap_pixels();
+        if width == 0 || height == 0 || width > max_width || height > max_height {
+            return None;
+        }
+        if (width as u64 * height as u64) > max_pixels {
             return None;
         }
 

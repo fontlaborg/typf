@@ -17,6 +17,8 @@
 //!
 //! Community project by FontLab - https://www.fontlab.org/
 
+// this_file: crates/typf-export-svg/src/lib.rs
+
 #[cfg(feature = "bitmap-embed")]
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine};
 use skrifa::MetadataProvider;
@@ -58,7 +60,8 @@ impl SvgExporter {
     /// Enable or disable bitmap glyph embedding (requires `bitmap-embed` feature)
     ///
     /// When enabled, bitmap-only glyphs (CBDT/sbix) are embedded as base64 PNG `<image>` elements.
-    /// When disabled, bitmap glyphs are skipped (empty output).
+    /// When disabled (or when the feature is not compiled), bitmap-only glyphs are emitted as a
+    /// placeholder box so they do not silently disappear from the output.
     #[cfg(feature = "bitmap-embed")]
     pub fn with_bitmap_embedding(mut self, embed: bool) -> Self {
         self.embed_bitmaps = embed;
@@ -112,10 +115,10 @@ impl SvgExporter {
             let y = baseline_y + glyph.y;
 
             // Try to extract outline path
-            let path_result = self.extract_glyph_path(&font, glyph.id, scale);
+            let outline_result = self.extract_glyph_outline(&font, glyph.id, scale);
 
-            match path_result {
-                Ok(path) if !path.is_empty() => {
+            match outline_result {
+                Ok(GlyphOutline::Path(path)) => {
                     // Write path element with transform
                     writeln!(
                         &mut svg,
@@ -130,22 +133,41 @@ impl SvgExporter {
                     )
                     .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
                 },
-                Ok(_) => {
-                    // Empty path - try bitmap embedding if enabled
+                Ok(GlyphOutline::EmptyOutline) => {
+                    // Intentionally empty glyph (e.g. space). Emit nothing.
+                },
+                Ok(GlyphOutline::BitmapOnly) => {
                     #[cfg(feature = "bitmap-embed")]
-                    if self.embed_bitmaps {
-                        if let Some(image_element) = self.try_embed_bitmap_glyph(
-                            &font,
-                            glyph.id,
-                            shaped.advance_height,
-                            x,
-                            y,
-                        )? {
-                            writeln!(&mut svg, "{}", image_element)
-                                .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
+                    let mut wrote_bitmap = false;
+                    #[cfg(not(feature = "bitmap-embed"))]
+                    let wrote_bitmap = false;
+                    #[cfg(feature = "bitmap-embed")]
+                    {
+                        if self.embed_bitmaps {
+                            if let Some(image_element) = self.try_embed_bitmap_glyph(
+                                &font,
+                                glyph.id,
+                                shaped.advance_height,
+                                x,
+                                y,
+                            )? {
+                                writeln!(&mut svg, "{}", image_element)
+                                    .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
+                                wrote_bitmap = true;
+                            }
                         }
                     }
-                    // If bitmap embedding disabled or failed, skip the glyph
+
+                    if !wrote_bitmap {
+                        self.write_missing_glyph_placeholder(
+                            &mut svg,
+                            x,
+                            y,
+                            glyph.advance,
+                            shaped.advance_height,
+                            foreground,
+                        )?;
+                    }
                 },
                 Err(_) => {
                     // Glyph extraction failed - try bitmap as fallback
@@ -176,14 +198,14 @@ impl SvgExporter {
 
     /// Extract glyph outline as SVG path string
     ///
-    /// Returns `Ok(empty string)` for bitmap-only glyphs that have no outline data.
-    /// This allows graceful handling of CBDT/CBLC bitmap fonts.
-    fn extract_glyph_path(
+    /// The SVG exporter treats glyphs with bitmap strikes but no outline as `BitmapOnly`, so callers
+    /// can decide whether to embed a bitmap image or emit a placeholder.
+    fn extract_glyph_outline(
         &self,
         font: &Arc<dyn FontRef>,
         glyph_id: u32,
         scale: f32,
-    ) -> Result<String> {
+    ) -> Result<GlyphOutline> {
         let font_data = font.data();
         let font_ref = skrifa::FontRef::new(font_data)
             .map_err(|_| ExportError::EncodingFailed("Invalid font".to_string()))?;
@@ -195,14 +217,10 @@ impl SvgExporter {
         let glyph = match outlines.get(glyph_id_obj) {
             Some(g) => g,
             None => {
-                // Check if this might be a bitmap-only glyph
-                // If the font has bitmap strikes, this is likely a CBDT/sbix glyph
                 let bitmap_strikes = font_ref.bitmap_strikes();
-                let has_bitmap_data = !bitmap_strikes.is_empty();
-                if has_bitmap_data {
-                    // Bitmap glyph - return empty path (graceful skip)
-                    // SVG paths can't represent bitmap data directly
-                    return Ok(String::new());
+                if !bitmap_strikes.is_empty() {
+                    // Bitmap-only glyph - SVG paths can't represent bitmap data directly.
+                    return Ok(GlyphOutline::BitmapOnly);
                 }
                 // No bitmap data either - this glyph truly doesn't exist
                 return Err(ExportError::EncodingFailed(format!(
@@ -225,7 +243,41 @@ impl SvgExporter {
             .draw(settings, &mut path_builder)
             .map_err(|_| ExportError::EncodingFailed("Outline extraction failed".to_string()))?;
 
-        Ok(path_builder.finish())
+        let path = path_builder.finish();
+        if path.is_empty() {
+            return Ok(GlyphOutline::EmptyOutline);
+        }
+        Ok(GlyphOutline::Path(path))
+    }
+
+    fn write_missing_glyph_placeholder(
+        &self,
+        svg: &mut String,
+        x: f32,
+        y: f32,
+        advance: f32,
+        em_height: f32,
+        foreground: Color,
+    ) -> Result<()> {
+        let height = em_height.max(1.0);
+        let width = advance.max(height * 0.5).max(1.0);
+        let y_top = y - height;
+
+        writeln!(
+            svg,
+            r#"  <rect class="typf-missing-glyph" x="{:.2}" y="{:.2}" width="{:.2}" height="{:.2}" fill="none" stroke="rgb({},{},{})" stroke-opacity="{:.2}" stroke-width="1"/>"#,
+            x,
+            y_top,
+            width,
+            height,
+            foreground.r,
+            foreground.g,
+            foreground.b,
+            (foreground.a as f32 / 255.0) * 0.35,
+        )
+        .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
+
+        Ok(())
     }
 
     /// Try to render a bitmap glyph and embed it as a base64 PNG image element
@@ -279,6 +331,13 @@ impl SvgExporter {
 
         Ok(Some(image_element))
     }
+}
+
+#[derive(Debug)]
+enum GlyphOutline {
+    Path(String),
+    EmptyOutline,
+    BitmapOnly,
 }
 
 impl Default for SvgExporter {

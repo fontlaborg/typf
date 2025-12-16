@@ -6,13 +6,16 @@ Get typf running in your Rust project in 5 minutes.
 
 ```toml
 [dependencies]
-# Minimal: just shaping and rendering
+# Minimal: just shaping and rendering (NoneShaper + Opixa)
 typf = { git = "https://github.com/fontlaborg/typf.git", features = ["minimal"] }
 
 # Recommended: HarfBuzz shaping + Opixa rendering + PNG export
 typf = { git = "https://github.com/fontlaborg/typf.git", features = ["shaping-hb", "render-opixa", "export-png"] }
 
-# Full: all backends
+# Alternative: Pure Rust HarfBuzz + Zeno rendering + SVG export
+typf = { git = "https://github.com/fontlaborg/typf.git", features = ["shaping-hr", "render-zeno", "export-svg"] }
+
+# Full: all backends including GPU rendering and color fonts
 typf = { git = "https://github.com/fontlaborg/typf.git", features = ["full"] }
 ```
 
@@ -22,6 +25,7 @@ typf = { git = "https://github.com/fontlaborg/typf.git", features = ["full"] }
 |---------|-------------|
 | `minimal` | NoneShaper + OpixaRenderer (pure Rust, no deps) |
 | `shaping-hb` | HarfBuzz shaper (complex scripts) |
+| `shaping-hr` | Pure Rust HarfBuzz alternative (harfrust) |
 | `shaping-ct` | CoreText shaper (macOS only) |
 | `shaping-icu-hb` | ICU + HarfBuzz (best Unicode support) |
 | `render-opixa` | Opixa rasterizer (pure Rust, SIMD) |
@@ -120,7 +124,7 @@ let render_params = RenderParams {
 
 ## Caching
 
-Typf includes two-level caches (L1 hot + L2 LRU) for both shaping and rendering results. **Caching is disabled by default.**
+Typf includes Moka TinyLFU caches for both shaping and rendering results with scan-resistant admission policies. **Caching is disabled by default.**
 
 ### Enable caching
 

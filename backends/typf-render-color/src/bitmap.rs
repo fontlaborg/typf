@@ -1,3 +1,4 @@
+// this_file: backends/typf-render-color/src/bitmap.rs
 //! Bitmap glyph rendering support
 //!
 //! Renders embedded bitmap glyphs (sbix, CBDT/CBLC) using skrifa's bitmap module.
@@ -467,8 +468,9 @@ impl OutlinePen for TinySkiaPathPen {
 
 /// Decode PNG data to a pixmap
 fn decode_png_to_pixmap(png_data: &[u8]) -> Result<Pixmap, BitmapRenderError> {
-    // Use png crate to decode
-    let decoder = png::Decoder::new(png_data);
+    let mut decoder = png::Decoder::new(png_data);
+    decoder.set_transformations(png::Transformations::ALPHA | png::Transformations::STRIP_16);
+
     let mut reader = decoder
         .read_info()
         .map_err(|_| BitmapRenderError::PngDecodeFailed)?;
@@ -480,34 +482,28 @@ fn decode_png_to_pixmap(png_data: &[u8]) -> Result<Pixmap, BitmapRenderError> {
 
     let width = info.width;
     let height = info.height;
+    let data = &buf[..info.buffer_size()];
 
-    // Convert to RGBA premultiplied for tiny-skia
-    let rgba = match info.color_type {
-        png::ColorType::Rgba => {
-            // Premultiply alpha
-            premultiply_rgba(&buf[..info.buffer_size()])
-        },
+    let rgba_premultiplied = match info.color_type {
+        png::ColorType::Rgba => premultiply_rgba(data),
         png::ColorType::Rgb => {
-            // Add alpha channel
             let mut rgba = Vec::with_capacity(width as usize * height as usize * 4);
-            for chunk in buf[..info.buffer_size()].chunks(3) {
+            for chunk in data.chunks(3) {
                 rgba.extend_from_slice(chunk);
                 rgba.push(255);
             }
             rgba
         },
         png::ColorType::Grayscale => {
-            // Convert to RGBA
             let mut rgba = Vec::with_capacity(width as usize * height as usize * 4);
-            for &gray in &buf[..info.buffer_size()] {
+            for &gray in data {
                 rgba.extend_from_slice(&[gray, gray, gray, 255]);
             }
             rgba
         },
         png::ColorType::GrayscaleAlpha => {
-            // Convert to RGBA with premultiplied alpha
             let mut rgba = Vec::with_capacity(width as usize * height as usize * 4);
-            for chunk in buf[..info.buffer_size()].chunks(2) {
+            for chunk in data.chunks(2) {
                 let gray = chunk[0];
                 let alpha = chunk[1];
                 let pm_gray = ((gray as u16 * alpha as u16) / 255) as u8;
@@ -515,14 +511,14 @@ fn decode_png_to_pixmap(png_data: &[u8]) -> Result<Pixmap, BitmapRenderError> {
             }
             rgba
         },
-        png::ColorType::Indexed => {
-            // Need palette info - fallback to error for now
-            return Err(BitmapRenderError::UnsupportedFormat);
-        },
+        png::ColorType::Indexed => return Err(BitmapRenderError::UnsupportedFormat),
     };
 
-    Pixmap::from_vec(rgba, tiny_skia::IntSize::from_wh(width, height).unwrap())
-        .ok_or(BitmapRenderError::PixmapCreationFailed)
+    Pixmap::from_vec(
+        rgba_premultiplied,
+        tiny_skia::IntSize::from_wh(width, height).unwrap(),
+    )
+    .ok_or(BitmapRenderError::PixmapCreationFailed)
 }
 
 /// Premultiply RGBA data
@@ -581,6 +577,48 @@ fn decode_mask_to_pixmap(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_decode_png_to_pixmap_when_indexed_palette_then_decodes_to_premultiplied_rgba() {
+        let width = 2;
+        let height = 2;
+
+        let mut png_bytes = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut png_bytes, width, height);
+            encoder.set_color(png::ColorType::Indexed);
+            encoder.set_depth(png::BitDepth::Eight);
+
+            // Palette entries: red, green, blue (RGB triplets).
+            encoder.set_palette([255, 0, 0, 0, 255, 0, 0, 0, 255].as_slice());
+            // Alpha per palette entry (tRNS). green is 50% alpha, blue fully transparent.
+            encoder.set_trns([255, 128, 0].as_slice());
+
+            let mut writer = encoder.write_header().expect("write_header");
+            // Pixel indices, row-major.
+            writer
+                .write_image_data([0, 1, 2, 0].as_slice())
+                .expect("write_image_data");
+        }
+
+        let pixmap = decode_png_to_pixmap(&png_bytes).expect("decode_png_to_pixmap");
+        assert_eq!(pixmap.width(), width);
+        assert_eq!(pixmap.height(), height);
+
+        // Expect premultiplied RGBA:
+        // idx 0 red alpha 255 => (255,0,0,255)
+        // idx 1 green alpha 128 => (0,128,0,128)
+        // idx 2 blue alpha 0 => (0,0,0,0)
+        assert_eq!(
+            pixmap.data(),
+            [
+                255, 0, 0, 255, //
+                0, 128, 0, 128, //
+                0, 0, 0, 0, //
+                255, 0, 0, 255, //
+            ]
+        );
+    }
 
     #[test]
     fn test_has_bitmap_glyphs_regular_font() {

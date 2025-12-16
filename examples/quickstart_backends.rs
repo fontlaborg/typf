@@ -1,9 +1,12 @@
-///! Quick start example demonstrating all major backends
-///!
-///! This example shows how to use different shaping and rendering backends
-///! with minimal code. Perfect for getting started with Typf.
-///!
-///! Run with: cargo run --example quickstart_backends --features shaping-hb,render-skia,render-zeno
+//! Quick start example demonstrating all major backends
+//!
+//! This example shows how to use different shaping and rendering backends
+//! with minimal code. Perfect for getting started with Typf.
+//!
+//! Run with: cargo run --example quickstart_backends --features shaping-hb,render-skia,render-zeno
+
+// this_file: examples/quickstart_backends.rs
+
 use std::sync::Arc;
 use typf_core::{
     traits::{FontRef, Renderer, Shaper},

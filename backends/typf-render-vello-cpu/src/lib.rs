@@ -22,6 +22,8 @@
 //! let result = renderer.render(&shaped, font, &params)?;
 //! ```
 
+// this_file: backends/typf-render-vello-cpu/src/lib.rs
+
 use std::sync::Arc;
 
 use skrifa::MetadataProvider;
@@ -33,7 +35,7 @@ use typf_core::{
     Color, RenderParams,
 };
 use vello_common::glyph::Glyph as VelloGlyph;
-use vello_common::peniko::FontData;
+use vello_common::peniko::{Blob, FontData};
 use vello_cpu::{
     color::AlphaColor,
     kurbo::{Affine, Rect},
@@ -177,18 +179,29 @@ impl Renderer for VelloCpuRenderer {
         let padding = params.padding as f32;
         let font_size = shaped.advance_height;
 
-        // Get actual font metrics for proper baseline and height calculation
+        // Font metrics for proper baseline and height calculation.
+        //
+        // Prefer FontRef-provided OS/2/hhea metrics (shared contract across renderers).
+        // Fall back to skrifa parsing, then to an approximation if parsing fails.
         let font_bytes = font.data();
-        let (ascent, descent) = if let Ok(font_ref) = skrifa::FontRef::new(font_bytes) {
-            let size = skrifa::instance::Size::new(font_size);
-            let location = skrifa::instance::LocationRef::default();
-            let metrics = font_ref.metrics(size, location);
-            // ascent is positive (above baseline), descent is negative (below baseline)
-            (metrics.ascent, metrics.descent.abs())
-        } else {
-            // Fallback to approximate values if font parsing fails
-            (font_size * 0.8, font_size * 0.2)
-        };
+        let (ascent, descent) = font
+            .metrics()
+            .filter(|m| m.units_per_em > 0 && (m.ascent != 0 || m.descent != 0))
+            .map(|m| {
+                let scale = font_size / (m.units_per_em as f32);
+                let ascent = (m.ascent as f32).max(0.0) * scale;
+                let descent = (m.descent as f32).abs() * scale;
+                (ascent, descent)
+            })
+            .or_else(|| {
+                skrifa::FontRef::new(font_bytes).ok().map(|font_ref| {
+                    let size = skrifa::instance::Size::new(font_size);
+                    let location = skrifa::instance::LocationRef::default();
+                    let metrics = font_ref.metrics(size, location);
+                    (metrics.ascent, metrics.descent.abs())
+                })
+            })
+            .unwrap_or((font_size * 0.8, font_size * 0.2));
 
         // Calculate canvas dimensions using actual font metrics
         let width = (shaped.advance_width + padding * 2.0).ceil() as u32;
@@ -200,13 +213,16 @@ impl Renderer for VelloCpuRenderer {
             return Err(RenderError::ZeroDimensions { width, height }.into());
         }
 
-        // Create font data from raw bytes
-        // FontData requires Vec<u8> (not &[u8]) and a font collection index
-        let font_bytes = font.data().to_vec();
-        let font_data = FontData::new(font_bytes.clone().into(), 0);
+        // Create font data from raw bytes. Prefer shared bytes to avoid a per-render copy.
+        let font_blob = if let Some(shared) = font.data_shared() {
+            Blob::new(shared)
+        } else {
+            font.data().to_vec().into()
+        };
+        let font_data = FontData::new(font_blob, 0);
 
         // Build normalized variation coordinates for variable fonts
-        let normalized_coords = build_normalized_coords(&font_bytes, &params.variations);
+        let normalized_coords = build_normalized_coords(font.data(), &params.variations);
 
         // Create render context
         let mut context = RenderContext::new(width as u16, height as u16);
@@ -278,6 +294,7 @@ mod tests {
     use super::*;
     use typf_core::types::{Direction, PositionedGlyph};
 
+    #[allow(dead_code)]
     struct MockFont {
         data: Vec<u8>,
     }

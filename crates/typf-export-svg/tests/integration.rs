@@ -2,6 +2,8 @@
 //!
 //! Community project by FontLab - https://www.fontlab.org/
 
+// this_file: crates/typf-export-svg/tests/integration.rs
+
 use std::sync::Arc;
 use typf_core::{
     traits::FontRef,
@@ -38,7 +40,8 @@ fn test_exporter_creation() {
     let exporter = SvgExporter::new();
     let with_padding = exporter.with_padding(15.0);
     // Just ensure it compiles and works
-    assert!(format!("{:?}", with_padding).len() > 0);
+    let debug = format!("{with_padding:?}");
+    assert!(!debug.is_empty());
 }
 
 #[test]
@@ -90,7 +93,8 @@ fn test_svg_output_structure() {
 /// Test that CBDT bitmap fonts are handled gracefully
 ///
 /// CBDT fonts contain bitmap data, not outlines.
-/// The SVG exporter should skip bitmap glyphs gracefully instead of failing.
+/// The SVG exporter should not silently drop bitmap-only glyphs:
+/// it should either embed them (when supported/enabled) or emit a placeholder.
 #[test]
 fn test_cbdt_bitmap_font_graceful_handling() {
     // Load the CBDT test font
@@ -163,8 +167,15 @@ fn test_cbdt_bitmap_font_graceful_handling() {
         assert!(svg.contains("<?xml"), "SVG should have XML header");
         assert!(svg.contains("<svg"), "SVG should have svg element");
         assert!(svg.contains("</svg>"), "SVG should have closing svg");
-        // Bitmap glyphs produce empty paths, which are skipped
-        // So we shouldn't see path elements for bitmap glyphs
+
+        // Bitmap-only glyphs must not disappear completely.
+        // Accept either an embedded <image> (feature enabled + embedding works)
+        // or a placeholder element (feature absent/disabled or embedding fails).
+        assert!(
+            svg.contains("<image") || svg.contains("typf-missing-glyph"),
+            "Bitmap-only glyph should be represented as an embedded image or placeholder; got:\n{}",
+            svg
+        );
     }
 }
 

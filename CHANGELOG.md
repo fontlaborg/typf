@@ -5,6 +5,45 @@ Changes to Typf.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0//),
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
+## [5.0.1] - 2025-12-16
+
+### Fixed
+- Cache test stabilization using `cache_config::scoped_caching_enabled()` to prevent test interference
+- Bitmap PNG decoding for indexed/paletted PNGs in bitmap glyphs (sbix/CBDT/EBDT)
+- Flaky cache tests in typf-shape-icu-hb and typf-shape-hr backends
+- Unused import warnings in SVG examples
+- Dead code warnings in test helpers
+
+### Added
+- `color_palette` field to `LinraRenderParams` for CPAL palette index specification
+- Zero-copy font bytes access via `FontRef::data_shared()` for performance optimization
+- Font metrics API with `FontRef::metrics()` and standard `FontMetrics` type
+- Vello GPU color font warnings when selecting unsupported glyph sources
+- SVG exporter placeholder fallback for bitmap-only glyphs
+- Cross-renderer baseline consistency tests
+- Indexed/paletted PNG decoding support in `typf-render-color`
+- `DEPENDENCIES.md` documenting major external dependencies and rationale
+
+### Changed
+- Standardized baseline computation across all renderers (Opixa/Skia/Zeno/Vello/Vello-CPU/CoreGraphics)
+- Improved cache architecture with Moka TinyLFU replacing custom L1/L2 caches
+- Enhanced bitmap glyph handling with centralized decoding in `typf-render-color`
+- Optimized Vello renderers to use shared font bytes when available
+- Updated planning documentation structure (PLAN.md index + PLANSTEPS/ directory)
+
+### Performance
+- Zero-copy font data access reduces memory allocations in Vello renderers
+- Improved caching efficiency with TinyLFU admission policies
+- Better baseline consistency reduces visual artifacts across renderer backends
+
+### Documentation
+- Created comprehensive QUICKSTART.md with caching, variable fonts, and color font examples
+- Added DEPENDENCIES.md documenting project dependencies
+- Expanded caching documentation in README.md
+- Reorganized planning documents into PLANSTEPS/ structure
+
+---
+
 ## [2.4.5] - 2025-12-02
 
 ### Fixed

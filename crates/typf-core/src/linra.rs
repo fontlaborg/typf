@@ -52,6 +52,8 @@ pub struct LinraRenderParams {
     pub antialias: bool,
     /// Extra spacing between characters (in points, can be negative)
     pub letter_spacing: f32,
+    /// CPAL color palette index for COLR color glyphs (0 = default palette)
+    pub color_palette: u16,
 }
 
 impl Default for LinraRenderParams {
@@ -68,6 +70,7 @@ impl Default for LinraRenderParams {
             script: None,
             antialias: true,
             letter_spacing: 0.0,
+            color_palette: 0,
         }
     }
 }
@@ -102,7 +105,7 @@ impl LinraRenderParams {
             padding: self.padding,
             antialias: self.antialias,
             variations: self.variations.clone(),
-            color_palette: 0, // TODO: add color_palette to LinraRenderParams
+            color_palette: self.color_palette,
             glyph_sources: crate::GlyphSourcePreference::default(),
             output: crate::RenderMode::Bitmap,
         }
@@ -195,6 +198,7 @@ mod tests {
             variations: vec![("wght".to_string(), 700.0)],
             features: vec![("liga".to_string(), 1)],
             language: Some("en".to_string()),
+            color_palette: 2,
             ..Default::default()
         };
 
@@ -205,5 +209,6 @@ mod tests {
 
         let render = linra.to_render_params();
         assert_eq!(render.variations.len(), 1);
+        assert_eq!(render.color_palette, 2);
     }
 }

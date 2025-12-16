@@ -7,6 +7,8 @@
 
 #![cfg(target_os = "macos")]
 
+// this_file: backends/typf-shape-ct/src/lib.rs
+
 use std::{
     cell::RefCell,
     ffi::c_void,
@@ -644,21 +646,30 @@ mod tests {
             return;
         }
 
-        let data = fs::read(&font_path).expect("failed to read Archivo variable font");
+        let data = match fs::read(&font_path) {
+            Ok(data) => data,
+            Err(e) => unreachable!("failed to read Archivo variable font: {e}"),
+        };
 
-        let mut base_params = ShapingParams::default();
-        base_params.size = 32.0;
+        let base_params = ShapingParams {
+            size: 32.0,
+            ..ShapingParams::default()
+        };
 
         // Base font without variations
-        let base = CoreTextShaper::create_ct_font_from_data(&data, &base_params)
-            .expect("failed to create base CTFont");
+        let base = match CoreTextShaper::create_ct_font_from_data(&data, &base_params) {
+            Ok(base) => base,
+            Err(e) => unreachable!("failed to create base CTFont: {e}"),
+        };
 
         // Apply variations that previously triggered descriptor-based lookup
         let mut var_params = base_params.clone();
         var_params.variations = vec![("wght".to_string(), 900.0), ("wdth".to_string(), 100.0)];
 
-        let with_vars = CoreTextShaper::create_ct_font_from_data(&data, &var_params)
-            .expect("failed to create CTFont with variations");
+        let with_vars = match CoreTextShaper::create_ct_font_from_data(&data, &var_params) {
+            Ok(with_vars) => with_vars,
+            Err(e) => unreachable!("failed to create CTFont with variations: {e}"),
+        };
 
         // The font identity must stay the same; losing it would swap in a system font
         let base_name = unsafe { base.post_script_name() };

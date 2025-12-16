@@ -27,6 +27,8 @@
 //!
 //! Crafted with passion by FontLab - https://www.fontlab.org/
 
+// this_file: backends/typf-render-zeno/src/lib.rs
+
 use kurbo::Shape;
 use skrifa::MetadataProvider;
 use std::sync::Arc;
@@ -45,16 +47,18 @@ use typf_render_svg::SvgRenderer;
 /// using nothing but Rust code. No system fonts, no native libraries, no
 /// platform-specific quirks. Just fast, reliable, beautiful text.
 pub struct ZenoRenderer {
-    /// Safety net to prevent runaway memory allocation
-    /// Even 8K displays need boundaries
-    max_size: u32,
+    /// Safety net to prevent runaway memory allocation (width)
+    max_width: u32,
+    /// Safety net to prevent runaway memory allocation (height)
+    max_height: u32,
 }
 
 impl ZenoRenderer {
     /// Creates a renderer that's pure Rust and proud of it
     pub fn new() -> Self {
         Self {
-            max_size: 65535, // Maximum u16 value, practical limit for bitmap dimensions
+            max_width: typf_core::get_max_bitmap_width(),
+            max_height: typf_core::get_max_bitmap_height(),
         }
     }
 
@@ -555,14 +559,33 @@ impl Renderer for ZenoRenderer {
             return Err(RenderError::BackendError("no glyphs rendered".into()).into());
         }
 
-        // Phase 2: Calculate canvas dimensions from actual glyph bounds
+        // Phase 2: Calculate canvas dimensions.
+        //
+        // Baseline standardization (metrics-first):
+        // - Prefer font ascent/descent (stable across strings)
+        // - Expand to include any glyph bounds that exceed the metrics (effects, extreme accents)
         let width = (shaped.advance_width + padding * 2.0).ceil() as u32;
 
-        // Height is from highest point above baseline to lowest point below
+        let (metrics_ascent, metrics_descent) = font
+            .metrics()
+            .filter(|m| m.units_per_em > 0 && (m.ascent != 0 || m.descent != 0))
+            .map(|m| {
+                let scale = glyph_size / (m.units_per_em as f32);
+                let ascent = (m.ascent as f32).max(0.0) * scale;
+                let descent = (m.descent as f32).abs() * scale;
+                (ascent, descent)
+            })
+            .unwrap_or((0.0, 0.0));
+
+        let glyph_top = max_y.max(0.0);
+        let glyph_bottom = (-min_y).max(0.0);
+        let top = glyph_top.max(metrics_ascent);
+        let bottom = glyph_bottom.max(metrics_descent);
+
         let content_height = if rendered_glyphs.is_empty() {
             16.0 // Default minimum for empty text
         } else {
-            max_y - min_y // Total height = ascent + descent
+            top + bottom
         };
         let height = (content_height + padding * 2.0).ceil() as u32;
 
@@ -571,11 +594,12 @@ impl Renderer for ZenoRenderer {
             return Err(RenderError::ZeroDimensions { width, height }.into());
         }
 
-        if width > self.max_size || height > self.max_size {
+        if width > self.max_width || height > self.max_height {
             return Err(RenderError::DimensionsTooLarge {
                 width,
                 height,
-                max: self.max_size,
+                max_width: self.max_width,
+                max_height: self.max_height,
             }
             .into());
         }
@@ -598,8 +622,11 @@ impl Renderer for ZenoRenderer {
         }
 
         // Baseline position: padding + distance from top to baseline
-        // max_y is the highest point above baseline, so baseline is at padding + max_y
-        let baseline_y = padding + max_y;
+        let baseline_y = if rendered_glyphs.is_empty() {
+            padding
+        } else {
+            padding + top
+        };
 
         // Phase 3: Composite pre-rendered glyphs onto canvas
         for rg in rendered_glyphs {
@@ -1023,10 +1050,11 @@ mod tests {
         let font = skrifa::FontRef::new(font_bytes).ok()?;
         let svg_table = font.svg().ok()?;
         let doc_list = svg_table.svg_document_list().ok()?;
-        for record in doc_list.document_records() {
-            return Some(record.start_glyph_id().to_u32());
-        }
-        None
+        doc_list
+            .document_records()
+            .iter()
+            .next()
+            .map(|record| record.start_glyph_id().to_u32())
     }
 
     #[test]

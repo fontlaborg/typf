@@ -293,7 +293,7 @@ mod tests {
 
         // Each 2x2 block has 2 black pixels → 2/4 coverage → alpha ~127
         for &alpha in &gray {
-            assert!(alpha >= 120 && alpha <= 135, "Alpha = {}", alpha);
+            assert!((120..=135).contains(&alpha), "Alpha = {}", alpha);
         }
     }
 

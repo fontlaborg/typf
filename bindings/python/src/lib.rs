@@ -478,6 +478,7 @@ impl TypfLinra {
             script,
             antialias: true,
             letter_spacing: 0.0,
+            color_palette: 0,
         };
 
         // Render using linra (single-pass)

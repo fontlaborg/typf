@@ -14,6 +14,8 @@
 //! let output = renderer.render(&shaped_result, font, &params)?;
 //! ```
 
+// this_file: backends/typf-render-vello/src/lib.rs
+
 use std::sync::Arc;
 
 use thiserror::Error;
@@ -26,7 +28,7 @@ use typf_core::{
 use vello_common::{
     glyph::Glyph,
     kurbo::Affine,
-    peniko::{color::AlphaColor, FontData},
+    peniko::{color::AlphaColor, Blob, FontData},
 };
 use vello_hybrid::{RenderSize, RenderTargetConfig, Scene};
 use wgpu::{Device, Queue};
@@ -298,9 +300,23 @@ impl Renderer for VelloRenderer {
         let padding = params.padding as f32;
         let font_size = shaped.advance_height;
 
+        // Baseline standardization (metrics-first):
+        // - Prefer font ascent/descent (stable across strings)
+        // - Fall back to a heuristic if font metrics are unavailable.
+        let (ascent, descent) = font
+            .metrics()
+            .filter(|m| m.units_per_em > 0 && (m.ascent != 0 || m.descent != 0))
+            .map(|m| {
+                let scale = font_size / (m.units_per_em as f32);
+                let ascent = (m.ascent as f32).max(0.0) * scale;
+                let descent = (m.descent as f32).abs() * scale;
+                (ascent, descent)
+            })
+            .unwrap_or((font_size * 0.8, font_size * 0.2));
+
         // Calculate canvas dimensions
         let width = (shaped.advance_width + padding * 2.0).ceil() as u32;
-        let height = (font_size * 1.5 + padding * 2.0).ceil() as u32;
+        let height = (ascent + descent + padding * 2.0).ceil() as u32;
 
         // Sanity check dimensions
         if width == 0 || height == 0 {
@@ -328,16 +344,20 @@ impl Renderer for VelloRenderer {
         // Set foreground color
         scene.set_paint(Self::to_vello_color(params.foreground));
 
-        // Create font data for Vello
-        let font_bytes = font.data().to_vec();
-        let font_data = FontData::new(font_bytes.into(), 0);
+        // Create font data for Vello. Prefer shared bytes to avoid a per-render copy.
+        let font_blob = if let Some(shared) = font.data_shared() {
+            Blob::new(shared)
+        } else {
+            font.data().to_vec().into()
+        };
+        let font_data = FontData::new(font_blob, 0);
 
         // Convert glyphs
         let glyphs = Self::convert_glyphs(shaped);
 
         if !glyphs.is_empty() {
-            // Calculate baseline position
-            let baseline_y = padding + font_size * 0.8; // Approximate baseline
+            // Baseline position: padding + ascent (top of canvas + ascender space)
+            let baseline_y = padding + ascent;
 
             // Set transform for positioning
             scene.set_transform(Affine::translate((padding as f64, baseline_y as f64)));

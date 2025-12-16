@@ -1,19 +1,26 @@
-//! Speed up your pipeline with intelligent caching
+//! Scan-resistant caching with TinyLFU and byte-weighted eviction
 //!
-//! Two levels of caching keep frequently-used data at your fingertips:
-//! - L1: Blazing fast hot cache (<50ns access) for the most recent items
-//! - L2: Larger LRU cache for everything else that still matters
+//! Uses Moka's TinyLFU eviction policy to handle scan workloads gracefully.
+//! Unlike timestamp-based eviction, TinyLFU tracks access frequency and
+//! rejects one-time "scan" entries that would pollute the cache.
 //!
-//! Shaping results and rendered glyphs get cached automatically,
-//! so repeated text or fonts feel instant.
+//! **Byte-weighted eviction**: Caches track actual memory usage, not just
+//! entry counts. A 4MB emoji bitmap consumes 4000x more quota than a 1KB
+//! glyph. This prevents memory explosions from pathological fonts.
+//!
+//! This prevents unbounded memory growth when processing many unique fonts
+//! (e.g., font matching across hundreds of candidates).
 
-use lru::LruCache;
+use moka::sync::Cache;
 use parking_lot::RwLock;
-use std::collections::HashMap;
 use std::hash::Hash;
-use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+/// Default cache byte limit: 512 MB
+///
+/// Can be overridden via `TYPF_CACHE_MAX_BYTES` environment variable.
+pub const DEFAULT_CACHE_MAX_BYTES: u64 = 512 * 1024 * 1024;
 
 /// Uniquely identifies shaped text for caching
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -39,218 +46,85 @@ pub struct GlyphCacheKey {
     pub params_hash: u64,
 }
 
-/// Data that's been cached, plus useful metadata
-#[derive(Debug, Clone)]
-pub struct CachedValue<T> {
-    /// The actual cached data
-    pub data: T,
-    /// When we first cached this
-    pub timestamp: Instant,
-    /// How popular this entry has been
-    pub hit_count: u32,
-}
-
-/// The sprinter: small, blindingly fast, for the hottest data
-pub struct L1Cache<K: Hash + Eq + Clone, V: Clone> {
-    cache: Arc<RwLock<HashMap<K, CachedValue<V>>>>,
-    max_size: usize,
-}
-
-impl<K: Hash + Eq + Clone, V: Clone> std::fmt::Debug for L1Cache<K, V> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("L1Cache")
-            .field("max_size", &self.max_size)
-            .field("current_size", &self.cache.read().len())
-            .finish()
-    }
-}
-
-impl<K: Hash + Eq + Clone, V: Clone> L1Cache<K, V> {
-    /// Create a new L1 cache with the specified capacity
-    pub fn new(max_size: usize) -> Self {
-        Self {
-            cache: Arc::new(RwLock::new(HashMap::with_capacity(max_size))),
-            max_size,
-        }
-    }
-
-    /// Grab data if we have it, update stats along the way
-    pub fn get(&self, key: &K) -> Option<V> {
-        let mut cache = self.cache.write();
-        if let Some(entry) = cache.get_mut(key) {
-            entry.hit_count += 1;
-            Some(entry.data.clone())
-        } else {
-            None
-        }
-    }
-
-    /// Store something valuable for fast access later
-    pub fn insert(&self, key: K, value: V) {
-        let mut cache = self.cache.write();
-
-        // Evict the oldest entry when we're full
-        if cache.len() >= self.max_size && !cache.contains_key(&key) {
-            if let Some(oldest_key) = cache
-                .iter()
-                .min_by_key(|(_, v)| v.timestamp)
-                .map(|(k, _)| k.clone())
-            {
-                cache.remove(&oldest_key);
-            }
-        }
-
-        cache.insert(
-            key,
-            CachedValue {
-                data: value,
-                timestamp: Instant::now(),
-                hit_count: 0,
-            },
-        );
-    }
-
-    /// Get a snapshot of cache performance
-    pub fn stats(&self) -> CacheStats {
-        let cache = self.cache.read();
-        let total_hits: u32 = cache.values().map(|v| v.hit_count).sum();
-        CacheStats {
-            size: cache.len(),
-            capacity: self.max_size,
-            total_hits,
-            hit_rate: 0.0, // Calculated at higher levels
-        }
-    }
-}
-
-/// The marathon runner: bigger, smart about what to forget
-pub struct L2Cache<K: Hash + Eq + Clone, V: Clone> {
-    cache: Arc<RwLock<LruCache<K, CachedValue<V>>>>,
-    capacity: NonZeroUsize,
-}
-
-impl<K: Hash + Eq + Clone, V: Clone> std::fmt::Debug for L2Cache<K, V> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("L2Cache")
-            .field("capacity", &self.capacity)
-            .field("current_size", &self.cache.read().len())
-            .finish()
-    }
-}
-
-/// Default L2 cache capacity
-const DEFAULT_L2_CAPACITY: NonZeroUsize = match NonZeroUsize::new(1000) {
-    Some(v) => v,
-    None => unreachable!(),
-};
-
-impl<K: Hash + Eq + Clone, V: Clone> L2Cache<K, V> {
-    /// Create a new L2 cache with LRU eviction
-    pub fn new(capacity: usize) -> Self {
-        let capacity = NonZeroUsize::new(capacity).unwrap_or(DEFAULT_L2_CAPACITY);
-        Self {
-            cache: Arc::new(RwLock::new(LruCache::new(capacity))),
-            capacity,
-        }
-    }
-
-    /// Find data we cached recently
-    pub fn get(&self, key: &K) -> Option<V> {
-        let mut cache = self.cache.write();
-        if let Some(entry) = cache.get_mut(key) {
-            entry.hit_count += 1;
-            Some(entry.data.clone())
-        } else {
-            None
-        }
-    }
-
-    /// Remember this for next time
-    pub fn insert(&self, key: K, value: V) {
-        let mut cache = self.cache.write();
-        cache.put(
-            key,
-            CachedValue {
-                data: value,
-                timestamp: Instant::now(),
-                hit_count: 0,
-            },
-        );
-    }
-
-    /// Performance metrics for this cache level
-    pub fn stats(&self) -> CacheStats {
-        let cache = self.cache.read();
-        let total_hits: u32 = cache.iter().map(|(_, v)| v.hit_count).sum();
-        CacheStats {
-            size: cache.len(),
-            capacity: self.capacity.get(),
-            total_hits,
-            hit_rate: 0.0,
-        }
-    }
-}
-
-/// Both levels working together for the best of both worlds
-pub struct MultiLevelCache<K: Hash + Eq + Clone, V: Clone> {
-    l1: L1Cache<K, V>,
-    l2: L2Cache<K, V>,
+/// Scan-resistant cache backed by Moka's TinyLFU
+///
+/// TinyLFU tracks frequency of both hits and misses, rejecting
+/// infrequent "scan" accesses that would pollute a pure LRU cache.
+pub struct MultiLevelCache<K, V>
+where
+    K: Hash + Eq + Send + Sync + Clone + 'static,
+    V: Clone + Send + Sync + 'static,
+{
+    cache: Cache<K, V>,
     stats: Arc<RwLock<CacheMetrics>>,
 }
 
-impl<K: Hash + Eq + Clone, V: Clone> std::fmt::Debug for MultiLevelCache<K, V> {
+impl<K, V> std::fmt::Debug for MultiLevelCache<K, V>
+where
+    K: Hash + Eq + Send + Sync + Clone + 'static,
+    V: Clone + Send + Sync + 'static,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MultiLevelCache")
-            .field("l1", &self.l1)
-            .field("l2", &self.l2)
+            .field("entry_count", &self.cache.entry_count())
             .field("hit_rate", &self.hit_rate())
             .finish()
     }
 }
 
-impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {
-    /// Build a two-level cache with specified capacities
+impl<K, V> MultiLevelCache<K, V>
+where
+    K: Hash + Eq + Send + Sync + Clone + 'static,
+    V: Clone + Send + Sync + 'static,
+{
+    /// Build a scan-resistant cache with specified capacity
+    ///
+    /// The `l1_size` and `l2_size` parameters are combined for total capacity.
+    /// Moka's TinyLFU internally manages hot/cold separation.
     pub fn new(l1_size: usize, l2_size: usize) -> Self {
+        let total_capacity = (l1_size + l2_size) as u64;
+        let cache = Cache::builder()
+            .max_capacity(total_capacity)
+            // TinyLFU is the default, but be explicit
+            .eviction_policy(moka::policy::EvictionPolicy::tiny_lfu())
+            // Time-to-idle: evict entries not accessed for 10 minutes
+            .time_to_idle(Duration::from_secs(600))
+            .build();
+
         Self {
-            l1: L1Cache::new(l1_size),
-            l2: L2Cache::new(l2_size),
+            cache,
             stats: Arc::new(RwLock::new(CacheMetrics::default())),
         }
     }
 
-    /// Smart lookup: L1 first, then L2 with auto-promotion
+    /// Look up a cached value
+    ///
+    /// TinyLFU admission policy means frequently-accessed keys stay cached
+    /// while scan-like one-time accesses are rejected.
     pub fn get(&self, key: &K) -> Option<V> {
         let start = Instant::now();
         let mut stats = self.stats.write();
         stats.total_requests += 1;
 
-        // L1: The sprinter responds instantly
-        if let Some(value) = self.l1.get(key) {
-            stats.l1_hits += 1;
+        if let Some(value) = self.cache.get(key) {
+            stats.l1_hits += 1; // Count all hits as "L1" for API compatibility
             stats.total_l1_time += start.elapsed();
-            return Some(value);
+            Some(value)
+        } else {
+            stats.misses += 1;
+            None
         }
-
-        // L2: The marathon runner helps out
-        if let Some(value) = self.l2.get(key) {
-            stats.l2_hits += 1;
-            stats.total_l2_time += start.elapsed();
-            // Popular data gets promoted to L1
-            self.l1.insert(key.clone(), value.clone());
-            return Some(value);
-        }
-
-        stats.misses += 1;
-        None
     }
 
-    /// Store in both levels for maximum availability
+    /// Store a value in the cache
+    ///
+    /// Note: TinyLFU may reject this entry if the key hasn't been
+    /// seen frequently enough. This is intentional for scan resistance.
     pub fn insert(&self, key: K, value: V) {
-        self.l1.insert(key.clone(), value.clone());
-        self.l2.insert(key, value);
+        self.cache.insert(key, value);
     }
 
-    /// How often do we find what we're looking for?
+    /// Cache hit rate (0.0 to 1.0)
     pub fn hit_rate(&self) -> f64 {
         let stats = self.stats.read();
         if stats.total_requests == 0 {
@@ -261,7 +135,7 @@ impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {
         }
     }
 
-    /// Average time to fetch cached data
+    /// Average access time for cache hits
     pub fn avg_access_time(&self) -> Duration {
         let stats = self.stats.read();
         let total_time = stats.total_l1_time + stats.total_l2_time;
@@ -277,6 +151,29 @@ impl<K: Hash + Eq + Clone, V: Clone> MultiLevelCache<K, V> {
     pub fn metrics(&self) -> CacheMetrics {
         self.stats.read().clone()
     }
+
+    /// Number of entries currently in cache
+    pub fn len(&self) -> usize {
+        self.cache.entry_count() as usize
+    }
+
+    /// Check if cache is empty
+    pub fn is_empty(&self) -> bool {
+        self.cache.entry_count() == 0
+    }
+
+    /// Clear all entries and reset stats
+    pub fn clear(&self) {
+        self.cache.invalidate_all();
+        let mut stats = self.stats.write();
+        *stats = CacheMetrics::default();
+    }
+
+    /// Force pending operations to complete (for testing)
+    #[cfg(test)]
+    pub fn sync(&self) {
+        self.cache.run_pending_tasks();
+    }
 }
 
 /// Basic cache statistics
@@ -288,7 +185,7 @@ pub struct CacheStats {
     pub hit_rate: f32,
 }
 
-/// Everything you need to know about cache performance
+/// Performance metrics for cache operations
 #[derive(Debug, Clone, Default)]
 pub struct CacheMetrics {
     pub total_requests: u64,
@@ -317,7 +214,134 @@ impl CacheMetrics {
     }
 }
 
-/// One place to manage all your caches
+/// Get the cache byte limit from environment or use default.
+///
+/// Set `TYPF_CACHE_MAX_BYTES` to override (e.g., "268435456" for 256MB).
+pub fn get_cache_max_bytes() -> u64 {
+    std::env::var("TYPF_CACHE_MAX_BYTES")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(DEFAULT_CACHE_MAX_BYTES)
+}
+
+/// Byte-weighted cache for RenderOutput values
+///
+/// Unlike entry-count caches, this tracks actual memory usage.
+/// A 4MB emoji bitmap consumes 4000x more quota than a 1KB glyph.
+pub struct RenderOutputCache<K>
+where
+    K: Hash + Eq + Send + Sync + Clone + 'static,
+{
+    cache: Cache<K, crate::types::RenderOutput>,
+    stats: Arc<RwLock<CacheMetrics>>,
+    max_bytes: u64,
+}
+
+impl<K> std::fmt::Debug for RenderOutputCache<K>
+where
+    K: Hash + Eq + Send + Sync + Clone + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RenderOutputCache")
+            .field("entry_count", &self.cache.entry_count())
+            .field("weighted_size", &self.cache.weighted_size())
+            .field("max_bytes", &self.max_bytes)
+            .field("hit_rate", &self.hit_rate())
+            .finish()
+    }
+}
+
+impl<K> RenderOutputCache<K>
+where
+    K: Hash + Eq + Send + Sync + Clone + 'static,
+{
+    /// Create a byte-weighted cache with specified maximum bytes.
+    pub fn new(max_bytes: u64) -> Self {
+        let cache = Cache::builder()
+            .max_capacity(max_bytes)
+            .weigher(|_key: &K, value: &crate::types::RenderOutput| {
+                // Weight = byte size, minimum 1 to avoid division issues
+                value.byte_size().max(1) as u32
+            })
+            .eviction_policy(moka::policy::EvictionPolicy::tiny_lfu())
+            .time_to_idle(Duration::from_secs(600))
+            .build();
+
+        Self {
+            cache,
+            stats: Arc::new(RwLock::new(CacheMetrics::default())),
+            max_bytes,
+        }
+    }
+
+    /// Create a cache with the default byte limit (512 MB or env override).
+    pub fn with_default_limit() -> Self {
+        Self::new(get_cache_max_bytes())
+    }
+
+    /// Look up a cached render output.
+    pub fn get(&self, key: &K) -> Option<crate::types::RenderOutput> {
+        let start = Instant::now();
+        let mut stats = self.stats.write();
+        stats.total_requests += 1;
+
+        if let Some(value) = self.cache.get(key) {
+            stats.l1_hits += 1;
+            stats.total_l1_time += start.elapsed();
+            Some(value)
+        } else {
+            stats.misses += 1;
+            None
+        }
+    }
+
+    /// Store a render output in the cache.
+    ///
+    /// Large outputs may be rejected by TinyLFU if not accessed frequently.
+    pub fn insert(&self, key: K, value: crate::types::RenderOutput) {
+        self.cache.insert(key, value);
+    }
+
+    /// Cache hit rate (0.0 to 1.0).
+    pub fn hit_rate(&self) -> f64 {
+        let stats = self.stats.read();
+        if stats.total_requests == 0 {
+            0.0
+        } else {
+            stats.l1_hits as f64 / stats.total_requests as f64
+        }
+    }
+
+    /// Current weighted size in bytes.
+    pub fn weighted_size(&self) -> u64 {
+        self.cache.weighted_size()
+    }
+
+    /// Number of entries in cache.
+    pub fn entry_count(&self) -> u64 {
+        self.cache.entry_count()
+    }
+
+    /// Performance metrics.
+    pub fn metrics(&self) -> CacheMetrics {
+        self.stats.read().clone()
+    }
+
+    /// Clear all entries.
+    pub fn clear(&self) {
+        self.cache.invalidate_all();
+        let mut stats = self.stats.write();
+        *stats = CacheMetrics::default();
+    }
+
+    /// Force pending operations to complete (for testing).
+    #[cfg(test)]
+    pub fn sync(&self) {
+        self.cache.run_pending_tasks();
+    }
+}
+
+/// Centralized cache manager for shaping and glyph caches
 pub struct CacheManager {
     shaping_cache: MultiLevelCache<ShapingCacheKey, Arc<Vec<u8>>>,
     glyph_cache: MultiLevelCache<GlyphCacheKey, Arc<Vec<u8>>>,
@@ -325,11 +349,13 @@ pub struct CacheManager {
 
 impl CacheManager {
     /// Create a manager with sensible default sizes
+    ///
+    /// Default capacities are conservative to prevent memory issues:
+    /// - Shaping: 10,100 entries (shapes are larger)
+    /// - Glyphs: 101,000 entries (individual glyphs are smaller)
     pub fn new() -> Self {
         Self {
-            // Shaping: 100 hot, 10k total (shaping is expensive)
             shaping_cache: MultiLevelCache::new(100, 10_000),
-            // Glyphs: 1000 hot, 100k total (individual glyphs are cheap)
             glyph_cache: MultiLevelCache::new(1000, 100_000),
         }
     }
@@ -360,20 +386,20 @@ impl CacheManager {
         let glyph = self.glyph_cache.metrics();
 
         format!(
-            "Cache Performance:\n\
+            "Cache Performance (TinyLFU):\n\
              Shaping Cache:\n\
-             - Overall Hit Rate: {:.2}%\n\
-             - L1 (Hot) Hit Rate: {:.2}%\n\
+             - Hit Rate: {:.2}%\n\
+             - Entries: {}\n\
              - Average Access: {:?}\n\
              Glyph Cache:\n\
-             - Overall Hit Rate: {:.2}%\n\
-             - L1 (Hot) Hit Rate: {:.2}%\n\
+             - Hit Rate: {:.2}%\n\
+             - Entries: {}\n\
              - Average Access: {:?}",
             shaping.hit_rate() * 100.0,
-            shaping.l1_hit_rate() * 100.0,
+            self.shaping_cache.len(),
             self.shaping_cache.avg_access_time(),
             glyph.hit_rate() * 100.0,
-            glyph.l1_hit_rate() * 100.0,
+            self.glyph_cache.len(),
             self.glyph_cache.avg_access_time(),
         )
     }
@@ -390,22 +416,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_l1_cache() {
-        let cache: L1Cache<String, String> = L1Cache::new(2);
+    fn test_cache_insert_and_get() {
+        let cache: MultiLevelCache<String, String> = MultiLevelCache::new(10, 100);
 
         cache.insert("key1".to_string(), "value1".to_string());
         cache.insert("key2".to_string(), "value2".to_string());
 
         assert_eq!(cache.get(&"key1".to_string()), Some("value1".to_string()));
         assert_eq!(cache.get(&"key2".to_string()), Some("value2".to_string()));
-
-        // Should evict oldest when full
-        cache.insert("key3".to_string(), "value3".to_string());
-        assert_eq!(cache.get(&"key3".to_string()), Some("value3".to_string()));
+        assert_eq!(cache.get(&"key3".to_string()), None);
     }
 
     #[test]
-    fn test_multi_level_cache() {
+    fn test_cache_metrics() {
         let cache: MultiLevelCache<u32, String> = MultiLevelCache::new(10, 100);
 
         cache.insert(1, "one".to_string());
@@ -422,16 +445,123 @@ mod tests {
     }
 
     #[test]
-    fn test_cache_promotion() {
-        let cache: MultiLevelCache<u32, String> = MultiLevelCache::new(1, 10);
+    fn test_cache_clear() {
+        let cache: MultiLevelCache<u32, String> = MultiLevelCache::new(10, 100);
 
         cache.insert(1, "one".to_string());
-        cache.insert(2, "two".to_string()); // Will evict 1 from L1
+        cache.sync(); // Force pending insert to complete
+        assert!(!cache.is_empty());
 
-        // First get should hit L2 and promote to L1
-        assert_eq!(cache.get(&1), Some("one".to_string()));
+        cache.clear();
+        cache.sync(); // Force pending invalidation to complete
+        assert!(cache.is_empty());
+        assert_eq!(cache.get(&1), None);
+    }
 
-        let metrics = cache.metrics();
-        assert!(metrics.l2_hits > 0);
+    #[test]
+    fn test_scan_resistance_concept() {
+        // TinyLFU tracks frequency - items accessed multiple times
+        // are more likely to stay cached than one-time scans.
+        // This test verifies the cache works; actual scan resistance
+        // is handled by Moka's internal TinyLFU implementation.
+        let cache: MultiLevelCache<u32, String> = MultiLevelCache::new(5, 5);
+
+        // Simulate a "hot" key accessed multiple times
+        cache.insert(1, "hot".to_string());
+        for _ in 0..10 {
+            cache.get(&1);
+        }
+
+        // Simulate scan of many unique keys
+        for i in 100..200 {
+            cache.insert(i, format!("scan_{}", i));
+        }
+
+        // Hot key should still be accessible (TinyLFU protects it)
+        // Note: This is probabilistic - TinyLFU may or may not keep it
+        // The important thing is the cache doesn't grow unbounded
+        assert!(cache.len() <= 10, "Cache should respect capacity limit");
+    }
+
+    #[test]
+    fn test_render_output_byte_size() {
+        use crate::types::{BitmapData, BitmapFormat, RenderOutput, VectorData, VectorFormat};
+
+        // Test bitmap byte size (should be data.len())
+        let bitmap = RenderOutput::Bitmap(BitmapData {
+            width: 100,
+            height: 100,
+            format: BitmapFormat::Rgba8,
+            data: vec![0u8; 40_000], // 100x100x4 = 40KB
+        });
+        assert_eq!(bitmap.byte_size(), 40_000);
+
+        // Test vector byte size (should be data.len())
+        let vector = RenderOutput::Vector(VectorData {
+            format: VectorFormat::Svg,
+            data: "<svg>test</svg>".to_string(),
+        });
+        assert_eq!(vector.byte_size(), 15);
+
+        // Test JSON byte size
+        let json = RenderOutput::Json(r#"{"test": true}"#.to_string());
+        assert_eq!(json.byte_size(), 14);
+    }
+
+    #[test]
+    fn test_byte_weighted_cache_respects_limit() {
+        use crate::types::{BitmapData, BitmapFormat, RenderOutput};
+
+        // Create a cache with 100KB limit
+        let cache: RenderOutputCache<u32> = RenderOutputCache::new(100_000);
+
+        // Insert entries totaling ~150KB (should evict some)
+        for i in 0..15 {
+            let output = RenderOutput::Bitmap(BitmapData {
+                width: 50,
+                height: 50,
+                format: BitmapFormat::Rgba8,
+                data: vec![i as u8; 10_000], // 10KB each
+            });
+            cache.insert(i, output);
+        }
+        cache.sync(); // Force pending operations
+
+        // Weighted size should be at or below the limit
+        assert!(
+            cache.weighted_size() <= 100_000,
+            "Cache weighted size {} should be <= 100KB",
+            cache.weighted_size()
+        );
+    }
+
+    #[test]
+    fn test_byte_weighted_cache_large_item_eviction() {
+        use crate::types::{BitmapData, BitmapFormat, RenderOutput};
+
+        // Create a cache with 50KB limit
+        let cache: RenderOutputCache<u32> = RenderOutputCache::new(50_000);
+
+        // Insert a small item
+        let small = RenderOutput::Bitmap(BitmapData {
+            width: 10,
+            height: 10,
+            format: BitmapFormat::Gray8,
+            data: vec![0u8; 100], // 100 bytes
+        });
+        cache.insert(1, small);
+
+        // Insert a large item (40KB)
+        let large = RenderOutput::Bitmap(BitmapData {
+            width: 100,
+            height: 100,
+            format: BitmapFormat::Rgba8,
+            data: vec![0u8; 40_000], // 40KB
+        });
+        cache.insert(2, large);
+        cache.sync();
+
+        // Both should fit (100 + 40KB = ~40KB < 50KB limit)
+        assert!(cache.weighted_size() <= 50_000);
     }
 }

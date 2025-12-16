@@ -10,12 +10,16 @@
 //! - Test scaling with text length and complexity
 //! - Measure the overhead of the builder pattern
 
+#![allow(clippy::unwrap_used)]
+
+// this_file: benches/pipeline_bench.rs
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::sync::Arc;
 
 use typf::{Color, Pipeline, RenderMode, RenderParams, ShapingParams};
 use typf_core::traits::{FontRef, Renderer, Shaper};
-use typf_export::{PnmExporter, PnmFormat};
+use typf_export::PnmExporter;
 use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
@@ -143,6 +147,7 @@ fn bench_full_pipeline(c: &mut Criterion) {
         antialias: false, // Faster for benchmarking
         variations: Vec::new(),
         output: RenderMode::Bitmap,
+        ..RenderParams::default()
     };
 
     // Complete pipeline for short text - common UI scenarios

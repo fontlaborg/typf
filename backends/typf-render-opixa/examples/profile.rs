@@ -9,14 +9,22 @@ use typf_core::{
 };
 use typf_render_opixa::OpixaRenderer;
 
+// this_file: backends/typf-render-opixa/examples/profile.rs
+
 struct SimpleFont {
     data: Vec<u8>,
 }
 
 impl SimpleFont {
-    fn new(path: &str) -> Self {
-        let data = fs::read(path).expect(&format!("Failed to read font file at {}", path));
-        Self { data }
+    fn new(path: &str) -> Option<Self> {
+        let data = match fs::read(path) {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("Failed to read font file at {path}: {e}");
+                return None;
+            },
+        };
+        Some(Self { data })
     }
 }
 
@@ -26,19 +34,29 @@ impl FontRef for SimpleFont {
     }
 
     fn units_per_em(&self) -> u16 {
-        let font = SkrifaFontRef::new(&self.data).unwrap();
-        font.head().unwrap().units_per_em()
+        let Ok(font) = SkrifaFontRef::new(&self.data) else {
+            return 1000;
+        };
+        font.head()
+            .ok()
+            .map(|head| head.units_per_em())
+            .unwrap_or(1000)
     }
 
     fn glyph_id(&self, ch: char) -> Option<u32> {
-        let font = SkrifaFontRef::new(&self.data).unwrap();
+        let font = SkrifaFontRef::new(&self.data).ok()?;
         font.charmap().map(ch).map(|g| g.to_u32())
     }
 
     fn advance_width(&self, glyph_id: u32) -> f32 {
-        let font = SkrifaFontRef::new(&self.data).unwrap();
+        let Ok(font) = SkrifaFontRef::new(&self.data) else {
+            return 0.0;
+        };
         let gid = skrifa::GlyphId::new(glyph_id);
-        font.hmtx().unwrap().advance(gid).unwrap_or(0) as f32
+        font.hmtx()
+            .ok()
+            .and_then(|hmtx| hmtx.advance(gid))
+            .unwrap_or(0) as f32
     }
 }
 
@@ -47,7 +65,14 @@ fn main() {
     let font_path =
         std::path::Path::new(manifest_dir).join("../../typf-tester/fonts/NotoSans-Regular.ttf");
 
-    let font = Arc::new(SimpleFont::new(font_path.to_str().unwrap()));
+    let Some(font_path_str) = font_path.to_str() else {
+        eprintln!("Font path is not valid UTF-8: {font_path:?}");
+        return;
+    };
+    let Some(font) = SimpleFont::new(font_path_str) else {
+        return;
+    };
+    let font = Arc::new(font);
 
     // Create a shaping result with some glyphs
     // "Hello World" repeated to have more work

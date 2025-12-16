@@ -72,18 +72,29 @@ pub mod parallel;
 /// We use scan conversion algorithms that respect font geometry while
 /// producing the smoothest text possible without grid fitting artifacts.
 pub struct OpixaRenderer {
-    /// Guard against memory bombs with reasonable size limits
-    /// 8K prepares us for future high-DPI displays without going mad
-    max_size: u32,
+    /// Maximum width for any bitmap.
+    /// Default: 65535 pixels, configurable via TYPF_MAX_BITMAP_WIDTH.
+    max_width: u32,
+    /// Maximum height for any bitmap.
+    /// Default: 4095 pixels, configurable via TYPF_MAX_BITMAP_HEIGHT.
+    max_height: u32,
+    /// Maximum total pixels (width × height).
+    /// Default: 4 megapixels, configurable via TYPF_MAX_BITMAP_PIXELS.
+    max_pixels: u64,
     /// Optional glyph cache for efficient repeated rendering
     cache: Option<Arc<glyph_cache::GlyphCache>>,
 }
 
 impl OpixaRenderer {
-    /// Ready your pixel artist for the transformation to come
+    /// Ready your pixel artist for the transformation to come.
+    ///
+    /// Uses default limits: 65535 px width, 4095 px height, 4M total pixels.
+    /// Configure via TYPF_MAX_BITMAP_WIDTH, TYPF_MAX_BITMAP_HEIGHT, TYPF_MAX_BITMAP_PIXELS.
     pub fn new() -> Self {
         Self {
-            max_size: 65535, // Maximum u16 value, practical limit for bitmap dimensions
+            max_width: typf_core::get_max_bitmap_width(),
+            max_height: typf_core::get_max_bitmap_height(),
+            max_pixels: typf_core::get_max_bitmap_pixels(),
             cache: None,
         }
     }
@@ -99,7 +110,9 @@ impl OpixaRenderer {
     /// Create renderer with custom cache capacity
     pub fn with_cache_capacity(capacity: usize) -> Self {
         Self {
-            max_size: 65535,
+            max_width: typf_core::get_max_bitmap_width(),
+            max_height: typf_core::get_max_bitmap_height(),
+            max_pixels: typf_core::get_max_bitmap_pixels(),
             cache: Some(Arc::new(glyph_cache::GlyphCache::new(capacity))),
         }
     }
@@ -384,11 +397,31 @@ impl Renderer for OpixaRenderer {
         };
         let width = min_width.max(1);
 
-        // Height is from highest point above baseline to lowest point below
+        // Height is from highest point above baseline to lowest point below.
+        //
+        // Baseline standardization (metrics-first):
+        // - Prefer font ascent/descent (stable across strings)
+        // - Expand to include any glyph bounds that exceed the metrics (effects, extreme accents)
+        let (metrics_ascent, metrics_descent) = font
+            .metrics()
+            .filter(|m| m.units_per_em > 0 && (m.ascent != 0 || m.descent != 0))
+            .map(|m| {
+                let scale = glyph_size / (m.units_per_em as f32);
+                let ascent = (m.ascent as f32).max(0.0) * scale;
+                let descent = (m.descent as f32).abs() * scale;
+                (ascent, descent)
+            })
+            .unwrap_or((0.0, 0.0));
+
+        let glyph_top = max_y.max(0.0);
+        let glyph_bottom = (-min_y).max(0.0);
+        let top = glyph_top.max(metrics_ascent);
+        let bottom = glyph_bottom.max(metrics_descent);
+
         let content_height = if rendered_glyphs.is_empty() {
             16.0 // Default minimum for empty text
         } else {
-            max_y - min_y // Total height = ascent + descent
+            top + bottom
         };
         let height = (content_height + padding * 2.0).ceil() as u32;
 
@@ -397,11 +430,25 @@ impl Renderer for OpixaRenderer {
             return Err(RenderError::ZeroDimensions { width, height }.into());
         }
 
-        if width > self.max_size || height > self.max_size {
+        // Check per-dimension limits (width and height have separate limits)
+        if width > self.max_width || height > self.max_height {
             return Err(RenderError::DimensionsTooLarge {
                 width,
                 height,
-                max: self.max_size,
+                max_width: self.max_width,
+                max_height: self.max_height,
+            }
+            .into());
+        }
+
+        // Check total pixel count to prevent memory bombs
+        let total_pixels = width as u64 * height as u64;
+        if total_pixels > self.max_pixels {
+            return Err(RenderError::TotalPixelsTooLarge {
+                width,
+                height,
+                total: total_pixels,
+                max: self.max_pixels,
             }
             .into());
         }
@@ -420,8 +467,11 @@ impl Renderer for OpixaRenderer {
         }
 
         // Baseline position: padding + distance from top to baseline
-        // max_y is the highest point above baseline, so baseline is at padding + max_y
-        let baseline_y = padding + max_y;
+        let baseline_y = if rendered_glyphs.is_empty() {
+            padding
+        } else {
+            padding + top
+        };
 
         // Phase 3: Composite pre-rendered glyphs onto canvas
         for rg in rendered_glyphs {

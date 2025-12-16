@@ -2,6 +2,8 @@
 //!
 //! Exports rendered text to PNG format using the `image` crate.
 
+// this_file: crates/typf-export/src/png.rs
+
 use image::{ImageBuffer, ImageEncoder, RgbaImage};
 use typf_core::{
     error::{ExportError, Result},
@@ -209,7 +211,10 @@ mod tests {
         };
 
         let output = RenderOutput::Bitmap(bitmap);
-        let png_data = exporter.export(&output).unwrap();
+        let png_data = match exporter.export(&output) {
+            Ok(png_data) => png_data,
+            Err(e) => unreachable!("png export failed: {e}"),
+        };
 
         // PNG should start with PNG magic bytes
         assert_eq!(&png_data[0..8], &[137, 80, 78, 71, 13, 10, 26, 10]);
@@ -228,7 +233,10 @@ mod tests {
         };
 
         let output = RenderOutput::Bitmap(bitmap);
-        let png_data = exporter.export(&output).unwrap();
+        let png_data = match exporter.export(&output) {
+            Ok(png_data) => png_data,
+            Err(e) => unreachable!("png export failed: {e}"),
+        };
 
         // Verify PNG magic bytes
         assert_eq!(&png_data[0..8], &[137, 80, 78, 71, 13, 10, 26, 10]);
@@ -236,7 +244,7 @@ mod tests {
 
     #[test]
     fn test_png_default() {
-        let exporter = PngExporter::default();
+        let exporter = PngExporter;
         assert_eq!(exporter.name(), "png");
     }
 }

@@ -1,3 +1,5 @@
+# this_file: Cargo.toml
+
 [workspace]
 resolver = "2"
 exclude = ["fuzz", "external"]
@@ -42,7 +44,7 @@ members = [
 ]
 
 [workspace.package]
-version = "2.0.0"
+version = "5.0.1"
 authors = ["Typf Contributors"]
 edition = "2021"
 rust-version = "1.75"
@@ -63,6 +65,8 @@ icu_segmenter = "2.1"
 kurbo = "0.11"
 log = "0.4"
 lru = "0.16"
+# High-performance cache with TinyLFU (scan-resistant)
+moka = { version = "0.12", features = ["sync"] }
 # macOS objc2 ecosystem
 objc2 = "0.6"
 objc2-foundation = "0.3"
@@ -83,33 +87,33 @@ thiserror = "2.0"
 # Rendering dependencies
 tiny-skia = "0.11"
 # Internal crates
-typf = { path = "crates/typf", version = "2.0.0" }
-typf-bench = { path = "crates/typf-bench", version = "2.0.0" }
-typf-core = { path = "crates/typf-core", version = "2.0.0" }
-typf-export = { path = "crates/typf-export", version = "2.0.0" }
-typf-fontdb = { path = "crates/typf-fontdb", version = "2.0.0" }
-typf-input = { path = "crates/typf-input", version = "2.0.0" }
-typf-os = { path = "backends/typf-os", version = "2.0.0" }
+typf = { path = "crates/typf", version = "5.0.1" }
+typf-bench = { path = "crates/typf-bench", version = "5.0.1" }
+typf-core = { path = "crates/typf-core", version = "5.0.1" }
+typf-export = { path = "crates/typf-export", version = "5.0.1" }
+typf-fontdb = { path = "crates/typf-fontdb", version = "5.0.1" }
+typf-input = { path = "crates/typf-input", version = "5.0.1" }
+typf-os = { path = "backends/typf-os", version = "5.0.1" }
 # Linra OS backends
-typf-os-mac = { path = "backends/typf-os-mac", version = "2.0.0" }
-typf-os-win = { path = "backends/typf-os-win", version = "2.0.0" }
-typf-render-cg = { path = "backends/typf-render-cg", version = "2.0.0" }
-typf-render-color = { path = "backends/typf-render-color", version = "2.0.0" }
+typf-os-mac = { path = "backends/typf-os-mac", version = "5.0.1" }
+typf-os-win = { path = "backends/typf-os-win", version = "5.0.1" }
+typf-render-cg = { path = "backends/typf-render-cg", version = "5.0.1" }
+typf-render-color = { path = "backends/typf-render-color", version = "5.0.1" }
 # Rendering backends
-typf-render-json = { path = "backends/typf-render-json", version = "2.0.0" }
-typf-render-opixa = { path = "backends/typf-render-opixa", version = "2.0.0" }
-typf-render-skia = { path = "backends/typf-render-skia", version = "2.0.0" }
-typf-render-svg = { path = "backends/typf-render-svg", version = "2.0.0" }
-typf-render-vello-cpu = { path = "backends/typf-render-vello-cpu", version = "2.0.0" }
-typf-render-vello = { path = "backends/typf-render-vello", version = "2.0.0" }
-typf-render-zeno = { path = "backends/typf-render-zeno", version = "2.0.0" }
-typf-shape-ct = { path = "backends/typf-shape-ct", version = "2.0.0" }
-typf-shape-hb = { path = "backends/typf-shape-hb", version = "2.0.0" }
-typf-shape-hr = { path = "backends/typf-shape-hr", version = "2.0.0" }
-typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb", version = "2.0.0" }
+typf-render-json = { path = "backends/typf-render-json", version = "5.0.1" }
+typf-render-opixa = { path = "backends/typf-render-opixa", version = "5.0.1" }
+typf-render-skia = { path = "backends/typf-render-skia", version = "5.0.1" }
+typf-render-svg = { path = "backends/typf-render-svg", version = "5.0.1" }
+typf-render-vello-cpu = { path = "backends/typf-render-vello-cpu", version = "5.0.1" }
+typf-render-vello = { path = "backends/typf-render-vello", version = "5.0.1" }
+typf-render-zeno = { path = "backends/typf-render-zeno", version = "5.0.1" }
+typf-shape-ct = { path = "backends/typf-shape-ct", version = "5.0.1" }
+typf-shape-hb = { path = "backends/typf-shape-hb", version = "5.0.1" }
+typf-shape-hr = { path = "backends/typf-shape-hr", version = "5.0.1" }
+typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb", version = "5.0.1" }
 # Shaping backends
-typf-shape-none = { path = "backends/typf-shape-none", version = "2.0.0" }
-typf-unicode = { path = "crates/typf-unicode", version = "2.0.0" }
+typf-shape-none = { path = "backends/typf-shape-none", version = "5.0.1" }
+typf-unicode = { path = "crates/typf-unicode", version = "5.0.1" }
 usvg = "0.45"
 zeno = "0.3"
 

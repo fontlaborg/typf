@@ -1,4 +1,5 @@
-# Typf v2.4.5
+<!-- this_file: README.md -->
+# Typf v5.0.1
 
 [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
@@ -26,9 +27,11 @@ That's it. Your text is rendered.
 
 - **Complex scripts**: Arabic, Hindi, Thai with proper shaping
 - **Mixed languages**: RTL and LTR in the same line  
-- **Fast output**: PNG, SVG, JSON in <1ms
-- **Small footprint**: 500KB minimal build
-- **Multiple backends**: Choose speed vs quality
+- **Fast output**: PNG, SVG, JSON in <1ms with advanced caching
+- **Small footprint**: 500KB minimal build with selective features
+- **Multiple backends**: 5 shapers × 7 renderers (35 combinations)
+- **Color fonts**: COLR v0/v1, SVG, and bitmap glyph support
+- **GPU rendering**: Vello acceleration where available
 
 ## How it works
 
@@ -67,7 +70,7 @@ That's it. Your text is rendered.
 | **skia** | 256 levels | Yes (COLR/SVG/bitmap) | Bitmap/SVG | 3.5K ops/sec | All |
 | **zeno** | 256 levels | Yes (COLR/SVG/bitmap) | Bitmap/SVG | 3K ops/sec | All (pure Rust) |
 | **vello-cpu** | 256 levels | Yes (COLR/bitmap) | Bitmap | 3.5K ops/sec | All (pure Rust) |
-| **vello** | 256 levels | Yes (COLR/bitmap) | Bitmap | 10K+ ops/sec | GPU required |
+| **vello** | 256 levels | ⚠️ Limited (outline-only today) | Bitmap | 10K+ ops/sec | GPU required |
 | **coregraphics** | 256 levels | Yes (sbix/COLR) | Bitmap | 4K ops/sec | macOS only |
 | **json** | N/A | N/A | JSON data | 25K ops/sec | All |
 
@@ -88,7 +91,7 @@ typf render "Hello" --renderer vello -o out.png
 typf render "Hello" --renderer vello-cpu -o out.png
 ```
 
-Both use the [Vello](https://github.com/linebender/vello) engine with skrifa for font parsing. Build with `--features render-vello` or `--features render-vello-cpu`.
+Both use the [Vello](https://github.com/linebender/vello) engine with skrifa for font parsing. In this repo, the GPU renderer currently does **not** render bitmap or COLR glyph types yet (use `vello-cpu` for color fonts). Build with `--features render-vello` or `--features render-vello-cpu`.
 
 ### Linra Renderers (Single-Pass)
 
@@ -126,14 +129,14 @@ The linra renderer bypasses the intermediate glyph extraction step, allowing Cor
 | CFF outlines (CFF ) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | CFF2 outlines (CFF2) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Variable fonts (gvar) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| COLR v0 (layered colors) | ❌ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ |
-| COLR v1 (gradients) | ❌ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| COLR v0 (layered colors) | ❌ | ✅ | ✅ | ✅ | ❌ | ⚠️ | ❌ |
+| COLR v1 (gradients) | ❌ | ✅ | ✅ | ✅ | ❌ | ⚠️ | ❌ |
 | SVG glyphs (SVG table) | ❌ | ✅ | ✅ | ❌ | ❌ | ⚠️ | ❌ |
-| Bitmap glyphs (CBDT/sbix) | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Bitmap glyphs (CBDT/sbix) | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
 
 **Legend:** ✅ Full support | ⚠️ Partial/via OS | ❌ Not supported
 
-> **Note:** Color glyph support in skia/zeno requires the `resvg` feature for SVG glyphs and `bitmap` feature for CBDT/sbix. Vello renderers use skrifa's native color font support.
+> **Note:** Color glyph support in skia/zeno requires the `resvg` feature for SVG glyphs and `bitmap` feature for CBDT/sbix. `vello-cpu` supports COLR/bitmap color fonts; `vello` (GPU) currently renders outlines only.
 
 ## Caching
 
@@ -180,6 +183,17 @@ TYPF_CACHE=1 ./your_app          # Enable at startup
 | Batch processing different texts | Off | Each text unique |
 | Batch processing same text/fonts | On | Cache hits save time |
 | Memory-constrained environment | Off | Caches use memory |
+
+### Cache behavior (v5.0.1+)
+
+Typf now uses the **Moka TinyLFU caching system** for improved performance:
+
+- **Shaping cache**: Keys on text + font + size + language + features + variations
+- **Glyph cache**: Keys on shaped result + render params + font  
+- **TinyLFU admission**: Tracks frequency of both hits AND misses for smarter caching
+- **Time-to-idle**: 10-minute automatic cleanup prevents unbounded memory growth
+- **Scan-resistant**: Optimized for workloads with many unique text inputs (font matching)
+- **Scoped test control**: `cache_config::scoped_caching_enabled()` prevents test interference
 
 ## Build options
 
@@ -324,23 +338,25 @@ The benchmark tool tests all shaper × renderer combinations across fonts, sizes
 
 ## Status
 
-**v2.5.x** - Production ready. All features work:
+**v5.0.1** - Production ready with enhanced caching and baseline consistency. 
 
-- ✅ 6-stage pipeline
-- ✅ 4 shapers, 7 renderers (28 combinations)
-- ✅ PNM, PNG, SVG, JSON export
-- ✅ Linra CLI (Rust + Python)
-- ✅ Python bindings (PyO3)
-- ✅ Linux, macOS, Windows, WASM
-- ✅ 348+ tests passing across workspace
-- ✅ macOS native backends (CoreText + CoreGraphics)
-- ✅ Comprehensive backend documentation and examples
-- ✅ COLR v0/v1 color glyph support (skia/zeno/vello)
-- ✅ SVG table glyph support via resvg (skia/zeno)
-- ✅ Bitmap glyph support (sbix/CBDT/EBDT)
-- ✅ Configurable glyph source selection (`--glyph-source`)
-- ✅ GPU-accelerated rendering via Vello (Metal/Vulkan/DX12)
-- ✅ High-quality CPU rendering via Vello CPU
+- ✅ 6-stage pipeline with optimized Moka TinyLFU caching architecture
+- ✅ 5 shapers (added HarfBuzz Rust), 7 renderers (35 combinations) with consistent baselines
+- ✅ PNM, PNG, SVG, JSON export with bitmap glyph embedding
+- ✅ Linra CLI (Rust + Python) with color palette support and zero-copy optimization
+- ✅ Python bindings (PyO3) with zero-copy font access and enhanced FFI
+- ✅ Linux, macOS, Windows, WASM with platform-specific optimizations
+- ✅ 414+ tests passing across workspace with cache test stabilization
+- ✅ macOS native backends (CoreText + CoreGraphics) with linra single-pass rendering
+- ✅ Comprehensive backend documentation and architectural examples
+- ✅ COLR v0/v1 color glyph support (skia/zeno/vello-cpu) with improved CPAL palette handling
+- ✅ SVG table glyph support via resvg (skia/zeno) with proper gzip decompression
+- ✅ Bitmap glyph support (sbix/CBDT/EBDT) with indexed PNG decoding and size selection
+- ✅ Configurable glyph source selection (`--glyph-source`) with CLI integration
+- ✅ GPU-accelerated rendering via Vello (Metal/Vulkan/DX12; outline-only with warnings for color fonts)
+- ✅ High-quality CPU rendering via Vello CPU with zero-copy font bytes optimization
+- ✅ Enhanced font metrics API with standardized baseline computation across all renderers
+- ✅ Comprehensive caching system with scoped test control and Moka TinyLFU admission policies
 
 ## Limits
 

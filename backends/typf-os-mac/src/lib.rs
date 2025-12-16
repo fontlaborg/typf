@@ -510,8 +510,26 @@ impl LinraRenderer for CoreTextLinraRenderer {
 
             // Calculate canvas dimensions
             let padding = params.padding as CGFloat;
-            let width = ((line_width + padding * 2.0).ceil().max(1.0) as u32).clamp(1, 16384);
-            let height = ((line_height + padding * 2.0).ceil().max(1.0) as u32).clamp(1, 16384);
+            let max_width = typf_core::get_max_bitmap_width();
+            let max_height = typf_core::get_max_bitmap_height();
+            let max_pixels = typf_core::get_max_bitmap_pixels();
+
+            let width = ((line_width + padding * 2.0).ceil().max(1.0) as u32).clamp(1, max_width);
+            let height =
+                ((line_height + padding * 2.0).ceil().max(1.0) as u32).clamp(1, max_height);
+
+            // Check total pixel count to prevent memory bombs
+            let total_pixels = width as u64 * height as u64;
+            if total_pixels > max_pixels {
+                return Err(TypfError::RenderingFailed(
+                    RenderError::TotalPixelsTooLarge {
+                        width,
+                        height,
+                        total: total_pixels,
+                        max: max_pixels,
+                    },
+                ));
+            }
 
             log::debug!(
                 "CoreTextLinraRenderer: Canvas {}x{}, line width {:.1}",

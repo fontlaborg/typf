@@ -1,3 +1,4 @@
+# this_file: backends/typf-render-color/Cargo.toml
 [package]
 name = "typf-render-color"
 version.workspace = true
@@ -29,3 +30,11 @@ bitmap = ["dep:png"]
 colr = []
 # SVG table glyph rendering via resvg (handles gzip compression)
 svg = ["dep:flate2", "dep:resvg", "dep:usvg"]
+
+[[example]]
+name = "svg_flip_test"
+required-features = ["svg"]
+
+[[example]]
+name = "svg_size_debug"
+required-features = ["svg"]

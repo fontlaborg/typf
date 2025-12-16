@@ -1,14 +1,19 @@
-//! Backend-neutral glyph/render cache
+//! Backend-neutral glyph/render cache with byte-weighted eviction
 //!
 //! Caches complete `RenderOutput` values keyed by the shaped glyph stream,
 //! render parameters, font identity, and renderer backend name. This sits in
 //! `typf-core` so every renderer can benefit without bespoke cache logic.
+//!
+//! **Memory safety**: Uses byte-weighted eviction to prevent memory explosions.
+//! A 4MB emoji bitmap consumes 4000x more cache quota than a 1KB glyph.
+
+// this_file: crates/typf-core/src/glyph_cache.rs
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
 
-use crate::cache::MultiLevelCache;
+use crate::cache::RenderOutputCache;
 use crate::cache_config;
 use crate::types::{RenderOutput, ShapingResult};
 use crate::RenderParams;
@@ -99,26 +104,30 @@ fn hash_render_params(params: &RenderParams) -> u64 {
     hasher.finish()
 }
 
-/// Render-output cache with two-level hierarchy
+/// Byte-weighted render output cache
+///
+/// Uses byte-weighted eviction (not entry count) to prevent memory explosions.
+/// Default limit is 512 MB, configurable via `TYPF_CACHE_MAX_BYTES`.
 pub struct GlyphCache {
-    cache: MultiLevelCache<GlyphCacheKey, RenderOutput>,
+    cache: RenderOutputCache<GlyphCacheKey>,
 }
 
 impl GlyphCache {
+    /// Create a cache with the default byte limit (512 MB or env override).
     pub fn new() -> Self {
-        // Render outputs are larger than shaping results; keep cache modest.
         Self {
-            cache: MultiLevelCache::new(64, 1024),
+            cache: RenderOutputCache::with_default_limit(),
         }
     }
 
-    pub fn with_capacity(l1: usize, l2: usize) -> Self {
+    /// Create a cache with a specific byte limit.
+    pub fn with_max_bytes(max_bytes: u64) -> Self {
         Self {
-            cache: MultiLevelCache::new(l1, l2),
+            cache: RenderOutputCache::new(max_bytes),
         }
     }
 
-    /// Get a cached render output
+    /// Get a cached render output.
     ///
     /// Returns `None` if not found or if caching is globally disabled.
     pub fn get(&self, key: &GlyphCacheKey) -> Option<RenderOutput> {
@@ -128,9 +137,10 @@ impl GlyphCache {
         self.cache.get(key)
     }
 
-    /// Insert a render output into the cache
+    /// Insert a render output into the cache.
     ///
     /// Does nothing if caching is globally disabled.
+    /// Large outputs may be evicted sooner due to byte-weighted eviction.
     pub fn insert(&self, key: GlyphCacheKey, output: RenderOutput) {
         if !cache_config::is_caching_enabled() {
             return;
@@ -144,6 +154,21 @@ impl GlyphCache {
 
     pub fn metrics(&self) -> crate::cache::CacheMetrics {
         self.cache.metrics()
+    }
+
+    /// Current weighted size in bytes.
+    pub fn weighted_size(&self) -> u64 {
+        self.cache.weighted_size()
+    }
+
+    /// Number of entries in cache.
+    pub fn entry_count(&self) -> u64 {
+        self.cache.entry_count()
+    }
+
+    /// Clear all cached entries.
+    pub fn clear(&self) {
+        self.cache.clear();
     }
 }
 
@@ -191,27 +216,22 @@ mod tests {
 
     #[test]
     fn cache_stores_and_retrieves() {
-        // Test cache behavior when enabled
-        // Note: This test may be flaky if run in parallel with tests that modify
-        // the global caching flag. Run with --test-threads=1 if issues persist.
-        crate::cache_config::set_caching_enabled(true);
+        let _guard = crate::cache_config::scoped_caching_enabled(true);
 
         let cache = GlyphCache::new();
         let key = GlyphCacheKey::new("r1", b"font", &shaped(), &render_params());
         let output = RenderOutput::Json("x".into());
 
         cache.insert(key.clone(), output.clone());
-        let hit = cache.get(&key);
+        let hit = match cache.get(&key) {
+            Some(hit) => hit,
+            None => unreachable!("cache should return stored value"),
+        };
 
-        crate::cache_config::set_caching_enabled(false);
-
-        // Skip assertion if another test disabled caching mid-operation
-        if let Some(hit) = hit {
-            match hit {
-                RenderOutput::Json(body) => assert_eq!(body, "x"),
-                _ => panic!("expected json"),
-            }
+        if let RenderOutput::Json(body) = hit {
+            assert_eq!(body, "x");
+        } else {
+            unreachable!("expected json");
         }
-        // If hit is None, another test disabled caching - that's OK, the cache still works
     }
 }

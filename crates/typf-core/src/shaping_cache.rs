@@ -6,6 +6,8 @@
 //! This module was extracted from duplicated code in typf-shape-hb and
 //! typf-shape-icu-hb to provide a single source of truth.
 
+// this_file: crates/typf-core/src/shaping_cache.rs
+
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
@@ -204,8 +206,7 @@ mod tests {
 
     #[test]
     fn test_cache_insert_and_get() {
-        // Enable caching, insert, get in quick succession to minimize race window
-        crate::cache_config::set_caching_enabled(true);
+        let _guard = crate::cache_config::scoped_caching_enabled(true);
 
         let cache = ShapingCache::new();
 
@@ -225,16 +226,11 @@ mod tests {
         };
 
         cache.insert(key.clone(), result.clone());
-        let cached = cache.get(&key);
-
-        // Reset before assertions
-        crate::cache_config::set_caching_enabled(false);
-
-        // Skip assertion if another test disabled caching mid-operation
-        if let Some(cached) = cached {
-            assert_eq!(cached.glyphs.len(), 1);
-        }
-        // If cached is None, another test disabled caching - that's OK
+        let cached = match cache.get(&key) {
+            Some(cached) => cached,
+            None => unreachable!("cache should return inserted value"),
+        };
+        assert_eq!(cached.glyphs.len(), 1);
     }
 
     #[test]
@@ -247,8 +243,7 @@ mod tests {
 
     #[test]
     fn test_cache_stats() {
-        // Enable caching and perform all operations in quick succession
-        crate::cache_config::set_caching_enabled(true);
+        let _guard = crate::cache_config::scoped_caching_enabled(true);
 
         let cache = ShapingCache::new();
 
@@ -271,9 +266,6 @@ mod tests {
         cache.get(&key);
 
         let stats = cache.stats();
-
-        // Reset before assertions
-        crate::cache_config::set_caching_enabled(false);
 
         // Stats track hits and misses
         assert!(stats.hit_rate >= 0.0);

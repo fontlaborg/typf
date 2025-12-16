@@ -1,4 +1,5 @@
 ---
+# this_file: src_docs/06-backend-architecture.md
 title: Backend Architecture
 icon: lucide/puzzle
 tags:
@@ -224,7 +225,9 @@ impl Renderer for VelloRenderer {
 
 **Use when:** You need maximum throughput on GPU-equipped systems.
 
-**Features:** GPU compute rendering, COLR/bitmap color fonts, glyph caching.
+**Features:** GPU compute rendering, glyph caching.
+
+**Limitation (current):** The vendored `vello_hybrid` renderer does not render bitmap/COLR glyph types yet, so color fonts may appear blank or monochrome. Prefer `vello-cpu` for color fonts until the vendored Vello version is updated (upstream added bitmap/COLR support in vello#937).
 
 ### Vello CPU Renderer
 Pure Rust CPU renderer using vello_cpu. No GPU required.
@@ -253,6 +256,49 @@ impl Renderer for VelloCpuRenderer {
 **Use when:** You need high-quality rendering without GPU dependencies.
 
 **Features:** Pure Rust, no GPU, server-friendly, COLR/bitmap color fonts.
+
+## Baseline & Coordinate Contract (Renderer Output)
+
+Typf’s shaping output (`PositionedGlyph`) is baseline-relative: `glyph.x`/`glyph.y` are offsets in *font-space* where `y=0` is the baseline. Renderers then rasterize individual glyphs and composite them onto an output bitmap with a top-left origin (`+y` downward).
+
+### Current state (Dec 2025)
+
+Renderers currently use **different baseline strategies**, which makes cross-backend output alignment inconsistent for the same `ShapingResult` (especially for strings without ascenders/descenders, and for GPU/OS backends that use heuristics).
+
+- **Opixa** (`backends/typf-render-opixa/src/lib.rs`): computes `max_y/min_y` from per-glyph bitmap metrics (`GlyphBitmap.top/left`), sets `baseline_y = padding + max_y`, and composites each glyph at `y = baseline_y + glyph.y - glyph.top` (inside `composite_glyph`).
+- **Skia** (`backends/typf-render-skia/src/lib.rs`): computes `max_y/min_y` from per-glyph bounds, sets `baseline_y = padding + max_y`, and composites at `y = baseline_y + glyph.y - bitmap.bearing_y`.
+- **Zeno** (`backends/typf-render-zeno/src/lib.rs`): same approach as Skia (`baseline_y = padding + max_y`, composite uses `- bitmap.bearing_y`).
+- **Vello CPU** (`backends/typf-render-vello-cpu/src/lib.rs`): uses `skrifa::FontRef::metrics(size)` for `ascent/descent`, sets `baseline_y = padding + ascent`, and allocates `height = ascent + descent + padding*2` (no per-string tight bounds).
+- **Vello GPU** (`backends/typf-render-vello/src/lib.rs`): uses heuristic `baseline_y = padding + font_size*0.8` and `height = font_size*1.5 + padding*2`.
+- **CoreGraphics (non-linra)** (`backends/typf-render-cg/src/lib.rs`): uses a fixed ratio (`BASELINE_RATIO = 0.75`) to place the baseline (`baseline_y = height * (1 - ratio)`).
+
+The project’s reference renderer is **linra-mac** (CoreText + CoreGraphics single-pass), which uses OS typography metrics; the non-linra CoreGraphics backend above is not a reliable baseline reference.
+
+### Chosen contract (for standardization)
+
+Renderers SHOULD become **metrics-first**:
+
+1. Compute **font metrics** at the requested size/variation location (`ascent`, `descent`, `line_gap`).
+2. Compute **actual glyph extents** for the shaped run (max above baseline, max below baseline) as a safety net.
+3. Allocate output so it contains both:
+   - the font’s line box (`ascent/descent`), and
+   - any glyphs that exceed the metrics (e.g. color glyph effects, extreme accents).
+
+Concretely (single line):
+
+- `top = max(ascent, max_glyph_top_above_baseline)`
+- `bottom = max(descent, max_glyph_bottom_below_baseline)`
+- `baseline_y = padding + top`
+- `height = ceil(top + bottom + padding*2)`
+- composite each glyph at `x = padding + glyph.x + bearing_x`, `y = baseline_y + glyph.y - bearing_y` (or the equivalent internal representation, as in Opixa).
+
+This keeps baseline placement stable across different strings (within normal metrics), while avoiding clipping when glyphs exceed ascent/descent.
+
+### Why this matters
+
+- **Consistency:** the same `ShapingResult` should render with the same baseline position across backends.
+- **Interop:** downstream layout engines expect baseline and line-height semantics tied to font metrics, not the particular glyphs in a run.
+- **Predictability:** “tight bounds” rendering is useful, but should be an explicit opt-in contract once renderers can report origin/baseline offsets.
 
 ## Backend Registry
 

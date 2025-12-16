@@ -504,7 +504,7 @@ mod tests {
         }
 
         // Check that exterior pixels are white (0)
-        assert_eq!(bitmap[4 * 10 + 0], 0, "Pixel (0, 4) should be white");
+        assert_eq!(bitmap[4 * 10], 0, "Pixel (0, 4) should be white");
         assert_eq!(bitmap[4 * 10 + 9], 0, "Pixel (9, 4) should be white");
     }
 

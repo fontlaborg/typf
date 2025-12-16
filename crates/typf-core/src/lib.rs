@@ -87,7 +87,57 @@
 //! Data flows through the types in [`types`] - these structures carry
 //! the results from one stage to the next.
 
+// this_file: crates/typf-core/src/lib.rs
+
 use std::collections::HashSet;
+
+/// Default maximum bitmap dimension (width or height): 4096 pixels
+///
+/// This prevents memory explosions from pathological fonts or extreme render sizes.
+/// Width can be large (65535) for long text runs; height is capped at 16M for sanity.
+pub const DEFAULT_MAX_BITMAP_WIDTH: u32 = 16 * 1024 * 1024;
+
+/// Default maximum bitmap height: 16k pixels
+///
+/// Height is more strictly limited than width since vertical overflow is rarer
+/// and tall bitmaps are often pathological.
+pub const DEFAULT_MAX_BITMAP_HEIGHT: u32 = 16 * 1024;
+
+/// Default maximum total bitmap pixels: 1 Gpix
+///
+/// This caps total memory regardless of aspect ratio.
+/// A 4-megapixel RGBA8 bitmap consumes 16 MB.
+pub const DEFAULT_MAX_BITMAP_PIXELS: u64 = 1024 * 1024 * 1024;
+
+/// Get max bitmap width from environment or use default (65535).
+///
+/// Set `TYPF_MAX_BITMAP_WIDTH` to override.
+pub fn get_max_bitmap_width() -> u32 {
+    std::env::var("TYPF_MAX_BITMAP_WIDTH")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(DEFAULT_MAX_BITMAP_WIDTH)
+}
+
+/// Get max bitmap height from environment or use default (4095).
+///
+/// Set `TYPF_MAX_BITMAP_HEIGHT` to override.
+pub fn get_max_bitmap_height() -> u32 {
+    std::env::var("TYPF_MAX_BITMAP_HEIGHT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(DEFAULT_MAX_BITMAP_HEIGHT)
+}
+
+/// Get max bitmap pixels from environment or use default (4M).
+///
+/// Set `TYPF_MAX_BITMAP_PIXELS` to override.
+pub fn get_max_bitmap_pixels() -> u64 {
+    std::env::var("TYPF_MAX_BITMAP_PIXELS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(DEFAULT_MAX_BITMAP_PIXELS)
+}
 
 pub mod cache;
 pub mod cache_config;
@@ -125,6 +175,17 @@ pub mod types {
     /// Unique identifier for a glyph within a font
     pub type GlyphId = u32;
 
+    /// Minimal, stable font-wide metrics in font units.
+    ///
+    /// These are intended for layout/baseline decisions by consumers that only have a `FontRef`.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct FontMetrics {
+        pub units_per_em: u16,
+        pub ascent: i16,
+        pub descent: i16,
+        pub line_gap: i16,
+    }
+
     /// Which way the text flows
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Direction {
@@ -161,6 +222,19 @@ pub mod types {
         Json(String),
     }
 
+    impl RenderOutput {
+        /// Returns the approximate heap size in bytes of this render output.
+        ///
+        /// Used by byte-weighted caches to enforce memory limits.
+        pub fn byte_size(&self) -> usize {
+            match self {
+                RenderOutput::Bitmap(b) => b.byte_size(),
+                RenderOutput::Vector(v) => v.data.len(),
+                RenderOutput::Json(s) => s.len(),
+            }
+        }
+    }
+
     /// Raw pixel data from rasterized glyphs
     #[derive(Debug, Clone)]
     pub struct BitmapData {
@@ -168,6 +242,13 @@ pub mod types {
         pub height: u32,
         pub format: BitmapFormat,
         pub data: Vec<u8>,
+    }
+
+    impl BitmapData {
+        /// Returns the heap size in bytes of the pixel data.
+        pub fn byte_size(&self) -> usize {
+            self.data.len()
+        }
     }
 
     /// How pixels are arranged in the bitmap

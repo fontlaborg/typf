@@ -1,5 +1,14 @@
 //! Integration tests for the Typf pipeline
 
+#![allow(
+    clippy::expect_fun_call,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unwrap_used
+)]
+
+// this_file: crates/typf/tests/integration_test.rs
+
 use std::path::PathBuf;
 use std::sync::Arc;
 

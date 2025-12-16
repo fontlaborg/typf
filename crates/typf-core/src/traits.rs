@@ -12,6 +12,8 @@
 //! - [`Renderer`] - Where glyphs become images
 //! - [`Exporter`] - Where images become files
 
+// this_file: crates/typf-core/src/traits.rs
+
 use crate::{error::Result, types::*, PipelineContext, RenderParams, ShapingParams};
 use std::sync::Arc;
 
@@ -79,11 +81,27 @@ pub trait FontRef: Send + Sync {
     /// Raw font bytes as they live in the file
     fn data(&self) -> &[u8];
 
+    /// Optional shared font bytes for zero-copy downstream consumption.
+    ///
+    /// Implementations that store their bytes in an `Arc` SHOULD override this to avoid per-call
+    /// allocations/copies in downstream libraries that require shared ownership.
+    fn data_shared(&self) -> Option<Arc<dyn AsRef<[u8]> + Send + Sync>> {
+        None
+    }
+
     /// The font's internal coordinate system scale
     ///
     /// Used to convert between font units and rendered pixels.
     /// Type 1 fonts use 1000, TrueType often uses 2048.
     fn units_per_em(&self) -> u16;
+
+    /// Optional font-wide metrics in font units (ascent/descent/line gap).
+    ///
+    /// Backends that can parse OpenType tables SHOULD provide this to allow consumers to make
+    /// baseline/layout decisions without depending on a specific font parser.
+    fn metrics(&self) -> Option<FontMetrics> {
+        None
+    }
 
     /// Find the glyph that represents this character
     ///

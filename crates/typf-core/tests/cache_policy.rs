@@ -1,3 +1,5 @@
+// this_file: crates/typf-core/tests/cache_policy.rs
+
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -125,15 +127,6 @@ impl Renderer for CountingRenderer {
     }
 }
 
-fn build_pipeline(shaper: Arc<dyn Shaper>, renderer: Arc<dyn Renderer>) -> Pipeline {
-    Pipeline::builder()
-        .shaper(shaper)
-        .renderer(renderer)
-        .exporter(Arc::new(DummyExporter))
-        .build()
-        .expect("pipeline build")
-}
-
 struct DummyExporter;
 
 impl Stage for DummyExporter {
@@ -173,8 +166,7 @@ impl typf_core::traits::Exporter for DummyExporter {
 
 #[test]
 fn caches_hit_when_enabled() {
-    // Enable global caching (disabled by default)
-    typf_core::cache_config::set_caching_enabled(true);
+    let _guard = typf_core::cache_config::scoped_caching_enabled(true);
 
     let shaper_calls = Arc::new(AtomicUsize::new(0));
     let renderer_calls = Arc::new(AtomicUsize::new(0));
@@ -186,17 +178,24 @@ fn caches_hit_when_enabled() {
         .shaper(Arc::new(CountingShaper::new(shaper_calls.clone())))
         .renderer(Arc::new(CountingRenderer::new(renderer_calls.clone())))
         .exporter(Arc::new(DummyExporter))
-        .build()
-        .expect("pipeline build");
+        .build();
+    let pipeline = match pipeline {
+        Ok(pipeline) => pipeline,
+        Err(e) => unreachable!("pipeline build failed: {e}"),
+    };
 
     let font: Arc<dyn FontRef> = Arc::new(TestFont);
     let shaping = ShapingParams::default();
     let render = RenderParams::default();
 
-    let _ = pipeline
-        .process("hello", font.clone(), &shaping, &render)
-        .unwrap();
-    let _ = pipeline.process("hello", font, &shaping, &render).unwrap();
+    match pipeline.process("hello", font.clone(), &shaping, &render) {
+        Ok(_) => {},
+        Err(e) => unreachable!("pipeline process failed: {e}"),
+    }
+    match pipeline.process("hello", font, &shaping, &render) {
+        Ok(_) => {},
+        Err(e) => unreachable!("pipeline process failed: {e}"),
+    }
 
     assert_eq!(
         1,
@@ -208,9 +207,6 @@ fn caches_hit_when_enabled() {
         renderer_calls.load(Ordering::SeqCst),
         "renderer should hit cache"
     );
-
-    // Reset to default state
-    typf_core::cache_config::set_caching_enabled(false);
 }
 
 #[test]
@@ -224,17 +220,24 @@ fn caches_can_be_disabled() {
         .shaper(Arc::new(CountingShaper::new(shaper_calls.clone())))
         .renderer(Arc::new(CountingRenderer::new(renderer_calls.clone())))
         .exporter(Arc::new(DummyExporter))
-        .build()
-        .expect("pipeline build");
+        .build();
+    let pipeline = match pipeline {
+        Ok(pipeline) => pipeline,
+        Err(e) => unreachable!("pipeline build failed: {e}"),
+    };
 
     let font: Arc<dyn FontRef> = Arc::new(TestFont);
     let shaping = ShapingParams::default();
     let render = RenderParams::default();
 
-    let _ = pipeline
-        .process("hello", font.clone(), &shaping, &render)
-        .unwrap();
-    let _ = pipeline.process("hello", font, &shaping, &render).unwrap();
+    match pipeline.process("hello", font.clone(), &shaping, &render) {
+        Ok(_) => {},
+        Err(e) => unreachable!("pipeline process failed: {e}"),
+    }
+    match pipeline.process("hello", font, &shaping, &render) {
+        Ok(_) => {},
+        Err(e) => unreachable!("pipeline process failed: {e}"),
+    }
 
     assert_eq!(2, shaper_calls.load(Ordering::SeqCst), "shaper cache off");
     assert_eq!(

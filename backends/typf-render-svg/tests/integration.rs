@@ -2,6 +2,8 @@
 //!
 //! Tests SVG output structure and validates with real fonts.
 
+// this_file: backends/typf-render-svg/tests/integration.rs
+
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -234,12 +236,14 @@ fn test_svg_color_support() {
     let shaped = simple_shaping_result();
 
     // Custom foreground color
-    let mut params = RenderParams::default();
-    params.foreground = typf_core::Color {
-        r: 255,
-        g: 0,
-        b: 0,
-        a: 255,
+    let params = RenderParams {
+        foreground: typf_core::Color {
+            r: 255,
+            g: 0,
+            b: 0,
+            a: 255,
+        },
+        ..RenderParams::default()
     };
 
     let result = renderer.render(&shaped, font, &params);
@@ -265,18 +269,21 @@ fn test_svg_consistency() {
     let params = RenderParams::default();
 
     // Render the same input twice
-    let result1 = renderer
-        .render(&shaped, font.clone(), &params)
-        .expect("First render should succeed");
-    let result2 = renderer
-        .render(&shaped, font, &params)
-        .expect("Second render should succeed");
+    let result1 = match renderer.render(&shaped, font.clone(), &params) {
+        Ok(result) => result,
+        Err(e) => unreachable!("first render should succeed: {e}"),
+    };
+    let result2 = match renderer.render(&shaped, font, &params) {
+        Ok(result) => result,
+        Err(e) => unreachable!("second render should succeed: {e}"),
+    };
 
     // Extract SVGs and verify they're identical
-    if let (RenderOutput::Vector(v1), RenderOutput::Vector(v2)) = (result1, result2) {
-        assert_eq!(v1.data, v2.data, "SVG output should be consistent");
-    } else {
-        panic!("Expected vector outputs");
+    match (result1, result2) {
+        (RenderOutput::Vector(v1), RenderOutput::Vector(v2)) => {
+            assert_eq!(v1.data, v2.data, "SVG output should be consistent");
+        },
+        _ => unreachable!("Expected vector outputs"),
     }
 }
 
@@ -379,24 +386,34 @@ fn test_svg_color_palette_affects_output() {
 
     let renderer = SvgRenderer::new();
 
-    let mut params0 = RenderParams::default();
-    params0.color_palette = 0;
-    params0.glyph_sources =
-        GlyphSourcePreference::from_parts(vec![GlyphSource::Colr1, GlyphSource::Glyf], []);
+    let params0 = RenderParams {
+        color_palette: 0,
+        glyph_sources: GlyphSourcePreference::from_parts(
+            vec![GlyphSource::Colr1, GlyphSource::Glyf],
+            [],
+        ),
+        ..RenderParams::default()
+    };
     let svg0 = match renderer.render(&shaped, font.clone(), &params0) {
         Ok(RenderOutput::Vector(v)) => v.data,
-        _ => panic!("Expected vector output for palette 0"),
+        _ => unreachable!("Expected vector output for palette 0"),
     };
 
     let mut params1 = params0.clone();
     params1.color_palette = 1;
     let svg1 = match renderer.render(&shaped, font, &params1) {
         Ok(RenderOutput::Vector(v)) => v.data,
-        _ => panic!("Expected vector output for palette 1"),
+        _ => unreachable!("Expected vector output for palette 1"),
     };
 
-    let img0 = extract_base64_image(&svg0).expect("Palette 0 image should exist");
-    let img1 = extract_base64_image(&svg1).expect("Palette 1 image should exist");
+    let img0 = match extract_base64_image(&svg0) {
+        Some(img) => img,
+        None => unreachable!("Palette 0 image should exist"),
+    };
+    let img1 = match extract_base64_image(&svg1) {
+        Some(img) => img,
+        None => unreachable!("Palette 1 image should exist"),
+    };
 
     if img0 == img1 {
         eprintln!("Skipping palette diff: palettes render identical PNG for this font");

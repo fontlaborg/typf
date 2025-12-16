@@ -10,6 +10,8 @@
 //! This avoids memory leaks from `Box::leak` and properly supports TTC
 //! font collections with multiple faces.
 
+// this_file: crates/typf-fontdb/src/lib.rs
+
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -20,6 +22,7 @@ use read_fonts::{FontRef as ReadFontRef, TableProvider};
 use typf_core::{
     error::{FontLoadError, Result},
     traits::FontRef as TypfFontRef,
+    types::FontMetrics,
 };
 
 /// Source container for a font face (path or memory)
@@ -48,9 +51,10 @@ impl TypfFontSource {
 /// Stores the raw font data and creates `FontRef` on-demand for parsing.
 /// For TTC collections, the `face_index` specifies which face to use.
 pub struct TypfFontFace {
-    data: Vec<u8>,
+    data: Arc<Vec<u8>>,
     source: TypfFontSource,
     units_per_em: u16,
+    metrics: FontMetrics,
 }
 
 impl TypfFontFace {
@@ -83,8 +87,8 @@ impl TypfFontFace {
         path: Option<PathBuf>,
     ) -> Result<Self> {
         // Validate the font data by attempting to parse it
-        let font_ref =
-            ReadFontRef::from_index(&data, face_index).map_err(|_| FontLoadError::InvalidData)?;
+        let font_ref = ReadFontRef::from_index(data.as_slice(), face_index)
+            .map_err(|_| FontLoadError::InvalidData)?;
 
         // Extract the fundamental measurement: units per em
         // This tells us how big the font's grid is
@@ -93,10 +97,37 @@ impl TypfFontFace {
             .map(|head| head.units_per_em())
             .unwrap_or(1000);
 
+        let (ascent, descent, line_gap) = font_ref
+            .os2()
+            .ok()
+            .map(|os2| {
+                (
+                    os2.s_typo_ascender(),
+                    os2.s_typo_descender(),
+                    os2.s_typo_line_gap(),
+                )
+            })
+            .or_else(|| {
+                font_ref.hhea().ok().map(|hhea| {
+                    (
+                        hhea.ascender().to_i16(),
+                        hhea.descender().to_i16(),
+                        hhea.line_gap().to_i16(),
+                    )
+                })
+            })
+            .unwrap_or((0, 0, 0));
+
         Ok(TypfFontFace {
-            data,
+            data: Arc::new(data),
             source: TypfFontSource::new(path, face_index),
             units_per_em,
+            metrics: FontMetrics {
+                units_per_em,
+                ascent,
+                descent,
+                line_gap,
+            },
         })
     }
 
@@ -117,7 +148,7 @@ impl TypfFontFace {
 
     /// Creates a FontRef on-demand for parsing operations
     fn font_ref(&self) -> Option<ReadFontRef<'_>> {
-        ReadFontRef::from_index(&self.data, self.source.face_index).ok()
+        ReadFontRef::from_index(self.data.as_slice(), self.source.face_index).ok()
     }
 
     /// Finds which glyph draws this character
@@ -154,11 +185,19 @@ impl TypfFontFace {
 
 impl TypfFontRef for TypfFontFace {
     fn data(&self) -> &[u8] {
-        &self.data
+        self.data.as_slice()
+    }
+
+    fn data_shared(&self) -> Option<Arc<dyn AsRef<[u8]> + Send + Sync>> {
+        Some(self.data.clone())
     }
 
     fn units_per_em(&self) -> u16 {
         self.units_per_em
+    }
+
+    fn metrics(&self) -> Option<FontMetrics> {
+        Some(self.metrics)
     }
 
     fn glyph_id(&self, ch: char) -> Option<u32> {
@@ -284,6 +323,7 @@ impl Default for FontDatabase {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use typf_core::traits::FontRef;
 
     #[test]
     fn test_empty_database() {
@@ -329,5 +369,30 @@ mod tests {
         let result = TypfFontFace::from_data_index(data, 0);
         // Invalid data, but we're testing the API structure
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_typf_font_face_data_shared_when_loaded_then_some() {
+        let font_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../test-fonts/NotoSans-Regular.ttf"
+        );
+        let Ok(font) = TypfFontFace::from_file(font_path) else {
+            return;
+        };
+
+        let shared = font.data_shared();
+        assert!(
+            shared.is_some(),
+            "TypfFontFace should provide shared font bytes to avoid copies"
+        );
+
+        if let Some(shared) = shared {
+            assert_eq!(
+                shared.as_ref().as_ref(),
+                font.data(),
+                "shared bytes must match FontRef::data()"
+            );
+        }
     }
 }

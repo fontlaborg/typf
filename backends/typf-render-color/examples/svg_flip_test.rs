@@ -1,6 +1,6 @@
 use skrifa::color::ColorPalettes;
 use skrifa::FontRef;
-use typf_render_color::svg::{get_svg_document, render_svg_glyph_with_palette};
+use typf_render_color::svg::render_svg_glyph_with_palette;
 
 fn main() {
     let font_data = std::fs::read("test-fonts/Nabla-Regular-SVG.ttf").unwrap();
