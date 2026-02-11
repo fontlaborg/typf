@@ -20,6 +20,10 @@
   - limits helper at-limit and over-limit tests
 - Added missing `this_file` markers across `crates/typf-cli/src/*.rs` and `crates/typf-cli/src/commands/*.rs`
 
+## Completed (Previous)
+
+- Fixed doc comment for `get_max_bitmap_height()` in `crates/typf-core/src/lib.rs` to reflect the actual default value of 16384 pixels, resolving an inconsistency with `REVIEW.md` and `TASKS.md` (Task 1.1).
+
 ## Research Notes
 
 - RFC 5646 / BCP 47 syntax and canonical casing guidance:

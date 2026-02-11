@@ -90,6 +90,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
+### Fixed
+- Fixed doc comment for `get_max_bitmap_height()` in `crates/typf-core/src/lib.rs` to reflect the actual default value of 16384 pixels.
+
 ### Maintenance (2026-02-11)
 - `typf render` now rejects ambiguous multi-source text input combinations (positional text + `--text` + `--text-file`) with explicit guidance
 - Render CLI text ingestion for `--text-file` and stdin now uses a capped read path (`MAX_TEXT_CONTENT_BYTES=1_000_000`) to prevent over-limit reads before full allocation
@@ -201,7 +204,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
   - New `TypfLinra` class in Python bindings with `render_text()` method
   - `__linra_available__` module attribute for feature detection
   - Updated `info` command to display available linra renderers
-- **Python Variable Fonts**: `Typf.render_text` and `TypfLinra.render_text` now accept a `variations` dict for axis control (e.g., `{"wght": 700, "wdth": 125}`) to render variable font instances.
+- **Python Variable Fonts**: `Typf.render_text` and `TypfLinra.render_text` now accept a `variations` dict for axis control (e.g., `{"wght": 700, "wdth": 100}`) to render variable font instances.
 - **Linra as Default**: Auto-selects linra when available for bitmap output
   - Falls back gracefully to traditional pipeline for SVG output
   - Warning message when linra requested with SVG (uses system shaper instead)
@@ -246,7 +249,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 ### Added
 
 **Core Architecture**
-- Six-stage pipeline: Input → Unicode → Font → Shaping → Rendering → Export
+- Six-stage pipeline: Input → Unicode → Font → Unicode → Font → Shaping → Rendering → Export
 - Trait-based backends with selective compilation via Cargo features
 - Builder pattern with comprehensive error handling
 - Multi-level caching system (L1 glyph cache, font database)

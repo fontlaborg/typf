@@ -167,7 +167,7 @@ unsafe_code = "warn"
 
 [workspace.lints.clippy]
 # Correctness
-unwrap_used = "warn"
+unwrap_used = "deny"
 expect_used = "warn"
 panic = "warn"
 # Style

@@ -13,6 +13,7 @@ skrifa = { workspace = true }
 typf-core = { workspace = true }
 typf-export = { workspace = true }
 typf-render-color = { workspace = true, features = ["bitmap", "svg"] }
+base64 = "0.22"
 
 [dev-dependencies]
 typf-fontdb = { workspace = true }

@@ -1,0 +1,55 @@
+Review this test-suite summary and return:
+1) top risks
+2) probable root causes
+3) concrete next actions
+Keep it concise and actionable.
+
+{
+  "categories": {
+    "practical_tests": {
+      "fail": 0,
+      "pass": 6,
+      "skip": 0,
+      "total": 6
+    },
+    "sanity_tests": {
+      "fail": 3,
+      "pass": 0,
+      "skip": 0,
+      "total": 3
+    },
+    "smoke_tests": {
+      "fail": 1,
+      "pass": 3,
+      "skip": 0,
+      "total": 4
+    },
+    "unit_tests": {
+      "fail": 3,
+      "pass": 0,
+      "skip": 0,
+      "total": 3
+    }
+  },
+  "counts": {
+    "fail": 7,
+    "pass": 9,
+    "skip": 0,
+    "total_steps": 16
+  },
+  "generated_at": "2026-02-11T21:46:16+00:00",
+  "quick_mode": false,
+  "required_failures": [
+    "smoke_build_cli",
+    "sanity_fmt",
+    "sanity_clippy",
+    "sanity_list_tests",
+    "unit_lib_tests",
+    "unit_integration_tests",
+    "unit_doc_tests"
+  ],
+  "run_finished_at": "2026-02-11T21:46:16+00:00",
+  "run_started_at": "2026-02-11T21:46:07+00:00",
+  "skip_ai": false,
+  "suite_duration_seconds": 6.926
+}

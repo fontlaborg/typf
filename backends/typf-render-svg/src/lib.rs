@@ -169,7 +169,8 @@ impl SvgRenderer {
         };
 
         let png_bytes = encode_bitmap_to_png(&bitmap).ok()?;
-        let data_base64 = base64_encode(&png_bytes);
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+        let data_base64 = STANDARD.encode(&png_bytes);
 
         Some(ColorImage {
             data_base64,
@@ -518,43 +519,6 @@ impl skrifa::outline::OutlinePen for SvgPathBuilder {
     fn close(&mut self) {
         self.commands.push('Z');
     }
-}
-
-/// Simple base64 encoding (copied from typf-export to avoid extra dependencies)
-fn base64_encode(data: &[u8]) -> String {
-    use std::fmt::Write;
-
-    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut result = String::new();
-
-    for chunk in data.chunks(3) {
-        let mut buf = [0u8; 3];
-        for (i, &byte) in chunk.iter().enumerate() {
-            buf[i] = byte;
-        }
-
-        let b1 = (buf[0] >> 2) as usize;
-        let b2 = (((buf[0] & 0x03) << 4) | (buf[1] >> 4)) as usize;
-        let b3 = (((buf[1] & 0x0f) << 2) | (buf[2] >> 6)) as usize;
-        let b4 = (buf[2] & 0x3f) as usize;
-
-        let _ = write!(&mut result, "{}", TABLE[b1] as char);
-        let _ = write!(&mut result, "{}", TABLE[b2] as char);
-
-        if chunk.len() > 1 {
-            let _ = write!(&mut result, "{}", TABLE[b3] as char);
-        } else {
-            result.push('=');
-        }
-
-        if chunk.len() > 2 {
-            let _ = write!(&mut result, "{}", TABLE[b4] as char);
-        } else {
-            result.push('=');
-        }
-    }
-
-    result
 }
 
 #[cfg(test)]
