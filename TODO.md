@@ -9,6 +9,13 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 JSONL job-identity/rendering-dimensions + batch field-normalization micro-sprint)
+
+- [x] Reject blank, whitespace-padded, and duplicate JSONL `job.id` values before batch execution
+- [x] Reject JSONL jobs with `rendering.width`/`rendering.height` set to `0` with explicit validation errors
+- [x] Trim/validate per-job `font` path input in `typf batch` and reject blank values
+- [x] Normalize per-job `shaper`/`renderer` tokens in `typf batch` (trim + lowercase + blank defaults), and reject blank per-job `format` values explicitly
+
 ## Completed (2026-02-11 unicode-escape reliability micro-sprint)
 
 - [x] Decode UTF-16 surrogate-pair escapes (`\uXXXX\uXXXX`) in Rust CLI text input parsing

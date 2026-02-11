@@ -3,22 +3,25 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 CLI input-normalization/output-path/JSONL-format micro-sprint
+**Focus:** Post-v5.0.2 JSONL/batch validation hardening micro-sprint
 
 ## Sprint Tasks
 
-- [x] Tighten `typf batch` output pattern validation (`trim`, reject blank, require exactly one `{}` placeholder)
-- [x] Harden `typf batch` per-job output path handling by trimming and rejecting whitespace-only `output`
-- [x] Tighten JSONL `rendering.format` validation with explicit blank-value rejection while preserving case-insensitive/trimmed parsing and canonical output labels
+- [x] Reject blank and duplicate JSONL `job.id` values
+- [x] Reject JSONL `rendering.width`/`rendering.height` values of `0`
+- [x] Normalize/validate batch per-job optional input fields (`font`, `shaper`, `renderer`, `language`)
+- [x] Normalize per-job batch backend tokens and reject blank per-job batch `format` values explicitly
 
 ## Research Notes
 
-- Rust string trimming behavior (`str::trim`) for robust CLI/JSONL input normalization:
+- JSON object member uniqueness interoperability guidance (RFC 8259):
+  https://www.rfc-editor.org/rfc/rfc8259
+- JSON Lines format reference:
+  https://jsonlines.org/
+- Rust string trimming behavior (`str::trim`) for robust input normalization:
   https://doc.rust-lang.org/std/primitive.str.html#method.trim
-- Rust path-component handling (`std::path::Component`) for safe relative-path validation:
-  https://doc.rust-lang.org/std/path/enum.Component.html
-- HarfBuzz feature-string and OpenType tag semantics reference:
-  https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-feature-from-string
+- Rust `HashSet` for duplicate detection:
+  https://doc.rust-lang.org/std/collections/struct.HashSet.html
 
 ## Verification Results
 
@@ -29,14 +32,15 @@
 ## Notes
 
 - Touched code paths:
-  - `crates/typf-cli/src/commands/batch.rs`
   - `crates/typf-cli/src/jsonl.rs`
-- Touched project-tracking docs:
-  - `WORK.md`
+  - `crates/typf-cli/src/commands/batch.rs`
+- Updated project tracking docs:
+  - `TASKS.md`
+  - `TODO.md`
   - `CHANGELOG.md`
-- `TASKS.md` and `TODO.md` already reflected this completed micro-sprint backlog state; no additional edits were required.
+  - `WORK.md`
 - Existing unrelated repository changes were preserved.
 
 ## Next
 
-- No open items in this sprint.
+- No open items in this micro-sprint.

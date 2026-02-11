@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, and unicode-escape reliability micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, and JSONL job-identity/rendering-dimensions plus batch field-normalization micro-sprints complete.
 
 ## TLDR
 
@@ -18,6 +18,13 @@
 - **Platform Docs**: Vello-GPU platform matrix in `src_docs/26-vello-gpu-platform-support.md`
 
 The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` is the flat actionable backlog.
+
+### Post-v5.0.2 JSONL Job-Identity/Rendering-Dimensions + Batch Field-Normalization Micro-Sprint (2026-02-11)
+
+- JSONL batch now rejects blank, whitespace-padded, or duplicate `job.id` values before execution
+- JSONL job processing now rejects `rendering.width` or `rendering.height` values of `0` with explicit diagnostics
+- `typf batch` now trims per-job `font` paths, rejects blank font-path values, and normalizes `shaper`/`renderer` tokens (trim + lowercase + blank-default behavior)
+- `typf batch` per-job `format` parsing now rejects blank/whitespace-only values with explicit validation guidance
 
 ### Post-v5.0.2 Maintenance Sprint (2026-02-11)
 

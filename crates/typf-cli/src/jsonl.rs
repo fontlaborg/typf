@@ -8,7 +8,7 @@
 
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 /// A batch of rendering jobs to process
@@ -258,6 +258,8 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
     let spec: JobSpec = serde_json::from_str(&input)?;
     validate_spec_version(&spec._version)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+    validate_job_ids(&spec.jobs)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
 
     eprintln!("Processing {} jobs...", spec.jobs.len());
 
@@ -292,7 +294,8 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
     let mut out = stdout().lock();
 
     // Read, process, and output one job at a time
-    for line in stdin().lock().lines() {
+    for (line_index, line) in stdin().lock().lines().enumerate() {
+        let line_number = line_index + 1;
         let line = line?;
         if line.trim().is_empty() {
             continue;
@@ -302,7 +305,8 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
         let job: Job = match serde_json::from_str(&line) {
             Ok(job) => job,
             Err(e) => {
-                let error_result = JobResult::error("parse_error", format!("Invalid JSON: {}", e));
+                let error_result =
+                    stream_error("parse_error", line_number, format!("Invalid JSON: {}", e));
                 serde_json::to_writer(&mut out, &error_result)?;
                 writeln!(&mut out)?;
                 out.flush()?;
@@ -310,8 +314,20 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
             },
         };
 
+        if let Err(error) = validate_job_id(&job.id) {
+            let error_result = stream_error(
+                "validation_error",
+                line_number,
+                format!("Invalid job.id: {}", error),
+            );
+            serde_json::to_writer(&mut out, &error_result)?;
+            writeln!(&mut out)?;
+            out.flush()?;
+            continue;
+        }
+
         // Do the actual rendering work
-        let result = process_job(&job);
+        let result = annotate_stream_error_with_line(process_job(&job), line_number);
 
         // Send the result back immediately
         serde_json::to_writer(&mut out, &result)?;
@@ -336,6 +352,10 @@ fn process_job(job: &Job) -> JobResult {
     use typf_export::PnmExporter;
     use typf_render_opixa::OpixaRenderer;
     use typf_shape_none::NoneShaper;
+
+    if let Err(error) = validate_job_id(&job.id) {
+        return JobResult::error("invalid_job_id", format!("Invalid job.id: {}", error));
+    }
 
     let start = Instant::now();
 
@@ -404,6 +424,10 @@ fn process_job(job: &Job) -> JobResult {
         Ok(format) => format,
         Err(e) => return JobResult::error(&job.id, format!("Invalid rendering.format: {}", e)),
     };
+
+    if let Err(e) = validate_rendering_dimensions(job.rendering.width, job.rendering.height) {
+        return JobResult::error(&job.id, format!("Invalid rendering dimensions: {}", e));
+    }
 
     // Create shaping parameters
     let shaping_params = ShapingParams {
@@ -675,6 +699,59 @@ fn validate_spec_version(version: &str) -> Result<(), String> {
     }
 }
 
+fn validate_job_id(id: &str) -> Result<&str, String> {
+    let normalized = id.trim();
+    if normalized.is_empty() {
+        return Err("job.id cannot be blank".to_string());
+    }
+    if normalized != id {
+        return Err("job.id cannot have leading or trailing whitespace".to_string());
+    }
+    Ok(normalized)
+}
+
+fn validate_job_ids(jobs: &[Job]) -> Result<(), String> {
+    let mut seen = HashSet::with_capacity(jobs.len());
+    for (index, job) in jobs.iter().enumerate() {
+        let normalized = validate_job_id(&job.id)
+            .map_err(|error| format!("job {} has invalid id: {}", index + 1, error))?;
+        if !seen.insert(normalized.to_string()) {
+            return Err(format!(
+                "duplicate job.id '{}' at job {}",
+                normalized,
+                index + 1
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn stream_error(error_kind: &str, line_number: usize, message: impl Into<String>) -> JobResult {
+    JobResult::error(
+        format!("{}_line_{}", error_kind, line_number),
+        format!("line {}: {}", line_number, message.into()),
+    )
+}
+
+fn annotate_stream_error_with_line(mut result: JobResult, line_number: usize) -> JobResult {
+    if result.status == "error" {
+        if let Some(error) = result.error.take() {
+            result.error = Some(format!("line {}: {}", line_number, error));
+        }
+    }
+    result
+}
+
+fn validate_rendering_dimensions(width: u32, height: u32) -> Result<(), String> {
+    if width == 0 {
+        return Err("rendering.width must be greater than 0".to_string());
+    }
+    if height == 0 {
+        return Err("rendering.height must be greater than 0".to_string());
+    }
+    Ok(())
+}
+
 fn parse_text_direction(raw: Option<&str>) -> Result<typf_core::types::Direction, String> {
     use typf_core::types::Direction;
 
@@ -924,6 +1001,95 @@ mod tests {
             err.contains("too many segments"),
             "expected too-many-segments error, got: {}",
             err
+        );
+    }
+
+    #[test]
+    fn test_validate_job_ids_accepts_unique_trimmed_ids() {
+        let jobs = vec![test_job("job-1"), test_job("job-2"), test_job("job-3")];
+        validate_job_ids(&jobs).expect("unique job ids should pass");
+    }
+
+    #[test]
+    fn test_validate_job_ids_rejects_blank_id() {
+        let mut jobs = vec![test_job("job-1"), test_job("job-2")];
+        jobs[1].id = " \t ".to_string();
+        let error = validate_job_ids(&jobs).expect_err("blank job id must fail");
+        assert!(
+            error.contains("cannot be blank"),
+            "expected blank-id validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_validate_job_ids_rejects_whitespace_padded_id() {
+        let mut jobs = vec![test_job("job-1"), test_job("job-2")];
+        jobs[1].id = " job-2 ".to_string();
+        let error = validate_job_ids(&jobs).expect_err("whitespace-padded id must fail");
+        assert!(
+            error.contains("leading or trailing whitespace"),
+            "expected whitespace-validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_validate_job_ids_rejects_duplicate_id() {
+        let jobs = vec![test_job("job-1"), test_job("job-2"), test_job("job-1")];
+        let error = validate_job_ids(&jobs).expect_err("duplicate id must fail");
+        assert!(
+            error.contains("duplicate job.id"),
+            "expected duplicate-id validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_stream_error_when_parse_error_then_reports_line_context() {
+        let result = stream_error("parse_error", 7, "Invalid JSON: eof");
+        assert_eq!(result.id, "parse_error_line_7");
+        assert_eq!(
+            result.error.as_deref(),
+            Some("line 7: Invalid JSON: eof"),
+            "expected line-aware parse error payload"
+        );
+    }
+
+    #[test]
+    fn test_annotate_stream_error_with_line_when_error_then_prefixes_message() {
+        let result = JobResult::error("job-1", "Failed to load font");
+        let annotated = annotate_stream_error_with_line(result, 3);
+        assert_eq!(
+            annotated.error.as_deref(),
+            Some("line 3: Failed to load font"),
+            "expected stream errors to include source line number"
+        );
+    }
+
+    #[test]
+    fn test_annotate_stream_error_with_line_when_success_then_unchanged() {
+        let result = JobResult::success_metrics(
+            "job-1".to_string(),
+            MetricsOutput {
+                glyph_count: 0,
+                advance_width: 0.0,
+                bbox: (0.0, 0.0, 0.0, 0.0),
+            },
+            TypfFontRenderableResult {
+                source: TypfFontSourceConfig {
+                    path: PathBuf::from("/tmp/font.ttf"),
+                    face_index: None,
+                },
+                instance: TypfFontInstanceConfig::default(),
+                render: FontResult { size: 12.0 },
+            },
+            TimingInfo::default(),
+        );
+        let annotated = annotate_stream_error_with_line(result, 11);
+        assert!(
+            annotated.error.is_none(),
+            "success results should not gain synthetic errors"
         );
     }
 
@@ -1281,6 +1447,38 @@ mod tests {
         assert!(
             error.contains("positive"),
             "expected positive-size guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_rendering_width_is_zero_then_error() {
+        let mut job = test_job("job-zero-width");
+        job.font.source.path = workspace_test_font();
+        job.rendering.width = 0;
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "zero rendering width must fail");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("rendering.width"),
+            "expected rendering.width validation context, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_rendering_height_is_zero_then_error() {
+        let mut job = test_job("job-zero-height");
+        job.font.source.path = workspace_test_font();
+        job.rendering.height = 0;
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "zero rendering height must fail");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("rendering.height"),
+            "expected rendering.height validation context, got: {}",
             error
         );
     }

@@ -247,19 +247,23 @@ fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<(
     use crate::cli::RenderArgs;
     use crate::commands::render;
 
+    let font_file = parse_batch_font_path(job.font.as_deref())?;
     let format = parse_output_format(job.format.as_deref())?;
+    let shaper = parse_batch_backend(job.shaper.as_deref(), "auto");
+    let renderer = parse_batch_backend(job.renderer.as_deref(), "auto");
+    let language = parse_optional_trimmed(job.language.as_deref());
 
     let render_args = RenderArgs {
         text: Some(job.text.clone()),
-        font_file: job.font.as_ref().map(PathBuf::from),
+        font_file,
         face_index: 0,
         instance: None,
         text_arg: None,
         text_file: None,
-        shaper: job.shaper.clone().unwrap_or_else(|| "auto".to_string()),
-        renderer: job.renderer.clone().unwrap_or_else(|| "auto".to_string()),
+        shaper,
+        renderer,
         direction: "auto".to_string(),
-        language: job.language.clone(),
+        language,
         script: "auto".to_string(),
         features: None,
         font_size: job
@@ -291,11 +295,39 @@ fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<(
     render::run(&render_args)
 }
 
+fn parse_optional_trimmed(raw: Option<&str>) -> Option<String> {
+    raw.map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn parse_batch_backend(raw: Option<&str>, default: &str) -> String {
+    parse_optional_trimmed(raw)
+        .map(|value| value.to_ascii_lowercase())
+        .unwrap_or_else(|| default.to_string())
+}
+
+fn parse_batch_font_path(raw: Option<&str>) -> Result<Option<PathBuf>> {
+    match parse_optional_trimmed(raw) {
+        Some(path) => Ok(Some(PathBuf::from(path))),
+        None if raw.is_some() => Err(TypfError::ConfigError(
+            "Batch job font path cannot be empty".to_string(),
+        )),
+        None => Ok(None),
+    }
+}
+
 fn parse_output_format(raw: Option<&str>) -> Result<OutputFormat> {
     let Some(raw) = raw else {
         return Ok(OutputFormat::Png);
     };
-    let normalized = raw.trim().to_ascii_lowercase();
+    let normalized = raw.trim();
+    if normalized.is_empty() {
+        return Err(TypfError::ConfigError(
+            "Batch output format cannot be blank".to_string(),
+        ));
+    }
+    let normalized = normalized.to_ascii_lowercase();
     match normalized.as_str() {
         "png" => Ok(OutputFormat::Png),
         "png1" => Ok(OutputFormat::Png1),
@@ -503,6 +535,67 @@ mod tests {
                 .contains("Unsupported batch output format"),
             "expected unsupported-format error, got: {}",
             error
+        );
+    }
+
+    #[test]
+    fn test_parse_output_format_when_blank_then_error() {
+        let error =
+            parse_output_format(Some(" \n\t ")).expect_err("blank format should be rejected");
+        assert!(
+            error.to_string().contains("cannot be blank"),
+            "expected blank-format validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_batch_backend_when_blank_then_defaults() {
+        assert_eq!(
+            parse_batch_backend(Some(" \t "), "auto"),
+            "auto",
+            "blank backend should fall back to default"
+        );
+    }
+
+    #[test]
+    fn test_parse_batch_backend_when_mixed_case_then_lowercase() {
+        assert_eq!(
+            parse_batch_backend(Some(" HB "), "auto"),
+            "hb",
+            "backend tokens should be trimmed and normalized to lowercase"
+        );
+    }
+
+    #[test]
+    fn test_parse_batch_font_path_when_blank_then_error() {
+        let error = parse_batch_font_path(Some(" \t "))
+            .expect_err("blank batch font path should be rejected");
+        assert!(
+            error.to_string().contains("cannot be empty"),
+            "expected blank-font-path validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_batch_font_path_when_trimmed_then_preserves_value() {
+        let parsed = parse_batch_font_path(Some(" ./test-fonts/NotoSans-Regular.ttf "))
+            .expect("trimmed font path should parse")
+            .expect("font path should be present");
+        assert_eq!(
+            parsed,
+            PathBuf::from("./test-fonts/NotoSans-Regular.ttf"),
+            "font path should be trimmed before conversion to PathBuf"
+        );
+    }
+
+    #[test]
+    fn test_parse_optional_trimmed_when_blank_then_none() {
+        assert_eq!(
+            parse_optional_trimmed(Some(" \n\t ")),
+            None,
+            "blank values should normalize to None"
         );
     }
 
