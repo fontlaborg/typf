@@ -153,12 +153,24 @@ pub fn run(args: &BatchArgs) -> Result<()> {
 }
 
 fn validate_output_pattern(pattern: &str) -> Result<()> {
-    if pattern.contains("{}") {
-        Ok(())
-    } else {
+    let normalized = pattern.trim();
+    if normalized.is_empty() {
         Err(TypfError::ConfigError(
-            "Output filename pattern must contain '{}' placeholder".to_string(),
+            "Output filename pattern cannot be empty".to_string(),
         ))
+    } else {
+        let placeholder_count = normalized.matches("{}").count();
+        if placeholder_count == 1 {
+            Ok(())
+        } else if placeholder_count == 0 {
+            Err(TypfError::ConfigError(
+                "Output filename pattern must contain '{}' placeholder".to_string(),
+            ))
+        } else {
+            Err(TypfError::ConfigError(
+                "Output filename pattern must contain exactly one '{}' placeholder".to_string(),
+            ))
+        }
     }
 }
 
@@ -206,8 +218,16 @@ fn resolve_output_file(
     job_output: Option<&str>,
 ) -> Result<PathBuf> {
     let relative_path = match job_output {
-        Some(output) => PathBuf::from(output),
-        None => PathBuf::from(output_pattern.replace("{}", &job_index.to_string())),
+        Some(output) => {
+            let trimmed = output.trim();
+            if trimmed.is_empty() {
+                return Err(TypfError::ConfigError(
+                    "Output filename cannot be empty".to_string(),
+                ));
+            }
+            PathBuf::from(trimmed)
+        },
+        None => PathBuf::from(output_pattern.trim().replace("{}", &job_index.to_string())),
     };
 
     validate_relative_output_path(&relative_path)?;
@@ -325,6 +345,28 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_output_pattern_when_empty_then_error() {
+        let error =
+            validate_output_pattern(" \t\n").expect_err("blank output pattern should be rejected");
+        assert!(
+            error.to_string().contains("cannot be empty"),
+            "expected empty-pattern validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_validate_output_pattern_when_multiple_placeholders_then_error() {
+        let error = validate_output_pattern("job_{}_{}.png")
+            .expect_err("multiple placeholders should be rejected");
+        assert!(
+            error.to_string().contains("exactly one"),
+            "expected exact-placeholder-count validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
     fn test_resolve_output_file_when_nested_relative_then_created_under_output_dir() {
         let output_dir = temp_dir("nested");
         let resolved = resolve_output_file(
@@ -343,6 +385,54 @@ mod tests {
         assert!(
             output_dir.join("nested/job").exists(),
             "parent directories should be created"
+        );
+
+        std::fs::remove_dir_all(output_dir).expect("temp dir cleanup should succeed");
+    }
+
+    #[test]
+    fn test_resolve_output_file_when_pattern_has_surrounding_whitespace_then_trimmed() {
+        let output_dir = temp_dir("pattern_trim");
+        let resolved = resolve_output_file(&output_dir, "  out_{}.png\t", 7, None)
+            .expect("surrounding whitespace in pattern should be trimmed");
+        assert_eq!(
+            resolved,
+            output_dir.join("out_7.png"),
+            "trimmed pattern should produce normalized output path"
+        );
+
+        std::fs::remove_dir_all(output_dir).expect("temp dir cleanup should succeed");
+    }
+
+    #[test]
+    fn test_resolve_output_file_when_job_output_has_surrounding_whitespace_then_trimmed() {
+        let output_dir = temp_dir("trimmed_path");
+        let resolved = resolve_output_file(
+            &output_dir,
+            "unused_{}.png",
+            1,
+            Some("  nested/job/output.png\t"),
+        )
+        .expect("whitespace should be trimmed around output path");
+
+        assert_eq!(
+            resolved,
+            output_dir.join("nested/job/output.png"),
+            "trimmed output path should stay inside output dir"
+        );
+
+        std::fs::remove_dir_all(output_dir).expect("temp dir cleanup should succeed");
+    }
+
+    #[test]
+    fn test_resolve_output_file_when_job_output_is_whitespace_then_error() {
+        let output_dir = temp_dir("blank_output");
+        let error = resolve_output_file(&output_dir, "unused_{}.png", 1, Some("  \t\n"))
+            .expect_err("blank output path should fail");
+        assert!(
+            error.to_string().contains("cannot be empty"),
+            "expected empty-output validation message, got: {}",
+            error
         );
 
         std::fs::remove_dir_all(output_dir).expect("temp dir cleanup should succeed");

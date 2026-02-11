@@ -3,37 +3,36 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 finite-font-size validation consistency micro-sprint
+**Focus:** Post-v5.0.2 CLI input-normalization/output-path/JSONL-format micro-sprint
 
 ## Sprint Tasks
 
-- [x] `typf-core::ShapingParams::validate()` rejects non-finite font sizes (`NaN`, `+/-inf`) before other checks
-- [x] JSONL job processing now relies on core shaping validation for `font.size` (single validation authority)
-- [x] Regression tests added for non-finite font sizes (`NaN`, `+inf`, `-inf`) in core + JSONL paths
+- [x] Tighten `typf batch` output pattern validation (`trim`, reject blank, require exactly one `{}` placeholder)
+- [x] Harden `typf batch` per-job output path handling by trimming and rejecting whitespace-only `output`
+- [x] Normalize/validate JSONL `rendering.format` values and emit canonical lowercase format labels
 
 ## Research Notes
 
-- Rust `f32::is_finite()` semantics for rejecting `NaN`/`+/-inf`:
-  https://doc.rust-lang.org/core/primitive.f32.html#method.is_finite
-- `serde_json::Number::from_f64()` rejects non-finite values (relevant for JSON boundaries):
-  https://docs.rs/serde_json/latest/serde_json/value/struct.Number.html#method.from_f64
+- Rust string trimming behavior (`str::trim`) for robust CLI/JSONL input normalization:
+  https://doc.rust-lang.org/std/primitive.str.html#method.trim
+- Rust path-component handling (`std::path::Component`) for safe relative-path validation:
+  https://doc.rust-lang.org/std/path/enum.Component.html
+- HarfBuzz feature-string and OpenType tag semantics reference:
+  https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-feature-from-string
 
 ## Verification Results
 
-- `cargo fmt --manifest-path crates/typf-core/Cargo.toml`: PASS
 - `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
-- `cargo test -p typf-core -p typf-cli -- --nocapture`: PASS
+- `cargo test --manifest-path crates/typf-cli/Cargo.toml -- --nocapture`: PASS
 - `./test.sh --quick`: PASS
 
 ## Notes
 
 - Touched files:
-  - `crates/typf-core/src/lib.rs`
-  - `crates/typf-cli/src/jsonl.rs`
-  - `TASKS.md`
-  - `TODO.md`
+  - `crates/typf-cli/src/commands/batch.rs`
   - `CHANGELOG.md`
   - `WORK.md`
+- `TASKS.md` and `TODO.md` already reflected this completed micro-sprint backlog state; no additional edits were required.
 - Existing unrelated repository changes were preserved.
 
 ## Next

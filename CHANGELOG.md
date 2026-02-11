@@ -132,6 +132,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - `scripts/test.sh` now fails when Python lint/tests fail (when executed), so verification status reflects actual outcomes
 - `typf render` direction parsing now trims whitespace and accepts case-insensitive direction tokens (`auto|ltr|rtl|ttb|btt`)
 - `typf render` font-size parsing now trims whitespace and accepts case-insensitive `em`
+- `typf batch` output-pattern validation now trims input, rejects blank values, and enforces exactly one `{}` placeholder
 - `typf batch` per-job output paths now trim surrounding whitespace and reject blank `output` filenames
 - JSONL `rendering.format` parsing now trims/canonicalizes case, validates supported values (`ppm|pgm|pbm|metrics`), and emits canonical lowercase format values in success payloads
 - JSONL `font.size` validation now delegates to `typf-core::ShapingParams::validate()` (removed duplicate JSONL-side finite check)
