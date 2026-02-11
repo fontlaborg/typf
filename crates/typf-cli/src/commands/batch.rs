@@ -251,7 +251,7 @@ fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<(
     let format = parse_output_format(job.format.as_deref())?;
     let shaper = parse_batch_backend(job.shaper.as_deref(), "auto");
     let renderer = parse_batch_backend(job.renderer.as_deref(), "auto");
-    let language = parse_optional_trimmed(job.language.as_deref());
+    let language = parse_batch_language(job.language.as_deref())?;
 
     let render_args = RenderArgs {
         text: Some(job.text.clone()),
@@ -315,6 +315,11 @@ fn parse_batch_font_path(raw: Option<&str>) -> Result<Option<PathBuf>> {
         )),
         None => Ok(None),
     }
+}
+
+fn parse_batch_language(raw: Option<&str>) -> Result<Option<String>> {
+    crate::language::normalize_language_tag(raw)
+        .map_err(|error| TypfError::ConfigError(format!("Invalid batch language tag: {}", error)))
 }
 
 fn parse_output_format(raw: Option<&str>) -> Result<OutputFormat> {
@@ -587,6 +592,26 @@ mod tests {
             parsed,
             PathBuf::from("./test-fonts/NotoSans-Regular.ttf"),
             "font path should be trimmed before conversion to PathBuf"
+        );
+    }
+
+    #[test]
+    fn test_parse_batch_language_when_valid_then_canonicalized() {
+        assert_eq!(
+            parse_batch_language(Some(" en-us ")).expect("valid language should parse"),
+            Some("en-US".to_string()),
+            "batch language should canonicalize to BCP 47 casing"
+        );
+    }
+
+    #[test]
+    fn test_parse_batch_language_when_invalid_then_error() {
+        let error = parse_batch_language(Some("en_US"))
+            .expect_err("invalid BCP 47 language tags should fail");
+        assert!(
+            error.to_string().contains("valid BCP 47"),
+            "expected BCP 47 guidance, got: {}",
+            error
         );
     }
 

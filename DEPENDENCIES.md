@@ -42,6 +42,10 @@ Source of truth for versions: `Cargo.toml` (`[workspace.dependencies]`) and indi
 - `anyhow`: Application-level error composition (primarily CLIs/tools).
 - `log`, `env_logger`: Logging facade + default logger.
 
+### Input validation
+
+- `language-tags`: BCP 47 language-tag parsing/canonicalization for CLI, batch, and JSONL language hints.
+
 ### Platform bindings
 
 - `objc2` + `objc2-*` crates: macOS CoreText/CoreGraphics integration.
