@@ -583,7 +583,9 @@ fn parse_rendering_encoding(raw: &str) -> Result<RenderingEncoding, String> {
 
 fn parse_rendering_format(raw: &str) -> Result<RenderingFormat, String> {
     let normalized = raw.trim();
-    if normalized.eq_ignore_ascii_case("ppm") {
+    if normalized.is_empty() {
+        Err("rendering.format cannot be blank; expected one of: ppm, pgm, pbm, metrics".to_string())
+    } else if normalized.eq_ignore_ascii_case("ppm") {
         Ok(RenderingFormat::Ppm)
     } else if normalized.eq_ignore_ascii_case("pgm") {
         Ok(RenderingFormat::Pgm)
@@ -1121,6 +1123,16 @@ mod tests {
         assert!(
             error.contains("expected one of: ppm, pgm, pbm, metrics"),
             "expected supported-format guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_rendering_format_rejects_blank_value() {
+        let error = parse_rendering_format("  \t\n").expect_err("blank format should fail");
+        assert!(
+            error.contains("cannot be blank"),
+            "expected blank-format validation guidance, got: {}",
             error
         );
     }

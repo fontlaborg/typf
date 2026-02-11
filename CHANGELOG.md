@@ -135,6 +135,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - `typf batch` output-pattern validation now trims input, rejects blank values, and enforces exactly one `{}` placeholder
 - `typf batch` per-job output paths now trim surrounding whitespace and reject blank `output` filenames
 - JSONL `rendering.format` parsing now trims/canonicalizes case, validates supported values (`ppm|pgm|pbm|metrics`), and emits canonical lowercase format values in success payloads
+- JSONL `rendering.format` now rejects blank/whitespace-only values with an explicit validation error
 - JSONL `font.size` validation now delegates to `typf-core::ShapingParams::validate()` (removed duplicate JSONL-side finite check)
 - Added core shaping-parameter regression coverage for `NaN`/`+/-inf`, positive finite values, and max-size overflow behavior
 - Rust CLI Unicode escape decoding now supports UTF-16 surrogate pairs in `\uXXXX\uXXXX` sequences
