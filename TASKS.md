@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, and finite-font-size validation consistency micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, and unicode-escape reliability micro-sprints complete.
 
 ## TLDR
 
@@ -92,6 +92,12 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - Render CLI and JSONL feature parsing now resolves duplicate OpenType feature tags deterministically (`last value wins`) with regression tests
 - JSONL `version` validation now rejects malformed values (`empty`, non-numeric minor, extra segments) while preserving `2`/`2.x` compatibility
 - `scripts/test.sh` now treats Python lint/test failures as build failures when those checks are executed
+
+### Post-v5.0.2 Unicode-Escape Reliability Micro-Sprint (2026-02-11)
+
+- Rust CLI Unicode input decoding now supports UTF-16 surrogate pairs in `\uXXXX\uXXXX` sequences
+- Rust and Python CLI Unicode decoders now preserve malformed `\u` escapes verbatim instead of consuming characters
+- Added cross-language regression tests for basic/braced escapes, surrogate-pair decoding, and malformed escape preservation
 
 ### Post-v5.0.2 CLI Input-Normalization/Output-Path/JSONL-Format Micro-Sprint (2026-02-11)
 

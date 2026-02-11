@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 unicode-escape reliability micro-sprint)
+
+- [x] Decode UTF-16 surrogate-pair escapes (`\uXXXX\uXXXX`) in Rust CLI text input parsing
+- [x] Preserve malformed Unicode escape literals verbatim (instead of consuming characters) in Rust and Python CLI decoders
+- [x] Add regression tests in Rust and Python for basic `\uXXXX`, braced `\u{...}`, surrogate-pair, and malformed escape cases
+
 ## Completed (2026-02-11 finite-font-size validation consistency micro-sprint)
 
 - [x] Reject non-finite font sizes (`NaN`, `+/-inf`) in `typf-core::ShapingParams::validate()` before positive/range checks

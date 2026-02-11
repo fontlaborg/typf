@@ -137,6 +137,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - JSONL `rendering.format` parsing now trims/canonicalizes case, validates supported values (`ppm|pgm|pbm|metrics`), and emits canonical lowercase format values in success payloads
 - JSONL `font.size` validation now delegates to `typf-core::ShapingParams::validate()` (removed duplicate JSONL-side finite check)
 - Added core shaping-parameter regression coverage for `NaN`/`+/-inf`, positive finite values, and max-size overflow behavior
+- Rust CLI Unicode escape decoding now supports UTF-16 surrogate pairs in `\uXXXX\uXXXX` sequences
+- Rust and Python CLI Unicode decoders now preserve malformed `\u` escapes verbatim instead of consuming characters
+- Added cross-language regression tests for `\uXXXX`, `\u{...}`, surrogate-pair decoding, and malformed escape preservation
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

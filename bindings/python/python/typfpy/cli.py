@@ -3,6 +3,7 @@ Typf Command Line Interface - Beautiful text from your terminal
 
 Linra CLI using Click for consistent interface with Rust CLI.
 """
+# this_file: bindings/python/python/typfpy/cli.py
 
 import sys
 from typing import Optional
@@ -390,44 +391,87 @@ def decode_unicode_escapes(text: str) -> str:
     """Decode Unicode escape sequences like \\uXXXX or \\u{X...}"""
     result = []
     i = 0
+    text_len = len(text)
 
-    while i < len(text):
-        if i < len(text) - 1 and text[i] == '\\' and text[i+1] == 'u':
-            i += 2  # Skip \\u
-
-            if i < len(text) and text[i] == '{':
-                # \\u{X...} format
-                i += 1  # Skip {
-                hex_str = ""
-                while i < len(text) and text[i] != '}':
-                    hex_str += text[i]
-                    i += 1
-                if i < len(text):
-                    i += 1  # Skip }
-
-                try:
-                    code = int(hex_str, 16)
-                    result.append(chr(code))
-                    continue
-                except ValueError:
-                    pass
-
-            else:
-                # \\uXXXX format (exactly 4 hex digits)
-                hex_str = text[i:i+4]
-                if len(hex_str) == 4:
-                    try:
-                        code = int(hex_str, 16)
-                        result.append(chr(code))
-                        i += 4
-                        continue
-                    except ValueError:
-                        pass
+    while i < text_len:
+        parsed = _parse_unicode_escape(text, i)
+        if parsed is not None:
+            decoded, consumed = parsed
+            result.append(decoded)
+            i += consumed
+            continue
 
         result.append(text[i])
         i += 1
 
     return ''.join(result)
+
+
+HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
+
+
+def _parse_unicode_escape(text: str, start: int) -> Optional[tuple[str, int]]:
+    if start + 2 >= len(text):
+        return None
+    if text[start] != "\\" or text[start + 1] != "u":
+        return None
+    if text[start + 2] == "{":
+        return _parse_braced_unicode_escape(text, start)
+    return _parse_u4_unicode_escape(text, start)
+
+
+def _parse_braced_unicode_escape(text: str, start: int) -> Optional[tuple[str, int]]:
+    end = text.find("}", start + 3)
+    if end < 0:
+        return None
+
+    hex_str = text[start + 3:end]
+    if not 1 <= len(hex_str) <= 6:
+        return None
+    if any(ch not in HEX_DIGITS for ch in hex_str):
+        return None
+
+    code = int(hex_str, 16)
+    if code > 0x10FFFF:
+        return None
+
+    try:
+        return chr(code), (end - start + 1)
+    except ValueError:
+        return None
+
+
+def _parse_u4_unicode_escape(text: str, start: int) -> Optional[tuple[str, int]]:
+    high = _parse_u16_escape(text, start)
+    if high is None:
+        return None
+
+    if 0xD800 <= high <= 0xDBFF:
+        low = _parse_u16_escape(text, start + 6)
+        if low is None or not (0xDC00 <= low <= 0xDFFF):
+            return None
+        code = 0x10000 + (((high - 0xD800) << 10) | (low - 0xDC00))
+        return chr(code), 12
+
+    if 0xDC00 <= high <= 0xDFFF:
+        return None
+
+    return chr(high), 6
+
+
+def _parse_u16_escape(text: str, start: int) -> Optional[int]:
+    if start + 6 > len(text):
+        return None
+    if text[start:start + 2] != "\\u":
+        return None
+
+    hex_str = text[start + 2:start + 6]
+    if len(hex_str) != 4:
+        return None
+    if any(ch not in HEX_DIGITS for ch in hex_str):
+        return None
+
+    return int(hex_str, 16)
 
 
 def parse_color(color_str: str) -> tuple:

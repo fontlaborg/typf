@@ -3,36 +3,33 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 CLI input-normalization/output-path/JSONL-format micro-sprint
+**Focus:** Post-v5.0.2 unicode-escape reliability micro-sprint
 
 ## Sprint Tasks
 
-- [x] Tighten `typf batch` output pattern validation (`trim`, reject blank, require exactly one `{}` placeholder)
-- [x] Harden `typf batch` per-job output path handling by trimming and rejecting whitespace-only `output`
-- [x] Normalize/validate JSONL `rendering.format` values and emit canonical lowercase format labels
+- [x] Decode UTF-16 surrogate pairs in Rust CLI `decode_unicode_escapes` (`\uXXXX\uXXXX`)
+- [x] Preserve malformed `\u` escapes verbatim in both Rust and Python CLI decoders
+- [x] Add Rust + Python regression coverage for basic/braced/surrogate/malformed Unicode escapes
 
 ## Research Notes
 
-- Rust string trimming behavior (`str::trim`) for robust CLI/JSONL input normalization:
-  https://doc.rust-lang.org/std/primitive.str.html#method.trim
-- Rust path-component handling (`std::path::Component`) for safe relative-path validation:
-  https://doc.rust-lang.org/std/path/enum.Component.html
-- HarfBuzz feature-string and OpenType tag semantics reference:
-  https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-feature-from-string
+- JSON string escaping and surrogate-pair model:
+  https://www.rfc-editor.org/rfc/rfc8259#section-7
+- Rust Unicode UTF-16 decoding reference:
+  https://doc.rust-lang.org/std/char/fn.decode_utf16.html
 
 ## Verification Results
 
-- `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
-- `cargo test --manifest-path crates/typf-cli/Cargo.toml -- --nocapture`: PASS
+- `cargo test -p typf-cli decode_unicode_escapes -- --nocapture`: PASS
+- `uv run pytest bindings/python/tests/test_cli_unicode_escapes.py -q`: PASS
 - `./test.sh --quick`: PASS
 
 ## Notes
 
-- Touched files:
-  - `crates/typf-cli/src/commands/batch.rs`
-  - `CHANGELOG.md`
-  - `WORK.md`
-- `TASKS.md` and `TODO.md` already reflected this completed micro-sprint backlog state; no additional edits were required.
+- Touched code paths:
+  - `crates/typf-cli/src/commands/render.rs`
+  - `bindings/python/python/typfpy/cli.py`
+  - `bindings/python/tests/test_cli_unicode_escapes.py`
 - Existing unrelated repository changes were preserved.
 
 ## Next

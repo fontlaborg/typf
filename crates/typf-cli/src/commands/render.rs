@@ -304,50 +304,99 @@ fn get_input_text(args: &RenderArgs) -> Result<String> {
 }
 
 fn decode_unicode_escapes(text: &str) -> String {
-    let mut result = String::new();
-    let mut chars = text.chars().peekable();
+    let chars: Vec<char> = text.chars().collect();
+    let mut result = String::with_capacity(text.len());
+    let mut index = 0;
 
-    while let Some(ch) = chars.next() {
-        if ch == '\\' {
-            if let Some('u') = chars.peek() {
-                chars.next(); // consume 'u'
-                if chars.peek() == Some(&'{') {
-                    // \u{X...} format
-                    chars.next(); // consume '{'
-                    let mut hex = String::new();
-                    while let Some(&c) = chars.peek() {
-                        if c == '}' {
-                            chars.next(); // consume '}'
-                            break;
-                        }
-                        hex.push(c);
-                        chars.next();
-                    }
-                    if let Ok(code) = u32::from_str_radix(&hex, 16) {
-                        if let Some(unicode_char) = char::from_u32(code) {
-                            result.push(unicode_char);
-                            continue;
-                        }
-                    }
-                } else {
-                    // \uXXXX format (exactly 4 hex digits)
-                    let mut hex = String::new();
-                    for _ in 0..4 {
-                        if let Some(c) = chars.next() {
-                            hex.push(c);
-                        }
-                    }
-                    if let Ok(code) = u16::from_str_radix(&hex, 16) {
-                        result.push(char::from_u32(code as u32).unwrap_or('�'));
-                        continue;
-                    }
-                }
+    while index < chars.len() {
+        if chars[index] == '\\' && index + 1 < chars.len() && chars[index + 1] == 'u' {
+            if let Some((decoded, consumed)) = parse_unicode_escape(&chars, index) {
+                result.push(decoded);
+                index += consumed;
+                continue;
             }
         }
-        result.push(ch);
+
+        result.push(chars[index]);
+        index += 1;
     }
 
     result
+}
+
+fn parse_unicode_escape(chars: &[char], start: usize) -> Option<(char, usize)> {
+    if start + 2 >= chars.len() {
+        return None;
+    }
+
+    if chars[start + 2] == '{' {
+        parse_braced_unicode_escape(chars, start)
+    } else {
+        parse_u4_unicode_escape(chars, start)
+    }
+}
+
+fn parse_braced_unicode_escape(chars: &[char], start: usize) -> Option<(char, usize)> {
+    let mut end = start + 3;
+    while end < chars.len() && chars[end] != '}' {
+        end += 1;
+    }
+    if end >= chars.len() {
+        return None;
+    }
+
+    let digit_count = end - (start + 3);
+    if !(1..=6).contains(&digit_count) {
+        return None;
+    }
+
+    let mut value = 0u32;
+    for ch in &chars[start + 3..end] {
+        value = (value << 4) | ch.to_digit(16)?;
+    }
+
+    char::from_u32(value).map(|decoded| (decoded, end - start + 1))
+}
+
+fn parse_u4_unicode_escape(chars: &[char], start: usize) -> Option<(char, usize)> {
+    let high = parse_u16_escape(chars, start)?;
+
+    if (0xD800..=0xDBFF).contains(&high) {
+        let next = start + 6;
+        let low = parse_u16_escape(chars, next)?;
+        if !(0xDC00..=0xDFFF).contains(&low) {
+            return None;
+        }
+        let code = 0x1_0000 + ((((high as u32) - 0xD800) << 10) | ((low as u32) - 0xDC00));
+        return char::from_u32(code).map(|decoded| (decoded, 12));
+    }
+
+    if (0xDC00..=0xDFFF).contains(&high) {
+        return None;
+    }
+
+    char::from_u32(high as u32).map(|decoded| (decoded, 6))
+}
+
+fn parse_u16_escape(chars: &[char], start: usize) -> Option<u16> {
+    if start + 6 > chars.len() {
+        return None;
+    }
+    if chars[start] != '\\' || chars[start + 1] != 'u' {
+        return None;
+    }
+    parse_hex_u16(&chars[start + 2..start + 6])
+}
+
+fn parse_hex_u16(chars: &[char]) -> Option<u16> {
+    if chars.len() != 4 {
+        return None;
+    }
+    let mut value = 0u16;
+    for ch in chars {
+        value = (value << 4) | (ch.to_digit(16)? as u16);
+    }
+    Some(value)
 }
 
 fn load_font(args: &RenderArgs) -> Result<Arc<dyn FontRef>> {
@@ -1257,5 +1306,27 @@ mod tests {
             "expected maximum-size validation message, got: {}",
             err
         );
+    }
+
+    #[test]
+    fn decode_unicode_escapes_decodes_basic_u4_sequence() {
+        assert_eq!(decode_unicode_escapes(r"\u0041"), "A");
+    }
+
+    #[test]
+    fn decode_unicode_escapes_decodes_braced_sequence() {
+        assert_eq!(decode_unicode_escapes(r"\u{1F600}"), "😀");
+    }
+
+    #[test]
+    fn decode_unicode_escapes_decodes_surrogate_pair_sequence() {
+        assert_eq!(decode_unicode_escapes(r"\uD83D\uDE00"), "😀");
+    }
+
+    #[test]
+    fn decode_unicode_escapes_preserves_malformed_sequences() {
+        assert_eq!(decode_unicode_escapes(r"\u12"), r"\u12");
+        assert_eq!(decode_unicode_escapes(r"\u{xyz}"), r"\u{xyz}");
+        assert_eq!(decode_unicode_escapes(r"\uD83D"), r"\uD83D");
     }
 }
