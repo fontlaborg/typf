@@ -23,8 +23,9 @@
 ## Verification Results
 
 - `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
-- `cargo test --manifest-path crates/typf-cli/Cargo.toml --all-features -- --nocapture`: PASS
-- `cargo clippy --manifest-path crates/typf-cli/Cargo.toml --all-features --all-targets -- -D warnings`: PASS
+- `cargo test --manifest-path crates/typf-cli/Cargo.toml -- --nocapture`: PASS
+- `cargo clippy --manifest-path crates/typf-cli/Cargo.toml --all-targets -- -D warnings`: PASS
+- `cd bindings/python && uv run --isolated --with pytest pytest tests/test_exports.py -q`: PASS
 - `./test.sh --rust --quick`: PASS
 
 ## Notes

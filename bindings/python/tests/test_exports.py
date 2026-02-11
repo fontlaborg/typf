@@ -4,6 +4,7 @@ Python parity tests for PNG/SVG export.
 These tests verify that the Python bindings produce valid output
 matching the Rust library's behavior.
 """
+# this_file: bindings/python/tests/test_exports.py
 
 from pathlib import Path
 
@@ -11,6 +12,14 @@ import pytest
 
 TEST_DATA_DIR = Path(__file__).resolve().parents[3] / "test-fonts"
 KALNIA_VAR_FONT = TEST_DATA_DIR / "Kalnia[wdth,wght].ttf"
+
+
+def render_simple_with_warning(text: str, **kwargs):
+    """Call deprecated render_simple and assert warning contract."""
+    from typfpy import render_simple
+
+    with pytest.warns(DeprecationWarning, match="stub font"):
+        return render_simple(text, **kwargs)
 
 
 class TestImports:
@@ -53,9 +62,7 @@ class TestRenderSimple:
 
     def test_render_simple_basic(self):
         """Can render simple text without a font file."""
-        from typfpy import render_simple
-
-        result = render_simple("Hello")
+        result = render_simple_with_warning("Hello")
         assert result is not None
         assert "width" in result
         assert "height" in result
@@ -65,10 +72,8 @@ class TestRenderSimple:
 
     def test_render_simple_with_size(self):
         """Can render with custom size."""
-        from typfpy import render_simple
-
-        small = render_simple("A", size=24)
-        large = render_simple("A", size=48)
+        small = render_simple_with_warning("A", size=24)
+        large = render_simple_with_warning("A", size=48)
 
         # Larger size should produce larger output
         assert large["width"] >= small["width"]
@@ -76,9 +81,7 @@ class TestRenderSimple:
 
     def test_render_simple_empty_text(self):
         """Empty text produces valid (possibly empty) output."""
-        from typfpy import render_simple
-
-        result = render_simple("")
+        result = render_simple_with_warning("")
         assert result is not None
 
 
@@ -87,9 +90,9 @@ class TestExportImage:
 
     def test_export_png(self):
         """Can export to PNG format."""
-        from typfpy import export_image, render_simple
+        from typfpy import export_image
 
-        image = render_simple("Test", size=24)
+        image = render_simple_with_warning("Test", size=24)
         png_data = export_image(image, format="png")
 
         assert png_data is not None
@@ -99,9 +102,9 @@ class TestExportImage:
 
     def test_export_svg(self):
         """Can export to SVG format."""
-        from typfpy import export_image, render_simple
+        from typfpy import export_image
 
-        image = render_simple("Test", size=24)
+        image = render_simple_with_warning("Test", size=24)
         svg_data = export_image(image, format="svg")
 
         assert svg_data is not None
@@ -112,9 +115,9 @@ class TestExportImage:
 
     def test_export_ppm(self):
         """Can export to PPM format."""
-        from typfpy import export_image, render_simple
+        from typfpy import export_image
 
-        image = render_simple("Test", size=24)
+        image = render_simple_with_warning("Test", size=24)
         ppm_data = export_image(image, format="ppm")
 
         assert ppm_data is not None
