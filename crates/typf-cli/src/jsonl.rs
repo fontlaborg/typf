@@ -400,6 +400,11 @@ fn process_job(job: &Job) -> JobResult {
         Err(e) => return JobResult::error(&job.id, format!("Invalid rendering.encoding: {}", e)),
     };
 
+    let format = match parse_rendering_format(&job.rendering.format) {
+        Ok(format) => format,
+        Err(e) => return JobResult::error(&job.id, format!("Invalid rendering.format: {}", e)),
+    };
+
     // Create shaping parameters
     let shaping_params = ShapingParams {
         size: job.font.size,
@@ -432,7 +437,7 @@ fn process_job(job: &Job) -> JobResult {
     let render_start = Instant::now();
 
     // Handle metrics-only output
-    if job.rendering.format == "metrics" {
+    if matches!(format, RenderingFormat::Metrics) {
         let metrics = MetricsOutput {
             glyph_count: shaped.glyphs.len(),
             advance_width: shaped.advance_width,
@@ -479,16 +484,11 @@ fn process_job(job: &Job) -> JobResult {
     let render_ms = render_start.elapsed().as_secs_f64() * 1000.0;
 
     // Export to requested format
-    let exporter: Arc<dyn Exporter> = match job.rendering.format.as_str() {
-        "ppm" => Arc::new(PnmExporter::ppm()),
-        "pgm" => Arc::new(PnmExporter::pgm()),
-        "pbm" => Arc::new(PnmExporter::new(typf_export::PnmFormat::Pbm)),
-        _ => {
-            return JobResult::error(
-                &job.id,
-                format!("Unsupported format: {}", job.rendering.format),
-            );
-        },
+    let exporter: Arc<dyn Exporter> = match format {
+        RenderingFormat::Ppm => Arc::new(PnmExporter::ppm()),
+        RenderingFormat::Pgm => Arc::new(PnmExporter::pgm()),
+        RenderingFormat::Pbm => Arc::new(PnmExporter::new(typf_export::PnmFormat::Pbm)),
+        RenderingFormat::Metrics => unreachable!("metrics format is handled before export"),
     };
 
     let exported = match exporter.export(&rendered) {
@@ -515,7 +515,7 @@ fn process_job(job: &Job) -> JobResult {
     JobResult::success_render(
         job.id.clone(),
         RenderingOutput {
-            format: job.rendering.format.clone(),
+            format: format.as_str().to_string(),
             encoding: encoding.as_str().to_string(),
             data,
             width,
@@ -534,6 +534,25 @@ fn process_job(job: &Job) -> JobResult {
             total_ms,
         },
     )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RenderingFormat {
+    Ppm,
+    Pgm,
+    Pbm,
+    Metrics,
+}
+
+impl RenderingFormat {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Ppm => "ppm",
+            Self::Pgm => "pgm",
+            Self::Pbm => "pbm",
+            Self::Metrics => "metrics",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -560,6 +579,24 @@ fn parse_rendering_encoding(raw: &str) -> Result<RenderingEncoding, String> {
     } else {
         Err(format!(
             "'{}' is not supported; expected one of: base64, plain",
+            raw
+        ))
+    }
+}
+
+fn parse_rendering_format(raw: &str) -> Result<RenderingFormat, String> {
+    let normalized = raw.trim();
+    if normalized.eq_ignore_ascii_case("ppm") {
+        Ok(RenderingFormat::Ppm)
+    } else if normalized.eq_ignore_ascii_case("pgm") {
+        Ok(RenderingFormat::Pgm)
+    } else if normalized.eq_ignore_ascii_case("pbm") {
+        Ok(RenderingFormat::Pbm)
+    } else if normalized.eq_ignore_ascii_case("metrics") {
+        Ok(RenderingFormat::Metrics)
+    } else {
+        Err(format!(
+            "'{}' is not supported; expected one of: ppm, pgm, pbm, metrics",
             raw
         ))
     }
@@ -603,18 +640,31 @@ fn parse_instance_variations(raw: &HashMap<String, f32>) -> Result<Vec<(String, 
 
 fn validate_spec_version(version: &str) -> Result<(), String> {
     let normalized = version.trim();
+    if normalized.is_empty() {
+        return Err("version is empty".to_string());
+    }
 
-    let major = normalized
-        .split('.')
-        .next()
-        .ok_or_else(|| "version is empty".to_string())?
-        .parse::<u32>()
-        .map_err(|_| {
-            format!(
-                "version '{}' must start with a numeric major version",
-                normalized
-            )
-        })?;
+    let parts: Vec<&str> = normalized.split('.').collect();
+    if parts.len() > 2 {
+        return Err(format!(
+            "version '{}' has too many segments; expected '2' or '2.<minor>'",
+            normalized
+        ));
+    }
+
+    let major = parts[0].parse::<u32>().map_err(|_| {
+        format!(
+            "version '{}' must start with a numeric major version",
+            normalized
+        )
+    })?;
+
+    if parts.len() == 2 && (parts[1].is_empty() || parts[1].parse::<u32>().is_err()) {
+        return Err(format!(
+            "version '{}' must use a numeric minor version when provided",
+            normalized
+        ));
+    }
 
     if major == 2 {
         Ok(())
@@ -653,7 +703,13 @@ fn parse_text_features(feature_specs: &[String]) -> Result<Vec<(String, u32)>, S
             if token.is_empty() {
                 continue;
             }
-            parsed.push(parse_feature_token(token)?);
+            let (tag, value) = parse_feature_token(token)?;
+            if let Some(existing) = parsed.iter_mut().find(|(existing, _)| existing == &tag) {
+                // Keep stable output ordering while making duplicate tags deterministic.
+                existing.1 = value;
+            } else {
+                parsed.push((tag, value));
+            }
         }
     }
 
@@ -812,6 +868,7 @@ mod tests {
 
     #[test]
     fn test_validate_spec_version_accepts_v2_series() {
+        validate_spec_version("2").expect("major-only 2 should be accepted");
         validate_spec_version("2.0").expect("2.0 should be accepted");
         validate_spec_version("2.99").expect("2.99 should be accepted");
     }
@@ -837,6 +894,36 @@ mod tests {
         assert!(
             err.contains("numeric major version"),
             "expected numeric-version error, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_spec_version_rejects_empty_version() {
+        let err = validate_spec_version(" \t ").expect_err("blank version should error");
+        assert!(
+            err.contains("version is empty"),
+            "expected empty-version error, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_spec_version_rejects_non_numeric_minor() {
+        let err = validate_spec_version("2.beta").expect_err("non-numeric minor should error");
+        assert!(
+            err.contains("numeric minor"),
+            "expected numeric-minor error, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_spec_version_rejects_extra_segments() {
+        let err = validate_spec_version("2.0.1").expect_err("extra segments should error");
+        assert!(
+            err.contains("too many segments"),
+            "expected too-many-segments error, got: {}",
             err
         );
     }
@@ -906,6 +993,27 @@ mod tests {
                 ("kern".to_string(), 0),
                 ("smcp".to_string(), 1),
                 ("cv01".to_string(), 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_text_features_when_duplicate_tags_then_last_value_wins() {
+        let parsed = parse_text_features(&[
+            "+liga".to_string(),
+            "kern=0".to_string(),
+            "liga=0".to_string(),
+            "cv01=1".to_string(),
+            "cv01=3".to_string(),
+        ])
+        .expect("duplicate tags should parse deterministically");
+
+        assert_eq!(
+            parsed,
+            vec![
+                ("liga".to_string(), 0),
+                ("kern".to_string(), 0),
+                ("cv01".to_string(), 3),
             ]
         );
     }
@@ -994,6 +1102,28 @@ mod tests {
         assert!(
             error.contains("expected one of: base64, plain"),
             "expected supported-encoding guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_rendering_format_accepts_case_insensitive_values_with_whitespace() {
+        assert_eq!(
+            parse_rendering_format("  PPM\t").expect("trimmed PPM should parse"),
+            RenderingFormat::Ppm
+        );
+        assert_eq!(
+            parse_rendering_format("metrics").expect("metrics should parse"),
+            RenderingFormat::Metrics
+        );
+    }
+
+    #[test]
+    fn test_parse_rendering_format_rejects_unknown_value() {
+        let error = parse_rendering_format("png").expect_err("unsupported format should fail");
+        assert!(
+            error.contains("expected one of: ppm, pgm, pbm, metrics"),
+            "expected supported-format guidance, got: {}",
             error
         );
     }
@@ -1122,6 +1252,23 @@ mod tests {
             error.contains("positive"),
             "expected positive-size guidance, got: {}",
             error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_format_has_surrounding_whitespace_then_succeeds() {
+        let mut job = test_job("job-format-trimmed");
+        job.font.source.path = workspace_test_font();
+        job.rendering.format = "  PPM\t".to_string();
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "success", "trimmed format should succeed");
+        let rendering = result
+            .rendering
+            .expect("successful render should include rendering payload");
+        assert_eq!(
+            rendering.format, "ppm",
+            "successful output should use canonical lowercase format"
         );
     }
 

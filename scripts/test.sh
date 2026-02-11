@@ -112,17 +112,18 @@ if [[ "$RUN_PYTHON" == "true" ]] && [[ "$RUN_LINT" == "true" ]]; then
                 echo "    Ruff OK"
             else
                 echo "    Ruff found issues"
-                # Don't fail on Python lint issues for now
+                FAILED=true
             fi
         fi
         echo ""
     elif command -v ruff &>/dev/null; then
         echo "==> Running Python linting (ruff)..."
         if [[ -d "bindings/python/python" ]]; then
-            if ruff check bindings/python/python; then
+            if ruff check bindings/python/python bindings/python/tests; then
                 echo "    Ruff OK"
             else
                 echo "    Ruff found issues"
+                FAILED=true
             fi
         fi
         echo ""
@@ -138,7 +139,7 @@ if [[ "$RUN_PYTHON" == "true" ]] && [[ "$RUN_TESTS" == "true" ]]; then
             echo "    Python tests OK"
         else
             echo "    Python tests FAILED"
-            # Don't fail the whole build for Python test issues
+            FAILED=true
         fi
         cd "$ROOT_DIR"
         echo ""
@@ -151,6 +152,7 @@ if [[ "$RUN_PYTHON" == "true" ]] && [[ "$RUN_TESTS" == "true" ]]; then
                 echo "    Python tests OK"
             else
                 echo "    Python tests FAILED (or no tests found)"
+                FAILED=true
             fi
         else
             echo "    Python build FAILED"

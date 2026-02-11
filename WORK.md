@@ -3,33 +3,37 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 JSONL determinism/input-normalization micro-sprint
+**Focus:** Post-v5.0.2 verification-integrity micro-sprint
 
 ## Sprint Tasks
 
-- [x] JSONL `font.instance.variations`: validate in stable sorted axis-tag order for deterministic diagnostics
-- [x] JSONL parsing: trim surrounding whitespace for `version` and `text.direction` (blank direction defaults to LTR)
-- [x] JSONL processing: reject non-finite/non-positive `font.size` before shaping with explicit error context
+- [x] Canonicalize duplicate OpenType feature tags in both CLI render parsing and JSONL feature parsing (`last value wins`) with regression tests
+- [x] Tighten JSONL `version` validation to reject malformed versions (`empty`, `non-numeric minor`, `extra segments`) while preserving `2`/`2.x` compatibility
+- [x] Make `scripts/test.sh` fail when Python lint/tests fail (when those checks are executed) so success status is trustworthy
 
 ## Research Notes
 
-- Rust `HashMap` iterators are in arbitrary order, so deterministic diagnostics require explicit sorting:
-  https://doc.rust-lang.org/std/collections/hash_map/struct.HashMap.html
-- Rust finite float checks for input validation:
-  https://doc.rust-lang.org/core/primitive.f32.html#method.is_finite
-- Rust string trimming behavior used for robust JSONL parser normalization:
-  https://doc.rust-lang.org/std/primitive.str.html#method.trim
+- HarfBuzz feature parsing and precedence behavior reference:
+  https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-feature-from-string
+- OpenType feature-tag byte constraints reference:
+  https://learn.microsoft.com/en-us/typography/opentype/spec/featuretags
+- Bash `pipefail` behavior reference:
+  https://www.gnu.org/software/bash/manual/bash.html#The-Set-Builtin
 
 ## Verification Results
 
 - `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
-- `cargo test --manifest-path crates/typf-cli/Cargo.toml -- --nocapture`: PASS
+- `cargo test -p typf-cli -- --nocapture`: PASS
+- `./test.sh --python --quick`: PASS
 - `./test.sh --quick`: PASS
 
 ## Notes
 
-- This sprint touched `crates/typf-cli/src/jsonl.rs` plus task-tracking docs.
-- Existing repo-local changes outside this sprint were preserved as-is.
+- Touched code paths:
+  - `crates/typf-cli/src/commands/render.rs`
+  - `crates/typf-cli/src/jsonl.rs`
+  - `scripts/test.sh`
+- Existing unrelated repo changes were preserved.
 
 ## Next
 

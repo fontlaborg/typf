@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 verification-integrity micro-sprint)
+
+- [x] Canonicalize duplicate OpenType feature tags in render CLI and JSONL parsing with deterministic `last value wins` behavior
+- [x] Tighten JSONL `version` parsing to reject malformed values (empty version, non-numeric minor, extra segments)
+- [x] Make `scripts/test.sh` fail on Python lint/test failures when those checks run
+
 ## Completed (2026-02-11 JSONL determinism/input-normalization micro-sprint)
 
 - [x] Validate JSONL `font.instance.variations` in stable sorted axis-tag order so diagnostics are deterministic

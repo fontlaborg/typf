@@ -367,10 +367,12 @@ fn load_font(args: &RenderArgs) -> Result<Arc<dyn FontRef>> {
 }
 
 fn parse_font_size(size_str: &str) -> Result<f32> {
-    let parsed: f32 = if size_str == "em" {
+    let normalized = size_str.trim();
+
+    let parsed: f32 = if normalized.eq_ignore_ascii_case("em") {
         1000.0 // UPM
     } else {
-        size_str
+        normalized
             .parse()
             .map_err(|_| TypfError::Other("Invalid font size".into()))?
     };
@@ -397,47 +399,55 @@ fn resolve_direction(
     language: Option<&str>,
     script_hint: Option<&str>,
 ) -> Result<Direction> {
-    match dir_str {
-        "ltr" => Ok(Direction::LeftToRight),
-        "rtl" => Ok(Direction::RightToLeft),
-        "ttb" => Ok(Direction::TopToBottom),
-        "btt" => Ok(Direction::BottomToTop),
-        "auto" => {
-            let processor = UnicodeProcessor::new();
-            let options = UnicodeOptions {
-                detect_scripts: true,
-                normalize: true,
-                bidi_resolve: true,
-                language: language.map(|l| l.to_string()),
-            };
+    let normalized = dir_str.trim();
 
-            let runs = processor.process(text, &options)?;
+    if normalized.eq_ignore_ascii_case("ltr") {
+        Ok(Direction::LeftToRight)
+    } else if normalized.eq_ignore_ascii_case("rtl") {
+        Ok(Direction::RightToLeft)
+    } else if normalized.eq_ignore_ascii_case("ttb") {
+        Ok(Direction::TopToBottom)
+    } else if normalized.eq_ignore_ascii_case("btt") {
+        Ok(Direction::BottomToTop)
+    } else if normalized.eq_ignore_ascii_case("auto") {
+        let processor = UnicodeProcessor::new();
+        let options = UnicodeOptions {
+            detect_scripts: true,
+            normalize: true,
+            bidi_resolve: true,
+            language: language.map(|l| l.to_string()),
+        };
 
-            let mut direction = runs
-                .iter()
-                .find_map(|run| {
-                    if matches!(
-                        run.direction,
-                        Direction::RightToLeft | Direction::BottomToTop
-                    ) {
-                        Some(run.direction)
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or(Direction::LeftToRight);
+        let runs = processor.process(text, &options)?;
 
-            if direction == Direction::LeftToRight {
-                if let Some(script) = script_hint {
-                    if is_rtl_script(script) {
-                        direction = Direction::RightToLeft;
-                    }
+        let mut direction = runs
+            .iter()
+            .find_map(|run| {
+                if matches!(
+                    run.direction,
+                    Direction::RightToLeft | Direction::BottomToTop
+                ) {
+                    Some(run.direction)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(Direction::LeftToRight);
+
+        if direction == Direction::LeftToRight {
+            if let Some(script) = script_hint {
+                if is_rtl_script(script) {
+                    direction = Direction::RightToLeft;
                 }
             }
+        }
 
-            Ok(direction)
-        },
-        _ => Err(TypfError::Other(format!("Invalid direction: {}", dir_str))),
+        Ok(direction)
+    } else {
+        Err(TypfError::Other(format!(
+            "Invalid direction: {}",
+            normalized
+        )))
     }
 }
 
@@ -495,7 +505,13 @@ fn parse_features(features_str: &Option<String>) -> Result<Vec<(String, u32)>> {
 
     let mut result = Vec::new();
     for part in split_csv_whitespace(features) {
-        result.push(parse_feature_token(part)?);
+        let (tag, value) = parse_feature_token(part)?;
+        if let Some(existing) = result.iter_mut().find(|(existing, _)| existing == &tag) {
+            // Keep stable output ordering while making duplicate tags deterministic.
+            existing.1 = value;
+        } else {
+            result.push((tag, value));
+        }
     }
 
     Ok(result)
@@ -1035,6 +1051,13 @@ mod tests {
     }
 
     #[test]
+    fn direction_accepts_trimmed_case_insensitive_tokens() {
+        let direction = resolve_direction("text", "  RTL\t", None, None)
+            .expect("trimmed uppercase direction should parse");
+        assert_eq!(direction, Direction::RightToLeft);
+    }
+
+    #[test]
     fn glyph_source_parsing_applies_prefer_and_deny() {
         let specs = vec!["prefer=glyf,svg".to_string(), "deny=svg,colr1".to_string()];
 
@@ -1071,6 +1094,20 @@ mod tests {
                 ("kern".to_string(), 0),
                 ("smcp".to_string(), 1),
                 ("cv01".to_string(), 2)
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_features_when_duplicate_tags_then_last_value_wins() {
+        let parsed = parse_features(&Some("+liga kern=0 liga=1 cv01=1 cv01=3".to_string()))
+            .expect("duplicate feature tags should parse deterministically");
+        assert_eq!(
+            parsed,
+            vec![
+                ("liga".to_string(), 1),
+                ("kern".to_string(), 0),
+                ("cv01".to_string(), 3)
             ]
         );
     }
@@ -1176,6 +1213,12 @@ mod tests {
     #[test]
     fn parse_font_size_accepts_em_keyword() {
         let parsed = parse_font_size("em").expect("em keyword should parse");
+        assert_eq!(parsed, 1000.0);
+    }
+
+    #[test]
+    fn parse_font_size_accepts_trimmed_case_insensitive_em_keyword() {
+        let parsed = parse_font_size("  EM\t").expect("trimmed uppercase em keyword should parse");
         assert_eq!(parsed, 1000.0);
     }
 

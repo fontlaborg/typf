@@ -127,6 +127,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - JSONL `version` and `text.direction` parsing now trims surrounding whitespace (blank direction defaults to LTR)
 - JSONL job processing now rejects non-finite `font.size` values before shaping and reports explicit `font.size` validation errors
 - Added JSONL regression tests for whitespace-normalized direction/version parsing, deterministic invalid-axis diagnostics, and non-finite/non-positive `font.size` rejection
+- Render CLI and JSONL feature parsers now resolve duplicate OpenType feature tags deterministically (`last value wins`) with regression coverage
+- JSONL spec-version validation now rejects malformed versions with explicit diagnostics (empty version, non-numeric minor, extra segments)
+- `scripts/test.sh` now fails when Python lint/tests fail (when executed), so verification status reflects actual outcomes
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts
