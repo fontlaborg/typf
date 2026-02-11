@@ -19,6 +19,7 @@ use typf_core::{
     traits::{Exporter, FontRef, Renderer, Shaper},
     types::{Direction, RenderOutput, VectorFormat},
     Color, GlyphSource, GlyphSourcePreference, RenderMode, RenderParams, ShapingParams,
+    MAX_FONT_SIZE,
 };
 use typf_export::{PngExporter, PnmExporter};
 use typf_fontdb::TypfFontFace;
@@ -366,13 +367,28 @@ fn load_font(args: &RenderArgs) -> Result<Arc<dyn FontRef>> {
 }
 
 fn parse_font_size(size_str: &str) -> Result<f32> {
-    if size_str == "em" {
-        Ok(1000.0) // UPM
+    let parsed: f32 = if size_str == "em" {
+        1000.0 // UPM
     } else {
         size_str
             .parse()
-            .map_err(|_| TypfError::Other("Invalid font size".into()))
+            .map_err(|_| TypfError::Other("Invalid font size".into()))?
+    };
+
+    if !parsed.is_finite() {
+        return Err(TypfError::Other("Font size must be finite".into()));
     }
+    if parsed <= 0.0 {
+        return Err(TypfError::Other("Font size must be positive".into()));
+    }
+    if parsed > MAX_FONT_SIZE {
+        return Err(TypfError::Other(format!(
+            "Font size {} exceeds maximum {}",
+            parsed, MAX_FONT_SIZE
+        )));
+    }
+
+    Ok(parsed)
 }
 
 fn resolve_direction(
@@ -526,8 +542,11 @@ fn parse_feature_token(part: &str) -> Result<(String, u32)> {
 /// Supports formats:
 /// - "wght=700,wdth=100" - Axis values
 /// - "wght:700 wdth:100" - Alternative separator
-/// - "Bold" - Named instance (not yet supported, returns empty)
+///
+/// Named instances like "Bold" are not supported by this parser.
 fn parse_variations(instance_str: &Option<String>) -> Result<Vec<(String, f32)>> {
+    use std::collections::BTreeMap;
+
     let Some(instance) = instance_str else {
         return Ok(Vec::new());
     };
@@ -537,7 +556,7 @@ fn parse_variations(instance_str: &Option<String>) -> Result<Vec<(String, f32)>>
         return Ok(Vec::new());
     }
 
-    let mut result = Vec::new();
+    let mut parsed = BTreeMap::new();
 
     for part in split_csv_whitespace(instance) {
         // Try axis=value or axis:value format
@@ -546,11 +565,24 @@ fn parse_variations(instance_str: &Option<String>) -> Result<Vec<(String, f32)>>
         } else if let Some(pos) = part.find(':') {
             (&part[..pos], &part[pos + 1..])
         } else {
-            // Named instance - skip for now (would need font parsing)
-            continue;
+            return Err(TypfError::Other(format!(
+                "Invalid axis token '{}': expected axis=value or axis:value",
+                part
+            )));
         };
 
         let tag = tag.trim();
+        if !tag
+            .as_bytes()
+            .iter()
+            .all(|byte| (0x20..=0x7E).contains(byte))
+        {
+            return Err(TypfError::Other(format!(
+                "Invalid axis tag '{}': expected printable ASCII characters",
+                tag
+            )));
+        }
+
         if tag.len() != 4 {
             return Err(TypfError::Other(format!(
                 "Invalid axis tag '{}': must be exactly 4 characters",
@@ -563,10 +595,18 @@ fn parse_variations(instance_str: &Option<String>) -> Result<Vec<(String, f32)>>
             .parse()
             .map_err(|_| TypfError::Other(format!("Invalid axis value: {}", part)))?;
 
-        result.push((tag.to_string(), val));
+        if !val.is_finite() {
+            return Err(TypfError::Other(format!(
+                "Invalid axis value '{}': must be finite",
+                part
+            )));
+        }
+
+        // Last occurrence wins so repeated tags are deterministic.
+        parsed.insert(tag.to_string(), val);
     }
 
-    Ok(result)
+    Ok(parsed.into_iter().collect())
 }
 
 /// Parse glyph-source preference/deny arguments
@@ -1076,10 +1116,40 @@ mod tests {
         assert_eq!(
             parsed,
             vec![
-                ("wght".to_string(), 700.0),
+                ("opsz".to_string(), 14.0),
                 ("wdth".to_string(), 95.0),
-                ("opsz".to_string(), 14.0)
+                ("wght".to_string(), 700.0)
             ]
+        );
+    }
+
+    #[test]
+    fn parse_variations_rejects_named_instance_token() {
+        let err =
+            parse_variations(&Some("Bold".to_string())).expect_err("named instances are rejected");
+        assert!(
+            format!("{err}").contains("expected axis=value or axis:value"),
+            "error should explain supported axis syntax"
+        );
+    }
+
+    #[test]
+    fn parse_variations_rejects_non_ascii_tag() {
+        let err = parse_variations(&Some("\u{7f}ght=700".to_string()))
+            .expect_err("non-ascii variation axis tags should fail");
+        assert!(
+            format!("{err}").contains("printable ASCII"),
+            "error should mention ASCII validation"
+        );
+    }
+
+    #[test]
+    fn parse_variations_when_duplicate_axis_then_last_value_wins() {
+        let parsed = parse_variations(&Some("wght=400,wdth=90,wght=700".to_string()))
+            .expect("duplicate axis tags should parse deterministically");
+        assert_eq!(
+            parsed,
+            vec![("wdth".to_string(), 90.0), ("wght".to_string(), 700.0)]
         );
     }
 
@@ -1090,6 +1160,49 @@ mod tests {
         assert_eq!(
             pref.prefer,
             vec![GlyphSource::Glyf, GlyphSource::Svg, GlyphSource::Cff2]
+        );
+    }
+
+    #[test]
+    fn parse_font_size_accepts_em_keyword() {
+        let parsed = parse_font_size("em").expect("em keyword should parse");
+        assert_eq!(parsed, 1000.0);
+    }
+
+    #[test]
+    fn parse_font_size_rejects_non_finite_values() {
+        let err = parse_font_size("NaN").expect_err("NaN should be rejected");
+        assert!(
+            format!("{err}").contains("finite"),
+            "expected finite-size validation message, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn parse_font_size_rejects_non_positive_values() {
+        let zero_err = parse_font_size("0").expect_err("zero size should be rejected");
+        let negative_err = parse_font_size("-12").expect_err("negative size should be rejected");
+        assert!(
+            format!("{zero_err}").contains("positive"),
+            "expected positive-size validation message, got: {}",
+            zero_err
+        );
+        assert!(
+            format!("{negative_err}").contains("positive"),
+            "expected positive-size validation message, got: {}",
+            negative_err
+        );
+    }
+
+    #[test]
+    fn parse_font_size_rejects_values_above_maximum() {
+        let oversized = format!("{}", MAX_FONT_SIZE + 1.0);
+        let err = parse_font_size(&oversized).expect_err("oversized font should be rejected");
+        assert!(
+            format!("{err}").contains("exceeds maximum"),
+            "expected maximum-size validation message, got: {}",
+            err
         );
     }
 }

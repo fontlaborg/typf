@@ -3,32 +3,37 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 batch hardening micro-sprint
+**Focus:** Post-v5.0.2 CLI/JSONL input-hardening micro-sprint
 
 ## Sprint Tasks
 
-- [x] Batch CLI: reject unsafe `output` paths (`..`, absolute paths, missing file names)
-- [x] Batch CLI: validate output filename pattern requires `{}` placeholder
-- [x] Batch CLI: reject unsupported `format` values and unknown JSON fields in batch jobs
+- [x] CLI `--instance` parsing: reject unsupported named-instance tokens and validate axis tags as 4 printable ASCII bytes
+- [x] CLI variation parsing: canonicalize axis list (sorted, duplicate axis tags resolve deterministically with last value)
+- [x] CLI font-size parsing: reject non-finite/non-positive values and values above `MAX_FONT_SIZE`
+- [x] JSONL validation: enforce supported `rendering.encoding` values (`base64|plain`) and validate/sort `font.instance.variations`
+- [x] JSONL text-feature parsing: accept comma/tab/newline delimiters consistently
 
 ## Research Notes
 
-- Rust `Path::components` reference (path-segment validation):
-  https://doc.rust-lang.org/std/path/struct.Path.html#method.components
-- Rust `Path::is_absolute` reference (absolute-path rejection):
-  https://doc.rust-lang.org/std/path/struct.Path.html#method.is_absolute
-- Serde `deny_unknown_fields` reference (strict JSON schema):
-  https://serde.rs/container-attrs.html#deny_unknown_fields
+- OpenType axis tags are 4-byte tags:
+  https://learn.microsoft.com/en-us/typography/opentype/spec/dvaraxisreg
+- OpenType feature tags are 4-byte tags:
+  https://learn.microsoft.com/en-us/typography/opentype/spec/featuretags
+- HarfBuzz feature parsing reference:
+  https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-feature-from-string
+- Rust finite-float checks (`f32::is_finite`):
+  https://doc.rust-lang.org/core/primitive.f32.html#method.is_finite
 
 ## Verification Results
 
 - `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
 - `cargo test --manifest-path crates/typf-cli/Cargo.toml -- --nocapture`: PASS
-- `./test.sh --rust --quick`: PASS
+- `./test.sh --quick`: PASS
 
 ## Notes
 
-- `cargo fmt --all` still fails in this repo snapshot due missing vendored `external/vello/vello/Cargo.toml`; scoped formatting via `--manifest-path crates/typf-cli/Cargo.toml` remains required.
+- This sprint touched only `crates/typf-cli/src/commands/render.rs` and `crates/typf-cli/src/jsonl.rs`.
+- Existing repo-local changes outside this sprint were preserved as-is.
 
 ## Next
 

@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, and batch-hardening micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, and input-validation parity micro-sprints complete.
 
 ## TLDR
 
@@ -55,6 +55,24 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - Batch command now validates output filename pattern requires `{}` placeholder
 - Batch command now rejects unsafe output paths (`..`, absolute paths, missing file name) outside `--output`
 - Batch command now rejects unsupported `format` values and unknown JSON fields in batch jobs
+
+### Post-v5.0.2 CLI/JSONL Hardening Micro-Sprint (2026-02-11)
+
+- Render CLI `--instance` parsing now rejects unsupported named-instance tokens (requires `axis=value`/`axis:value`)
+- Render CLI variation parsing now enforces printable-ASCII 4-byte axis tags and canonicalizes duplicate axes deterministically
+- JSONL parsing now validates/sorts `font.instance.variations` axis settings and restricts `rendering.encoding` to `base64|plain`
+
+### Post-v5.0.2 Parser Consistency Micro-Sprint (2026-02-11)
+
+- Render CLI variation parsing now reports non-ASCII axis-tag violations deterministically before length validation
+- JSONL `font.instance.variations` axis-tag validation now mirrors the same non-ASCII-first validation order
+- JSONL `text.features` tokenization now accepts mixed comma/tab/newline delimiters (CLI parity) with regression coverage
+
+### Post-v5.0.2 Input Validation Parity Micro-Sprint (2026-02-11)
+
+- `typf-core` `ShapingParams::validate()` now rejects non-finite font sizes (`NaN`, `+/-inf`) before range checks
+- Batch CLI per-job format parsing now supports `png1`, `png4`, and `png8` (full parity with CLI output enum)
+- JSONL `rendering.encoding` parsing now trims surrounding whitespace for `base64|plain` values and includes delimiter/encoding regression coverage
 
 ## Plan Steps (authoritative details)
 

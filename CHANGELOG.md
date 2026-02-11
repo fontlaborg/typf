@@ -111,6 +111,15 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - `typf batch` now rejects unsafe job `output` paths (`..`, absolute paths, missing file name) to keep writes inside `--output`
 - `typf batch` now rejects unsupported per-job output formats instead of silently defaulting to PNG
 - `typf batch` JSON parsing now rejects unknown fields via strict `deny_unknown_fields`
+- `typf render --instance` now rejects unsupported named-instance tokens and requires `axis=value` or `axis:value` syntax
+- `typf render --instance` now validates axis tags as printable ASCII 4-byte tags and canonicalizes duplicate axes deterministically
+- JSONL now validates `rendering.encoding` (`base64|plain`) and validates/sorts `font.instance.variations` axis settings before shaping
+- CLI variation axis-tag validation now reports non-ASCII violations before length errors for deterministic diagnostics
+- JSONL axis-tag validation for `font.instance.variations` now mirrors CLI ordering (ASCII-range check before length check)
+- JSONL `text.features` parsing now accepts mixed comma/tab/newline separators (parity with render CLI parser)
+- `typf-core` shaping parameter validation now rejects non-finite font sizes (`NaN`, `+/-inf`) before positive/range checks
+- `typf batch` per-job output format parsing now supports `png1`, `png4`, and `png8` (matching CLI format enum)
+- JSONL `rendering.encoding` parsing now accepts case-insensitive `base64|plain` values with surrounding whitespace
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

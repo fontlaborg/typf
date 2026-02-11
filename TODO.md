@@ -9,6 +9,24 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 input-validation parity micro-sprint)
+
+- [x] Reject non-finite shaping font sizes (`NaN`, `+/-inf`) in `typf-core::ShapingParams::validate()`
+- [x] Support `png1`, `png4`, and `png8` in `typf batch` per-job `format` parsing
+- [x] Trim surrounding whitespace in JSONL `rendering.encoding` (`base64|plain`) parsing and add regression tests
+
+## Completed (2026-02-11 parser consistency micro-sprint)
+
+- [x] Make CLI variation axis-tag validation report non-ASCII violations before length errors for deterministic diagnostics
+- [x] Align JSONL `font.instance.variations` axis-tag validation order with CLI (`ASCII range` before `length`)
+- [x] Accept mixed comma/tab/newline delimiters in JSONL `text.features` parsing with regression tests
+
+## Completed (2026-02-11 CLI/JSONL hardening micro-sprint)
+
+- [x] Reject unsupported named-instance tokens in CLI `--instance` parsing (`axis=value`/`axis:value` only)
+- [x] Validate CLI variation axis tags as 4 printable ASCII bytes and canonicalize parsed variations (sorted, duplicate tags deterministic)
+- [x] Validate JSONL `rendering.encoding` (`base64|plain`) plus `font.instance.variations` axis tags/values with deterministic sorted output
+
 ## Completed (2026-02-11 batch hardening micro-sprint)
 
 - [x] Validate batch output filename pattern requires `{}` placeholder

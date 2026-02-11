@@ -388,6 +388,18 @@ fn process_job(job: &Job) -> JobResult {
         Err(e) => return JobResult::error(&job.id, format!("Invalid OpenType feature: {}", e)),
     };
 
+    let variations = match parse_instance_variations(&job.font.instance.variations) {
+        Ok(variations) => variations,
+        Err(e) => {
+            return JobResult::error(&job.id, format!("Invalid font.instance.variations: {}", e))
+        },
+    };
+
+    let encoding = match parse_rendering_encoding(&job.rendering.encoding) {
+        Ok(encoding) => encoding,
+        Err(e) => return JobResult::error(&job.id, format!("Invalid rendering.encoding: {}", e)),
+    };
+
     // Create shaping parameters
     let shaping_params = ShapingParams {
         size: job.font.size,
@@ -395,13 +407,7 @@ fn process_job(job: &Job) -> JobResult {
         language: job.text.language.clone(),
         script: job.text.script.clone(),
         features,
-        variations: job
-            .font
-            .instance
-            .variations
-            .iter()
-            .map(|(k, v)| (k.clone(), *v))
-            .collect(),
+        variations,
         letter_spacing: 0.0,
     };
 
@@ -492,11 +498,10 @@ fn process_job(job: &Job) -> JobResult {
         _ => (0, 0),
     };
 
-    // Base64 encode if requested
-    let data = if job.rendering.encoding == "base64" {
-        BASE64.encode(&exported)
-    } else {
-        String::from_utf8_lossy(&exported).to_string()
+    // Encode output payload based on requested transport encoding.
+    let data = match encoding {
+        RenderingEncoding::Base64 => BASE64.encode(&exported),
+        RenderingEncoding::Plain => String::from_utf8_lossy(&exported).to_string(),
     };
 
     let total_ms = start.elapsed().as_secs_f64() * 1000.0;
@@ -505,7 +510,7 @@ fn process_job(job: &Job) -> JobResult {
         job.id.clone(),
         RenderingOutput {
             format: job.rendering.format.clone(),
-            encoding: job.rendering.encoding.clone(),
+            encoding: encoding.as_str().to_string(),
             data,
             width,
             height,
@@ -523,6 +528,66 @@ fn process_job(job: &Job) -> JobResult {
             total_ms,
         },
     )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RenderingEncoding {
+    Base64,
+    Plain,
+}
+
+impl RenderingEncoding {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Base64 => "base64",
+            Self::Plain => "plain",
+        }
+    }
+}
+
+fn parse_rendering_encoding(raw: &str) -> Result<RenderingEncoding, String> {
+    let normalized = raw.trim();
+    if normalized.eq_ignore_ascii_case("base64") {
+        Ok(RenderingEncoding::Base64)
+    } else if normalized.eq_ignore_ascii_case("plain") {
+        Ok(RenderingEncoding::Plain)
+    } else {
+        Err(format!(
+            "'{}' is not supported; expected one of: base64, plain",
+            raw
+        ))
+    }
+}
+
+fn parse_instance_variations(raw: &HashMap<String, f32>) -> Result<Vec<(String, f32)>, String> {
+    let mut parsed: Vec<(String, f32)> = Vec::with_capacity(raw.len());
+
+    for (tag, value) in raw {
+        if !tag
+            .as_bytes()
+            .iter()
+            .all(|byte| (0x20..=0x7E).contains(byte))
+        {
+            return Err(format!("axis '{}' must use ASCII bytes in 0x20..0x7E", tag));
+        }
+
+        if tag.len() != 4 {
+            return Err(format!(
+                "axis '{}' has invalid tag length {}; expected 4 characters",
+                tag,
+                tag.len()
+            ));
+        }
+
+        if !value.is_finite() {
+            return Err(format!("axis '{}' has non-finite value {}", tag, value));
+        }
+
+        parsed.push((tag.clone(), *value));
+    }
+
+    parsed.sort_by(|left, right| left.0.cmp(&right.0));
+    Ok(parsed)
 }
 
 fn validate_spec_version(version: &str) -> Result<(), String> {
@@ -568,7 +633,7 @@ fn parse_text_features(feature_specs: &[String]) -> Result<Vec<(String, u32)>, S
     let mut parsed = Vec::new();
 
     for spec in feature_specs {
-        for token in spec.split([',', ' ']) {
+        for token in spec.split([',', ' ', '\t', '\n', '\r']) {
             let token = token.trim();
             if token.is_empty() {
                 continue;
@@ -826,6 +891,124 @@ mod tests {
         assert!(
             error.contains("0x20..0x7E"),
             "expected ASCII-range validation error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_text_features_when_tab_newline_separated_then_parsed_values() {
+        let parsed = parse_text_features(&["+liga,\tkern=0\nsmcp".to_string()])
+            .expect("tab/newline-delimited feature list should parse");
+        assert_eq!(
+            parsed,
+            vec![
+                ("liga".to_string(), 1),
+                ("kern".to_string(), 0),
+                ("smcp".to_string(), 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_rendering_encoding_accepts_case_insensitive_values() {
+        assert_eq!(
+            parse_rendering_encoding("base64").expect("base64 should parse"),
+            RenderingEncoding::Base64
+        );
+        assert_eq!(
+            parse_rendering_encoding("PLAIN").expect("plain should parse"),
+            RenderingEncoding::Plain
+        );
+    }
+
+    #[test]
+    fn test_parse_rendering_encoding_accepts_surrounding_whitespace() {
+        assert_eq!(
+            parse_rendering_encoding("  base64\t").expect("trimmed base64 should parse"),
+            RenderingEncoding::Base64
+        );
+        assert_eq!(
+            parse_rendering_encoding("\nplain ").expect("trimmed plain should parse"),
+            RenderingEncoding::Plain
+        );
+    }
+
+    #[test]
+    fn test_parse_rendering_encoding_rejects_unknown_value() {
+        let error = parse_rendering_encoding("hex").expect_err("unknown encoding should fail");
+        assert!(
+            error.contains("expected one of: base64, plain"),
+            "expected supported-encoding guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_instance_variations_sorts_by_axis_tag() {
+        let mut raw = HashMap::new();
+        raw.insert("wght".to_string(), 700.0);
+        raw.insert("opsz".to_string(), 12.0);
+        raw.insert("wdth".to_string(), 110.0);
+
+        let parsed = parse_instance_variations(&raw).expect("variations should parse");
+        assert_eq!(
+            parsed,
+            vec![
+                ("opsz".to_string(), 12.0),
+                ("wdth".to_string(), 110.0),
+                ("wght".to_string(), 700.0),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_instance_variations_rejects_invalid_tag_length() {
+        let mut raw = HashMap::new();
+        raw.insert("weight".to_string(), 700.0);
+
+        let error = parse_instance_variations(&raw).expect_err("invalid tag length must fail");
+        assert!(
+            error.contains("expected 4 characters"),
+            "expected tag-length validation error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_instance_variations_rejects_non_printable_ascii_tag() {
+        let mut raw = HashMap::new();
+        raw.insert("\u{7f}ght".to_string(), 700.0);
+
+        let error = parse_instance_variations(&raw).expect_err("non-printable ascii must fail");
+        assert!(
+            error.contains("0x20..0x7E"),
+            "expected ASCII-range validation error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_instance_variations_rejects_non_ascii_multibyte_tag() {
+        let mut raw = HashMap::new();
+        raw.insert("éght".to_string(), 700.0);
+
+        let error = parse_instance_variations(&raw).expect_err("non-ascii tags must fail");
+        assert!(
+            error.contains("0x20..0x7E"),
+            "expected ASCII-range validation error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_instance_variations_rejects_non_finite_value() {
+        let mut raw = HashMap::new();
+        raw.insert("wght".to_string(), f32::INFINITY);
+
+        let error = parse_instance_variations(&raw).expect_err("non-finite values must fail");
+        assert!(
+            error.contains("non-finite value"),
+            "expected finite-value validation error, got: {}",
             error
         );
     }
