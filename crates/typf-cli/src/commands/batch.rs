@@ -1,16 +1,18 @@
 //! Batch command implementation
 //!
 //! Processes multiple rendering jobs from a JSONL file.
+// this_file: crates/typf-cli/src/commands/batch.rs
 
-use crate::cli::BatchArgs;
+use crate::cli::{BatchArgs, OutputFormat};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use typf::error::{Result, TypfError};
 
 /// JSONL job specification
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct BatchJob {
     /// Text to render
     text: String,
@@ -63,6 +65,7 @@ pub fn run(args: &BatchArgs) -> Result<()> {
     if !args.output.exists() {
         std::fs::create_dir_all(&args.output)?;
     }
+    validate_output_pattern(&args.pattern)?;
 
     // Process each job
     let mut job_count = 0;
@@ -88,11 +91,23 @@ pub fn run(args: &BatchArgs) -> Result<()> {
         };
 
         // Determine output file
-        let output_file = if let Some(ref output) = job.output {
-            args.output.join(output)
-        } else {
-            let filename = args.pattern.replace("{}", &job_count.to_string());
-            args.output.join(filename)
+        let output_file = match resolve_output_file(
+            &args.output,
+            &args.pattern,
+            job_count,
+            job.output.as_deref(),
+        ) {
+            Ok(path) => path,
+            Err(e) => {
+                eprintln!(
+                    "Error processing job {} (line {}): {}",
+                    job_count,
+                    line_num + 1,
+                    e
+                );
+                error_count += 1;
+                continue;
+            },
         };
 
         if args.verbose {
@@ -137,22 +152,82 @@ pub fn run(args: &BatchArgs) -> Result<()> {
     }
 }
 
+fn validate_output_pattern(pattern: &str) -> Result<()> {
+    if pattern.contains("{}") {
+        Ok(())
+    } else {
+        Err(TypfError::ConfigError(
+            "Output filename pattern must contain '{}' placeholder".to_string(),
+        ))
+    }
+}
+
+fn validate_relative_output_path(relative_path: &Path) -> Result<()> {
+    if relative_path.as_os_str().is_empty() {
+        return Err(TypfError::ConfigError(
+            "Output filename cannot be empty".to_string(),
+        ));
+    }
+    if relative_path.is_absolute() {
+        return Err(TypfError::ConfigError(
+            "Batch job output path must be relative to --output directory".to_string(),
+        ));
+    }
+    #[cfg(windows)]
+    if relative_path
+        .components()
+        .any(|component| matches!(component, Component::Prefix(_)))
+    {
+        return Err(TypfError::ConfigError(
+            "Batch job output path must not include a drive prefix".to_string(),
+        ));
+    }
+    if relative_path
+        .components()
+        .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Err(TypfError::ConfigError(
+            "Batch job output path must not contain '..' segments".to_string(),
+        ));
+    }
+    if relative_path.file_name().is_none() {
+        return Err(TypfError::ConfigError(
+            "Batch job output path must include a file name".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn resolve_output_file(
+    output_dir: &Path,
+    output_pattern: &str,
+    job_index: usize,
+    job_output: Option<&str>,
+) -> Result<PathBuf> {
+    let relative_path = match job_output {
+        Some(output) => PathBuf::from(output),
+        None => PathBuf::from(output_pattern.replace("{}", &job_index.to_string())),
+    };
+
+    validate_relative_output_path(&relative_path)?;
+
+    let output_file = output_dir.join(relative_path);
+    if let Some(parent) = output_file.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    Ok(output_file)
+}
+
 fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<()> {
     // Build RenderArgs from BatchJob
     // For now, this is a simplified version
     // In practice, you would construct proper RenderArgs and call render::run()
 
-    use crate::cli::{OutputFormat, RenderArgs};
+    use crate::cli::RenderArgs;
     use crate::commands::render;
 
-    let format = match job.format.as_deref() {
-        Some("png") => OutputFormat::Png,
-        Some("svg") => OutputFormat::Svg,
-        Some("pbm") => OutputFormat::Pbm,
-        Some("pgm") => OutputFormat::Pgm,
-        Some("ppm") => OutputFormat::Ppm,
-        _ => OutputFormat::Png,
-    };
+    let format = parse_output_format(job.format.as_deref())?;
 
     let render_args = RenderArgs {
         text: Some(job.text.clone()),
@@ -194,4 +269,153 @@ fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<(
     };
 
     render::run(&render_args)
+}
+
+fn parse_output_format(raw: Option<&str>) -> Result<OutputFormat> {
+    let Some(raw) = raw else {
+        return Ok(OutputFormat::Png);
+    };
+    let normalized = raw.trim().to_ascii_lowercase();
+    match normalized.as_str() {
+        "png" => Ok(OutputFormat::Png),
+        "svg" => Ok(OutputFormat::Svg),
+        "pbm" => Ok(OutputFormat::Pbm),
+        "pgm" => Ok(OutputFormat::Pgm),
+        "ppm" => Ok(OutputFormat::Ppm),
+        _ => Err(TypfError::ConfigError(format!(
+            "Unsupported batch output format '{}'; expected one of: png, svg, pbm, pgm, ppm",
+            raw
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_dir(prefix: &str) -> PathBuf {
+        let mut path = std::env::temp_dir();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after epoch")
+            .as_nanos();
+        path.push(format!("typf_cli_batch_{}_{}", prefix, nanos));
+        std::fs::create_dir_all(&path).expect("temp dir should be created");
+        path
+    }
+
+    #[test]
+    fn test_validate_output_pattern_when_missing_placeholder_then_error() {
+        let error = validate_output_pattern("out.png")
+            .expect_err("pattern without placeholder should be rejected");
+        assert!(
+            error.to_string().contains("placeholder"),
+            "expected placeholder validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_validate_output_pattern_when_present_then_ok() {
+        validate_output_pattern("out_{}.png").expect("pattern with placeholder should pass");
+    }
+
+    #[test]
+    fn test_resolve_output_file_when_nested_relative_then_created_under_output_dir() {
+        let output_dir = temp_dir("nested");
+        let resolved = resolve_output_file(
+            &output_dir,
+            "unused_{}.png",
+            1,
+            Some("nested/job/output.png"),
+        )
+        .expect("nested relative output should be accepted");
+
+        assert_eq!(
+            resolved,
+            output_dir.join("nested/job/output.png"),
+            "output should stay inside output dir"
+        );
+        assert!(
+            output_dir.join("nested/job").exists(),
+            "parent directories should be created"
+        );
+
+        std::fs::remove_dir_all(output_dir).expect("temp dir cleanup should succeed");
+    }
+
+    #[test]
+    fn test_resolve_output_file_when_parent_segment_then_error() {
+        let output_dir = temp_dir("parent_dir");
+        let error = resolve_output_file(&output_dir, "unused_{}.png", 1, Some("../escape.png"))
+            .expect_err("parent-dir traversal should fail");
+        assert!(
+            error.to_string().contains(".."),
+            "expected parent-dir validation message, got: {}",
+            error
+        );
+
+        std::fs::remove_dir_all(output_dir).expect("temp dir cleanup should succeed");
+    }
+
+    #[test]
+    fn test_resolve_output_file_when_absolute_path_then_error() {
+        let output_dir = temp_dir("absolute");
+        #[cfg(unix)]
+        let absolute = "/tmp/escape.png";
+        #[cfg(windows)]
+        let absolute = "C:\\temp\\escape.png";
+
+        let error = resolve_output_file(&output_dir, "unused_{}.png", 1, Some(absolute))
+            .expect_err("absolute output path should fail");
+        assert!(
+            error.to_string().contains("relative"),
+            "expected relative-path validation message, got: {}",
+            error
+        );
+
+        std::fs::remove_dir_all(output_dir).expect("temp dir cleanup should succeed");
+    }
+
+    #[test]
+    fn test_parse_output_format_when_none_then_defaults_to_png() {
+        let format = parse_output_format(None).expect("default format should parse");
+        assert!(matches!(format, crate::cli::OutputFormat::Png));
+    }
+
+    #[test]
+    fn test_parse_output_format_when_uppercase_then_parsed_case_insensitively() {
+        let format = parse_output_format(Some("SVG")).expect("uppercase SVG should parse");
+        assert!(matches!(format, crate::cli::OutputFormat::Svg));
+    }
+
+    #[test]
+    fn test_parse_output_format_when_unknown_then_error() {
+        let error = parse_output_format(Some("gif"))
+            .expect_err("unsupported output format should be rejected");
+        assert!(
+            error
+                .to_string()
+                .contains("Unsupported batch output format"),
+            "expected unsupported-format error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_batch_job_deserialization_when_unknown_field_then_error() {
+        let input = r#"{
+            "text":"Hello",
+            "font":"font.ttf",
+            "unknown_field":"unexpected value"
+        }"#;
+        let error = serde_json::from_str::<BatchJob>(input)
+            .expect_err("unknown JSON field should fail due to deny_unknown_fields");
+        assert!(
+            error.to_string().contains("unknown field"),
+            "expected serde unknown-field error, got: {}",
+            error
+        );
+    }
 }

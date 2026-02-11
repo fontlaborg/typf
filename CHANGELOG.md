@@ -107,6 +107,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - `typf render` feature parsing now accepts mixed comma/tab/newline separators
 - `typf render` variation axis parsing now accepts mixed comma/tab/newline separators
 - `typf render --glyph-source` list parsing now accepts mixed comma/tab/newline separators
+- `typf batch` now validates that `--pattern` includes the `{}` placeholder
+- `typf batch` now rejects unsafe job `output` paths (`..`, absolute paths, missing file name) to keep writes inside `--output`
+- `typf batch` now rejects unsupported per-job output formats instead of silently defaulting to PNG
+- `typf batch` JSON parsing now rejects unknown fields via strict `deny_unknown_fields`
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

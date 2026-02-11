@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 batch hardening micro-sprint)
+
+- [x] Validate batch output filename pattern requires `{}` placeholder
+- [x] Validate batch output paths are confined to `--output` (reject `..`, absolute paths, and directory-only values)
+- [x] Reject unsupported batch output `format` values and unknown JSON fields with regression tests
+
 ## Completed (2026-02-11 parser delimiter micro-sprint)
 
 - [x] Accept mixed comma/tab/newline separators for render CLI OpenType feature parsing

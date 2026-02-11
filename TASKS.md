@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, and parser micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, and batch-hardening micro-sprints complete.
 
 ## TLDR
 
@@ -49,6 +49,12 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - Render CLI token parsing now accepts mixed comma/tab/newline separators for OpenType features
 - Render CLI variation-axis parsing now accepts mixed comma/tab/newline separators
 - Glyph-source list parsing now accepts mixed comma/tab/newline separators
+
+### Post-v5.0.2 Batch Hardening Micro-Sprint (2026-02-11)
+
+- Batch command now validates output filename pattern requires `{}` placeholder
+- Batch command now rejects unsafe output paths (`..`, absolute paths, missing file name) outside `--output`
+- Batch command now rejects unsupported `format` values and unknown JSON fields in batch jobs
 
 ## Plan Steps (authoritative details)
 
