@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, and cross-CLI unicode/color parser-parity micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, cross-CLI unicode/color parser-parity, and render face-index/glyph-source plus JSONL stream duplicate-id micro-sprints complete.
 
 ## TLDR
 
@@ -18,6 +18,13 @@
 - **Platform Docs**: Vello-GPU platform matrix in `src_docs/26-vello-gpu-platform-support.md`
 
 The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` is the flat actionable backlog.
+
+### Post-v5.0.2 Render Face-Index/Glyph-Source + JSONL Stream Duplicate-ID Micro-Sprint (2026-02-11)
+
+- `typf render` now honors `--face-index` by loading fonts through `TypfFontFace::from_file_index(...)`
+- `typf render` font-load failures now include contextual `face_index=<n>` diagnostics
+- `typf render --glyph-source` now trims whitespace around `prefer=`/`deny=` keys/lists and rejects blank lists
+- JSONL stream mode now rejects duplicate `job.id` values across lines with line-aware validation errors
 
 ### Post-v5.0.2 Cross-CLI Unicode/Color Parser-Parity Micro-Sprint (2026-02-11)
 

@@ -301,6 +301,7 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
     use std::io::{stdin, stdout, BufRead, Write};
 
     let mut out = stdout().lock();
+    let mut seen_job_ids = HashSet::new();
 
     // Read, process, and output one job at a time
     for (line_index, line) in stdin().lock().lines().enumerate() {
@@ -323,7 +324,7 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
             },
         };
 
-        if let Err(error) = validate_job_id(&job.id) {
+        if let Err(error) = validate_stream_job_id(&job.id, line_number, &mut seen_job_ids) {
             let error_result = stream_error(
                 "validation_error",
                 line_number,
@@ -716,6 +717,21 @@ fn validate_job_ids(jobs: &[Job]) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_stream_job_id<'a>(
+    id: &'a str,
+    line_number: usize,
+    seen: &mut HashSet<String>,
+) -> Result<&'a str, String> {
+    let normalized = validate_job_id(id)?;
+    if !seen.insert(normalized.to_string()) {
+        return Err(format!(
+            "duplicate job.id '{}' at line {}",
+            normalized, line_number
+        ));
+    }
+    Ok(normalized)
+}
+
 fn stream_error(error_kind: &str, line_number: usize, message: impl Into<String>) -> JobResult {
     JobResult::error(
         format!("{}_line_{}", error_kind, line_number),
@@ -846,6 +862,7 @@ fn parse_feature_token(token: &str) -> Result<(String, u32), String> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::collections::HashSet;
     use typf_core::types::Direction;
 
     fn test_job(id: &str) -> Job {
@@ -1179,6 +1196,31 @@ mod tests {
         assert!(
             annotated.error.is_none(),
             "success results should not gain synthetic errors"
+        );
+    }
+
+    #[test]
+    fn test_validate_stream_job_id_when_first_occurrence_then_accepts() {
+        let mut seen = HashSet::new();
+        let validated = validate_stream_job_id("job-1", 1, &mut seen)
+            .expect("first valid stream job id should be accepted");
+        assert_eq!(validated, "job-1");
+        assert!(
+            seen.contains("job-1"),
+            "accepted stream IDs should be tracked for duplicate detection"
+        );
+    }
+
+    #[test]
+    fn test_validate_stream_job_id_when_duplicate_then_rejects_with_line_context() {
+        let mut seen = HashSet::new();
+        validate_stream_job_id("job-1", 1, &mut seen).expect("first id should be accepted");
+        let error = validate_stream_job_id("job-1", 4, &mut seen)
+            .expect_err("duplicate stream job id should fail");
+        assert!(
+            error.contains("duplicate job.id 'job-1' at line 4"),
+            "expected duplicate-id line-aware error, got: {}",
+            error
         );
     }
 

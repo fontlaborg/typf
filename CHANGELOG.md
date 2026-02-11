@@ -148,14 +148,18 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Rust and Python CLI Unicode decoders now support 8-digit uppercase escapes (`\UXXXXXXXX`) with malformed `\U` literals preserved verbatim
 - JSONL stream parse/validation failures now include source line numbers and emit line-aware synthetic IDs for diagnostics
 - JSONL stream execution failures now preserve job IDs while prefixing error messages with source line numbers
+- JSONL stream validation now rejects duplicate `job.id` values across lines with explicit line-aware diagnostics
 - `typf render` color parsing now accepts trimmed shorthand hex inputs (`RGB`/`RGBA`) in addition to full hex forms
 - `typf render` font-size parse errors now include the invalid token and expected syntax (`number` or `em`)
 - Python CLI `parse_color()` now accepts trimmed shorthand hex inputs (`RGB`/`RGBA`) for parity with Rust CLI behavior
 - JSONL job processing now uses `TypfFontFace::from_file_index()` for font loading instead of a placeholder font shim
 - JSONL job processing now respects `font.source.face_index` and reports load failures with explicit `face_index=<n>` context
+- `typf render` now honors `--face-index` by loading fonts with `TypfFontFace::from_file_index(...)`
+- `typf render` font-load failures now include contextual `face_index=<n>` details
 - JSONL shaping now normalizes optional `text.language` and `text.script` hints (trim + blank to `None`) before dispatch
 - Added JSONL regression tests for face-index loading behavior and text-hint normalization
 - Added Python CLI regression coverage for shorthand/trimmed color parsing (`bindings/python/tests/test_cli_color_parsing.py`)
+- `typf render --glyph-source` now trims `prefer=`/`deny=` key+list whitespace and rejects blank source lists
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

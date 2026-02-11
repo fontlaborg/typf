@@ -9,6 +9,13 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 render face-index/glyph-source + JSONL stream duplicate-id micro-sprint)
+
+- [x] Make `typf render` honor `--face-index` by loading via `TypfFontFace::from_file_index(...)`
+- [x] Include contextual `face_index=<n>` diagnostics in `typf render` font-load failures
+- [x] Trim `--glyph-source` `prefer=`/`deny=` key+list whitespace and reject blank source lists with explicit errors
+- [x] Reject duplicate JSONL stream `job.id` values across lines with line-aware validation errors
+
 ## Completed (2026-02-11 cross-CLI unicode/color parser-parity micro-sprint)
 
 - [x] Add Rust CLI support for 8-digit `\UXXXXXXXX` Unicode escapes while preserving malformed uppercase escapes literally

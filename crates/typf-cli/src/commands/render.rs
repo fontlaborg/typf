@@ -442,10 +442,23 @@ fn load_font(args: &RenderArgs) -> Result<Arc<dyn FontRef>> {
     })?;
 
     if args.verbose {
-        eprintln!("Loading font from {}", font_path.display());
+        eprintln!(
+            "Loading font from {} (face_index={})",
+            font_path.display(),
+            args.face_index
+        );
     }
 
-    TypfFontFace::from_file(font_path).map(|f| Arc::new(f) as Arc<dyn FontRef>)
+    TypfFontFace::from_file_index(font_path, args.face_index)
+        .map_err(|error| {
+            TypfError::Other(format!(
+                "Failed to load font '{}' with face_index={}: {}",
+                font_path.display(),
+                args.face_index,
+                error
+            ))
+        })
+        .map(|font| Arc::new(font) as Arc<dyn FontRef>)
 }
 
 fn parse_font_size(size_str: &str) -> Result<f32> {
@@ -738,6 +751,8 @@ fn parse_glyph_sources(specs: &[String]) -> Result<GlyphSourcePreference> {
         let (kind, list) = spec.split_once('=').ok_or_else(|| {
             TypfError::Other("glyph-source expects prefer= or deny=<list>".into())
         })?;
+        let kind = kind.trim();
+        let list = list.trim();
 
         let sources = parse_glyph_source_list(list)?;
         match kind.to_ascii_lowercase().as_str() {
@@ -757,12 +772,20 @@ fn parse_glyph_sources(specs: &[String]) -> Result<GlyphSourcePreference> {
 
 fn parse_glyph_source_list(list: &str) -> Result<Vec<GlyphSource>> {
     if list.trim().is_empty() {
-        return Ok(Vec::new());
+        return Err(TypfError::Other(
+            "glyph-source list cannot be empty; expected one or more sources".into(),
+        ));
     }
 
     let mut sources = Vec::new();
     for token in split_csv_whitespace(list) {
         sources.push(parse_glyph_source(token)?);
+    }
+
+    if sources.is_empty() {
+        return Err(TypfError::Other(
+            "glyph-source list cannot be empty; expected one or more sources".into(),
+        ));
     }
 
     Ok(sources)
@@ -1082,6 +1105,38 @@ mod tests {
         std::fs::read(test_font(name)).expect("test font should be readable")
     }
 
+    fn test_render_args_with_font(name: &str, face_index: u32) -> RenderArgs {
+        RenderArgs {
+            text: Some("Hello".to_string()),
+            font_file: Some(test_font(name)),
+            face_index,
+            instance: None,
+            text_arg: None,
+            text_file: None,
+            shaper: "none".to_string(),
+            renderer: "opixa".to_string(),
+            direction: "ltr".to_string(),
+            language: None,
+            script: "auto".to_string(),
+            features: None,
+            font_size: "16".to_string(),
+            line_height: 120,
+            width_height: "none".to_string(),
+            margin: 10,
+            font_optical_sizing: "auto".to_string(),
+            foreground: "000000FF".to_string(),
+            background: "FFFFFF00".to_string(),
+            color_palette: 0,
+            glyph_source: Vec::new(),
+            no_shaping_cache: false,
+            no_glyph_cache: false,
+            output_file: None,
+            format: OutputFormat::Png,
+            quiet: true,
+            verbose: false,
+        }
+    }
+
     #[test]
     fn test_detect_color_font_support_when_no_color_tables_then_all_false() {
         let bytes = load_font_bytes("NotoSans-Regular.ttf");
@@ -1158,6 +1213,30 @@ mod tests {
     }
 
     #[test]
+    fn load_font_when_face_index_zero_then_succeeds() {
+        let args = test_render_args_with_font("NotoSans-Regular.ttf", 0);
+        let font = load_font(&args).expect("face index 0 should load single-face fonts");
+        assert!(
+            !font.data().is_empty(),
+            "loaded font should provide non-empty font bytes"
+        );
+    }
+
+    #[test]
+    fn load_font_when_face_index_non_zero_then_reports_contextual_error() {
+        let args = test_render_args_with_font("NotoSans-Regular.ttf", 1);
+        let error = match load_font(&args) {
+            Ok(_) => panic!("invalid face index should fail"),
+            Err(error) => error,
+        };
+        assert!(
+            format!("{error}").contains("face_index=1"),
+            "expected face-index context in load error, got: {}",
+            error
+        );
+    }
+
+    #[test]
     fn glyph_source_parsing_applies_prefer_and_deny() {
         let specs = vec!["prefer=glyf,svg".to_string(), "deny=svg,colr1".to_string()];
 
@@ -1180,6 +1259,32 @@ mod tests {
         assert!(
             format!("{err}").contains("unknown glyph source"),
             "error message should mention source"
+        );
+    }
+
+    #[test]
+    fn glyph_source_parsing_trims_kind_and_list_tokens() {
+        let pref = parse_glyph_sources(&["  prefer = glyf ,  svg\t".to_string()])
+            .expect("trimmed prefer spec should parse");
+        assert_eq!(pref.prefer, vec![GlyphSource::Glyf, GlyphSource::Svg]);
+    }
+
+    #[test]
+    fn glyph_source_parsing_rejects_blank_prefer_or_deny_lists() {
+        let prefer_error = parse_glyph_sources(&["prefer= \t ".to_string()])
+            .expect_err("blank prefer list should be rejected");
+        assert!(
+            format!("{prefer_error}").contains("cannot be empty"),
+            "expected blank-list validation message, got: {}",
+            prefer_error
+        );
+
+        let deny_error = parse_glyph_sources(&["deny=\n".to_string()])
+            .expect_err("blank deny list should be rejected");
+        assert!(
+            format!("{deny_error}").contains("cannot be empty"),
+            "expected blank-list validation message, got: {}",
+            deny_error
         );
     }
 
