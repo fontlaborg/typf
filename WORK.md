@@ -24,12 +24,10 @@
 
 ## Verification Results
 
-- `cargo test --manifest-path crates/typf-cli/Cargo.toml render::tests:: -- --nocapture`
-  - Result: PASS (`46` render-module unit tests)
-- `cargo test --manifest-path crates/typf-cli/Cargo.toml jsonl::tests:: -- --nocapture`
-  - Result: PASS (`71` JSONL-module unit tests)
-- `./test.sh --quick`
-  - Result: PASS (Rust fmt, clippy, quick Rust workspace tests/doc-tests, Python lint, Python tests)
+- `cargo test -p typf-cli --all-features`
+  - Result: PASS (`145` CLI unit tests + `23` CLI smoke tests)
+- `./test.sh`
+  - Result: PASS (Rust fmt, clippy, full workspace Rust tests/doc-tests, Python lint, Python tests)
   - Python tests: `27 passed`
 
 ## Notes

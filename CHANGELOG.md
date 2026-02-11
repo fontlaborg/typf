@@ -165,9 +165,6 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - `typf render --glyph-source` now trims `prefer=`/`deny=` key+list whitespace and rejects blank source lists
 - JSONL batch validation now enforces an upper bound of 10,000 jobs and rejects oversized payloads early
 - JSONL job processing now enforces a `text.content` size limit of 1,000,000 bytes before shaping
-- `typf render` now enforces the same 1,000,000-byte text-size limit across positional/`--text`, `--text-file`, and stdin input paths
-- `typf render` now normalizes `--language` (`trim`, blank as unset) and validates/canonicalizes `--script` as ISO 15924-style 4-letter ASCII tags
-- JSONL `text.script` parsing now validates/canonicalizes with render-CLI parity and returns explicit `Invalid text.script` diagnostics on invalid input
 - JSONL stream duplicate-ID diagnostics now report both current and first-seen line numbers, and stream unique-ID tracking is now capped at 100,000 IDs
 
 ### Added
