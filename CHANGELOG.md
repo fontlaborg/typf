@@ -104,6 +104,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - JSONL batch mode now rejects unsupported API versions and enforces major `2.x`
 - JSONL batch mode now validates `text.direction` values and reports invalid tokens explicitly
 - `typf render` feature parsing now validates OpenType tags as exactly four printable ASCII characters
+- `typf render` feature parsing now accepts mixed comma/tab/newline separators
+- `typf render` variation axis parsing now accepts mixed comma/tab/newline separators
+- `typf render --glyph-source` list parsing now accepts mixed comma/tab/newline separators
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

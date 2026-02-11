@@ -478,12 +478,7 @@ fn parse_features(features_str: &Option<String>) -> Result<Vec<(String, u32)>> {
     };
 
     let mut result = Vec::new();
-    for part in features.split([',', ' ']) {
-        let part = part.trim();
-        if part.is_empty() {
-            continue;
-        }
-
+    for part in split_csv_whitespace(features) {
         result.push(parse_feature_token(part)?);
     }
 
@@ -544,13 +539,7 @@ fn parse_variations(instance_str: &Option<String>) -> Result<Vec<(String, f32)>>
 
     let mut result = Vec::new();
 
-    // Split by comma or space
-    for part in instance.split([',', ' ']) {
-        let part = part.trim();
-        if part.is_empty() {
-            continue;
-        }
-
+    for part in split_csv_whitespace(instance) {
         // Try axis=value or axis:value format
         let (tag, value) = if let Some(pos) = part.find('=') {
             (&part[..pos], &part[pos + 1..])
@@ -616,15 +605,15 @@ fn parse_glyph_source_list(list: &str) -> Result<Vec<GlyphSource>> {
     }
 
     let mut sources = Vec::new();
-    for token in list.split([',', ' ']) {
-        let token = token.trim();
-        if token.is_empty() {
-            continue;
-        }
+    for token in split_csv_whitespace(list) {
         sources.push(parse_glyph_source(token)?);
     }
 
     Ok(sources)
+}
+
+fn split_csv_whitespace(input: &str) -> impl Iterator<Item = &str> {
+    input.split(',').flat_map(str::split_whitespace)
 }
 
 fn parse_glyph_source(token: &str) -> Result<GlyphSource> {
@@ -1063,6 +1052,44 @@ mod tests {
         assert!(
             format!("{err}").contains("printable ASCII"),
             "error should mention ASCII validation"
+        );
+    }
+
+    #[test]
+    fn parse_features_accepts_tab_and_newline_separators() {
+        let parsed = parse_features(&Some("+liga,\tkern=0\nsmcp".to_string()))
+            .expect("tab/newline-delimited features should parse");
+        assert_eq!(
+            parsed,
+            vec![
+                ("liga".to_string(), 1),
+                ("kern".to_string(), 0),
+                ("smcp".to_string(), 1)
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_variations_accepts_tab_and_newline_separators() {
+        let parsed = parse_variations(&Some("wght=700,\nwdth:95\topsz=14".to_string()))
+            .expect("tab/newline-delimited variations should parse");
+        assert_eq!(
+            parsed,
+            vec![
+                ("wght".to_string(), 700.0),
+                ("wdth".to_string(), 95.0),
+                ("opsz".to_string(), 14.0)
+            ]
+        );
+    }
+
+    #[test]
+    fn glyph_source_parsing_accepts_tab_and_newline_separators() {
+        let pref = parse_glyph_sources(&["prefer=glyf,\nsvg\tcff2".to_string()])
+            .expect("tab/newline-delimited sources should parse");
+        assert_eq!(
+            pref.prefer,
+            vec![GlyphSource::Glyf, GlyphSource::Svg, GlyphSource::Cff2]
         );
     }
 }

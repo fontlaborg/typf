@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, and validation micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, and parser micro-sprints complete.
 
 ## TLDR
 
@@ -43,6 +43,12 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - JSONL batch input now rejects unsupported API versions (major `2.x` required)
 - JSONL `text.direction` now validates allowed values (`ltr|rtl|ttb|btt`) instead of silently defaulting
 - Render CLI OpenType feature parsing now enforces exactly 4 printable ASCII tag characters
+
+### Post-v5.0.2 Parser Delimiter Micro-Sprint (2026-02-11)
+
+- Render CLI token parsing now accepts mixed comma/tab/newline separators for OpenType features
+- Render CLI variation-axis parsing now accepts mixed comma/tab/newline separators
+- Glyph-source list parsing now accepts mixed comma/tab/newline separators
 
 ## Plan Steps (authoritative details)
 

@@ -3,30 +3,26 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 CLI validation micro-sprint
+**Focus:** Post-v5.0.2 parser delimiter micro-sprint
 
 ## Sprint Tasks
 
-- [x] JSONL: reject unsupported batch `version` values (accept only major `2.x`)
-- [x] JSONL: validate `text.direction` (`ltr|rtl|ttb|btt`) and reject unknown values
-- [x] CLI render: enforce OpenType feature-tag validation (exactly 4 printable ASCII chars)
+- [x] Render CLI: accept comma/tab/newline-delimited OpenType feature lists
+- [x] Render CLI: accept comma/tab/newline-delimited variation-axis lists
+- [x] Render CLI: accept comma/tab/newline-delimited glyph-source lists
 
 ## Research Notes
 
-- OpenType feature tags are defined as four-byte tags:
-  https://learn.microsoft.com/en-us/typography/opentype/spec/featuretags
-- HarfBuzz feature syntax (`+kern`, `-kern`, `liga=0`) uses OpenType feature tags:
-  https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-feature-from-string
-- OpenType variation axis tags are also 4-byte tags (kept parser behavior aligned):
-  https://learn.microsoft.com/en-us/typography/opentype/spec/dvaraxisreg
+- Rust `split_whitespace()` reference (whitespace tokenization contract):
+  https://doc.rust-lang.org/std/primitive.str.html#method.split_whitespace
+- Rust iterator `flat_map()` reference (CSV + whitespace composition):
+  https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.flat_map
 
 ## Verification Results
 
 - `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
-- `cargo test --manifest-path crates/typf-cli/Cargo.toml -- --nocapture`: PASS
-- `cargo clippy --manifest-path crates/typf-cli/Cargo.toml --all-targets -- -D warnings`: PASS
-- `cd bindings/python && uv run --isolated --with pytest pytest tests/test_exports.py -q`: PASS
-- `./test.sh --rust --quick`: PASS
+- `cargo test --manifest-path crates/typf-cli/Cargo.toml commands::render::tests -- --nocapture`: PASS
+- `./test.sh`: PASS
 
 ## Notes
 

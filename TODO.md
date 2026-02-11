@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 parser delimiter micro-sprint)
+
+- [x] Accept mixed comma/tab/newline separators for render CLI OpenType feature parsing
+- [x] Accept mixed comma/tab/newline separators for render CLI variation-axis parsing
+- [x] Accept mixed comma/tab/newline separators for glyph-source list parsing, with regression tests
+
 ## Completed (2026-02-11 CLI validation micro-sprint)
 
 - [x] Validate JSONL batch `version` and reject unsupported major versions (require `2.x`)
