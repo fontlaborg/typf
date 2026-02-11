@@ -415,9 +415,6 @@ fn process_job(job: &Job) -> JobResult {
         variations,
         letter_spacing: 0.0,
     };
-    if !shaping_params.size.is_finite() {
-        return JobResult::error(&job.id, "Invalid font.size: value must be finite");
-    }
     if let Err(error) = shaping_params.validate() {
         return JobResult::error(&job.id, format!("Invalid font.size: {}", error));
     }
@@ -1221,6 +1218,27 @@ mod tests {
 
         let result = process_job(&job);
         assert_eq!(result.status, "error", "invalid font size must fail fast");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("Invalid font.size"),
+            "expected font.size validation context, got: {}",
+            error
+        );
+        assert!(
+            error.contains("finite"),
+            "expected finite-value guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_font_size_is_infinite_then_error() {
+        let mut job = test_job("job-infinite-size");
+        job.font.source.path = workspace_test_font();
+        job.font.size = f32::INFINITY;
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "infinite font size must fail fast");
         let error = result.error.unwrap_or_default();
         assert!(
             error.contains("Invalid font.size"),

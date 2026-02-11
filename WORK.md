@@ -3,37 +3,38 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 verification-integrity micro-sprint
+**Focus:** Post-v5.0.2 finite-font-size validation consistency micro-sprint
 
 ## Sprint Tasks
 
-- [x] Canonicalize duplicate OpenType feature tags in both CLI render parsing and JSONL feature parsing (`last value wins`) with regression tests
-- [x] Tighten JSONL `version` validation to reject malformed versions (`empty`, `non-numeric minor`, `extra segments`) while preserving `2`/`2.x` compatibility
-- [x] Make `scripts/test.sh` fail when Python lint/tests fail (when those checks are executed) so success status is trustworthy
+- [x] `typf-core::ShapingParams::validate()` rejects non-finite font sizes (`NaN`, `+/-inf`) before other checks
+- [x] JSONL job processing now relies on core shaping validation for `font.size` (single validation authority)
+- [x] Regression tests added for non-finite font sizes (`NaN`, `+inf`, `-inf`) in core + JSONL paths
 
 ## Research Notes
 
-- HarfBuzz feature parsing and precedence behavior reference:
-  https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-feature-from-string
-- OpenType feature-tag byte constraints reference:
-  https://learn.microsoft.com/en-us/typography/opentype/spec/featuretags
-- Bash `pipefail` behavior reference:
-  https://www.gnu.org/software/bash/manual/bash.html#The-Set-Builtin
+- Rust `f32::is_finite()` semantics for rejecting `NaN`/`+/-inf`:
+  https://doc.rust-lang.org/core/primitive.f32.html#method.is_finite
+- `serde_json::Number::from_f64()` rejects non-finite values (relevant for JSON boundaries):
+  https://docs.rs/serde_json/latest/serde_json/value/struct.Number.html#method.from_f64
 
 ## Verification Results
 
+- `cargo fmt --manifest-path crates/typf-core/Cargo.toml`: PASS
 - `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
-- `cargo test -p typf-cli -- --nocapture`: PASS
-- `./test.sh --python --quick`: PASS
+- `cargo test -p typf-core -p typf-cli -- --nocapture`: PASS
 - `./test.sh --quick`: PASS
 
 ## Notes
 
-- Touched code paths:
-  - `crates/typf-cli/src/commands/render.rs`
+- Touched files:
+  - `crates/typf-core/src/lib.rs`
   - `crates/typf-cli/src/jsonl.rs`
-  - `scripts/test.sh`
-- Existing unrelated repo changes were preserved.
+  - `TASKS.md`
+  - `TODO.md`
+  - `CHANGELOG.md`
+  - `WORK.md`
+- Existing unrelated repository changes were preserved.
 
 ## Next
 

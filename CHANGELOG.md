@@ -130,6 +130,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Render CLI and JSONL feature parsers now resolve duplicate OpenType feature tags deterministically (`last value wins`) with regression coverage
 - JSONL spec-version validation now rejects malformed versions with explicit diagnostics (empty version, non-numeric minor, extra segments)
 - `scripts/test.sh` now fails when Python lint/tests fail (when executed), so verification status reflects actual outcomes
+- `typf render` direction parsing now trims whitespace and accepts case-insensitive direction tokens (`auto|ltr|rtl|ttb|btt`)
+- `typf render` font-size parsing now trims whitespace and accepts case-insensitive `em`
+- `typf batch` per-job output paths now trim surrounding whitespace and reject blank `output` filenames
+- JSONL `rendering.format` parsing now trims/canonicalizes case, validates supported values (`ppm|pgm|pbm|metrics`), and emits canonical lowercase format values in success payloads
+- JSONL `font.size` validation now delegates to `typf-core::ShapingParams::validate()` (removed duplicate JSONL-side finite check)
+- Added core shaping-parameter regression coverage for `NaN`/`+/-inf`, positive finite values, and max-size overflow behavior
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

@@ -143,6 +143,7 @@ pub mod cache;
 pub mod cache_config;
 pub mod context;
 pub mod error;
+pub mod ffi;
 pub mod glyph_cache;
 pub mod linra;
 pub mod pipeline;
@@ -186,6 +187,26 @@ pub mod types {
         pub line_gap: i16,
     }
 
+    /// A variable font axis definition.
+    ///
+    /// Describes one axis of variation in a variable font (e.g., weight, width, slant).
+    /// Values are in font design units unless otherwise specified.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct VariationAxis {
+        /// 4-character tag (e.g., "wght", "wdth", "slnt", "ital")
+        pub tag: String,
+        /// Human-readable name (if available from name table)
+        pub name: Option<String>,
+        /// Minimum axis value
+        pub min_value: f32,
+        /// Default axis value
+        pub default_value: f32,
+        /// Maximum axis value
+        pub max_value: f32,
+        /// Whether this is a hidden axis (not shown to users)
+        pub hidden: bool,
+    }
+
     /// Which way the text flows
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Direction {
@@ -214,12 +235,17 @@ pub mod types {
         pub direction: Direction,
     }
 
-    /// The three forms output can take
+    /// The forms output can take
     #[derive(Debug, Clone)]
     pub enum RenderOutput {
+        /// Rasterized bitmap (PNG, PBM, etc.)
         Bitmap(BitmapData),
+        /// Serialized vector format (SVG, PDF)
         Vector(VectorData),
+        /// JSON representation of glyph data
         Json(String),
+        /// Path geometry for GPU pipelines and tessellators
+        Geometry(GeometryData),
     }
 
     impl RenderOutput {
@@ -231,7 +257,13 @@ pub mod types {
                 RenderOutput::Bitmap(b) => b.byte_size(),
                 RenderOutput::Vector(v) => v.data.len(),
                 RenderOutput::Json(s) => s.len(),
+                RenderOutput::Geometry(g) => g.byte_size(),
             }
+        }
+
+        /// Returns true if this is geometry output suitable for GPU consumption.
+        pub fn is_geometry(&self) -> bool {
+            matches!(self, RenderOutput::Geometry(_))
         }
     }
 
@@ -272,6 +304,103 @@ pub mod types {
     pub enum VectorFormat {
         Svg,
         Pdf,
+    }
+
+    // =========================================================================
+    // Stage 5 Geometry Types (for GPU pipelines and external tessellators)
+    // =========================================================================
+
+    /// A single path operation for vector glyph outlines.
+    ///
+    /// These primitives match the common subset of path operations supported by
+    /// Cairo, Skia, CoreGraphics, Direct2D, and wgpu tessellators.
+    ///
+    /// Coordinates are in font units (typically 1000 or 2048 per em).
+    /// Scale by `(font_size / units_per_em)` to convert to pixels.
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub enum PathOp {
+        /// Move to a new position without drawing (M x y)
+        MoveTo { x: f32, y: f32 },
+        /// Draw a straight line to a point (L x y)
+        LineTo { x: f32, y: f32 },
+        /// Quadratic Bézier curve (Q cx cy x y)
+        QuadTo { cx: f32, cy: f32, x: f32, y: f32 },
+        /// Cubic Bézier curve (C c1x c1y c2x c2y x y)
+        CubicTo {
+            c1x: f32,
+            c1y: f32,
+            c2x: f32,
+            c2y: f32,
+            x: f32,
+            y: f32,
+        },
+        /// Close the current subpath (Z)
+        Close,
+    }
+
+    /// Glyph path data with positioning for a single glyph.
+    ///
+    /// Contains the vector outline of a glyph and its rendered position.
+    /// Can be consumed by external tessellators or GPU pipelines.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct GlyphPath {
+        /// Glyph ID in the font
+        pub glyph_id: GlyphId,
+        /// X position of the glyph origin (in rendered coordinates)
+        pub x: f32,
+        /// Y position of the glyph origin (in rendered coordinates)
+        pub y: f32,
+        /// Path operations defining the glyph outline (in font units)
+        pub ops: Vec<PathOp>,
+    }
+
+    /// Geometry output for GPU pipelines and vector consumers.
+    ///
+    /// This provides path operations that can be:
+    /// - Tessellated by external libraries (lyon, earcutr)
+    /// - Converted to GPU meshes for wgpu/Vulkan
+    /// - Used for hit testing and text selection
+    /// - Exported to vector formats
+    ///
+    /// # Coordinate Systems
+    ///
+    /// - Path ops are in font units (unscaled)
+    /// - Glyph positions (x, y) are in rendered coordinates (scaled to font_size)
+    /// - Consumer must apply `font_size / units_per_em` scaling to path ops
+    #[derive(Debug, Clone)]
+    pub struct GeometryData {
+        /// Glyph paths with their positions
+        pub glyphs: Vec<GlyphPath>,
+        /// Total advance width in rendered coordinates
+        pub advance_width: f32,
+        /// Total advance height in rendered coordinates
+        pub advance_height: f32,
+        /// Font units per em (for scaling path ops to rendered coordinates)
+        pub units_per_em: u16,
+        /// Font size used for positioning (pixels)
+        pub font_size: f32,
+    }
+
+    impl GeometryData {
+        /// Returns the approximate heap size in bytes.
+        pub fn byte_size(&self) -> usize {
+            self.glyphs
+                .iter()
+                .map(|g| {
+                    std::mem::size_of::<GlyphPath>() + g.ops.len() * std::mem::size_of::<PathOp>()
+                })
+                .sum()
+        }
+
+        /// Returns an iterator over glyph paths.
+        pub fn iter(&self) -> impl Iterator<Item = &GlyphPath> {
+            self.glyphs.iter()
+        }
+
+        /// Scale factor to convert font units to rendered coordinates.
+        pub fn scale(&self) -> f32 {
+            self.font_size / self.units_per_em as f32
+        }
     }
 
     /// The source type of glyph data in a font
@@ -383,6 +512,7 @@ impl ShapingParams {
     /// Validate shaping parameters against security limits
     ///
     /// Returns an error if:
+    /// - Font size is not finite (`NaN`, `+/-inf`)
     /// - Font size exceeds [`MAX_FONT_SIZE`] (currently 100,000 pixels)
     /// - Font size is negative or zero
     ///
@@ -398,6 +528,11 @@ impl ShapingParams {
     /// assert!(bad_params.validate().is_err());
     /// ```
     pub fn validate(&self) -> Result<(), error::ShapingError> {
+        if !self.size.is_finite() {
+            return Err(error::ShapingError::BackendError(
+                "Font size must be finite".to_string(),
+            ));
+        }
         if self.size <= 0.0 {
             return Err(error::ShapingError::BackendError(
                 "Font size must be positive".to_string(),
@@ -582,5 +717,147 @@ impl Color {
 
     pub const fn white() -> Self {
         Self::rgba(255, 255, 255, 255)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::types::*;
+    use super::{error::ShapingError, ShapingParams, MAX_FONT_SIZE};
+
+    #[test]
+    fn test_path_op_size() {
+        // PathOp should be reasonably compact for efficient storage
+        assert!(std::mem::size_of::<PathOp>() <= 32);
+    }
+
+    #[test]
+    fn test_geometry_data_byte_size() {
+        let geometry = GeometryData {
+            glyphs: vec![
+                GlyphPath {
+                    glyph_id: 1,
+                    x: 0.0,
+                    y: 0.0,
+                    ops: vec![
+                        PathOp::MoveTo { x: 0.0, y: 0.0 },
+                        PathOp::LineTo { x: 100.0, y: 0.0 },
+                        PathOp::Close,
+                    ],
+                },
+                GlyphPath {
+                    glyph_id: 2,
+                    x: 50.0,
+                    y: 0.0,
+                    ops: vec![
+                        PathOp::MoveTo { x: 0.0, y: 0.0 },
+                        PathOp::QuadTo {
+                            cx: 50.0,
+                            cy: 100.0,
+                            x: 100.0,
+                            y: 0.0,
+                        },
+                        PathOp::Close,
+                    ],
+                },
+            ],
+            advance_width: 100.0,
+            advance_height: 0.0,
+            units_per_em: 1000,
+            font_size: 16.0,
+        };
+
+        // byte_size should be non-zero and reasonable
+        let size = geometry.byte_size();
+        assert!(size > 0);
+        assert!(size < 1024); // Should be small for this test case
+    }
+
+    #[test]
+    fn test_geometry_data_scale() {
+        let geometry = GeometryData {
+            glyphs: vec![],
+            advance_width: 0.0,
+            advance_height: 0.0,
+            units_per_em: 2048,
+            font_size: 16.0,
+        };
+
+        let scale = geometry.scale();
+        assert!((scale - 16.0 / 2048.0).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_render_output_geometry_variant() {
+        let geometry = GeometryData {
+            glyphs: vec![GlyphPath {
+                glyph_id: 42,
+                x: 0.0,
+                y: 0.0,
+                ops: vec![PathOp::MoveTo { x: 0.0, y: 0.0 }, PathOp::Close],
+            }],
+            advance_width: 50.0,
+            advance_height: 0.0,
+            units_per_em: 1000,
+            font_size: 24.0,
+        };
+
+        let output = RenderOutput::Geometry(geometry);
+        assert!(output.is_geometry());
+        assert!(output.byte_size() > 0);
+    }
+
+    #[test]
+    fn test_shaping_params_validate_when_non_finite_size_then_error() {
+        for size in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            let params = ShapingParams {
+                size,
+                ..Default::default()
+            };
+            let error = params.validate().expect_err("non-finite size must fail");
+            match error {
+                ShapingError::BackendError(message) => {
+                    assert!(
+                        message.contains("finite"),
+                        "expected finite-size guidance, got: {}",
+                        message
+                    );
+                },
+                other => panic!("expected BackendError, got {:?}", other),
+            }
+        }
+    }
+
+    #[test]
+    fn test_shaping_params_validate_when_positive_size_then_ok() {
+        let params = ShapingParams {
+            size: 24.0,
+            ..Default::default()
+        };
+        params
+            .validate()
+            .expect("positive finite size should validate");
+    }
+
+    #[test]
+    fn test_shaping_params_validate_when_size_above_max_then_error() {
+        let params = ShapingParams {
+            size: MAX_FONT_SIZE + 1.0,
+            ..Default::default()
+        };
+        let error = params
+            .validate()
+            .expect_err("oversized font size must fail validation");
+        match error {
+            ShapingError::FontSizeTooLarge(size, max) => {
+                assert!(
+                    size > max,
+                    "expected reported size {} to exceed max {}",
+                    size,
+                    max
+                );
+            },
+            other => panic!("expected FontSizeTooLarge, got {:?}", other),
+        }
     }
 }

@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, and verification-integrity micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, and finite-font-size validation consistency micro-sprints complete.
 
 ## TLDR
 
@@ -92,6 +92,18 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - Render CLI and JSONL feature parsing now resolves duplicate OpenType feature tags deterministically (`last value wins`) with regression tests
 - JSONL `version` validation now rejects malformed values (`empty`, non-numeric minor, extra segments) while preserving `2`/`2.x` compatibility
 - `scripts/test.sh` now treats Python lint/test failures as build failures when those checks are executed
+
+### Post-v5.0.2 CLI Input-Normalization/Output-Path/JSONL-Format Micro-Sprint (2026-02-11)
+
+- `typf batch` output-pattern validation now trims input, rejects blank values, and requires exactly one `{}` placeholder
+- `typf batch` output-path resolution now trims per-job `output` values and rejects whitespace-only filenames
+- JSONL `rendering.format` parsing now trims/normalizes case, validates supported values (`ppm|pgm|pbm|metrics`), and emits canonical lowercase format values
+
+### Post-v5.0.2 Finite-Font-Size Validation Consistency Micro-Sprint (2026-02-11)
+
+- `typf-core` `ShapingParams::validate()` now rejects non-finite font sizes (`NaN`, `+/-inf`) before positive/range checks
+- JSONL job processing now delegates `font.size` validation entirely to `typf-core` (single source of truth)
+- Added regression coverage for non-finite `font.size` behavior in both `typf-core` and JSONL processing paths
 
 ## Plan Steps (authoritative details)
 

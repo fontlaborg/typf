@@ -9,6 +9,18 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 finite-font-size validation consistency micro-sprint)
+
+- [x] Reject non-finite font sizes (`NaN`, `+/-inf`) in `typf-core::ShapingParams::validate()` before positive/range checks
+- [x] Remove duplicate JSONL non-finite `font.size` guard and rely on core shaping validation as the single authority
+- [x] Add regression tests for non-finite `font.size` validation behavior across core and JSONL job processing
+
+## Completed (2026-02-11 CLI input-normalization/output-path/JSONL-format micro-sprint)
+
+- [x] Tighten `typf batch` output pattern validation (`trim`, reject blank, require exactly one `{}` placeholder) with regression tests
+- [x] Trim `typf batch` per-job `output` values and reject whitespace-only filenames with regression tests
+- [x] Normalize/validate JSONL `rendering.format` (`trim` + case-insensitive `ppm|pgm|pbm|metrics`) and emit canonical lowercase output format values
+
 ## Completed (2026-02-11 verification-integrity micro-sprint)
 
 - [x] Canonicalize duplicate OpenType feature tags in render CLI and JSONL parsing with deterministic `last value wins` behavior
