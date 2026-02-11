@@ -120,6 +120,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - `typf-core` shaping parameter validation now rejects non-finite font sizes (`NaN`, `+/-inf`) before positive/range checks
 - `typf batch` per-job output format parsing now supports `png1`, `png4`, and `png8` (matching CLI format enum)
 - JSONL `rendering.encoding` parsing now accepts case-insensitive `base64|plain` values with surrounding whitespace
+- `typf render` feature-tag validation now checks printable-ASCII byte range before length checks for deterministic multibyte diagnostics
+- JSONL feature-tag validation now mirrors render CLI ordering (ASCII-range check before length check)
+- Added multibyte non-ASCII feature-tag regression tests for both render CLI and JSONL parsers
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

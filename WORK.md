@@ -3,36 +3,30 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 CLI/JSONL input-hardening micro-sprint
+**Focus:** Post-v5.0.2 feature-tag diagnostics micro-sprint
 
 ## Sprint Tasks
 
-- [x] CLI `--instance` parsing: reject unsupported named-instance tokens and validate axis tags as 4 printable ASCII bytes
-- [x] CLI variation parsing: canonicalize axis list (sorted, duplicate axis tags resolve deterministically with last value)
-- [x] CLI font-size parsing: reject non-finite/non-positive values and values above `MAX_FONT_SIZE`
-- [x] JSONL validation: enforce supported `rendering.encoding` values (`base64|plain`) and validate/sort `font.instance.variations`
-- [x] JSONL text-feature parsing: accept comma/tab/newline delimiters consistently
+- [x] Render CLI feature-tag validation: check printable-ASCII bytes before tag-length checks
+- [x] JSONL feature-tag validation: align ordering with render CLI for deterministic multibyte diagnostics
+- [x] Add multibyte non-ASCII feature-tag regression tests for both render CLI and JSONL parser paths
 
 ## Research Notes
 
-- OpenType axis tags are 4-byte tags:
-  https://learn.microsoft.com/en-us/typography/opentype/spec/dvaraxisreg
 - OpenType feature tags are 4-byte tags:
   https://learn.microsoft.com/en-us/typography/opentype/spec/featuretags
-- HarfBuzz feature parsing reference:
-  https://harfbuzz.github.io/harfbuzz-hb-common.html#hb-feature-from-string
-- Rust finite-float checks (`f32::is_finite`):
-  https://doc.rust-lang.org/core/primitive.f32.html#method.is_finite
+- Rust `str::len` returns bytes (important for 4-byte tag validation behavior):
+  https://doc.rust-lang.org/std/primitive.str.html#method.len
 
 ## Verification Results
 
 - `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
-- `cargo test --manifest-path crates/typf-cli/Cargo.toml -- --nocapture`: PASS
-- `./test.sh --quick`: PASS
+- `cargo test -p typf-cli -- --nocapture`: PASS
+- `./test.sh --rust --quick`: FAIL (existing unrelated formatting drift in `crates/typf-core/src/lib.rs` blocks global fmt check)
 
 ## Notes
 
-- This sprint touched only `crates/typf-cli/src/commands/render.rs` and `crates/typf-cli/src/jsonl.rs`.
+- This sprint touched `crates/typf-cli/src/commands/render.rs` and `crates/typf-cli/src/jsonl.rs`.
 - Existing repo-local changes outside this sprint were preserved as-is.
 
 ## Next

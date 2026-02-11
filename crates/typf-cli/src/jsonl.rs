@@ -661,14 +661,6 @@ fn parse_feature_token(token: &str) -> Result<(String, u32), String> {
         (token, 1)
     };
 
-    if tag.len() != 4 {
-        return Err(format!(
-            "feature '{}' has invalid tag length {}; expected 4 characters",
-            tag,
-            tag.len()
-        ));
-    }
-
     if !tag
         .as_bytes()
         .iter()
@@ -677,6 +669,14 @@ fn parse_feature_token(token: &str) -> Result<(String, u32), String> {
         return Err(format!(
             "feature '{}' must use ASCII bytes in 0x20..0x7E",
             tag
+        ));
+    }
+
+    if tag.len() != 4 {
+        return Err(format!(
+            "feature '{}' has invalid tag length {}; expected 4 characters",
+            tag,
+            tag.len()
         ));
     }
 
@@ -888,6 +888,16 @@ mod tests {
     #[test]
     fn test_parse_text_features_when_non_printable_ascii_then_error() {
         let error = parse_text_features(&["\u{7f}abc=1".to_string()]).unwrap_err();
+        assert!(
+            error.contains("0x20..0x7E"),
+            "expected ASCII-range validation error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_text_features_when_non_ascii_multibyte_then_error() {
+        let error = parse_text_features(&["éght=1".to_string()]).unwrap_err();
         assert!(
             error.contains("0x20..0x7E"),
             "expected ASCII-range validation error, got: {}",

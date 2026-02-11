@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 feature-tag diagnostics micro-sprint)
+
+- [x] Make render CLI feature-tag validation report non-ASCII violations before tag-length errors for multibyte input
+- [x] Align JSONL feature-tag validation ordering with render CLI (ASCII-range check before length check)
+- [x] Add multibyte non-ASCII feature-tag regression tests for both render CLI and JSONL parsers
+
 ## Completed (2026-02-11 input-validation parity micro-sprint)
 
 - [x] Reject non-finite shaping font sizes (`NaN`, `+/-inf`) in `typf-core::ShapingParams::validate()`

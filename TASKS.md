@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, and input-validation parity micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, and feature-tag diagnostics micro-sprints complete.
 
 ## TLDR
 
@@ -73,6 +73,12 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - `typf-core` `ShapingParams::validate()` now rejects non-finite font sizes (`NaN`, `+/-inf`) before range checks
 - Batch CLI per-job format parsing now supports `png1`, `png4`, and `png8` (full parity with CLI output enum)
 - JSONL `rendering.encoding` parsing now trims surrounding whitespace for `base64|plain` values and includes delimiter/encoding regression coverage
+
+### Post-v5.0.2 Feature-Tag Diagnostics Micro-Sprint (2026-02-11)
+
+- Render CLI feature-tag validation now checks printable-ASCII byte range before length checks for deterministic multibyte diagnostics
+- JSONL feature-tag validation now mirrors the same ASCII-first validation order as render CLI
+- Added multibyte non-ASCII feature-tag regression tests for both CLI and JSONL parsing paths
 
 ## Plan Steps (authoritative details)
 

@@ -516,13 +516,6 @@ fn parse_feature_token(part: &str) -> Result<(String, u32)> {
         (part, 1)
     };
 
-    if tag.len() != 4 {
-        return Err(TypfError::Other(format!(
-            "Invalid OpenType feature tag '{}': expected exactly 4 characters",
-            tag
-        )));
-    }
-
     if !tag
         .as_bytes()
         .iter()
@@ -530,6 +523,13 @@ fn parse_feature_token(part: &str) -> Result<(String, u32)> {
     {
         return Err(TypfError::Other(format!(
             "Invalid OpenType feature tag '{}': expected printable ASCII characters",
+            tag
+        )));
+    }
+
+    if tag.len() != 4 {
+        return Err(TypfError::Other(format!(
+            "Invalid OpenType feature tag '{}': expected exactly 4 characters",
             tag
         )));
     }
@@ -1089,6 +1089,16 @@ mod tests {
     fn parse_features_rejects_non_ascii_tag() {
         let err = parse_features(&Some("liga=1,éab=1".to_string()))
             .expect_err("non-ascii tags should fail");
+        assert!(
+            format!("{err}").contains("printable ASCII"),
+            "error should mention ASCII validation"
+        );
+    }
+
+    #[test]
+    fn parse_features_rejects_non_ascii_multibyte_tag() {
+        let err = parse_features(&Some("éght=1".to_string()))
+            .expect_err("multibyte non-ascii tags should fail");
         assert!(
             format!("{err}").contains("printable ASCII"),
             "error should mention ASCII validation"
