@@ -3,35 +3,36 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Render/JSONL script-hint + text-size validation parity micro-sprint
+**Focus:** BCP47 language-tag validation parity micro-sprint (render + JSONL + batch)
 
 ## Completed
 
-- [x] Verified render CLI text payload-size guardrail (`MAX_TEXT_CONTENT_BYTES=1_000_000`) before shaping
-- [x] Verified render CLI `--script` parsing enforces ISO 15924-style 4 ASCII letters and canonical titlecase (`auto`/blank => unset)
-- [x] Verified render CLI `--language` normalization (`trim` + blank => unset) before auto-direction resolution
-- [x] Verified JSONL `text.script` validation/canonicalization parity with render CLI
-- [x] Verified regression coverage for payload-size/script/language normalization paths in render + JSONL tests
+- [x] Added shared BCP 47 language-tag normalization utility in `crates/typf-cli/src/language.rs` using `language-tags`
+- [x] Updated `typf render --language` parsing to validate BCP 47 and canonicalize tag casing
+- [x] Updated JSONL `text.language` parsing to validate/canonicalize with explicit `Invalid text.language` diagnostics
+- [x] Updated `typf batch` per-job `language` parsing to validate/canonicalize with explicit `Invalid batch language tag` diagnostics
+- [x] Added regression tests for valid canonicalization and invalid-tag error paths across render, JSONL, batch, and shared language utility
 
 ## Research Notes
 
-- RFC 5646 language-tag syntax + script subtags (`script = 4ALPHA`, case-insensitive, canonical titlecase):
+- RFC 5646 (BCP 47 language-tag grammar and casing conventions):
   https://www.rfc-editor.org/rfc/rfc5646
-- IANA Language Subtag Registry metadata:
-  https://www.iana.org/assignments/language-subtags-tags-extensions/language-subtags-tags-extensions.xhtml
-- ISO 15924 script code list:
-  https://www.unicode.org/iso15924/iso15924-codes.html
+- `language-tags` crate API (`LanguageTag::parse`, `canonicalize`):
+  https://docs.rs/language-tags/latest/language_tags/struct.LanguageTag.html
 
 ## Verification Results
 
 - `cargo test -p typf-cli --all-features`
-  - Result: PASS (`145` CLI unit tests + `23` CLI smoke tests)
+  - Result: PASS
+- `./test.sh --quick`
+  - Result: PASS
 - `./test.sh`
   - Result: PASS (Rust fmt, clippy, full workspace Rust tests/doc-tests, Python lint, Python tests)
   - Python tests: `27 passed`
 
 ## Notes
 
+- Added dependency: `language-tags v0.3.2`
 - Existing unrelated repository changes were preserved.
 
 ## Next

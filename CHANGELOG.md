@@ -96,7 +96,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Updated CI lint workflow formatting check to use `cargo fmt --check` for parity with local verification
 - `typf render` now enforces a 1,000,000-byte text input cap across positional/`--text` (after Unicode escape decoding), `--text-file`, and stdin sources
 - `typf render` now normalizes `--language` hints (`trim`, blank→unset) and validates/canonicalizes `--script` hints as 4-letter ASCII ISO 15924 tags (`auto`/blank→unset, titlecase canonical form)
+- `typf render` now validates `--language` as BCP 47 and canonicalizes valid tags (for example, `en-us` → `en-US`)
 - JSONL `text.script` parsing now mirrors render CLI normalization/validation rules and emits explicit `Invalid text.script` diagnostics for invalid tags
+- JSONL `text.language` parsing now validates BCP 47 syntax/casing and emits explicit `Invalid text.language` diagnostics
+- `typf batch` per-job `language` parsing now validates BCP 47 syntax/casing and emits explicit `Invalid batch language tag` diagnostics
 - JSONL batch jobs now run in parallel via Rayon while preserving output order
 - JSONL `text.features` is now parsed/validated and passed into shaping params
 - JSONL `JobSpec` now accepts canonical `version` with legacy `_version` alias
@@ -166,6 +169,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - JSONL batch validation now enforces an upper bound of 10,000 jobs and rejects oversized payloads early
 - JSONL job processing now enforces a `text.content` size limit of 1,000,000 bytes before shaping
 - JSONL stream duplicate-ID diagnostics now report both current and first-seen line numbers, and stream unique-ID tracking is now capped at 100,000 IDs
+- `typf render` and linra mode now validate `--color-palette` as a strict 16-bit index (`0..=65535`) and reject overflow values instead of silently truncating
+- Render CLI and JSONL job processing now enforce a max source-font file size (`MAX_FONT_FILE_BYTES=104857600`) before font parsing
+- Structured JSONL batch mode now enforces a bounded read cap (`MAX_JSONL_BATCH_INPUT_BYTES=33554432`) before deserialization and reports explicit size-limit errors
+- Added regression tests for palette overflow validation, oversized font-source files, and bounded JSONL batch reads
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

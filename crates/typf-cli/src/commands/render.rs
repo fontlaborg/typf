@@ -6,6 +6,7 @@
 // this_file: crates/typf-cli/src/commands/render.rs
 
 use crate::cli::{OutputFormat, RenderArgs};
+use crate::limits::{validate_file_size_limit, MAX_FONT_FILE_BYTES};
 use skrifa::bitmap::BitmapStrikes;
 use skrifa::raw::TableProvider;
 use std::fs::File;
@@ -103,7 +104,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     // 2. Load font
     let font: Arc<dyn FontRef> = load_font(args)?;
 
-    let language = normalize_language_hint(args.language.as_deref());
+    let language = parse_language_hint(args.language.as_deref())?;
     let script = parse_script_hint(&args.script)?;
 
     // 3. Resolve direction (auto uses UnicodeProcessor)
@@ -118,6 +119,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     let font_size = parse_font_size(&args.font_size)?;
     let foreground = parse_color(&args.foreground)?;
     let background = parse_color(&args.background)?;
+    let color_palette = parse_color_palette(args.color_palette)?;
 
     // 5. Parse variable font variations
     let variations = parse_variations(&args.instance)?;
@@ -148,7 +150,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         padding: args.margin,
         antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
         variations,
-        color_palette: args.color_palette as u16,
+        color_palette,
         glyph_sources,
         output: output_mode,
     };
@@ -469,6 +471,9 @@ fn load_font(args: &RenderArgs) -> Result<Arc<dyn FontRef>> {
         );
     }
 
+    validate_file_size_limit(font_path, MAX_FONT_FILE_BYTES, "font file")
+        .map_err(TypfError::Other)?;
+
     TypfFontFace::from_file_index(font_path, args.face_index)
         .map_err(|error| {
             TypfError::Other(format!(
@@ -569,10 +574,9 @@ fn resolve_direction(
     }
 }
 
-fn normalize_language_hint(raw: Option<&str>) -> Option<String> {
-    raw.map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
+fn parse_language_hint(raw: Option<&str>) -> Result<Option<String>> {
+    crate::language::normalize_language_tag(raw)
+        .map_err(|error| TypfError::Other(format!("Invalid language tag: {}", error)))
 }
 
 fn parse_script_hint(raw: &str) -> Result<Option<String>> {
@@ -655,6 +659,16 @@ fn parse_color(color_str: &str) -> Result<Color> {
     };
 
     Ok(Color::rgba(r, g, b, a))
+}
+
+fn parse_color_palette(raw: u32) -> Result<u16> {
+    u16::try_from(raw).map_err(|_| {
+        TypfError::Other(format!(
+            "Invalid color-palette {}: expected value in range 0..={}",
+            raw,
+            u16::MAX
+        ))
+    })
 }
 
 fn parse_features(features_str: &Option<String>) -> Result<Vec<(String, u32)>> {
@@ -954,7 +968,7 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
 
     // 3. Parse rendering parameters
     let font_size = parse_font_size(&args.font_size)?;
-    let language = normalize_language_hint(args.language.as_deref());
+    let language = parse_language_hint(args.language.as_deref())?;
     let script = parse_script_hint(&args.script)?;
     let direction = resolve_direction(
         &text,
@@ -964,6 +978,7 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
     )?;
     let foreground = parse_color(&args.foreground)?;
     let background = parse_color(&args.background)?;
+    let color_palette = parse_color_palette(args.color_palette)?;
 
     // 4. Parse variable font variations
     let variations = parse_variations(&args.instance)?;
@@ -981,7 +996,7 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
         script,
         antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
         letter_spacing: 0.0,
-        color_palette: args.color_palette as u16,
+        color_palette,
     };
 
     // 5. Select linra renderer
@@ -1135,6 +1150,7 @@ fn write_output(args: &RenderArgs, data: &[u8]) -> Result<()> {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn test_font(name: &str) -> PathBuf {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -1147,6 +1163,16 @@ mod tests {
 
     fn load_font_bytes(name: &str) -> Vec<u8> {
         std::fs::read(test_font(name)).expect("test font should be readable")
+    }
+
+    fn temp_file(prefix: &str) -> PathBuf {
+        let mut path = std::env::temp_dir();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after epoch")
+            .as_nanos();
+        path.push(format!("typf_render_{}_{}", prefix, nanos));
+        path
     }
 
     fn test_render_args_with_font(name: &str, face_index: u32) -> RenderArgs {
@@ -1276,6 +1302,56 @@ mod tests {
         assert!(
             format!("{error}").contains("face_index=1"),
             "expected face-index context in load error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn load_font_when_font_file_is_oversized_then_rejects_before_loading() {
+        let oversized_path = temp_file("oversized_font");
+        let file = std::fs::File::create(&oversized_path).expect("temp file should be creatable");
+        file.set_len(MAX_FONT_FILE_BYTES + 1)
+            .expect("temp file size should be adjustable");
+
+        let args = RenderArgs {
+            text: Some("Hello".to_string()),
+            font_file: Some(oversized_path.clone()),
+            face_index: 0,
+            instance: None,
+            text_arg: None,
+            text_file: None,
+            shaper: "none".to_string(),
+            renderer: "opixa".to_string(),
+            direction: "ltr".to_string(),
+            language: None,
+            script: "auto".to_string(),
+            features: None,
+            font_size: "16".to_string(),
+            line_height: 120,
+            width_height: "none".to_string(),
+            margin: 10,
+            font_optical_sizing: "auto".to_string(),
+            foreground: "000000FF".to_string(),
+            background: "FFFFFF00".to_string(),
+            color_palette: 0,
+            glyph_source: Vec::new(),
+            no_shaping_cache: false,
+            no_glyph_cache: false,
+            output_file: None,
+            format: OutputFormat::Png,
+            quiet: true,
+            verbose: false,
+        };
+
+        let error = match load_font(&args) {
+            Ok(_) => panic!("oversized font should fail before parser load"),
+            Err(error) => error,
+        };
+        std::fs::remove_file(&oversized_path).expect("temp file cleanup should succeed");
+
+        assert!(
+            format!("{error}").contains("exceeds max size"),
+            "expected size-limit validation message, got: {}",
             error
         );
     }
@@ -1561,21 +1637,46 @@ mod tests {
     }
 
     #[test]
-    fn normalize_language_hint_trims_and_drops_blank_values() {
+    fn parse_language_hint_trims_and_drops_blank_values() {
         assert_eq!(
-            normalize_language_hint(Some("  zh-Hans  ")),
+            parse_language_hint(Some("  zh-Hans  ")).expect("trimmed language should parse"),
             Some("zh-Hans".to_string()),
             "language hints should be trimmed"
         );
         assert_eq!(
-            normalize_language_hint(Some(" \t ")),
+            parse_language_hint(Some(" \t ")).expect("blank language should parse"),
             None,
             "blank language hints should be treated as unset"
         );
         assert_eq!(
-            normalize_language_hint(None),
+            parse_language_hint(None).expect("missing language should parse"),
             None,
             "missing language hints should remain unset"
+        );
+    }
+
+    #[test]
+    fn parse_language_hint_canonicalizes_bcp47_case_conventions() {
+        assert_eq!(
+            parse_language_hint(Some(" en-us ")).expect("valid language should parse"),
+            Some("en-US".to_string()),
+            "language tags should canonicalize to BCP 47 casing conventions"
+        );
+    }
+
+    #[test]
+    fn parse_language_hint_rejects_invalid_bcp47_tags() {
+        let error = parse_language_hint(Some("en_US"))
+            .expect_err("underscore-delimited language tag should fail");
+        assert!(
+            format!("{error}").contains("Invalid language tag"),
+            "expected language-tag context in error, got: {}",
+            error
+        );
+        assert!(
+            format!("{error}").contains("valid BCP 47"),
+            "expected BCP 47 guidance in error, got: {}",
+            error
         );
     }
 
@@ -1615,6 +1716,23 @@ mod tests {
         assert!(
             format!("{err}").contains("RGB, RGBA, RRGGBB, or RRGGBBAA"),
             "expected supported-format guidance, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn parse_color_palette_accepts_u16_maximum() {
+        let parsed = parse_color_palette(u16::MAX as u32).expect("u16::MAX should be accepted");
+        assert_eq!(parsed, u16::MAX);
+    }
+
+    #[test]
+    fn parse_color_palette_rejects_values_above_u16_maximum() {
+        let err = parse_color_palette((u16::MAX as u32) + 1)
+            .expect_err("values above u16::MAX should be rejected");
+        assert!(
+            format!("{err}").contains("color-palette"),
+            "expected color-palette validation message, got: {}",
             err
         );
     }

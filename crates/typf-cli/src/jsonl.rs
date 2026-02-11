@@ -11,6 +11,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use crate::limits::{
+    read_to_string_with_limit, validate_file_size_limit, MAX_FONT_FILE_BYTES,
+    MAX_JSONL_BATCH_INPUT_BYTES,
+};
+
 const MAX_BATCH_JOBS: usize = 10_000;
 const MAX_STREAM_UNIQUE_JOB_IDS: usize = 100_000;
 const MAX_TEXT_CONTENT_BYTES: usize = 1_000_000;
@@ -261,9 +266,8 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
 
     let start = Instant::now();
 
-    // Read the entire job specification
-    let mut input = String::new();
-    std::io::Read::read_to_string(&mut stdin().lock(), &mut input)?;
+    // Read the entire job specification with a hard byte cap.
+    let input = read_batch_input_with_limit(stdin().lock(), MAX_JSONL_BATCH_INPUT_BYTES)?;
 
     // Parse what we need to do
     let spec: JobSpec = serde_json::from_str(&input)?;
@@ -293,6 +297,14 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     Ok(())
+}
+
+fn read_batch_input_with_limit<R: std::io::Read>(
+    reader: R,
+    max_bytes: u64,
+) -> std::io::Result<String> {
+    read_to_string_with_limit(reader, max_bytes, "JSONL batch input")
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))
 }
 
 fn process_jobs(jobs: &[Job]) -> Vec<JobResult> {
@@ -384,6 +396,10 @@ fn process_job(job: &Job) -> JobResult {
 
     // Load font
     let font_path = &job.font.source.path;
+    if let Err(error) = validate_file_size_limit(font_path, MAX_FONT_FILE_BYTES, "font.source.path")
+    {
+        return JobResult::error(&job.id, format!("Invalid font.source.path: {}", error));
+    }
     let face_index = job.font.source.face_index.unwrap_or(0);
     let font: Arc<dyn FontRef> = match TypfFontFace::from_file_index(font_path, face_index) {
         Ok(font) => Arc::new(font),
@@ -432,11 +448,16 @@ fn process_job(job: &Job) -> JobResult {
         Err(e) => return JobResult::error(&job.id, format!("Invalid text.script: {}", e)),
     };
 
+    let language = match parse_text_language(job.text.language.as_deref()) {
+        Ok(language) => language,
+        Err(e) => return JobResult::error(&job.id, format!("Invalid text.language: {}", e)),
+    };
+
     // Create shaping parameters
     let shaping_params = ShapingParams {
         size: job.font.size,
         direction,
-        language: normalize_optional_text_hint(job.text.language.as_deref()),
+        language,
         script,
         features,
         variations,
@@ -810,10 +831,8 @@ fn validate_rendering_dimensions(width: u32, height: u32) -> Result<(), String> 
     Ok(())
 }
 
-fn normalize_optional_text_hint(raw: Option<&str>) -> Option<String> {
-    raw.map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
+fn parse_text_language(raw: Option<&str>) -> Result<Option<String>, String> {
+    crate::language::normalize_language_tag(raw)
 }
 
 fn parse_text_script(raw: Option<&str>) -> Result<Option<String>, String> {
@@ -929,6 +948,8 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::collections::HashMap;
+    use std::io::Cursor;
+    use std::time::{SystemTime, UNIX_EPOCH};
     use typf_core::types::Direction;
 
     fn test_job(id: &str) -> Job {
@@ -964,6 +985,16 @@ mod tests {
         path.pop(); // workspace root
         path.push("test-fonts");
         path.push("NotoSans-Regular.ttf");
+        path
+    }
+
+    fn temp_file(prefix: &str) -> PathBuf {
+        let mut path = std::env::temp_dir();
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after epoch")
+            .as_nanos();
+        path.push(format!("typf_jsonl_{}_{}", prefix, nanos));
         path
     }
 
@@ -1064,6 +1095,26 @@ mod tests {
 
         let spec: JobSpec = serde_json::from_str(json).unwrap();
         assert_eq!(spec._version, "2.2");
+    }
+
+    #[test]
+    fn test_read_batch_input_with_limit_when_under_limit_then_succeeds() {
+        let input = Cursor::new(br#"{"version":"2.0","jobs":[]}"#.to_vec());
+        let parsed =
+            read_batch_input_with_limit(input, 64).expect("small JSON input should be accepted");
+        assert_eq!(parsed, r#"{"version":"2.0","jobs":[]}"#);
+    }
+
+    #[test]
+    fn test_read_batch_input_with_limit_when_over_limit_then_errors() {
+        let input = Cursor::new(vec![b'a'; 10]);
+        let error = read_batch_input_with_limit(input, 4)
+            .expect_err("input beyond limit should be rejected");
+        assert!(
+            error.to_string().contains("exceeds max size"),
+            "expected size-limit validation message, got: {}",
+            error
+        );
     }
 
     #[test]
@@ -1372,20 +1423,31 @@ mod tests {
     }
 
     #[test]
-    fn test_normalize_optional_text_hint_when_blank_then_none() {
+    fn test_parse_text_language_when_blank_then_none() {
         assert_eq!(
-            normalize_optional_text_hint(Some(" \t\n ")),
+            parse_text_language(Some(" \t\n ")).expect("blank language should parse"),
             None,
-            "blank optional hints should normalize to None"
+            "blank language hints should normalize to None"
         );
     }
 
     #[test]
-    fn test_normalize_optional_text_hint_when_surrounded_by_whitespace_then_trimmed() {
+    fn test_parse_text_language_when_valid_then_canonicalized() {
         assert_eq!(
-            normalize_optional_text_hint(Some("  Arab\t")),
-            Some("Arab".to_string()),
-            "optional hints should be trimmed"
+            parse_text_language(Some("  en-us\t")).expect("language should parse"),
+            Some("en-US".to_string()),
+            "language hints should canonicalize to BCP 47 casing"
+        );
+    }
+
+    #[test]
+    fn test_parse_text_language_when_invalid_then_error() {
+        let error = parse_text_language(Some("en_US"))
+            .expect_err("invalid BCP 47 language tags should fail");
+        assert!(
+            error.contains("valid BCP 47"),
+            "expected BCP 47 validation guidance, got: {}",
+            error
         );
     }
 
@@ -1762,6 +1824,36 @@ mod tests {
     }
 
     #[test]
+    fn test_process_job_when_font_source_file_is_oversized_then_error() {
+        let oversized_path = temp_file("oversized_font");
+        let file = std::fs::File::create(&oversized_path).expect("temp file should be creatable");
+        file.set_len(MAX_FONT_FILE_BYTES + 1)
+            .expect("temp file size should be adjustable");
+
+        let mut job = test_job("job-oversized-font");
+        job.font.source.path = oversized_path.clone();
+
+        let result = process_job(&job);
+        std::fs::remove_file(&oversized_path).expect("temp file cleanup should succeed");
+
+        assert_eq!(
+            result.status, "error",
+            "oversized font source file should fail fast"
+        );
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("Invalid font.source.path"),
+            "expected font.source.path validation context, got: {}",
+            error
+        );
+        assert!(
+            error.contains("exceeds max size"),
+            "expected size-limit guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
     fn test_process_job_when_text_content_exceeds_limit_then_error() {
         let mut job = test_job("job-text-too-large");
         job.text.content = "a".repeat(MAX_TEXT_CONTENT_BYTES + 1);
@@ -1798,6 +1890,27 @@ mod tests {
         assert!(
             error.contains("ASCII letters"),
             "expected script-format guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_text_language_is_invalid_then_error() {
+        let mut job = test_job("job-invalid-language");
+        job.font.source.path = workspace_test_font();
+        job.text.language = Some("en_US".to_string());
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "invalid language should fail fast");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("Invalid text.language"),
+            "expected text.language validation context, got: {}",
+            error
+        );
+        assert!(
+            error.contains("valid BCP 47"),
+            "expected BCP 47 guidance, got: {}",
             error
         );
     }

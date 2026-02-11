@@ -5,6 +5,8 @@
 
 mod cli;
 mod commands;
+mod language;
+mod limits;
 
 // Keep legacy modules for REPL and advanced batch
 mod batch;

@@ -9,6 +9,22 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 BCP47 language-tag validation parity micro-sprint)
+
+- [x] Add shared BCP 47 language-tag normalization utility for typf-cli inputs (`language-tags`-backed canonicalization)
+- [x] Validate/canonicalize `typf render --language` and emit explicit invalid-language diagnostics
+- [x] Validate/canonicalize JSONL `text.language` with explicit `Invalid text.language` error context
+- [x] Validate/canonicalize `typf batch` per-job `language` with explicit `Invalid batch language tag` diagnostics
+- [x] Re-verify with `cargo test -p typf-cli --all-features`, `./test.sh --quick`, and full `./test.sh`
+
+## Completed (2026-02-11 resource/input-guardrail micro-sprint)
+
+- [x] Validate render CLI `--color-palette` as a strict CPAL-compatible 16-bit index (`0..=65535`) and reject overflow values
+- [x] Add font source file-size guardrail (`MAX_FONT_FILE_BYTES=100 MiB`) before font loading in render CLI and JSONL job processing
+- [x] Add bounded structured JSONL read (`MAX_JSONL_BATCH_INPUT_BYTES=32 MiB`) before deserializing batch payloads
+- [x] Add regression tests for palette overflow, oversized font source files, and capped JSON batch input reads
+- [x] Re-verify with `cargo test -p typf-cli --all-features` and `./test.sh --quick`
+
 ## Completed (2026-02-11 render/JSONL script-hint + text-size parity micro-sprint)
 
 - [x] Add render-CLI text payload-size cap (`MAX_TEXT_CONTENT_BYTES=1_000_000`) across positional/`--text`, `--text-file`, and stdin inputs

@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, cross-CLI unicode/color parser-parity, render face-index/glyph-source plus JSONL stream duplicate-id, JSONL resource-limits/stream-id-cap, and render/JSONL script-hint plus text-size parity micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, cross-CLI unicode/color parser-parity, render face-index/glyph-source plus JSONL stream duplicate-id, JSONL resource-limits/stream-id-cap, render/JSONL script-hint plus text-size parity, and resource-input-guardrail micro-sprints complete.
 
 ## TLDR
 
@@ -19,12 +19,27 @@
 
 The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` is the flat actionable backlog.
 
+### Post-v5.0.2 Resource/Input-Guardrail Micro-Sprint (2026-02-11)
+
+- `typf render` and linra rendering now validate `--color-palette` against CPAL’s 16-bit range (`0..=65535`) and reject overflow instead of silently truncating
+- Render CLI and JSONL job processing now validate source font file size before parsing (`MAX_FONT_FILE_BYTES = 100 MiB`) to prevent oversized font inputs from exhausting resources
+- JSONL structured batch mode now applies a bounded pre-parse input read (`MAX_JSONL_BATCH_INPUT_BYTES = 32 MiB`) and rejects oversized payloads before deserialization
+- Verification: `cargo test -p typf-cli --all-features` and repo-root `./test.sh --quick` both pass
+
 ### Post-v5.0.2 Render/JSONL Script-Hint + Text-Size Parity Micro-Sprint (2026-02-11)
 
 - `typf render` now rejects oversized text payloads above `1_000_000` bytes before shaping (positional/`--text` decoded input, `--text-file`, and stdin)
 - `typf render` now normalizes `--language` (`trim`, blank→unset) and validates `--script` as ISO 15924-style 4-letter ASCII alpha tags (`auto`/blank→unset, canonicalized titlecase)
 - JSONL `text.script` now uses the same normalization/validation rules as render CLI and reports explicit `Invalid text.script` diagnostics for invalid values
 - Verification: `cargo test --manifest-path crates/typf-cli/Cargo.toml render::tests:: -- --nocapture`, `cargo test --manifest-path crates/typf-cli/Cargo.toml jsonl::tests:: -- --nocapture`, and repo-root `./test.sh --quick` all pass
+
+### Post-v5.0.2 BCP47 Language-Tag Validation Parity Micro-Sprint (2026-02-11)
+
+- Added shared BCP 47 language-tag parser/canonicalizer (`crates/typf-cli/src/language.rs`) backed by `language-tags`
+- `typf render --language` now validates BCP 47 syntax and canonicalizes casing (for example, `en-us` → `en-US`) before shaping
+- JSONL `text.language` now validates/canonicalizes with explicit `Invalid text.language` diagnostics for invalid tags
+- `typf batch` per-job `language` now validates/canonicalizes with explicit `Invalid batch language tag` diagnostics
+- Verification: `cargo test -p typf-cli --all-features`, `./test.sh --quick`, and full `./test.sh` all pass
 
 ### Post-v5.0.2 JSONL Resource-Limits/Stream-ID-Cap Micro-Sprint (2026-02-11)
 
