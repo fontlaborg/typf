@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, and JSONL font-loader/face-index/text-hint-normalization micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, and cross-CLI unicode/color parser-parity micro-sprints complete.
 
 ## TLDR
 
@@ -18,6 +18,12 @@
 - **Platform Docs**: Vello-GPU platform matrix in `src_docs/26-vello-gpu-platform-support.md`
 
 The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` is the flat actionable backlog.
+
+### Post-v5.0.2 Cross-CLI Unicode/Color Parser-Parity Micro-Sprint (2026-02-11)
+
+- Rust CLI Unicode decoding now supports 8-digit `\UXXXXXXXX` escapes in addition to `\uXXXX` and `\u{...}`
+- Python CLI Unicode decoding now supports `\UXXXXXXXX` and keeps malformed `\U` escapes literal for deterministic behavior
+- Python CLI color parsing now matches Rust CLI behavior by accepting trimmed shorthand hex (`RGB`/`RGBA`) and full hex (`RRGGBB`/`RRGGBBAA`) forms with dedicated regression coverage
 
 ### Post-v5.0.2 JSONL Job-Identity/Rendering-Dimensions + Batch Field-Normalization Micro-Sprint (2026-02-11)
 

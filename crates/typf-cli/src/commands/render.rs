@@ -309,7 +309,8 @@ fn decode_unicode_escapes(text: &str) -> String {
     let mut index = 0;
 
     while index < chars.len() {
-        if chars[index] == '\\' && index + 1 < chars.len() && chars[index + 1] == 'u' {
+        if chars[index] == '\\' && index + 1 < chars.len() && matches!(chars[index + 1], 'u' | 'U')
+        {
             if let Some((decoded, consumed)) = parse_unicode_escape(&chars, index) {
                 result.push(decoded);
                 index += consumed;
@@ -329,10 +330,16 @@ fn parse_unicode_escape(chars: &[char], start: usize) -> Option<(char, usize)> {
         return None;
     }
 
-    if chars[start + 2] == '{' {
-        parse_braced_unicode_escape(chars, start)
-    } else {
-        parse_u4_unicode_escape(chars, start)
+    match chars[start + 1] {
+        'u' => {
+            if chars[start + 2] == '{' {
+                parse_braced_unicode_escape(chars, start)
+            } else {
+                parse_u4_unicode_escape(chars, start)
+            }
+        },
+        'U' => parse_u8_unicode_escape(chars, start),
+        _ => None,
     }
 }
 
@@ -378,6 +385,11 @@ fn parse_u4_unicode_escape(chars: &[char], start: usize) -> Option<(char, usize)
     char::from_u32(high as u32).map(|decoded| (decoded, 6))
 }
 
+fn parse_u8_unicode_escape(chars: &[char], start: usize) -> Option<(char, usize)> {
+    let value = parse_u32_escape(chars, start)?;
+    char::from_u32(value).map(|decoded| (decoded, 10))
+}
+
 fn parse_u16_escape(chars: &[char], start: usize) -> Option<u16> {
     if start + 6 > chars.len() {
         return None;
@@ -388,6 +400,16 @@ fn parse_u16_escape(chars: &[char], start: usize) -> Option<u16> {
     parse_hex_u16(&chars[start + 2..start + 6])
 }
 
+fn parse_u32_escape(chars: &[char], start: usize) -> Option<u32> {
+    if start + 10 > chars.len() {
+        return None;
+    }
+    if chars[start] != '\\' || chars[start + 1] != 'U' {
+        return None;
+    }
+    parse_hex_u32(&chars[start + 2..start + 10])
+}
+
 fn parse_hex_u16(chars: &[char]) -> Option<u16> {
     if chars.len() != 4 {
         return None;
@@ -395,6 +417,17 @@ fn parse_hex_u16(chars: &[char]) -> Option<u16> {
     let mut value = 0u16;
     for ch in chars {
         value = (value << 4) | (ch.to_digit(16)? as u16);
+    }
+    Some(value)
+}
+
+fn parse_hex_u32(chars: &[char]) -> Option<u32> {
+    if chars.len() != 8 {
+        return None;
+    }
+    let mut value = 0u32;
+    for ch in chars {
+        value = (value << 4) | ch.to_digit(16)?;
     }
     Some(value)
 }
@@ -1380,9 +1413,16 @@ mod tests {
     }
 
     #[test]
+    fn decode_unicode_escapes_decodes_uppercase_u8_sequence() {
+        assert_eq!(decode_unicode_escapes(r"\U0001F600"), "😀");
+    }
+
+    #[test]
     fn decode_unicode_escapes_preserves_malformed_sequences() {
         assert_eq!(decode_unicode_escapes(r"\u12"), r"\u12");
         assert_eq!(decode_unicode_escapes(r"\u{xyz}"), r"\u{xyz}");
         assert_eq!(decode_unicode_escapes(r"\uD83D"), r"\uD83D");
+        assert_eq!(decode_unicode_escapes(r"\U00110000"), r"\U00110000");
+        assert_eq!(decode_unicode_escapes(r"\U0000ZZZZ"), r"\U0000ZZZZ");
     }
 }

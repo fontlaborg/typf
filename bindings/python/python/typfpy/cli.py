@@ -388,7 +388,7 @@ def get_input_text(text: Optional[str], text_opt: Optional[str], text_file: Opti
 
 
 def decode_unicode_escapes(text: str) -> str:
-    """Decode Unicode escape sequences like \\uXXXX or \\u{X...}"""
+    """Decode Unicode escape sequences like \\uXXXX, \\UXXXXXXXX, or \\u{X...}"""
     result = []
     i = 0
     text_len = len(text)
@@ -413,11 +413,17 @@ HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
 def _parse_unicode_escape(text: str, start: int) -> Optional[tuple[str, int]]:
     if start + 2 >= len(text):
         return None
-    if text[start] != "\\" or text[start + 1] != "u":
+    if text[start] != "\\":
         return None
-    if text[start + 2] == "{":
-        return _parse_braced_unicode_escape(text, start)
-    return _parse_u4_unicode_escape(text, start)
+
+    marker = text[start + 1]
+    if marker == "u":
+        if text[start + 2] == "{":
+            return _parse_braced_unicode_escape(text, start)
+        return _parse_u4_unicode_escape(text, start)
+    if marker == "U":
+        return _parse_u8_unicode_escape(text, start)
+    return None
 
 
 def _parse_braced_unicode_escape(text: str, start: int) -> Optional[tuple[str, int]]:
@@ -459,6 +465,28 @@ def _parse_u4_unicode_escape(text: str, start: int) -> Optional[tuple[str, int]]
     return chr(high), 6
 
 
+def _parse_u8_unicode_escape(text: str, start: int) -> Optional[tuple[str, int]]:
+    if start + 10 > len(text):
+        return None
+    if text[start:start + 2] != "\\U":
+        return None
+
+    hex_str = text[start + 2:start + 10]
+    if len(hex_str) != 8:
+        return None
+    if any(ch not in HEX_DIGITS for ch in hex_str):
+        return None
+
+    code = int(hex_str, 16)
+    if code > 0x10FFFF or 0xD800 <= code <= 0xDFFF:
+        return None
+
+    try:
+        return chr(code), 10
+    except ValueError:
+        return None
+
+
 def _parse_u16_escape(text: str, start: int) -> Optional[int]:
     if start + 6 > len(text):
         return None
@@ -475,8 +503,12 @@ def _parse_u16_escape(text: str, start: int) -> Optional[int]:
 
 
 def parse_color(color_str: str) -> tuple:
-    """Parse color in RRGGBB or RRGGBBAA format"""
-    hex_str = color_str.lstrip('#')
+    """Parse color in RGB, RGBA, RRGGBB, or RRGGBBAA format"""
+    normalized = color_str.strip()
+    hex_str = normalized.lstrip('#')
+
+    if len(hex_str) in (3, 4):
+        hex_str = ''.join(ch * 2 for ch in hex_str)
 
     if len(hex_str) == 6:
         # RRGGBB format
@@ -492,7 +524,9 @@ def parse_color(color_str: str) -> tuple:
         a = int(hex_str[6:8], 16)
         return (r, g, b, a)
     else:
-        raise ValueError(f"Invalid color format: {color_str}. Must be RRGGBB or RRGGBBAA")
+        raise ValueError(
+            f"Invalid color format: {color_str}. Must be RGB, RGBA, RRGGBB, or RRGGBBAA"
+        )
 
 
 def parse_features(features_str: str) -> list:

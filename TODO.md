@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 cross-CLI unicode/color parser-parity micro-sprint)
+
+- [x] Add Rust CLI support for 8-digit `\UXXXXXXXX` Unicode escapes while preserving malformed uppercase escapes literally
+- [x] Add Python CLI support for `\UXXXXXXXX` Unicode escapes with malformed-literal preservation parity
+- [x] Align Python CLI color parsing with Rust (`RGB`/`RGBA` shorthand + trimmed input support) and add parser regression tests
+
 ## Completed (2026-02-11 JSONL font-loader/face-index/text-hint-normalization micro-sprint)
 
 - [x] Replace JSONL job font loading shim with real `TypfFontFace::from_file_index()` loading

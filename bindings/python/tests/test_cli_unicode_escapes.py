@@ -16,7 +16,13 @@ def test_decode_unicode_escapes_when_surrogate_pair_then_decodes():
     assert decode_unicode_escapes(r"\uD83D\uDE00") == "😀"
 
 
+def test_decode_unicode_escapes_when_uppercase_u8_then_decodes():
+    assert decode_unicode_escapes(r"\U0001F600") == "😀"
+
+
 def test_decode_unicode_escapes_when_malformed_then_preserves_literal():
     assert decode_unicode_escapes(r"\u12") == r"\u12"
     assert decode_unicode_escapes(r"\u{xyz}") == r"\u{xyz}"
     assert decode_unicode_escapes(r"\uD83D") == r"\uD83D"
+    assert decode_unicode_escapes(r"\U0000ZZZZ") == r"\U0000ZZZZ"
+    assert decode_unicode_escapes(r"\U00110000") == r"\U00110000"
