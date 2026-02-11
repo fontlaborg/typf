@@ -3,37 +3,35 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 JSONL/batch validation hardening micro-sprint
+**Focus:** Post-v5.0.2 stream-diagnostics/color-input micro-sprint
 
 ## Sprint Tasks
 
-- [x] Reject blank and duplicate JSONL `job.id` values
-- [x] Reject JSONL `rendering.width`/`rendering.height` values of `0`
-- [x] Normalize/validate batch per-job optional input fields (`font`, `shaper`, `renderer`, `language`)
-- [x] Normalize per-job batch backend tokens and reject blank per-job batch `format` values explicitly
+- [x] Add line-aware JSONL stream diagnostics for parse and `job.id` validation failures
+- [x] Prefix JSONL stream execution errors with source line numbers while preserving job IDs
+- [x] Improve render CLI input parsing: support shorthand hex colors (`RGB`/`RGBA`) and contextual invalid font-size diagnostics
 
 ## Research Notes
 
-- JSON object member uniqueness interoperability guidance (RFC 8259):
-  https://www.rfc-editor.org/rfc/rfc8259
 - JSON Lines format reference:
   https://jsonlines.org/
-- Rust string trimming behavior (`str::trim`) for robust input normalization:
-  https://doc.rust-lang.org/std/primitive.str.html#method.trim
-- Rust `HashSet` for duplicate detection:
-  https://doc.rust-lang.org/std/collections/struct.HashSet.html
+- MDN hex-color shorthand/full notation reference (`#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`):
+  https://developer.mozilla.org/en-US/docs/Web/CSS/hex-color
+- Rayon indexed `collect()` ordering behavior:
+  https://docs.rs/rayon/latest/rayon/iter/trait.ParallelIterator.html#method.collect
 
 ## Verification Results
 
 - `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
-- `cargo test --manifest-path crates/typf-cli/Cargo.toml -- --nocapture`: PASS
+- `cargo clippy -p typf-cli --all-features -- -D warnings`: PASS
+- `cargo test -p typf-cli`: PASS
 - `./test.sh --quick`: PASS
 
 ## Notes
 
 - Touched code paths:
   - `crates/typf-cli/src/jsonl.rs`
-  - `crates/typf-cli/src/commands/batch.rs`
+  - `crates/typf-cli/src/commands/render.rs`
 - Updated project tracking docs:
   - `TASKS.md`
   - `TODO.md`

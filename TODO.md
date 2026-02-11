@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 stream-diagnostics/color-input micro-sprint)
+
+- [x] Add line-aware JSONL stream diagnostics for parse and `job.id` validation failures (synthetic IDs + line-number context)
+- [x] Prefix JSONL stream execution error messages with source line numbers while preserving original job IDs
+- [x] Harden `typf render` input parsing by supporting trimmed shorthand hex colors (`RGB`/`RGBA`) and contextual invalid font-size diagnostics
+
 ## Completed (2026-02-11 JSONL job-identity/rendering-dimensions + batch field-normalization micro-sprint)
 
 - [x] Reject blank, whitespace-padded, and duplicate JSONL `job.id` values before batch execution

@@ -9,10 +9,11 @@
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// A batch of rendering jobs to process
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct JobSpec {
     /// API version compatibility (defaults to "2.0")
     #[serde(default = "default_version", rename = "version", alias = "_version")]
@@ -27,6 +28,7 @@ fn default_version() -> String {
 
 /// One complete rendering request
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Job {
     /// How to identify this job in the results
     pub id: String,
@@ -40,6 +42,7 @@ pub struct Job {
 
 /// Where the font data comes from (file path + optional face index)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TypfFontSourceConfig {
     /// Where to find the font file
     pub path: PathBuf,
@@ -50,6 +53,7 @@ pub struct TypfFontSourceConfig {
 
 /// Variable font coordinates (instance-level)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
 pub struct TypfFontInstanceConfig {
     /// Variable font axis settings (weight, width, etc.)
     #[serde(default)]
@@ -58,6 +62,7 @@ pub struct TypfFontInstanceConfig {
 
 /// Render-ready font settings (source + instance + size)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TypfFontRenderableConfig {
     /// Font container (path + face index)
     pub source: TypfFontSourceConfig,
@@ -70,6 +75,7 @@ pub struct TypfFontRenderableConfig {
 
 /// Text content and language settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TextConfig {
     /// What we're actually rendering
     pub content: String,
@@ -89,6 +95,7 @@ pub struct TextConfig {
 
 /// Output format and rendering settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RenderingConfig {
     /// What we're outputting (ppm, pgm, pbm, png, metrics)
     pub format: String,
@@ -258,6 +265,8 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
     let spec: JobSpec = serde_json::from_str(&input)?;
     validate_spec_version(&spec._version)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+    validate_jobs_not_empty(&spec.jobs)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
     validate_job_ids(&spec.jobs)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
 
@@ -355,6 +364,12 @@ fn process_job(job: &Job) -> JobResult {
 
     if let Err(error) = validate_job_id(&job.id) {
         return JobResult::error("invalid_job_id", format!("Invalid job.id: {}", error));
+    }
+    if let Err(error) = validate_font_source_path(&job.font.source.path) {
+        return JobResult::error(
+            "invalid_font_source_path",
+            format!("Invalid font.source.path: {}", error),
+        );
     }
 
     let start = Instant::now();
@@ -742,6 +757,22 @@ fn annotate_stream_error_with_line(mut result: JobResult, line_number: usize) ->
     result
 }
 
+fn validate_jobs_not_empty(jobs: &[Job]) -> Result<(), String> {
+    if jobs.is_empty() {
+        Err("jobs list cannot be empty".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+fn validate_font_source_path(path: &Path) -> Result<(), String> {
+    if path.as_os_str().is_empty() || path.to_string_lossy().trim().is_empty() {
+        Err("font.source.path cannot be blank".to_string())
+    } else {
+        Ok(())
+    }
+}
+
 fn validate_rendering_dimensions(width: u32, height: u32) -> Result<(), String> {
     if width == 0 {
         return Err("rendering.width must be greater than 0".to_string());
@@ -917,6 +948,50 @@ mod tests {
     }
 
     #[test]
+    fn test_job_spec_deserialization_when_unknown_top_level_field_then_error() {
+        let json = r#"{
+            "version": "2.1",
+            "jobs": [],
+            "unexpected": true
+        }"#;
+
+        let error =
+            serde_json::from_str::<JobSpec>(json).expect_err("unknown top-level field should fail");
+        assert!(
+            error.to_string().contains("unknown field"),
+            "expected serde unknown-field error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_job_spec_deserialization_when_unknown_nested_field_then_error() {
+        let json = r#"{
+            "version": "2.1",
+            "jobs": [
+                {
+                    "id": "job1",
+                    "font": {
+                        "source": {"path": "/fonts/arial.ttf"},
+                        "size": 24,
+                        "extra_font_field": "oops"
+                    },
+                    "text": {"content": "Test"},
+                    "rendering": {"format": "ppm", "encoding": "base64", "width": 800, "height": 600}
+                }
+            ]
+        }"#;
+
+        let error =
+            serde_json::from_str::<JobSpec>(json).expect_err("unknown nested field should fail");
+        assert!(
+            error.to_string().contains("unknown field"),
+            "expected serde unknown-field error, got: {}",
+            error
+        );
+    }
+
+    #[test]
     fn test_job_spec_deserialization_supports_legacy_underscore_version() {
         let json = r#"{
             "_version": "2.2",
@@ -1043,6 +1118,39 @@ mod tests {
             "expected duplicate-id validation message, got: {}",
             error
         );
+    }
+
+    #[test]
+    fn test_validate_jobs_not_empty_rejects_empty_list() {
+        let error = validate_jobs_not_empty(&[]).expect_err("empty jobs list should be rejected");
+        assert!(
+            error.contains("cannot be empty"),
+            "expected empty-jobs validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_validate_jobs_not_empty_accepts_non_empty_list() {
+        let jobs = vec![test_job("job-1")];
+        validate_jobs_not_empty(&jobs).expect("non-empty jobs list should pass");
+    }
+
+    #[test]
+    fn test_validate_font_source_path_rejects_blank_path() {
+        let error = validate_font_source_path(&PathBuf::from(" \t\n"))
+            .expect_err("blank font source path should fail");
+        assert!(
+            error.contains("cannot be blank"),
+            "expected blank-path validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_validate_font_source_path_accepts_non_empty_path() {
+        validate_font_source_path(&PathBuf::from("./test-fonts/NotoSans-Regular.ttf"))
+            .expect("non-empty font source path should pass");
     }
 
     #[test]
@@ -1447,6 +1555,21 @@ mod tests {
         assert!(
             error.contains("positive"),
             "expected positive-size guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_font_source_path_is_blank_then_error() {
+        let mut job = test_job("job-blank-path");
+        job.font.source.path = PathBuf::from(" \t ");
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "blank font path must fail fast");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("Invalid font.source.path"),
+            "expected font.source.path validation context, got: {}",
             error
         );
     }

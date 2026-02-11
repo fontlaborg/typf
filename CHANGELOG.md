@@ -145,6 +145,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Rust CLI Unicode escape decoding now supports UTF-16 surrogate pairs in `\uXXXX\uXXXX` sequences
 - Rust and Python CLI Unicode decoders now preserve malformed `\u` escapes verbatim instead of consuming characters
 - Added cross-language regression tests for `\uXXXX`, `\u{...}`, surrogate-pair decoding, and malformed escape preservation
+- JSONL stream parse/validation failures now include source line numbers and emit line-aware synthetic IDs for diagnostics
+- JSONL stream execution failures now preserve job IDs while prefixing error messages with source line numbers
+- `typf render` color parsing now accepts trimmed shorthand hex inputs (`RGB`/`RGBA`) in addition to full hex forms
+- `typf render` font-size parse errors now include the invalid token and expected syntax (`number` or `em`)
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

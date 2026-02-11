@@ -421,9 +421,12 @@ fn parse_font_size(size_str: &str) -> Result<f32> {
     let parsed: f32 = if normalized.eq_ignore_ascii_case("em") {
         1000.0 // UPM
     } else {
-        normalized
-            .parse()
-            .map_err(|_| TypfError::Other("Invalid font size".into()))?
+        normalized.parse().map_err(|_| {
+            TypfError::Other(format!(
+                "Invalid font size '{}': expected number or 'em'",
+                normalized
+            ))
+        })?
     };
 
     if !parsed.is_finite() {
@@ -516,7 +519,22 @@ fn is_rtl_script(script: &str) -> bool {
 }
 
 fn parse_color(color_str: &str) -> Result<Color> {
-    let hex = color_str.trim_start_matches('#');
+    let normalized = color_str.trim();
+    let hex = normalized.strip_prefix('#').unwrap_or(normalized);
+
+    let expanded;
+    let hex = match hex.len() {
+        3 | 4 => {
+            expanded = hex.chars().flat_map(|ch| [ch, ch]).collect::<String>();
+            expanded.as_str()
+        },
+        6 | 8 => hex,
+        _ => {
+            return Err(TypfError::Other(
+                "Color must be in RGB, RGBA, RRGGBB, or RRGGBBAA hex format".into(),
+            ))
+        },
+    };
 
     let (r, g, b, a) = if hex.len() == 6 {
         // RRGGBB format
@@ -540,7 +558,7 @@ fn parse_color(color_str: &str) -> Result<Color> {
         (r, g, b, a)
     } else {
         return Err(TypfError::Other(
-            "Color must be in RRGGBB or RRGGBBAA format".into(),
+            "Color must be in RGB, RGBA, RRGGBB, or RRGGBBAA hex format".into(),
         ));
     };
 
@@ -1282,6 +1300,16 @@ mod tests {
     }
 
     #[test]
+    fn parse_font_size_rejects_non_numeric_values_with_context() {
+        let err = parse_font_size("large").expect_err("non-numeric size should fail");
+        assert!(
+            format!("{err}").contains("Invalid font size 'large'"),
+            "expected contextual parse error, got: {}",
+            err
+        );
+    }
+
+    #[test]
     fn parse_font_size_rejects_non_positive_values() {
         let zero_err = parse_font_size("0").expect_err("zero size should be rejected");
         let negative_err = parse_font_size("-12").expect_err("negative size should be rejected");
@@ -1304,6 +1332,34 @@ mod tests {
         assert!(
             format!("{err}").contains("exceeds maximum"),
             "expected maximum-size validation message, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn parse_color_accepts_trimmed_six_digit_hex() {
+        let color = parse_color("  #00ff7f\t").expect("trimmed six-digit hex should parse");
+        assert_eq!(color, Color::rgba(0x00, 0xFF, 0x7F, 0xFF));
+    }
+
+    #[test]
+    fn parse_color_accepts_rgb_shorthand_hex() {
+        let color = parse_color("#0f8").expect("rgb shorthand should parse");
+        assert_eq!(color, Color::rgba(0x00, 0xFF, 0x88, 0xFF));
+    }
+
+    #[test]
+    fn parse_color_accepts_rgba_shorthand_hex() {
+        let color = parse_color("0f8c").expect("rgba shorthand should parse");
+        assert_eq!(color, Color::rgba(0x00, 0xFF, 0x88, 0xCC));
+    }
+
+    #[test]
+    fn parse_color_rejects_invalid_hex_length() {
+        let err = parse_color("#12").expect_err("invalid-length hex should fail");
+        assert!(
+            format!("{err}").contains("RGB, RGBA, RRGGBB, or RRGGBBAA"),
+            "expected supported-format guidance, got: {}",
             err
         );
     }
