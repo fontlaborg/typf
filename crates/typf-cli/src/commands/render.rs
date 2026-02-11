@@ -6,7 +6,7 @@
 // this_file: crates/typf-cli/src/commands/render.rs
 
 use crate::cli::{OutputFormat, RenderArgs};
-use crate::limits::{validate_file_size_limit, MAX_FONT_FILE_BYTES};
+use crate::limits::{read_to_string_with_limit, validate_file_size_limit, MAX_FONT_FILE_BYTES};
 use skrifa::bitmap::BitmapStrikes;
 use skrifa::raw::TableProvider;
 use std::fs::File;
@@ -32,9 +32,12 @@ use typf_unicode::{UnicodeOptions, UnicodeProcessor};
 const MAX_TEXT_CONTENT_BYTES: usize = 1_000_000;
 
 pub fn run(args: &RenderArgs) -> Result<()> {
+    let normalized_renderer = parse_backend_name(&args.renderer, "renderer")?;
+    let normalized_shaper = parse_backend_name(&args.shaper, "shaper")?;
+
     // Check if using linra (single-pass) renderer
     // "auto" now defaults to linra if available (unless SVG output requested)
-    let use_linra = if args.renderer == "auto" {
+    let use_linra = if normalized_renderer == "auto" {
         // Auto-select: use linra if available, but not for SVG output
         #[cfg(feature = "linra")]
         {
@@ -45,7 +48,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
             false
         }
     } else {
-        is_linra_renderer(&args.renderer)
+        is_linra_renderer(&normalized_renderer)
     };
 
     // Track if we're falling back from linra for SVG export
@@ -54,7 +57,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         // SVG export extracts glyph outlines from font after shaping.
         // Linra combines shaping+rendering atomically, so we can't get shaping result.
         // Fall back to the matching system shaper for consistent results.
-        let fallback = match args.renderer.as_str() {
+        let fallback = match normalized_renderer.as_str() {
             "linra-mac" | "linra" => {
                 #[cfg(feature = "shaping-ct")]
                 {
@@ -79,7 +82,7 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         fallback
     } else if use_linra {
         #[cfg(feature = "linra")]
-        return run_linra(args);
+        return run_linra(args, &normalized_renderer);
 
         #[cfg(not(feature = "linra"))]
         return Err(TypfError::Other(format!(
@@ -164,12 +167,12 @@ pub fn run(args: &RenderArgs) -> Result<()> {
 
     // 8. Select backends
     // Use fallback shaper if we're falling back from linra for SVG
-    let shaper_name = svg_fallback_shaper.unwrap_or(&args.shaper);
+    let shaper_name = svg_fallback_shaper.unwrap_or(normalized_shaper.as_str());
     let shaper = select_shaper(shaper_name)?;
 
     // Prefer requested renderer; if SVG output is requested but the renderer
     // cannot emit SVG, fall back to the dedicated SVG renderer.
-    let mut renderer_name = args.renderer.as_str();
+    let mut renderer_name = normalized_renderer.as_str();
     let mut renderer = select_renderer(renderer_name)?;
 
     if matches!(args.format, OutputFormat::Svg) && !renderer.supports_format("svg") {
@@ -284,6 +287,8 @@ fn warn_if_vello_gpu_with_color_font(renderer_name: &str, font_data: &[u8], quie
 }
 
 fn get_input_text(args: &RenderArgs) -> Result<String> {
+    validate_text_sources(args)?;
+
     // Priority: text positional > --text > --text-file > stdin
     if let Some(ref text) = args.text {
         return decode_and_validate_inline_text(text);
@@ -294,18 +299,40 @@ fn get_input_text(args: &RenderArgs) -> Result<String> {
     }
 
     if let Some(ref path) = args.text_file {
-        let mut file = File::open(path)?;
-        let mut text = String::new();
-        file.read_to_string(&mut text)?;
-        validate_text_content_size(&text)?;
+        let file = File::open(path)?;
+        let text = read_text_with_limit(file, "text file input").map_err(TypfError::Other)?;
         return Ok(text);
     }
 
     // Read from stdin
-    let mut text = String::new();
-    io::stdin().read_to_string(&mut text)?;
-    validate_text_content_size(&text)?;
-    Ok(text)
+    let stdin = io::stdin();
+    read_text_with_limit(stdin.lock(), "stdin input text").map_err(TypfError::Other)
+}
+
+fn validate_text_sources(args: &RenderArgs) -> Result<()> {
+    let mut explicit_sources = Vec::new();
+    if args.text.is_some() {
+        explicit_sources.push("positional text");
+    }
+    if args.text_arg.is_some() {
+        explicit_sources.push("--text");
+    }
+    if args.text_file.is_some() {
+        explicit_sources.push("--text-file");
+    }
+
+    if explicit_sources.len() <= 1 {
+        return Ok(());
+    }
+
+    Err(TypfError::Other(format!(
+        "Specify exactly one text input source (positional text, --text, or --text-file); got: {}",
+        explicit_sources.join(", ")
+    )))
+}
+
+fn read_text_with_limit<R: Read>(reader: R, label: &str) -> std::result::Result<String, String> {
+    read_to_string_with_limit(reader, MAX_TEXT_CONTENT_BYTES as u64, label)
 }
 
 fn decode_and_validate_inline_text(raw: &str) -> Result<String> {
@@ -671,6 +698,21 @@ fn parse_color_palette(raw: u32) -> Result<u16> {
     })
 }
 
+fn parse_backend_name(raw: &str, kind: &str) -> Result<String> {
+    let normalized = raw.trim().to_ascii_lowercase();
+    if normalized.chars().any(char::is_whitespace) {
+        return Err(TypfError::Other(format!(
+            "Invalid {} backend '{}': whitespace is not allowed",
+            kind, raw
+        )));
+    }
+    if normalized.is_empty() {
+        Ok("auto".to_string())
+    } else {
+        Ok(normalized)
+    }
+}
+
 fn parse_features(features_str: &Option<String>) -> Result<Vec<(String, u32)>> {
     let Some(features) = features_str else {
         return Ok(Vec::new());
@@ -954,7 +996,7 @@ fn select_linra_renderer(renderer_name: &str) -> Result<Arc<dyn LinraRenderer>> 
 
 /// Render using the linra (single-pass) pipeline
 #[cfg(feature = "linra")]
-fn run_linra(args: &RenderArgs) -> Result<()> {
+fn run_linra(args: &RenderArgs, normalized_renderer: &str) -> Result<()> {
     // 1. Get input text
     let text = get_input_text(args)?;
 
@@ -1000,7 +1042,7 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
     };
 
     // 5. Select linra renderer
-    let linra_renderer = select_linra_renderer(&args.renderer)?;
+    let linra_renderer = select_linra_renderer(normalized_renderer)?;
 
     if args.verbose {
         eprintln!("Using linra renderer: {}", linra_renderer.name());
@@ -1149,6 +1191,7 @@ fn write_output(args: &RenderArgs, data: &[u8]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -1678,6 +1721,72 @@ mod tests {
             "expected BCP 47 guidance in error, got: {}",
             error
         );
+    }
+
+    #[test]
+    fn validate_text_sources_when_multiple_explicit_inputs_then_error() {
+        let mut args = test_render_args_with_font("NotoSans-Regular.ttf", 0);
+        args.text = Some("positional".to_string());
+        args.text_arg = Some("option".to_string());
+
+        let err = validate_text_sources(&args)
+            .expect_err("multiple explicit text sources should be rejected");
+        assert!(
+            format!("{err}").contains("Specify exactly one text input source"),
+            "expected clear source-conflict guidance, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn validate_text_sources_when_single_or_stdin_then_ok() {
+        let mut explicit = test_render_args_with_font("NotoSans-Regular.ttf", 0);
+        explicit.text = Some("single".to_string());
+        explicit.text_arg = None;
+        explicit.text_file = None;
+        assert!(
+            validate_text_sources(&explicit).is_ok(),
+            "single explicit source should be accepted"
+        );
+
+        let mut stdin_fallback = test_render_args_with_font("NotoSans-Regular.ttf", 0);
+        stdin_fallback.text = None;
+        stdin_fallback.text_arg = None;
+        stdin_fallback.text_file = None;
+        assert!(
+            validate_text_sources(&stdin_fallback).is_ok(),
+            "missing explicit source should fall back to stdin"
+        );
+    }
+
+    #[test]
+    fn read_text_with_limit_when_oversized_then_errors() {
+        let oversized = "a".repeat(MAX_TEXT_CONTENT_BYTES + 1);
+        let err = read_text_with_limit(Cursor::new(oversized), "stdin input text")
+            .expect_err("oversized text input should be rejected");
+        assert!(
+            err.contains("exceeds max size"),
+            "expected size-limit validation message, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn parse_backend_name_when_mixed_case_and_whitespace_then_normalized() {
+        let renderer = parse_backend_name("  OPIXA\t", "renderer")
+            .expect("renderer token should parse after normalization");
+        let shaper =
+            parse_backend_name("  NoNe ", "shaper").expect("shaper token should parse when mixed");
+
+        assert_eq!(renderer, "opixa");
+        assert_eq!(shaper, "none");
+    }
+
+    #[test]
+    fn parse_backend_name_when_blank_then_defaults_to_auto() {
+        let renderer =
+            parse_backend_name(" \n\t ", "renderer").expect("blank renderer token should parse");
+        assert_eq!(renderer, "auto");
     }
 
     #[test]

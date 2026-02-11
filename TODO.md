@@ -9,6 +9,23 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 script-normalization/limit-helper dedup + file-tracking hygiene micro-sprint)
+
+- [x] Add shared ISO 15924 script-tag normalization utility (`crates/typf-cli/src/script.rs`) and reuse it for render CLI and JSONL `text.script` parsing
+- [x] Add shared text-size validator helper (`validate_text_size_limit`) plus shared `MAX_TEXT_CONTENT_BYTES` in `crates/typf-cli/src/limits.rs`
+- [x] Replace duplicate render/JSONL text-size validation logic with shared limits helper calls
+- [x] Add boundary regression tests for text-size validation (exact-limit accept + over-limit reject)
+- [x] Add missing `this_file` markers in `crates/typf-cli/src/*.rs` and `crates/typf-cli/src/commands/*.rs`
+- [x] Re-verify with `cargo test -p typf-cli --all-features` and `./test.sh --quick`
+
+## Completed (2026-02-11 render input-source/size-capped input-read/backend-normalization micro-sprint)
+
+- [x] Reject ambiguous render CLI text inputs when multiple explicit sources are provided (`positional text`, `--text`, `--text-file`)
+- [x] Switch render CLI `--text-file` and stdin ingestion to bounded reads using shared limits (`MAX_TEXT_CONTENT_BYTES=1_000_000`)
+- [x] Normalize render CLI `--shaper`/`--renderer` tokens (trim + case-insensitive + blank defaults) for backend-selection parity with batch mode
+- [x] Add regression coverage for ambiguous-source rejection, oversized text-file rejection, and case-insensitive backend selection
+- [x] Re-verify with `cargo test -p typf-cli --all-features` and `./test.sh --quick`
+
 ## Completed (2026-02-11 BCP47 language-tag validation parity micro-sprint)
 
 - [x] Add shared BCP 47 language-tag normalization utility for typf-cli inputs (`language-tags`-backed canonicalization)

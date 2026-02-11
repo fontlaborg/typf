@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, cross-CLI unicode/color parser-parity, render face-index/glyph-source plus JSONL stream duplicate-id, JSONL resource-limits/stream-id-cap, render/JSONL script-hint plus text-size parity, and resource-input-guardrail micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, cross-CLI unicode/color parser-parity, render face-index/glyph-source plus JSONL stream duplicate-id, JSONL resource-limits/stream-id-cap, render/JSONL script-hint plus text-size parity, resource-input-guardrail, render input-source/size-capped input-read/backend-normalization, and script-normalization/limit-helper dedup plus `this_file` coverage micro-sprints complete.
 
 ## TLDR
 
@@ -19,11 +19,26 @@
 
 The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` is the flat actionable backlog.
 
+### Post-v5.0.2 Script-Normalization/Limit-Helper Dedup + File-Tracking Hygiene Micro-Sprint (2026-02-11)
+
+- Added shared ISO 15924 script-tag normalization helper (`crates/typf-cli/src/script.rs`) and switched both render CLI and JSONL script parsing to it
+- Added shared text-size limit helper (`validate_text_size_limit`) and shared `MAX_TEXT_CONTENT_BYTES` in `crates/typf-cli/src/limits.rs`; render CLI and JSONL now consume the shared validator
+- Added boundary regression coverage for text-size validation (exact limit accepted, oversized rejected)
+- Added missing `this_file` markers for all `crates/typf-cli/src/*.rs` and `crates/typf-cli/src/commands/*.rs`
+- Verification: `cargo test -p typf-cli --all-features` and repo-root `./test.sh --quick` both pass
+
 ### Post-v5.0.2 Resource/Input-Guardrail Micro-Sprint (2026-02-11)
 
 - `typf render` and linra rendering now validate `--color-palette` against CPAL’s 16-bit range (`0..=65535`) and reject overflow instead of silently truncating
 - Render CLI and JSONL job processing now validate source font file size before parsing (`MAX_FONT_FILE_BYTES = 100 MiB`) to prevent oversized font inputs from exhausting resources
 - JSONL structured batch mode now applies a bounded pre-parse input read (`MAX_JSONL_BATCH_INPUT_BYTES = 32 MiB`) and rejects oversized payloads before deserialization
+- Verification: `cargo test -p typf-cli --all-features` and repo-root `./test.sh --quick` both pass
+
+### Post-v5.0.2 Render Input-Source/Size-Capped Input-Read/Backend-Normalization Micro-Sprint (2026-02-11)
+
+- `typf render` now rejects ambiguous text input combinations when more than one explicit source is provided (`positional text`, `--text`, `--text-file`)
+- Render CLI text ingestion now uses bounded reads for `--text-file` and stdin (`MAX_TEXT_CONTENT_BYTES = 1_000_000`) via shared limit helpers, preventing over-limit reads before full allocation
+- `typf render` now normalizes backend tokens (`--shaper`, `--renderer`) with trim + lowercase + blank→`auto`, enabling case-insensitive backend selection and parity with batch normalization behavior
 - Verification: `cargo test -p typf-cli --all-features` and repo-root `./test.sh --quick` both pass
 
 ### Post-v5.0.2 Render/JSONL Script-Hint + Text-Size Parity Micro-Sprint (2026-02-11)

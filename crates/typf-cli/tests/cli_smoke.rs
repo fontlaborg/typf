@@ -503,6 +503,93 @@ fn test_render_non_finite_font_size_fails() {
 }
 
 #[test]
+fn test_render_rejects_multiple_text_sources() {
+    let output = Command::new(typf_binary())
+        .args(["render", "positional", "--text", "option", "-q"])
+        .output()
+        .expect("Failed to execute typf render with conflicting text inputs");
+
+    assert!(
+        !output.status.success(),
+        "render should fail when positional text and --text are both provided"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Specify exactly one text input source"),
+        "expected explicit text-source conflict message, got: {}",
+        stderr
+    );
+}
+
+#[test]
+fn test_render_rejects_oversized_text_file() {
+    let text_file = temp_output("txt");
+    let file = fs::File::create(&text_file).expect("temp text file should be creatable");
+    file.set_len(1_000_001)
+        .expect("temp text file size should be adjustable");
+
+    let output = Command::new(typf_binary())
+        .args(["render", "--text-file", text_file.to_str().unwrap(), "-q"])
+        .output()
+        .expect("Failed to execute typf render with oversized text file");
+
+    assert!(
+        !output.status.success(),
+        "render with oversized --text-file should fail"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("text file input")
+            && (stderr.contains("exceeds max size") || stderr.contains("max size")),
+        "expected text-file size-limit diagnostics, got: {}",
+        stderr
+    );
+
+    let _ = fs::remove_file(text_file);
+}
+
+#[test]
+fn test_render_accepts_case_insensitive_shaper_and_renderer() {
+    let font = test_font("NotoSans-Regular.ttf");
+    if !font.exists() {
+        return;
+    }
+
+    let output_file = temp_output("png");
+
+    let output = Command::new(typf_binary())
+        .args([
+            "render",
+            "Hello",
+            "-f",
+            font.to_str().unwrap(),
+            "--shaper",
+            " NoNe ",
+            "--renderer",
+            " OPIXA ",
+            "-o",
+            output_file.to_str().unwrap(),
+            "-q",
+        ])
+        .output()
+        .expect("Failed to execute typf render with normalized backend names");
+
+    assert!(
+        output.status.success(),
+        "render with case-insensitive backend names should succeed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        output_file.exists(),
+        "output file should be created for normalized backend invocation"
+    );
+
+    let _ = fs::remove_file(output_file);
+}
+
+#[test]
 fn test_render_corrupted_font_fails() {
     // Create a temporary file with invalid font data
     let temp_font = temp_output("ttf");

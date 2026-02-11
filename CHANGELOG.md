@@ -91,6 +91,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 ## [Unreleased]
 
 ### Maintenance (2026-02-11)
+- `typf render` now rejects ambiguous multi-source text input combinations (positional text + `--text` + `--text-file`) with explicit guidance
+- Render CLI text ingestion for `--text-file` and stdin now uses a capped read path (`MAX_TEXT_CONTENT_BYTES=1_000_000`) to prevent over-limit reads before full allocation
+- `typf render` backend parsing now normalizes `--shaper` and `--renderer` tokens (trim + case-insensitive + blank→`auto`) for parity with batch backend normalization
 - Added repo-root `./test.sh` wrapper as the canonical test entrypoint
 - Updated `scripts/test.sh` formatting check to use `cargo fmt --check` (compatible with current vendored Vello layout)
 - Updated CI lint workflow formatting check to use `cargo fmt --check` for parity with local verification
@@ -173,6 +176,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Render CLI and JSONL job processing now enforce a max source-font file size (`MAX_FONT_FILE_BYTES=104857600`) before font parsing
 - Structured JSONL batch mode now enforces a bounded read cap (`MAX_JSONL_BATCH_INPUT_BYTES=33554432`) before deserialization and reports explicit size-limit errors
 - Added regression tests for palette overflow validation, oversized font-source files, and bounded JSONL batch reads
+- Added shared ISO 15924 script-tag normalization utility (`crates/typf-cli/src/script.rs`) and wired both render CLI and JSONL parsing to it for parity
+- Added shared text-size limit helper (`validate_text_size_limit`) and shared limit constant (`MAX_TEXT_CONTENT_BYTES`) in `crates/typf-cli/src/limits.rs`
+- Added boundary regression coverage for text-size validation (exact-limit accept + over-limit reject) across shared limits, render CLI, and JSONL
+- Added missing `this_file` markers for all `crates/typf-cli/src/*.rs` and `crates/typf-cli/src/commands/*.rs` sources
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts
