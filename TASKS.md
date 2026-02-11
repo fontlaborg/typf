@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, and validation micro-sprints complete.
 
 ## TLDR
 
@@ -30,6 +30,19 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - JSONL `text.features` is now parsed and validated before shaping
 - JSONL job spec now accepts canonical `version` and legacy `_version`
 - JSONL batch execution now runs in parallel with deterministic output ordering
+- JSONL parallel execution no longer does redundant index/sort post-processing
+
+### Post-v5.0.2 Quality Hygiene Sprint (2026-02-11)
+
+- JSONL feature tags now enforce OpenType ASCII-byte constraints (`0x20..0x7E`)
+- JSONL ordering tests now include a high-cardinality parallel regression case
+- Python `render_simple` tests now assert `DeprecationWarning` explicitly (warning-clean suite)
+
+### Post-v5.0.2 CLI Validation Micro-Sprint (2026-02-11)
+
+- JSONL batch input now rejects unsupported API versions (major `2.x` required)
+- JSONL `text.direction` now validates allowed values (`ltr|rtl|ttb|btt`) instead of silently defaulting
+- Render CLI OpenType feature parsing now enforces exactly 4 printable ASCII tag characters
 
 ## Plan Steps (authoritative details)
 

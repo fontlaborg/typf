@@ -256,6 +256,8 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
 
     // Parse what we need to do
     let spec: JobSpec = serde_json::from_str(&input)?;
+    validate_spec_version(&spec._version)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
 
     eprintln!("Processing {} jobs...", spec.jobs.len());
 
@@ -279,17 +281,8 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn process_jobs(jobs: &[Job]) -> Vec<JobResult> {
-    let mut indexed_results: Vec<(usize, JobResult)> = jobs
-        .par_iter()
-        .enumerate()
-        .map(|(idx, job)| (idx, process_job(job)))
-        .collect();
-
-    indexed_results.sort_unstable_by_key(|(idx, _)| *idx);
-    indexed_results
-        .into_iter()
-        .map(|(_, result)| result)
-        .collect()
+    // Slice parallel iterators are indexed; collect() preserves input order.
+    jobs.par_iter().map(process_job).collect()
 }
 
 /// Stream jobs one by one, perfect for pipelines
@@ -337,7 +330,7 @@ fn process_job(job: &Job) -> JobResult {
     use std::time::Instant;
     use typf_core::{
         traits::{Exporter, FontRef, Renderer, Shaper},
-        types::{Direction, RenderOutput},
+        types::RenderOutput,
         Color, RenderParams, ShapingParams,
     };
     use typf_export::PnmExporter;
@@ -385,11 +378,9 @@ fn process_job(job: &Job) -> JobResult {
     let font = Arc::new(SimpleFont { data: font_data });
 
     // Parse direction
-    let direction = match job.text.direction.as_deref() {
-        Some("rtl") => Direction::RightToLeft,
-        Some("ttb") => Direction::TopToBottom,
-        Some("btt") => Direction::BottomToTop,
-        _ => Direction::LeftToRight,
+    let direction = match parse_text_direction(job.text.direction.as_deref()) {
+        Ok(direction) => direction,
+        Err(e) => return JobResult::error(&job.id, format!("Invalid text.direction: {}", e)),
     };
 
     let features = match parse_text_features(&job.text.features) {
@@ -534,6 +525,45 @@ fn process_job(job: &Job) -> JobResult {
     )
 }
 
+fn validate_spec_version(version: &str) -> Result<(), String> {
+    let major = version
+        .split('.')
+        .next()
+        .ok_or_else(|| "version is empty".to_string())?
+        .parse::<u32>()
+        .map_err(|_| {
+            format!(
+                "version '{}' must start with a numeric major version",
+                version
+            )
+        })?;
+
+    if major == 2 {
+        Ok(())
+    } else {
+        Err(format!(
+            "unsupported JSONL version '{}'; expected major version 2.x",
+            version
+        ))
+    }
+}
+
+fn parse_text_direction(raw: Option<&str>) -> Result<typf_core::types::Direction, String> {
+    use typf_core::types::Direction;
+
+    match raw {
+        None => Ok(Direction::LeftToRight),
+        Some(value) if value.eq_ignore_ascii_case("ltr") => Ok(Direction::LeftToRight),
+        Some(value) if value.eq_ignore_ascii_case("rtl") => Ok(Direction::RightToLeft),
+        Some(value) if value.eq_ignore_ascii_case("ttb") => Ok(Direction::TopToBottom),
+        Some(value) if value.eq_ignore_ascii_case("btt") => Ok(Direction::BottomToTop),
+        Some(value) => Err(format!(
+            "'{}' is not supported; expected one of: ltr, rtl, ttb, btt",
+            value
+        )),
+    }
+}
+
 fn parse_text_features(feature_specs: &[String]) -> Result<Vec<(String, u32)>, String> {
     let mut parsed = Vec::new();
 
@@ -574,6 +604,17 @@ fn parse_feature_token(token: &str) -> Result<(String, u32), String> {
         ));
     }
 
+    if !tag
+        .as_bytes()
+        .iter()
+        .all(|byte| (0x20..=0x7E).contains(byte))
+    {
+        return Err(format!(
+            "feature '{}' must use ASCII bytes in 0x20..0x7E",
+            tag
+        ));
+    }
+
     Ok((tag.to_string(), value))
 }
 
@@ -581,6 +622,7 @@ fn parse_feature_token(token: &str) -> Result<(String, u32), String> {
 mod tests {
     use super::*;
     use serde_json::json;
+    use typf_core::types::Direction;
 
     fn test_job(id: &str) -> Job {
         Job {
@@ -680,6 +722,64 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_spec_version_accepts_v2_series() {
+        validate_spec_version("2.0").expect("2.0 should be accepted");
+        validate_spec_version("2.99").expect("2.99 should be accepted");
+    }
+
+    #[test]
+    fn test_validate_spec_version_rejects_other_majors() {
+        let err = validate_spec_version("3.0").expect_err("3.x should be rejected");
+        assert!(
+            err.contains("expected major version 2.x"),
+            "expected unsupported-version error, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_spec_version_rejects_non_numeric_major() {
+        let err = validate_spec_version("v2").expect_err("non-numeric major should error");
+        assert!(
+            err.contains("numeric major version"),
+            "expected numeric-version error, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_parse_text_direction_defaults_to_ltr_when_missing() {
+        let direction = parse_text_direction(None).expect("missing direction should default");
+        assert_eq!(direction, Direction::LeftToRight);
+    }
+
+    #[test]
+    fn test_parse_text_direction_accepts_valid_values_case_insensitively() {
+        assert_eq!(
+            parse_text_direction(Some("rtl")).expect("rtl should parse"),
+            Direction::RightToLeft
+        );
+        assert_eq!(
+            parse_text_direction(Some("TTB")).expect("TTB should parse"),
+            Direction::TopToBottom
+        );
+        assert_eq!(
+            parse_text_direction(Some("btt")).expect("btt should parse"),
+            Direction::BottomToTop
+        );
+    }
+
+    #[test]
+    fn test_parse_text_direction_rejects_unknown_value() {
+        let err = parse_text_direction(Some("sideways")).expect_err("invalid direction must fail");
+        assert!(
+            err.contains("expected one of"),
+            "expected list of supported directions, got: {}",
+            err
+        );
+    }
+
+    #[test]
     fn test_parse_text_features_when_mixed_syntax_then_parsed_values() {
         let parsed = parse_text_features(&[
             "+liga".to_string(),
@@ -721,6 +821,16 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_text_features_when_non_printable_ascii_then_error() {
+        let error = parse_text_features(&["\u{7f}abc=1".to_string()]).unwrap_err();
+        assert!(
+            error.contains("0x20..0x7E"),
+            "expected ASCII-range validation error, got: {}",
+            error
+        );
+    }
+
+    #[test]
     fn test_process_jobs_when_parallel_then_preserves_input_order() {
         let jobs = vec![test_job("job-a"), test_job("job-b"), test_job("job-c")];
         let results = process_jobs(&jobs);
@@ -730,6 +840,22 @@ mod tests {
         assert!(
             results.iter().all(|result| result.status == "error"),
             "missing font should fail consistently in deterministic order"
+        );
+    }
+
+    #[test]
+    fn test_process_jobs_when_parallel_many_jobs_then_preserves_input_order() {
+        let jobs: Vec<Job> = (0..128)
+            .map(|idx| test_job(&format!("job-{:03}", idx)))
+            .collect();
+        let results = process_jobs(&jobs);
+
+        let ids: Vec<&str> = results.iter().map(|result| result.id.as_str()).collect();
+        let expected_ids: Vec<String> = (0..128).map(|idx| format!("job-{:03}", idx)).collect();
+
+        assert_eq!(
+            ids,
+            expected_ids.iter().map(String::as_str).collect::<Vec<_>>()
         );
     }
 }

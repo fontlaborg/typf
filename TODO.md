@@ -9,11 +9,24 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 CLI validation micro-sprint)
+
+- [x] Validate JSONL batch `version` and reject unsupported major versions (require `2.x`)
+- [x] Validate JSONL `text.direction` values (`ltr|rtl|ttb|btt`) and fail fast on unknown values
+- [x] Validate `typf render` OpenType feature tags as 4 printable ASCII characters with regression tests
+
+## Completed (2026-02-11 quality hygiene sprint)
+
+- [x] Validate JSONL OpenType feature tags against printable ASCII byte range (`0x20..0x7E`)
+- [x] Add high-cardinality JSONL parallel ordering regression test (`process_jobs` deterministic order)
+- [x] Assert `DeprecationWarning` for all Python `render_simple` test calls to keep test output warning-clean
+
 ## Completed (2026-02-11 JSONL quality sprint)
 
 - [x] Parse `text.features` in JSONL jobs and feed validated values into `ShapingParams.features`
 - [x] Make JSONL `JobSpec` accept `version` plus legacy `_version` compatibility alias
 - [x] Parallelize JSONL batch job execution with deterministic output ordering and regression tests
+- [x] Remove redundant index/sort pass from parallel JSONL collection (preserve order via indexed `par_iter` + `collect`)
 
 ## Completed (2026-02-11 maintenance sprint)
 

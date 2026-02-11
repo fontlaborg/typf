@@ -484,24 +484,46 @@ fn parse_features(features_str: &Option<String>) -> Result<Vec<(String, u32)>> {
             continue;
         }
 
-        let (tag, value) = if let Some(stripped) = part.strip_prefix('+') {
-            (stripped, 1)
-        } else if let Some(stripped) = part.strip_prefix('-') {
-            (stripped, 0)
-        } else if let Some(pos) = part.find('=') {
-            let tag = &part[..pos];
-            let val = part[pos + 1..]
-                .parse()
-                .map_err(|_| TypfError::Other(format!("Invalid feature value: {}", part)))?;
-            (tag, val)
-        } else {
-            (part, 1)
-        };
-
-        result.push((tag.to_string(), value));
+        result.push(parse_feature_token(part)?);
     }
 
     Ok(result)
+}
+
+fn parse_feature_token(part: &str) -> Result<(String, u32)> {
+    let (tag, value) = if let Some(stripped) = part.strip_prefix('+') {
+        (stripped, 1)
+    } else if let Some(stripped) = part.strip_prefix('-') {
+        (stripped, 0)
+    } else if let Some(pos) = part.find('=') {
+        let tag = &part[..pos];
+        let val = part[pos + 1..]
+            .parse()
+            .map_err(|_| TypfError::Other(format!("Invalid feature value: {}", part)))?;
+        (tag, val)
+    } else {
+        (part, 1)
+    };
+
+    if tag.len() != 4 {
+        return Err(TypfError::Other(format!(
+            "Invalid OpenType feature tag '{}': expected exactly 4 characters",
+            tag
+        )));
+    }
+
+    if !tag
+        .as_bytes()
+        .iter()
+        .all(|byte| byte.is_ascii() && (0x20..=0x7E).contains(byte))
+    {
+        return Err(TypfError::Other(format!(
+            "Invalid OpenType feature tag '{}': expected printable ASCII characters",
+            tag
+        )));
+    }
+
+    Ok((tag.to_string(), value))
 }
 
 /// Parse variable font instance specification
@@ -1006,6 +1028,41 @@ mod tests {
         assert!(
             format!("{err}").contains("unknown glyph source"),
             "error message should mention source"
+        );
+    }
+
+    #[test]
+    fn parse_features_accepts_mixed_syntax() {
+        let parsed = parse_features(&Some("+liga kern=0 smcp cv01=2".to_string()))
+            .expect("feature parsing should succeed");
+        assert_eq!(
+            parsed,
+            vec![
+                ("liga".to_string(), 1),
+                ("kern".to_string(), 0),
+                ("smcp".to_string(), 1),
+                ("cv01".to_string(), 2)
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_features_rejects_tag_with_invalid_length() {
+        let err = parse_features(&Some("ligature=1".to_string()))
+            .expect_err("non-4-char tags should fail");
+        assert!(
+            format!("{err}").contains("expected exactly 4 characters"),
+            "error should mention tag length"
+        );
+    }
+
+    #[test]
+    fn parse_features_rejects_non_ascii_tag() {
+        let err = parse_features(&Some("liga=1,éab=1".to_string()))
+            .expect_err("non-ascii tags should fail");
+        assert!(
+            format!("{err}").contains("printable ASCII"),
+            "error should mention ASCII validation"
         );
     }
 }

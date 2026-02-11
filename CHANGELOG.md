@@ -1,3 +1,4 @@
+<!-- this_file: CHANGELOG.md -->
 # Changelog
 
 Changes to Typf.
@@ -96,6 +97,13 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - JSONL batch jobs now run in parallel via Rayon while preserving output order
 - JSONL `text.features` is now parsed/validated and passed into shaping params
 - JSONL `JobSpec` now accepts canonical `version` with legacy `_version` alias
+- JSONL parallel batch processing now uses direct indexed `collect()` (removed redundant index/sort pass)
+- JSONL OpenType feature tags now reject non-printable/non-conforming bytes (`0x20..0x7E` required)
+- JSONL parallel ordering coverage now includes a high-cardinality deterministic-order regression test
+- Python export tests now assert `render_simple()` deprecation warnings explicitly (warning-clean runs)
+- JSONL batch mode now rejects unsupported API versions and enforces major `2.x`
+- JSONL batch mode now validates `text.direction` values and reports invalid tokens explicitly
+- `typf render` feature parsing now validates OpenType tags as exactly four printable ASCII characters
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts
