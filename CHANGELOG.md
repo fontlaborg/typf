@@ -5,6 +5,29 @@ Changes to Typf.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0//),
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
+## [5.0.2] - 2025-12-16
+
+### Added
+- Stage 4 (Shaping) C-ABI contract: `PositionedGlyphC`, `ShapingResultC`, `GlyphIterator` for zero-copy consumers
+- Stage 5 (Rendering) geometry output: `PathOp`, `GlyphPath`, `GeometryData` for GPU pipelines
+- Stage 5 mesh ABI: `Vertex2D`, `VertexUV`, `VertexColor`, `RenderMesh` for wgpu integration
+- Python FFI `ShapedGlyphs` class with `for_cairo()`, iteration, and bulk access methods
+- Python FFI `PathOp` and `GlyphPath` types for vector path primitives
+- Visual regression testing with SSIM (21 tests covering all renderer pairs)
+- `external_layout_integration.rs` example for cosmic-text/parley integration
+- `wgpu_mesh_upload.rs` example for zero-copy GPU buffer patterns
+- Vello-GPU platform support documentation (`src_docs/26-vello-gpu-platform-support.md`)
+- API stability markers in REVIEW.md
+
+### Changed
+- Test count increased from 449 to 490 (including visual regression suite)
+
+### Documentation
+- Added WASM/WebGPU constraints to `src_docs/21-webassembly-integration.md`
+- Documented SDF as out-of-scope for v5.x with rationale
+
+---
+
 ## [5.0.1] - 2025-12-16
 
 ### Fixed
@@ -29,7 +52,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Improved cache architecture with Moka TinyLFU replacing custom L1/L2 caches
 - Enhanced bitmap glyph handling with centralized decoding in `typf-render-color`
 - Optimized Vello renderers to use shared font bytes when available
-- Updated planning documentation structure (PLAN.md index + PLANSTEPS/ directory)
+- Updated planning documentation structure (TASKS.md index + PLANSTEPS/ directory)
 
 ### Performance
 - Zero-copy font data access reduces memory allocations in Vello renderers
@@ -56,7 +79,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Comprehensive test coverage for typf-core with new test suite
 - Property-based tests for typf-unicode module
 - Glyph cache optimizations in opixa renderer
-- PLAN.md for structured development planning
+- TASKS.md for structured development planning
 
 ### Changed
 - Updated rendering pipeline for improved performance across all backends
@@ -65,6 +88,11 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Updated documentation structure and working files
 
 ## [Unreleased]
+
+### Maintenance (2026-02-11)
+- Added repo-root `./test.sh` wrapper as the canonical test entrypoint
+- Updated `scripts/test.sh` formatting check to use `cargo fmt --check` (compatible with current vendored Vello layout)
+- Updated CI lint workflow formatting check to use `cargo fmt --check` for parity with local verification
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

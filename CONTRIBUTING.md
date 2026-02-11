@@ -40,7 +40,7 @@ cargo run --example harfbuzz --features shaping-hb
 
 - `README.md` - What Typf does and quick start
 - `ARCHITECTURE.md` - Pipeline design and backend details
-- `PLAN.md` - Roadmap and current priorities
+- `TASKS.md` - Roadmap and current priorities
 - `TODO.md` - Active task list
 
 ### 2. Check Issues
@@ -417,7 +417,7 @@ See [RELEASING.md](RELEASING.md) for the complete release process.
 ./scripts/set-version.sh 2.4.0
 
 # 2. Verify
-./scripts/test.sh
+./test.sh
 
 # 3. Commit, tag, push
 git add -A && git commit -m "v2.4.0"
@@ -431,6 +431,7 @@ GitHub Actions will build 8 Rust binaries + 40+ Python wheels and publish to cra
 
 | Script | Purpose |
 |--------|---------|
+| `./test.sh` | Canonical verification entrypoint |
 | `./scripts/build.sh` | Build workspace + wheel |
 | `./scripts/test.sh` | Run fmt, clippy, tests |
 | `./scripts/publish.sh --dry-run` | Test publishing |

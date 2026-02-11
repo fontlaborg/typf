@@ -1,4 +1,5 @@
 #!/bin/bash
+# this_file: scripts/test.sh
 # test.sh - Run all checks and tests
 #
 # Usage:
@@ -58,10 +59,12 @@ FAILED=false
 # Rust formatting check
 if [[ "$RUN_RUST" == "true" ]] && [[ "$RUN_LINT" == "true" ]]; then
     echo "==> Checking Rust formatting..."
-    if cargo fmt --all --check; then
+    # Keep fmt scoped to the current workspace. `--all` traverses local path deps,
+    # which can fail when vendored workspaces are intentionally partial.
+    if cargo fmt --check; then
         echo "    Formatting OK"
     else
-        echo "    Formatting FAILED - run 'cargo fmt --all' to fix"
+        echo "    Formatting FAILED - run 'cargo fmt' to fix"
         FAILED=true
     fi
     echo ""
