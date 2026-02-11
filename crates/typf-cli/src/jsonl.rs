@@ -427,12 +427,17 @@ fn process_job(job: &Job) -> JobResult {
         return JobResult::error(&job.id, format!("Invalid rendering dimensions: {}", e));
     }
 
+    let script = match parse_text_script(job.text.script.as_deref()) {
+        Ok(script) => script,
+        Err(e) => return JobResult::error(&job.id, format!("Invalid text.script: {}", e)),
+    };
+
     // Create shaping parameters
     let shaping_params = ShapingParams {
         size: job.font.size,
         direction,
         language: normalize_optional_text_hint(job.text.language.as_deref()),
-        script: normalize_optional_text_hint(job.text.script.as_deref()),
+        script,
         features,
         variations,
         letter_spacing: 0.0,
@@ -809,6 +814,36 @@ fn normalize_optional_text_hint(raw: Option<&str>) -> Option<String> {
     raw.map(str::trim)
         .filter(|value| !value.is_empty())
         .map(str::to_string)
+}
+
+fn parse_text_script(raw: Option<&str>) -> Result<Option<String>, String> {
+    let normalized = raw.map(str::trim).filter(|value| !value.is_empty());
+
+    match normalized {
+        None => Ok(None),
+        Some(value) if value.eq_ignore_ascii_case("auto") => Ok(None),
+        Some(value) => {
+            if value.len() != 4 {
+                return Err(format!(
+                    "'{}' must be exactly 4 ASCII letters (ISO 15924)",
+                    value
+                ));
+            }
+            if !value.chars().all(|ch| ch.is_ascii_alphabetic()) {
+                return Err(format!(
+                    "'{}' must contain only ASCII letters (ISO 15924)",
+                    value
+                ));
+            }
+
+            let mut chars = value.chars();
+            let first = chars.next().expect("len() == 4 ensures first char exists");
+            let mut canonical = String::with_capacity(4);
+            canonical.push(first.to_ascii_uppercase());
+            canonical.extend(chars.map(|ch| ch.to_ascii_lowercase()));
+            Ok(Some(canonical))
+        },
+    }
 }
 
 fn parse_text_direction(raw: Option<&str>) -> Result<typf_core::types::Direction, String> {
@@ -1355,6 +1390,53 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_text_script_when_missing_or_blank_or_auto_then_none() {
+        assert_eq!(
+            parse_text_script(None).expect("missing script should parse"),
+            None,
+            "missing script hint should remain unset"
+        );
+        assert_eq!(
+            parse_text_script(Some(" \t ")).expect("blank script should parse"),
+            None,
+            "blank script hint should normalize to unset"
+        );
+        assert_eq!(
+            parse_text_script(Some("AUTO")).expect("auto script should parse"),
+            None,
+            "auto script hint should normalize to unset"
+        );
+    }
+
+    #[test]
+    fn test_parse_text_script_when_mixed_case_then_canonicalizes() {
+        assert_eq!(
+            parse_text_script(Some(" aRAb ")).expect("mixed-case script should parse"),
+            Some("Arab".to_string()),
+            "script hints should canonicalize to titlecase"
+        );
+    }
+
+    #[test]
+    fn test_parse_text_script_rejects_invalid_values() {
+        let length_error = parse_text_script(Some("Arabic"))
+            .expect_err("script longer than 4 letters should fail");
+        assert!(
+            length_error.contains("exactly 4 ASCII letters"),
+            "expected length validation message, got: {}",
+            length_error
+        );
+
+        let alpha_error =
+            parse_text_script(Some("Ar4b")).expect_err("script with non-letter chars should fail");
+        assert!(
+            alpha_error.contains("only ASCII letters"),
+            "expected alphabetic validation message, got: {}",
+            alpha_error
+        );
+    }
+
+    #[test]
     fn test_parse_text_features_when_mixed_syntax_then_parsed_values() {
         let parsed = parse_text_features(&[
             "+liga".to_string(),
@@ -1695,6 +1777,27 @@ mod tests {
         assert!(
             error.contains("max size"),
             "expected max-size guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_text_script_is_invalid_then_error() {
+        let mut job = test_job("job-invalid-script");
+        job.font.source.path = workspace_test_font();
+        job.text.script = Some("Arab1".to_string());
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "invalid script should fail fast");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("Invalid text.script"),
+            "expected text.script validation context, got: {}",
+            error
+        );
+        assert!(
+            error.contains("ASCII letters"),
+            "expected script-format guidance, got: {}",
             error
         );
     }

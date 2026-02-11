@@ -9,6 +9,13 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 render/JSONL script-hint + text-size parity micro-sprint)
+
+- [x] Add render-CLI text payload-size cap (`MAX_TEXT_CONTENT_BYTES=1_000_000`) across positional/`--text`, `--text-file`, and stdin inputs
+- [x] Normalize render-CLI `--language` (`trim`, blank→unset) and validate/canonicalize `--script` as ISO 15924-style 4-letter ASCII alpha tags (`auto`/blank→unset)
+- [x] Add JSONL `text.script` normalization/validation parity with render CLI and emit explicit `Invalid text.script` diagnostics for invalid values
+- [x] Re-verify parity sprint end-to-end with `cargo test -p typf-cli --all-features` and `./test.sh`
+
 ## Completed (2026-02-11 JSONL resource-limits/stream-id-cap micro-sprint)
 
 - [x] Add JSONL batch-size cap (`MAX_BATCH_JOBS=10_000`) and reject oversized job lists with explicit validation errors

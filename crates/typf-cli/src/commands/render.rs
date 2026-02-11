@@ -28,6 +28,8 @@ use typf_render_svg::SvgRenderer;
 use typf_shape_none::NoneShaper;
 use typf_unicode::{UnicodeOptions, UnicodeProcessor};
 
+const MAX_TEXT_CONTENT_BYTES: usize = 1_000_000;
+
 pub fn run(args: &RenderArgs) -> Result<()> {
     // Check if using linra (single-pass) renderer
     // "auto" now defaults to linra if available (unless SVG output requested)
@@ -101,12 +103,15 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     // 2. Load font
     let font: Arc<dyn FontRef> = load_font(args)?;
 
+    let language = normalize_language_hint(args.language.as_deref());
+    let script = parse_script_hint(&args.script)?;
+
     // 3. Resolve direction (auto uses UnicodeProcessor)
     let direction = resolve_direction(
         &text,
         &args.direction,
-        args.language.as_deref(),
-        script_hint(&args.script),
+        language.as_deref(),
+        script.as_deref(),
     )?;
 
     // 4. Parse rendering parameters
@@ -121,12 +126,8 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     let shaping_params = ShapingParams {
         size: font_size,
         direction,
-        language: args.language.clone(),
-        script: if args.script == "auto" {
-            None
-        } else {
-            Some(args.script.clone())
-        },
+        language: language.clone(),
+        script: script.clone(),
         features: parse_features(&args.features)?,
         variations: variations.clone(),
         letter_spacing: 0.0,
@@ -283,24 +284,43 @@ fn warn_if_vello_gpu_with_color_font(renderer_name: &str, font_data: &[u8], quie
 fn get_input_text(args: &RenderArgs) -> Result<String> {
     // Priority: text positional > --text > --text-file > stdin
     if let Some(ref text) = args.text {
-        return Ok(decode_unicode_escapes(text));
+        return decode_and_validate_inline_text(text);
     }
 
     if let Some(ref text) = args.text_arg {
-        return Ok(decode_unicode_escapes(text));
+        return decode_and_validate_inline_text(text);
     }
 
     if let Some(ref path) = args.text_file {
         let mut file = File::open(path)?;
         let mut text = String::new();
         file.read_to_string(&mut text)?;
+        validate_text_content_size(&text)?;
         return Ok(text);
     }
 
     // Read from stdin
     let mut text = String::new();
     io::stdin().read_to_string(&mut text)?;
+    validate_text_content_size(&text)?;
     Ok(text)
+}
+
+fn decode_and_validate_inline_text(raw: &str) -> Result<String> {
+    let decoded = decode_unicode_escapes(raw);
+    validate_text_content_size(&decoded)?;
+    Ok(decoded)
+}
+
+fn validate_text_content_size(text: &str) -> Result<()> {
+    let size = text.len();
+    if size > MAX_TEXT_CONTENT_BYTES {
+        return Err(TypfError::Other(format!(
+            "Input text exceeds max size of {} bytes (got {})",
+            MAX_TEXT_CONTENT_BYTES, size
+        )));
+    }
+    Ok(())
 }
 
 fn decode_unicode_escapes(text: &str) -> String {
@@ -549,12 +569,38 @@ fn resolve_direction(
     }
 }
 
-fn script_hint(script: &str) -> Option<&str> {
-    if script.eq_ignore_ascii_case("auto") {
-        None
-    } else {
-        Some(script)
+fn normalize_language_hint(raw: Option<&str>) -> Option<String> {
+    raw.map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn parse_script_hint(raw: &str) -> Result<Option<String>> {
+    let normalized = raw.trim();
+    if normalized.is_empty() || normalized.eq_ignore_ascii_case("auto") {
+        return Ok(None);
     }
+
+    if normalized.len() != 4 {
+        return Err(TypfError::Other(format!(
+            "Invalid script tag '{}': expected exactly 4 ASCII letters (ISO 15924)",
+            normalized
+        )));
+    }
+
+    if !normalized.chars().all(|ch| ch.is_ascii_alphabetic()) {
+        return Err(TypfError::Other(format!(
+            "Invalid script tag '{}': expected only ASCII letters (ISO 15924)",
+            normalized
+        )));
+    }
+
+    let mut chars = normalized.chars();
+    let first = chars.next().expect("len() == 4 ensures first char exists");
+    let mut canonical = String::with_capacity(4);
+    canonical.push(first.to_ascii_uppercase());
+    canonical.extend(chars.map(|ch| ch.to_ascii_lowercase()));
+    Ok(Some(canonical))
 }
 
 fn is_rtl_script(script: &str) -> bool {
@@ -908,11 +954,13 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
 
     // 3. Parse rendering parameters
     let font_size = parse_font_size(&args.font_size)?;
+    let language = normalize_language_hint(args.language.as_deref());
+    let script = parse_script_hint(&args.script)?;
     let direction = resolve_direction(
         &text,
         &args.direction,
-        args.language.as_deref(),
-        script_hint(&args.script),
+        language.as_deref(),
+        script.as_deref(),
     )?;
     let foreground = parse_color(&args.foreground)?;
     let background = parse_color(&args.background)?;
@@ -929,12 +977,8 @@ fn run_linra(args: &RenderArgs) -> Result<()> {
         padding: args.margin,
         variations,
         features: parse_features(&args.features)?,
-        language: args.language.clone(),
-        script: if args.script == "auto" {
-            None
-        } else {
-            Some(args.script.clone())
-        },
+        language,
+        script,
         antialias: !matches!(args.format, OutputFormat::Pbm | OutputFormat::Png1),
         letter_spacing: 0.0,
         color_palette: args.color_palette as u16,
@@ -1470,6 +1514,79 @@ mod tests {
         assert!(
             format!("{err}").contains("exceeds maximum"),
             "expected maximum-size validation message, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn parse_script_hint_when_auto_or_blank_then_none() {
+        assert_eq!(
+            parse_script_hint("auto").expect("auto should parse"),
+            None,
+            "auto script should map to no explicit script hint"
+        );
+        assert_eq!(
+            parse_script_hint(" \t ").expect("blank script should parse"),
+            None,
+            "blank script should map to no explicit script hint"
+        );
+    }
+
+    #[test]
+    fn parse_script_hint_when_mixed_case_then_canonicalizes() {
+        assert_eq!(
+            parse_script_hint(" aRAb ").expect("mixed-case script should parse"),
+            Some("Arab".to_string()),
+            "script hints should canonicalize to titlecase"
+        );
+    }
+
+    #[test]
+    fn parse_script_hint_rejects_invalid_script_values() {
+        let invalid_length = parse_script_hint("Arabic")
+            .expect_err("script tags longer than four letters should fail");
+        assert!(
+            format!("{invalid_length}").contains("exactly 4 ASCII letters"),
+            "expected length validation message, got: {}",
+            invalid_length
+        );
+
+        let invalid_chars =
+            parse_script_hint("Ar4b").expect_err("non-letter script tags should fail");
+        assert!(
+            format!("{invalid_chars}").contains("only ASCII letters"),
+            "expected alphabetic validation message, got: {}",
+            invalid_chars
+        );
+    }
+
+    #[test]
+    fn normalize_language_hint_trims_and_drops_blank_values() {
+        assert_eq!(
+            normalize_language_hint(Some("  zh-Hans  ")),
+            Some("zh-Hans".to_string()),
+            "language hints should be trimmed"
+        );
+        assert_eq!(
+            normalize_language_hint(Some(" \t ")),
+            None,
+            "blank language hints should be treated as unset"
+        );
+        assert_eq!(
+            normalize_language_hint(None),
+            None,
+            "missing language hints should remain unset"
+        );
+    }
+
+    #[test]
+    fn validate_text_content_size_rejects_oversized_input() {
+        let oversized = "a".repeat(MAX_TEXT_CONTENT_BYTES + 1);
+        let err = validate_text_content_size(&oversized)
+            .expect_err("oversized text payload should be rejected");
+        assert!(
+            format!("{err}").contains("exceeds max size"),
+            "expected max-size validation message, got: {}",
             err
         );
     }
