@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 JSONL determinism/input-normalization micro-sprint)
+
+- [x] Validate JSONL `font.instance.variations` in stable sorted axis-tag order so diagnostics are deterministic
+- [x] Trim surrounding whitespace for JSONL `version` and `text.direction` parsing (blank `text.direction` defaults to LTR)
+- [x] Reject JSONL jobs with non-finite/non-positive `font.size` before shaping and report explicit `font.size` validation errors
+
 ## Completed (2026-02-11 feature-tag diagnostics micro-sprint)
 
 - [x] Make render CLI feature-tag validation report non-ASCII violations before tag-length errors for multibyte input

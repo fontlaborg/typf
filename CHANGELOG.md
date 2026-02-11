@@ -123,6 +123,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - `typf render` feature-tag validation now checks printable-ASCII byte range before length checks for deterministic multibyte diagnostics
 - JSONL feature-tag validation now mirrors render CLI ordering (ASCII-range check before length check)
 - Added multibyte non-ASCII feature-tag regression tests for both render CLI and JSONL parsers
+- JSONL `font.instance.variations` validation now sorts axis tags before validation so diagnostics are deterministic across runs
+- JSONL `version` and `text.direction` parsing now trims surrounding whitespace (blank direction defaults to LTR)
+- JSONL job processing now rejects non-finite `font.size` values before shaping and reports explicit `font.size` validation errors
+- Added JSONL regression tests for whitespace-normalized direction/version parsing, deterministic invalid-axis diagnostics, and non-finite/non-positive `font.size` rejection
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

@@ -410,6 +410,12 @@ fn process_job(job: &Job) -> JobResult {
         variations,
         letter_spacing: 0.0,
     };
+    if !shaping_params.size.is_finite() {
+        return JobResult::error(&job.id, "Invalid font.size: value must be finite");
+    }
+    if let Err(error) = shaping_params.validate() {
+        return JobResult::error(&job.id, format!("Invalid font.size: {}", error));
+    }
 
     let shape_start = Instant::now();
 
@@ -562,7 +568,12 @@ fn parse_rendering_encoding(raw: &str) -> Result<RenderingEncoding, String> {
 fn parse_instance_variations(raw: &HashMap<String, f32>) -> Result<Vec<(String, f32)>, String> {
     let mut parsed: Vec<(String, f32)> = Vec::with_capacity(raw.len());
 
-    for (tag, value) in raw {
+    // HashMap iteration order is arbitrary; sort tags first so validation
+    // diagnostics are deterministic across runs.
+    let mut entries: Vec<(&String, &f32)> = raw.iter().collect();
+    entries.sort_by(|left, right| left.0.cmp(right.0));
+
+    for (tag, value) in entries {
         if !tag
             .as_bytes()
             .iter()
@@ -591,7 +602,9 @@ fn parse_instance_variations(raw: &HashMap<String, f32>) -> Result<Vec<(String, 
 }
 
 fn validate_spec_version(version: &str) -> Result<(), String> {
-    let major = version
+    let normalized = version.trim();
+
+    let major = normalized
         .split('.')
         .next()
         .ok_or_else(|| "version is empty".to_string())?
@@ -599,7 +612,7 @@ fn validate_spec_version(version: &str) -> Result<(), String> {
         .map_err(|_| {
             format!(
                 "version '{}' must start with a numeric major version",
-                version
+                normalized
             )
         })?;
 
@@ -608,7 +621,7 @@ fn validate_spec_version(version: &str) -> Result<(), String> {
     } else {
         Err(format!(
             "unsupported JSONL version '{}'; expected major version 2.x",
-            version
+            normalized
         ))
     }
 }
@@ -616,7 +629,9 @@ fn validate_spec_version(version: &str) -> Result<(), String> {
 fn parse_text_direction(raw: Option<&str>) -> Result<typf_core::types::Direction, String> {
     use typf_core::types::Direction;
 
-    match raw {
+    let normalized = raw.map(str::trim).filter(|value| !value.is_empty());
+
+    match normalized {
         None => Ok(Direction::LeftToRight),
         Some(value) if value.eq_ignore_ascii_case("ltr") => Ok(Direction::LeftToRight),
         Some(value) if value.eq_ignore_ascii_case("rtl") => Ok(Direction::RightToLeft),
@@ -716,6 +731,15 @@ mod tests {
         }
     }
 
+    fn workspace_test_font() -> PathBuf {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.pop(); // crates
+        path.pop(); // workspace root
+        path.push("test-fonts");
+        path.push("NotoSans-Regular.ttf");
+        path
+    }
+
     #[test]
     fn test_job_result_error() {
         let result = JobResult::error("job1", "test error");
@@ -793,6 +817,11 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_spec_version_accepts_surrounding_whitespace() {
+        validate_spec_version(" 2.0 ").expect("whitespace-trimmed 2.0 should be accepted");
+    }
+
+    #[test]
     fn test_validate_spec_version_rejects_other_majors() {
         let err = validate_spec_version("3.0").expect_err("3.x should be rejected");
         assert!(
@@ -831,6 +860,22 @@ mod tests {
         assert_eq!(
             parse_text_direction(Some("btt")).expect("btt should parse"),
             Direction::BottomToTop
+        );
+    }
+
+    #[test]
+    fn test_parse_text_direction_accepts_surrounding_whitespace() {
+        assert_eq!(
+            parse_text_direction(Some("  RTL\t")).expect("trimmed RTL should parse"),
+            Direction::RightToLeft
+        );
+    }
+
+    #[test]
+    fn test_parse_text_direction_when_empty_then_defaults_to_ltr() {
+        assert_eq!(
+            parse_text_direction(Some(" \n\t ")).expect("blank direction should default"),
+            Direction::LeftToRight
         );
     }
 
@@ -1019,6 +1064,63 @@ mod tests {
         assert!(
             error.contains("non-finite value"),
             "expected finite-value validation error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_instance_variations_when_multiple_invalid_then_error_is_deterministic() {
+        let mut raw = HashMap::new();
+        raw.insert("éght".to_string(), 700.0);
+        raw.insert("weight".to_string(), 700.0);
+
+        let error = parse_instance_variations(&raw)
+            .expect_err("validation should report deterministic first error");
+        assert!(
+            error.contains("axis 'weight' has invalid tag length"),
+            "expected deterministic tag-length-first error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_font_size_is_non_finite_then_error() {
+        let mut job = test_job("job-non-finite-size");
+        job.font.source.path = workspace_test_font();
+        job.font.size = f32::NAN;
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "invalid font size must fail fast");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("Invalid font.size"),
+            "expected font.size validation context, got: {}",
+            error
+        );
+        assert!(
+            error.contains("finite"),
+            "expected finite-value guidance, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_font_size_is_non_positive_then_error() {
+        let mut job = test_job("job-zero-size");
+        job.font.source.path = workspace_test_font();
+        job.font.size = 0.0;
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "non-positive font size must fail");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("Invalid font.size"),
+            "expected font.size validation context, got: {}",
+            error
+        );
+        assert!(
+            error.contains("positive"),
+            "expected positive-size guidance, got: {}",
             error
         );
     }
