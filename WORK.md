@@ -3,27 +3,24 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Post-v5.0.2 maintenance sprint (verification workflow)
+**Focus:** Post-v5.0.2 JSONL quality sprint
 
 ## Sprint Tasks
 
-- [x] Fix Rust formatting check path in `scripts/test.sh` by using `cargo fmt --check`
-- [x] Align CI lint formatting command in `.github/workflows/ci.yml`
-- [x] Add repo-root `./test.sh` wrapper as stable test entrypoint
+- [x] JSONL: Parse `text.features` into shaping features (`Vec<(String, u32)>`)
+- [x] JSONL: Accept canonical `version` with legacy `_version` alias for compatibility
+- [x] JSONL: Parallelize `run_batch` with deterministic result ordering
 
 ## Verification Results
 
-- `bash -n scripts/test.sh`: PASS
-- `bash -n test.sh`: PASS
-- `cargo fmt --check`: PASS
-- `cargo clippy --workspace --all-features -- -D warnings`: PASS
-- `./scripts/test.sh --rust`: PASS
-- `./test.sh --rust --lint`: PASS
+- `cargo fmt --manifest-path crates/typf-cli/Cargo.toml`: PASS
+- `cargo test --manifest-path crates/typf-cli/Cargo.toml jsonl -- --nocapture`: PASS
+- `cargo test --workspace`: PASS
+- `cargo clippy --manifest-path crates/typf-cli/Cargo.toml --all-targets -- -D warnings`: PASS
 
 ## Notes
 
-- Standardized formatting command is `cargo fmt --check`.
-- `cargo fmt --all --check` is no longer used in local/CI verification because the `--all` mode traverses vendored Vello workspace metadata and fails in this repository snapshot.
+- `cargo fmt --all` still fails in this repo snapshot due a missing vendored `external/vello/vello/Cargo.toml`; scoped formatting via `--manifest-path crates/typf-cli/Cargo.toml` is required.
 
 ## Next
 

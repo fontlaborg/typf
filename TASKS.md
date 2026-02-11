@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance sprint (verification tooling) complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance sprints complete.
 
 ## TLDR
 
@@ -24,6 +24,12 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - Verification entrypoint standardized with repo-root `./test.sh`
 - Rust formatting checks fixed to use `cargo fmt --check` (avoids vendored Vello path breakage triggered by `--all`)
 - CI lint workflow formatting check aligned with local test script
+
+### Post-v5.0.2 JSONL Quality Sprint (2026-02-11)
+
+- JSONL `text.features` is now parsed and validated before shaping
+- JSONL job spec now accepts canonical `version` and legacy `_version`
+- JSONL batch execution now runs in parallel with deterministic output ordering
 
 ## Plan Steps (authoritative details)
 

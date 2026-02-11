@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 JSONL quality sprint)
+
+- [x] Parse `text.features` in JSONL jobs and feed validated values into `ShapingParams.features`
+- [x] Make JSONL `JobSpec` accept `version` plus legacy `_version` compatibility alias
+- [x] Parallelize JSONL batch job execution with deterministic output ordering and regression tests
+
 ## Completed (2026-02-11 maintenance sprint)
 
 - [x] Add repo-root `./test.sh` wrapper as the canonical verification entrypoint

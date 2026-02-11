@@ -93,6 +93,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Added repo-root `./test.sh` wrapper as the canonical test entrypoint
 - Updated `scripts/test.sh` formatting check to use `cargo fmt --check` (compatible with current vendored Vello layout)
 - Updated CI lint workflow formatting check to use `cargo fmt --check` for parity with local verification
+- JSONL batch jobs now run in parallel via Rayon while preserving output order
+- JSONL `text.features` is now parsed/validated and passed into shaping params
+- JSONL `JobSpec` now accepts canonical `version` with legacy `_version` alias
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

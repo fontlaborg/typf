@@ -2,18 +2,20 @@
 //!
 //! Perfect for automation, testing frameworks, and integration with
 //! other tools. Each line is a complete job specification.
+// this_file: crates/typf-cli/src/jsonl.rs
 
 #![allow(dead_code)] // Legacy JSONL batch processing - retained for future v2.1 batch command
 
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// A batch of rendering jobs to process
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobSpec {
     /// API version compatibility (defaults to "2.0")
-    #[serde(default = "default_version")]
+    #[serde(default = "default_version", rename = "version", alias = "_version")]
     pub _version: String,
     /// All the jobs we need to render
     pub jobs: Vec<Job>,
@@ -257,8 +259,8 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
 
     eprintln!("Processing {} jobs...", spec.jobs.len());
 
-    // Process each job (TODO: parallelize with rayon for speed)
-    let results: Vec<JobResult> = spec.jobs.iter().map(process_job).collect();
+    // Process jobs in parallel while preserving output order.
+    let results = process_jobs(&spec.jobs);
 
     // Write out results, one JSON per line
     let mut out = stdout().lock();
@@ -274,6 +276,20 @@ pub fn run_batch() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     Ok(())
+}
+
+fn process_jobs(jobs: &[Job]) -> Vec<JobResult> {
+    let mut indexed_results: Vec<(usize, JobResult)> = jobs
+        .par_iter()
+        .enumerate()
+        .map(|(idx, job)| (idx, process_job(job)))
+        .collect();
+
+    indexed_results.sort_unstable_by_key(|(idx, _)| *idx);
+    indexed_results
+        .into_iter()
+        .map(|(_, result)| result)
+        .collect()
 }
 
 /// Stream jobs one by one, perfect for pipelines
@@ -376,13 +392,18 @@ fn process_job(job: &Job) -> JobResult {
         _ => Direction::LeftToRight,
     };
 
+    let features = match parse_text_features(&job.text.features) {
+        Ok(features) => features,
+        Err(e) => return JobResult::error(&job.id, format!("Invalid OpenType feature: {}", e)),
+    };
+
     // Create shaping parameters
     let shaping_params = ShapingParams {
         size: job.font.size,
         direction,
         language: job.text.language.clone(),
         script: job.text.script.clone(),
-        features: Vec::new(), // TODO: parse job.text.features
+        features,
         variations: job
             .font
             .instance
@@ -513,9 +534,80 @@ fn process_job(job: &Job) -> JobResult {
     )
 }
 
+fn parse_text_features(feature_specs: &[String]) -> Result<Vec<(String, u32)>, String> {
+    let mut parsed = Vec::new();
+
+    for spec in feature_specs {
+        for token in spec.split([',', ' ']) {
+            let token = token.trim();
+            if token.is_empty() {
+                continue;
+            }
+            parsed.push(parse_feature_token(token)?);
+        }
+    }
+
+    Ok(parsed)
+}
+
+fn parse_feature_token(token: &str) -> Result<(String, u32), String> {
+    let (tag, value) = if let Some(stripped) = token.strip_prefix('+') {
+        (stripped, 1)
+    } else if let Some(stripped) = token.strip_prefix('-') {
+        (stripped, 0)
+    } else if let Some(eq_pos) = token.find('=') {
+        let tag = &token[..eq_pos];
+        let value_str = &token[eq_pos + 1..];
+        let value = value_str
+            .parse::<u32>()
+            .map_err(|_| format!("feature '{}' has invalid value '{}'", tag, value_str))?;
+        (tag, value)
+    } else {
+        (token, 1)
+    };
+
+    if tag.len() != 4 {
+        return Err(format!(
+            "feature '{}' has invalid tag length {}; expected 4 characters",
+            tag,
+            tag.len()
+        ));
+    }
+
+    Ok((tag.to_string(), value))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    fn test_job(id: &str) -> Job {
+        Job {
+            id: id.to_string(),
+            font: TypfFontRenderableConfig {
+                source: TypfFontSourceConfig {
+                    path: PathBuf::from("/definitely/missing/font.ttf"),
+                    face_index: None,
+                },
+                instance: TypfFontInstanceConfig::default(),
+                size: 24.0,
+            },
+            text: TextConfig {
+                content: "Hello".to_string(),
+                script: None,
+                direction: Some("ltr".to_string()),
+                language: None,
+                features: Vec::new(),
+            },
+            rendering: RenderingConfig {
+                format: "ppm".to_string(),
+                encoding: "base64".to_string(),
+                width: 800,
+                height: 600,
+            },
+        }
+    }
 
     #[test]
     fn test_job_result_error() {
@@ -545,7 +637,7 @@ mod tests {
     #[test]
     fn test_job_spec_deserialization() {
         let json = r#"{
-            "version": "2.0",
+            "version": "2.1",
             "jobs": [
                 {
                     "id": "job1",
@@ -557,7 +649,87 @@ mod tests {
         }"#;
 
         let spec: JobSpec = serde_json::from_str(json).unwrap();
-        assert_eq!(spec._version, "2.0");
+        assert_eq!(spec._version, "2.1");
         assert_eq!(spec.jobs.len(), 1);
+    }
+
+    #[test]
+    fn test_job_spec_deserialization_supports_legacy_underscore_version() {
+        let json = r#"{
+            "_version": "2.2",
+            "jobs": []
+        }"#;
+
+        let spec: JobSpec = serde_json::from_str(json).unwrap();
+        assert_eq!(spec._version, "2.2");
+    }
+
+    #[test]
+    fn test_job_spec_serialization_uses_version_field() {
+        let spec = JobSpec {
+            _version: "2.3".to_string(),
+            jobs: Vec::new(),
+        };
+
+        let value = serde_json::to_value(spec).unwrap();
+        assert_eq!(value["version"], json!("2.3"));
+        assert!(
+            value.get("_version").is_none(),
+            "serialized JobSpec must use canonical 'version' key"
+        );
+    }
+
+    #[test]
+    fn test_parse_text_features_when_mixed_syntax_then_parsed_values() {
+        let parsed = parse_text_features(&[
+            "+liga".to_string(),
+            "kern=0".to_string(),
+            "smcp".to_string(),
+            "cv01=2".to_string(),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            parsed,
+            vec![
+                ("liga".to_string(), 1),
+                ("kern".to_string(), 0),
+                ("smcp".to_string(), 1),
+                ("cv01".to_string(), 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_text_features_when_bad_value_then_error() {
+        let error = parse_text_features(&["liga=on".to_string()]).unwrap_err();
+        assert!(
+            error.contains("invalid value"),
+            "expected invalid value error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_parse_text_features_when_bad_tag_length_then_error() {
+        let error = parse_text_features(&["ligature=1".to_string()]).unwrap_err();
+        assert!(
+            error.contains("expected 4 characters"),
+            "expected tag-length validation error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_jobs_when_parallel_then_preserves_input_order() {
+        let jobs = vec![test_job("job-a"), test_job("job-b"), test_job("job-c")];
+        let results = process_jobs(&jobs);
+
+        let ids: Vec<&str> = results.iter().map(|result| result.id.as_str()).collect();
+        assert_eq!(ids, vec!["job-a", "job-b", "job-c"]);
+        assert!(
+            results.iter().all(|result| result.status == "error"),
+            "missing font should fail consistently in deterministic order"
+        );
     }
 }
