@@ -5,9 +5,33 @@
 **Updated:** 2026-02-11
 **Source:** `PLANSTEPS/` (split from `TASKS.md`)
 
-## Remaining Tasks
+## Remaining Tasks (2026-02-11 test-fix + polish micro-sprint)
 
-No remaining tasks for v5.0.2. All planned work complete.
+### P0 — Test Failures (blocking CI)
+
+- [ ] **T1: Fix `sanity_fmt` failure in `test.py`** — Change `cargo fmt --all --check` to `cargo fmt --check` (remove `--all` flag). The `--all` flag traverses vendored `external/vello/` workspace members that don't exist on disk, breaking `cargo metadata`. `scripts/test.sh` already uses the correct command.
+  - File: `test.py` line 213
+  - Change: `["cargo", "fmt", "--all", "--check"]` → `["cargo", "fmt", "--check"]`
+
+- [ ] **T2: Fix `sanity_clippy` failure in `typf-core`** — Add `#[allow(clippy::expect_used, clippy::panic)]` to the `#[cfg(test)] mod tests` block in `typf-core/src/lib.rs`. The workspace sets `expect_used` and `panic` to `"warn"`, and clippy runs with `-D warnings`, making test-only `expect_err()` and `panic!()` into hard errors.
+  - File: `crates/typf-core/src/lib.rs` around line 724 (the `mod tests` declaration)
+  - 5 violations: lines 817, 826, 837-839, 848-850, 860
+
+- [ ] **T3: Verify fixes** — Run `python3 test.py` and confirm `sanity_fmt` and `sanity_clippy` both pass (18/18 steps green)
+
+### P1 — Code Quality Polish
+
+- [ ] **T4: Remove `#[allow(dead_code)]` from `Pipeline` struct fields** — `cache_policy`, `shaping_cache`, and `glyph_cache` fields in `crates/typf-core/src/pipeline.rs` (lines 58-63) are suppressed as dead code. Either use them properly or remove the fields if they're only for future use.
+
+- [ ] **T5: Audit `unreachable!()` in production code paths** — `crates/typf-core/src/shaping_cache.rs:231` and `crates/typf-core/src/glyph_cache.rs:228,234` use `unreachable!()` for cache invariants. These should use `debug_assert!` + graceful fallback, or document the safety invariant. `crates/typf-cli/src/jsonl.rs:535` uses `unreachable!()` for metrics format — verify this is truly unreachable.
+
+- [ ] **T6: Audit clippy `#[allow]` suppressions across backends** — Review all 18 `#[allow(...)]` attributes found in `crates/` and `backends/`:
+  - `too_many_arguments` (4 occurrences in render backends) — consider introducing param structs
+  - `dead_code` (4 occurrences) — remove dead code or justify retention
+  - `arc_with_non_send_sync` in `typf-shape-ct` — document why this is necessary
+  - `never_loop, while_immutable_condition` in `typf-render-opixa/simd.rs` — investigate SIMD correctness
+
+- [ ] **T7: Final re-verification** — Run `python3 test.py` one last time to confirm 18/18 pass and no regressions
 
 ## Completed (2026-02-11 script-normalization/limit-helper dedup + file-tracking hygiene micro-sprint)
 

@@ -721,6 +721,7 @@ impl Color {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::panic)]
 mod tests {
     use super::types::*;
     use super::{error::ShapingError, ShapingParams, MAX_FONT_SIZE};

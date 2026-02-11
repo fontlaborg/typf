@@ -96,7 +96,9 @@ def run_capture(command: List[str], cwd: Path, timeout: int = 30) -> str:
 
 def write_json(path: Path, payload: Dict) -> None:
     """Write JSON with stable formatting."""
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 class TestRunner:
@@ -171,7 +173,9 @@ class TestRunner:
             "variable_png": self.images_dir / "variable_font.png",
             "mixed_svg": self.artifacts_dir / "mixed_scripts.svg",
             "batch_latin_png": self.artifacts_dir / "batch_output" / "batch_latin.png",
-            "batch_arabic_svg": self.artifacts_dir / "batch_output" / "batch_arabic.svg",
+            "batch_arabic_svg": self.artifacts_dir
+            / "batch_output"
+            / "batch_arabic.svg",
         }
 
         typf_bin = ["target/debug/typf"]
@@ -210,7 +214,7 @@ class TestRunner:
                 category="sanity_tests",
                 title="Rust Format Check",
                 description="Ensure formatting is stable.",
-                command=["cargo", "fmt", "--all", "--check"],
+                command=["cargo", "fmt", "--check"],
                 timeout_seconds=900,
             ),
             Step(
@@ -218,7 +222,16 @@ class TestRunner:
                 category="sanity_tests",
                 title="Rust Clippy",
                 description="Run strict lint checks.",
-                command=["cargo", "clippy", "--workspace", "--all-features", "--all-targets", "--", "-D", "warnings"],
+                command=[
+                    "cargo",
+                    "clippy",
+                    "--workspace",
+                    "--all-features",
+                    "--all-targets",
+                    "--",
+                    "-D",
+                    "warnings",
+                ],
                 timeout_seconds=2400,
                 required=not self.quick,
             ),
@@ -227,7 +240,14 @@ class TestRunner:
                 category="sanity_tests",
                 title="List Rust Tests",
                 description="Inventory all workspace tests.",
-                command=["cargo", "test", "--workspace", "--all-features", "--", "--list"],
+                command=[
+                    "cargo",
+                    "test",
+                    "--workspace",
+                    "--all-features",
+                    "--",
+                    "--list",
+                ],
                 timeout_seconds=2400,
             ),
             Step(
@@ -536,7 +556,9 @@ class TestRunner:
                 f"- {entry['artifact']}: ok={entry['ok']} reason={entry['reason']} path={entry['path']}"
             )
         lines.append("")
-        (self.text_dir / "practical_checks.txt").write_text("\n".join(lines), encoding="utf-8")
+        (self.text_dir / "practical_checks.txt").write_text(
+            "\n".join(lines), encoding="utf-8"
+        )
         failed = [entry for entry in checks if not bool(entry.get("ok"))]
         status = "pass" if not failed else "fail"
         notes = "All practical artifacts validated."
@@ -560,8 +582,16 @@ class TestRunner:
             command=[],
             log_file=str(log_path.relative_to(self.report_dir)),
             artifacts=[
-                str((self.json_dir / "practical_checks.json").relative_to(self.report_dir)),
-                str((self.text_dir / "practical_checks.txt").relative_to(self.report_dir)),
+                str(
+                    (self.json_dir / "practical_checks.json").relative_to(
+                        self.report_dir
+                    )
+                ),
+                str(
+                    (self.text_dir / "practical_checks.txt").relative_to(
+                        self.report_dir
+                    )
+                ),
             ],
             notes=notes,
         )
@@ -584,9 +614,15 @@ class TestRunner:
             "tools": {
                 "cargo": run_capture(["cargo", "--version"], ROOT),
                 "rustc": run_capture(["rustc", "--version"], ROOT),
-                "uv": run_capture(["uv", "--version"], ROOT) if tool_exists("uv") else "<not_found>",
-                "codex": run_capture(["codex", "--version"], ROOT) if tool_exists("codex") else "<not_found>",
-                "gemini": run_capture(["gemini", "--version"], ROOT) if tool_exists("gemini") else "<not_found>",
+                "uv": run_capture(["uv", "--version"], ROOT)
+                if tool_exists("uv")
+                else "<not_found>",
+                "codex": run_capture(["codex", "--version"], ROOT)
+                if tool_exists("codex")
+                else "<not_found>",
+                "gemini": run_capture(["gemini", "--version"], ROOT)
+                if tool_exists("gemini")
+                else "<not_found>",
             },
             "env_subset": {
                 key: os.environ.get(key, "")
@@ -717,8 +753,12 @@ class TestRunner:
                 "Neither codex nor gemini was found on PATH.\n",
                 encoding="utf-8",
             )
-            codex_output.write_text("AI analysis unavailable: codex not found.\n", encoding="utf-8")
-            gemini_output.write_text("AI analysis unavailable: gemini not found.\n", encoding="utf-8")
+            codex_output.write_text(
+                "AI analysis unavailable: codex not found.\n", encoding="utf-8"
+            )
+            gemini_output.write_text(
+                "AI analysis unavailable: gemini not found.\n", encoding="utf-8"
+            )
             return
 
         ai_successes = 0
@@ -764,7 +804,9 @@ class TestRunner:
             if not gemini_output.exists():
                 gemini_output.write_text("Gemini analysis failed.\n", encoding="utf-8")
 
-    def write_results_files(self, environment: Dict[str, object], summary: Dict[str, object]) -> None:
+    def write_results_files(
+        self, environment: Dict[str, object], summary: Dict[str, object]
+    ) -> None:
         """Write machine-readable files."""
         payload = {
             "generated_at": iso_now(),
@@ -774,8 +816,12 @@ class TestRunner:
         write_json(self.json_dir / "results.json", payload)
         write_json(self.json_dir / "summary.json", summary)
 
-        commands = [quote_command(result.command) for result in self.results if result.command]
-        (self.text_dir / "commands.txt").write_text("\n".join(commands) + "\n", encoding="utf-8")
+        commands = [
+            quote_command(result.command) for result in self.results if result.command
+        ]
+        (self.text_dir / "commands.txt").write_text(
+            "\n".join(commands) + "\n", encoding="utf-8"
+        )
         summary_lines = [
             "Test Suite Summary",
             "==================",
@@ -787,7 +833,9 @@ class TestRunner:
             f"skip: {summary['counts']['skip']}",
             f"required_failures: {', '.join(summary['required_failures']) or 'none'}",
         ]
-        (self.text_dir / "summary.txt").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+        (self.text_dir / "summary.txt").write_text(
+            "\n".join(summary_lines) + "\n", encoding="utf-8"
+        )
 
     def generate_readme(self, summary: Dict[str, object]) -> None:
         """Generate report index README linking all artifacts."""
@@ -911,7 +959,9 @@ class TestRunner:
     def extract_test_count_metric(self) -> None:
         """Parse test count from sanity_list_tests output into JSON."""
         metrics_path = self.json_dir / "metrics.json"
-        list_step = next((r for r in self.results if r.step_id == "sanity_list_tests"), None)
+        list_step = next(
+            (r for r in self.results if r.step_id == "sanity_list_tests"), None
+        )
         if not list_step:
             write_json(
                 metrics_path,
@@ -972,9 +1022,13 @@ class TestRunner:
                 encoding="utf-8",
             )
         if not (self.text_dir / "ai_codex.md").exists():
-            (self.text_dir / "ai_codex.md").write_text("AI analysis not run.\n", encoding="utf-8")
+            (self.text_dir / "ai_codex.md").write_text(
+                "AI analysis not run.\n", encoding="utf-8"
+            )
         if not (self.text_dir / "ai_gemini.md").exists():
-            (self.text_dir / "ai_gemini.md").write_text("AI analysis not run.\n", encoding="utf-8")
+            (self.text_dir / "ai_gemini.md").write_text(
+                "AI analysis not run.\n", encoding="utf-8"
+            )
 
         if not self.skip_ai:
             self.run_ai_analyses(pre_ai_summary)
@@ -1015,7 +1069,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     """Entrypoint."""
     args = parse_args()
-    runner = TestRunner(quick=args.quick, skip_ai=args.skip_ai, fail_fast=args.fail_fast)
+    runner = TestRunner(
+        quick=args.quick, skip_ai=args.skip_ai, fail_fast=args.fail_fast
+    )
     exit_code = runner.execute()
     report_rel = runner.report_dir.relative_to(ROOT).as_posix()
     print(f"Report: {report_rel}/README.md")

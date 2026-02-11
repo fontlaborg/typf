@@ -1,0 +1,27 @@
+{
+  "cwd": "/Users/adam/Developer/vcs3/github.fontlaborg/typf",
+  "env_subset": {
+    "CARGO_TARGET_DIR": "",
+    "CI": "",
+    "RUSTFLAGS": "",
+    "TYPF_CACHE": ""
+  },
+  "generated_at": "2026-02-11T20:19:27+00:00",
+  "platform": {
+    "machine": "arm64",
+    "python_implementation": "CPython",
+    "release": "25.2.0",
+    "system": "Darwin"
+  },
+  "python": {
+    "executable": "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+    "version": "3.13.10 (v3.13.10:4fd884356d7, Dec  2 2025, 09:31:05) [Clang 16.0.0 (clang-1600.0.26.6)]"
+  },
+  "tools": {
+    "cargo": "cargo 1.92.0 (344c4567c 2025-10-21)",
+    "codex": "codex-cli 0.98.0",
+    "gemini": "0.29.0-nightly.20260206.4ffc349c1",
+    "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+    "uv": "uv 0.9.21 (0dc9556ad 2025-12-30)"
+  }
+}

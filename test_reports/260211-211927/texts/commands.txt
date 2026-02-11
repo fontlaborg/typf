@@ -1,0 +1,64 @@
+cargo build -p typf-cli
+target/debug/typf --version
+target/debug/typf info
+target/debug/typf render --help
+cargo fmt --check
+cargo clippy --workspace --all-features --all-targets -- -D warnings
+cargo test --workspace --all-features -- --list
+cargo test --workspace --all-features --lib
+cargo test --workspace --all-features --tests
+cargo test --workspace --all-features --doc
+target/debug/typf render "Hello, Typf Practical Test" -f test-fonts/NotoSans-Regular.ttf -s 60 --shaper hb --renderer opixa -O png -o /Users/adam/Developer/vcs3/github.fontlaborg/typf/test_reports/260211-211927/images/latin.png --quiet
+target/debug/typf render "مرحبا بالعالم" -f test-fonts/NotoNaskhArabic-Regular.ttf -s 64 --shaper hb --renderer opixa -O png -o /Users/adam/Developer/vcs3/github.fontlaborg/typf/test_reports/260211-211927/images/arabic.png --quiet
+target/debug/typf render "Variable Width" -f test-fonts/Kalnia[wdth,wght].ttf -i wght=700,wdth=120 -s 70 --shaper hb --renderer opixa -O png -o /Users/adam/Developer/vcs3/github.fontlaborg/typf/test_reports/260211-211927/images/variable_font.png --quiet
+target/debug/typf render "Hello, مرحبا, 你好!" -f test-fonts/NotoSans-Regular.ttf -s 54 --shaper hb --renderer opixa -O svg -o /Users/adam/Developer/vcs3/github.fontlaborg/typf/test_reports/260211-211927/artifacts/mixed_scripts.svg --quiet
+target/debug/typf batch -i /Users/adam/Developer/vcs3/github.fontlaborg/typf/test_reports/260211-211927/texts/batch_jobs.jsonl -o /Users/adam/Developer/vcs3/github.fontlaborg/typf/test_reports/260211-211927/artifacts/batch_output --verbose
+codex exec --skip-git-repo-check --sandbox read-only -C /Users/adam/Developer/vcs3/github.fontlaborg/typf -o /Users/adam/Developer/vcs3/github.fontlaborg/typf/test_reports/260211-211927/texts/ai_codex.md -
+gemini --output-format text -p "Review this test-suite summary and return:
+1) top risks
+2) probable root causes
+3) concrete next actions
+Keep it concise and actionable.
+
+{
+  \"categories\": {
+    \"practical_tests\": {
+      \"fail\": 0,
+      \"pass\": 6,
+      \"skip\": 0,
+      \"total\": 6
+    },
+    \"sanity_tests\": {
+      \"fail\": 0,
+      \"pass\": 3,
+      \"skip\": 0,
+      \"total\": 3
+    },
+    \"smoke_tests\": {
+      \"fail\": 0,
+      \"pass\": 4,
+      \"skip\": 0,
+      \"total\": 4
+    },
+    \"unit_tests\": {
+      \"fail\": 0,
+      \"pass\": 3,
+      \"skip\": 0,
+      \"total\": 3
+    }
+  },
+  \"counts\": {
+    \"fail\": 0,
+    \"pass\": 16,
+    \"skip\": 0,
+    \"total_steps\": 16
+  },
+  \"generated_at\": \"2026-02-11T20:19:43+00:00\",
+  \"quick_mode\": false,
+  \"required_failures\": [],
+  \"run_finished_at\": \"2026-02-11T20:19:43+00:00\",
+  \"run_started_at\": \"2026-02-11T20:19:27+00:00\",
+  \"skip_ai\": false,
+  \"suite_duration_seconds\": 14.435
+}
+"
