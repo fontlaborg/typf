@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 JSONL resource-limits/stream-id-cap micro-sprint)
+
+- [x] Add JSONL batch-size cap (`MAX_BATCH_JOBS=10_000`) and reject oversized job lists with explicit validation errors
+- [x] Add JSONL `text.content` payload-size cap (`MAX_TEXT_CONTENT_BYTES=1_000_000`) and fail fast before shaping
+- [x] Improve stream duplicate-ID diagnostics with first-seen line context and enforce bounded unique stream IDs (`MAX_STREAM_UNIQUE_JOB_IDS=100_000`)
+
 ## Completed (2026-02-11 render face-index/glyph-source + JSONL stream duplicate-id micro-sprint)
 
 - [x] Make `typf render` honor `--face-index` by loading via `TypfFontFace::from_file_index(...)`

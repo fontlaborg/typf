@@ -11,6 +11,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+const MAX_BATCH_JOBS: usize = 10_000;
+const MAX_STREAM_UNIQUE_JOB_IDS: usize = 100_000;
+const MAX_TEXT_CONTENT_BYTES: usize = 1_000_000;
+
 /// A batch of rendering jobs to process
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -301,7 +305,7 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
     use std::io::{stdin, stdout, BufRead, Write};
 
     let mut out = stdout().lock();
-    let mut seen_job_ids = HashSet::new();
+    let mut seen_job_ids = HashMap::new();
 
     // Read, process, and output one job at a time
     for (line_index, line) in stdin().lock().lines().enumerate() {
@@ -371,6 +375,9 @@ fn process_job(job: &Job) -> JobResult {
             "invalid_font_source_path",
             format!("Invalid font.source.path: {}", error),
         );
+    }
+    if let Err(error) = validate_text_content(&job.text.content) {
+        return JobResult::error(&job.id, format!("Invalid text.content: {}", error));
     }
 
     let start = Instant::now();
@@ -720,15 +727,22 @@ fn validate_job_ids(jobs: &[Job]) -> Result<(), String> {
 fn validate_stream_job_id<'a>(
     id: &'a str,
     line_number: usize,
-    seen: &mut HashSet<String>,
+    seen: &mut HashMap<String, usize>,
 ) -> Result<&'a str, String> {
     let normalized = validate_job_id(id)?;
-    if !seen.insert(normalized.to_string()) {
+    if let Some(first_line) = seen.get(normalized) {
         return Err(format!(
-            "duplicate job.id '{}' at line {}",
-            normalized, line_number
+            "duplicate job.id '{}' at line {} (first seen at line {})",
+            normalized, line_number, first_line
         ));
     }
+    if seen.len() >= MAX_STREAM_UNIQUE_JOB_IDS {
+        return Err(format!(
+            "stream exceeds max unique job.id count ({})",
+            MAX_STREAM_UNIQUE_JOB_IDS
+        ));
+    }
+    seen.insert(normalized.to_string(), line_number);
     Ok(normalized)
 }
 
@@ -750,10 +764,27 @@ fn annotate_stream_error_with_line(mut result: JobResult, line_number: usize) ->
 
 fn validate_jobs_not_empty(jobs: &[Job]) -> Result<(), String> {
     if jobs.is_empty() {
-        Err("jobs list cannot be empty".to_string())
-    } else {
-        Ok(())
+        return Err("jobs list cannot be empty".to_string());
     }
+    if jobs.len() > MAX_BATCH_JOBS {
+        return Err(format!(
+            "jobs list cannot exceed {} entries (got {})",
+            MAX_BATCH_JOBS,
+            jobs.len()
+        ));
+    }
+    Ok(())
+}
+
+fn validate_text_content(content: &str) -> Result<(), String> {
+    let size = content.len();
+    if size > MAX_TEXT_CONTENT_BYTES {
+        return Err(format!(
+            "text.content exceeds max size of {} bytes (got {})",
+            MAX_TEXT_CONTENT_BYTES, size
+        ));
+    }
+    Ok(())
 }
 
 fn validate_font_source_path(path: &Path) -> Result<(), String> {
@@ -862,7 +893,7 @@ fn parse_feature_token(token: &str) -> Result<(String, u32), String> {
 mod tests {
     use super::*;
     use serde_json::json;
-    use std::collections::HashSet;
+    use std::collections::HashMap;
     use typf_core::types::Direction;
 
     fn test_job(id: &str) -> Job {
@@ -1135,6 +1166,19 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_jobs_not_empty_rejects_excessive_job_count() {
+        let jobs = (0..=MAX_BATCH_JOBS)
+            .map(|index| test_job(&format!("job-{}", index)))
+            .collect::<Vec<_>>();
+        let error = validate_jobs_not_empty(&jobs).expect_err("oversized jobs list should fail");
+        assert!(
+            error.contains("cannot exceed"),
+            "expected max-job-count validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
     fn test_validate_font_source_path_rejects_blank_path() {
         let error = validate_font_source_path(&PathBuf::from(" \t\n"))
             .expect_err("blank font source path should fail");
@@ -1201,25 +1245,45 @@ mod tests {
 
     #[test]
     fn test_validate_stream_job_id_when_first_occurrence_then_accepts() {
-        let mut seen = HashSet::new();
+        let mut seen = HashMap::new();
         let validated = validate_stream_job_id("job-1", 1, &mut seen)
             .expect("first valid stream job id should be accepted");
         assert_eq!(validated, "job-1");
         assert!(
-            seen.contains("job-1"),
+            seen.contains_key("job-1"),
             "accepted stream IDs should be tracked for duplicate detection"
         );
     }
 
     #[test]
     fn test_validate_stream_job_id_when_duplicate_then_rejects_with_line_context() {
-        let mut seen = HashSet::new();
+        let mut seen = HashMap::new();
         validate_stream_job_id("job-1", 1, &mut seen).expect("first id should be accepted");
         let error = validate_stream_job_id("job-1", 4, &mut seen)
             .expect_err("duplicate stream job id should fail");
         assert!(
             error.contains("duplicate job.id 'job-1' at line 4"),
             "expected duplicate-id line-aware error, got: {}",
+            error
+        );
+        assert!(
+            error.contains("first seen at line 1"),
+            "expected first-seen line context, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_validate_stream_job_id_when_unique_limit_exceeded_then_rejects() {
+        let mut seen = HashMap::new();
+        for index in 0..MAX_STREAM_UNIQUE_JOB_IDS {
+            seen.insert(format!("job-{}", index), index + 1);
+        }
+        let error = validate_stream_job_id("new-id", 2, &mut seen)
+            .expect_err("stream unique-id cap should be enforced");
+        assert!(
+            error.contains("max unique job.id count"),
+            "expected unique-id cap error, got: {}",
             error
         );
     }
@@ -1611,6 +1675,26 @@ mod tests {
         assert!(
             error.contains("Invalid font.source.path"),
             "expected font.source.path validation context, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_text_content_exceeds_limit_then_error() {
+        let mut job = test_job("job-text-too-large");
+        job.text.content = "a".repeat(MAX_TEXT_CONTENT_BYTES + 1);
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "oversized text content must fail");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("Invalid text.content"),
+            "expected text.content validation context, got: {}",
+            error
+        );
+        assert!(
+            error.contains("max size"),
+            "expected max-size guidance, got: {}",
             error
         );
     }

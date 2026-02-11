@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, cross-CLI unicode/color parser-parity, and render face-index/glyph-source plus JSONL stream duplicate-id micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, JSONL font-loader/face-index/text-hint-normalization, cross-CLI unicode/color parser-parity, render face-index/glyph-source plus JSONL stream duplicate-id, and JSONL resource-limits/stream-id-cap micro-sprints complete.
 
 ## TLDR
 
@@ -18,6 +18,12 @@
 - **Platform Docs**: Vello-GPU platform matrix in `src_docs/26-vello-gpu-platform-support.md`
 
 The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` is the flat actionable backlog.
+
+### Post-v5.0.2 JSONL Resource-Limits/Stream-ID-Cap Micro-Sprint (2026-02-11)
+
+- JSONL batch validation now rejects oversized job lists above `MAX_BATCH_JOBS` (10,000) with explicit diagnostics
+- JSONL job processing now rejects oversized `text.content` payloads above `MAX_TEXT_CONTENT_BYTES` (1,000,000 bytes)
+- JSONL stream duplicate-ID errors now include first-seen line context, and stream mode now enforces a bounded unique-ID set (`MAX_STREAM_UNIQUE_JOB_IDS` = 100,000)
 
 ### Post-v5.0.2 Render Face-Index/Glyph-Source + JSONL Stream Duplicate-ID Micro-Sprint (2026-02-11)
 

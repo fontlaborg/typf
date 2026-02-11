@@ -160,6 +160,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Added JSONL regression tests for face-index loading behavior and text-hint normalization
 - Added Python CLI regression coverage for shorthand/trimmed color parsing (`bindings/python/tests/test_cli_color_parsing.py`)
 - `typf render --glyph-source` now trims `prefer=`/`deny=` key+list whitespace and rejects blank source lists
+- JSONL batch validation now enforces an upper bound of 10,000 jobs and rejects oversized payloads early
+- JSONL job processing now enforces a `text.content` size limit of 1,000,000 bytes before shaping
+- JSONL stream duplicate-ID diagnostics now report both current and first-seen line numbers, and stream unique-ID tracking is now capped at 100,000 IDs
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts
