@@ -3,7 +3,7 @@
 
 **Version:** 5.0.2
 **Updated:** 2026-02-11
-**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, and stream-diagnostics/color-input micro-sprints complete.
+**Status:** All v5.0.2 tasks complete. Post-5.0.2 maintenance, quality-hygiene, validation, parser, batch-hardening, CLI/JSONL hardening, parser-consistency, input-validation parity, feature-tag diagnostics, JSONL determinism/input-normalization, verification-integrity, CLI input-normalization/output-path/JSONL-format, finite-font-size validation consistency, unicode-escape reliability, JSONL job-identity/rendering-dimensions plus batch field-normalization, stream-diagnostics/color-input, and JSONL font-loader/face-index/text-hint-normalization micro-sprints complete.
 
 ## TLDR
 
@@ -31,6 +31,12 @@ The authoritative detailed plan is split into `PLANSTEPS/` documents; `TODO.md` 
 - JSONL stream parse and validation failures now emit line-aware synthetic IDs (`parse_error_line_N` / `validation_error_line_N`)
 - JSONL stream execution failures now preserve job IDs while prefixing error messages with source line numbers
 - `typf render` now accepts trimmed shorthand hex color input (`RGB`/`RGBA`) and reports contextual invalid font-size tokens
+
+### Post-v5.0.2 JSONL Font-Loader/Face-Index/Text-Hint-Normalization Micro-Sprint (2026-02-11)
+
+- JSONL job processing now loads fonts via `TypfFontFace::from_file_index()` instead of a placeholder in-memory font shim
+- JSONL `font.source.face_index` is now respected during font loading, with explicit `face_index=<n>` failure context when loading fails
+- JSONL shaping now normalizes optional `text.language`/`text.script` values (`trim`, blank→`None`) before dispatching to shaping
 
 ### Post-v5.0.2 Maintenance Sprint (2026-02-11)
 

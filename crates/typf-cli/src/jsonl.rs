@@ -350,7 +350,6 @@ pub fn run_stream() -> Result<(), Box<dyn std::error::Error>> {
 /// Turn one job spec into one rendered result
 fn process_job(job: &Job) -> JobResult {
     use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-    use std::fs;
     use std::sync::Arc;
     use std::time::Instant;
     use typf_core::{
@@ -359,6 +358,7 @@ fn process_job(job: &Job) -> JobResult {
         Color, RenderParams, ShapingParams,
     };
     use typf_export::PnmExporter;
+    use typf_fontdb::TypfFontFace;
     use typf_render_opixa::OpixaRenderer;
     use typf_shape_none::NoneShaper;
 
@@ -376,41 +376,16 @@ fn process_job(job: &Job) -> JobResult {
 
     // Load font
     let font_path = &job.font.source.path;
-    let font_data = match fs::read(font_path) {
-        Ok(data) => data,
+    let face_index = job.font.source.face_index.unwrap_or(0);
+    let font: Arc<dyn FontRef> = match TypfFontFace::from_file_index(font_path, face_index) {
+        Ok(font) => Arc::new(font),
         Err(e) => {
-            return JobResult::error(&job.id, format!("Failed to load font: {}", e));
+            return JobResult::error(
+                &job.id,
+                format!("Failed to load font (face_index={}): {}", face_index, e),
+            );
         },
     };
-
-    // Create simple font wrapper
-    struct SimpleFont {
-        data: Vec<u8>,
-    }
-
-    impl FontRef for SimpleFont {
-        fn data(&self) -> &[u8] {
-            &self.data
-        }
-
-        fn units_per_em(&self) -> u16 {
-            1000
-        }
-
-        fn glyph_id(&self, ch: char) -> Option<u32> {
-            if ch.is_ascii() {
-                Some(ch as u32)
-            } else {
-                Some(0)
-            }
-        }
-
-        fn advance_width(&self, _glyph_id: u32) -> f32 {
-            600.0
-        }
-    }
-
-    let font = Arc::new(SimpleFont { data: font_data });
 
     // Parse direction
     let direction = match parse_text_direction(job.text.direction.as_deref()) {
@@ -448,8 +423,8 @@ fn process_job(job: &Job) -> JobResult {
     let shaping_params = ShapingParams {
         size: job.font.size,
         direction,
-        language: job.text.language.clone(),
-        script: job.text.script.clone(),
+        language: normalize_optional_text_hint(job.text.language.as_deref()),
+        script: normalize_optional_text_hint(job.text.script.as_deref()),
         features,
         variations,
         letter_spacing: 0.0,
@@ -781,6 +756,12 @@ fn validate_rendering_dimensions(width: u32, height: u32) -> Result<(), String> 
         return Err("rendering.height must be greater than 0".to_string());
     }
     Ok(())
+}
+
+fn normalize_optional_text_hint(raw: Option<&str>) -> Option<String> {
+    raw.map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
 }
 
 fn parse_text_direction(raw: Option<&str>) -> Result<typf_core::types::Direction, String> {
@@ -1250,6 +1231,24 @@ mod tests {
     }
 
     #[test]
+    fn test_normalize_optional_text_hint_when_blank_then_none() {
+        assert_eq!(
+            normalize_optional_text_hint(Some(" \t\n ")),
+            None,
+            "blank optional hints should normalize to None"
+        );
+    }
+
+    #[test]
+    fn test_normalize_optional_text_hint_when_surrounded_by_whitespace_then_trimmed() {
+        assert_eq!(
+            normalize_optional_text_hint(Some("  Arab\t")),
+            Some("Arab".to_string()),
+            "optional hints should be trimmed"
+        );
+    }
+
+    #[test]
     fn test_parse_text_features_when_mixed_syntax_then_parsed_values() {
         let parsed = parse_text_features(&[
             "+liga".to_string(),
@@ -1572,6 +1571,32 @@ mod tests {
             "expected font.source.path validation context, got: {}",
             error
         );
+    }
+
+    #[test]
+    fn test_process_job_when_face_index_is_invalid_then_error() {
+        let mut job = test_job("job-invalid-face-index");
+        job.font.source.path = workspace_test_font();
+        job.font.source.face_index = Some(1);
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "error", "invalid face index should fail");
+        let error = result.error.unwrap_or_default();
+        assert!(
+            error.contains("face_index=1"),
+            "expected face-index context in load error, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_process_job_when_face_index_is_zero_then_succeeds() {
+        let mut job = test_job("job-face-index-zero");
+        job.font.source.path = workspace_test_font();
+        job.font.source.face_index = Some(0);
+
+        let result = process_job(&job);
+        assert_eq!(result.status, "success", "face index 0 should succeed");
     }
 
     #[test]

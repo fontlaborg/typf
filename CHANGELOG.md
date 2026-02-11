@@ -149,6 +149,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - JSONL stream execution failures now preserve job IDs while prefixing error messages with source line numbers
 - `typf render` color parsing now accepts trimmed shorthand hex inputs (`RGB`/`RGBA`) in addition to full hex forms
 - `typf render` font-size parse errors now include the invalid token and expected syntax (`number` or `em`)
+- JSONL job processing now uses `TypfFontFace::from_file_index()` for font loading instead of a placeholder font shim
+- JSONL job processing now respects `font.source.face_index` and reports load failures with explicit `face_index=<n>` context
+- JSONL shaping now normalizes optional `text.language` and `text.script` hints (trim + blank to `None`) before dispatch
+- Added JSONL regression tests for face-index loading behavior and text-hint normalization
 
 ### Added
 - **Color Glyph Renderer**: New `typf-render-color` crate for emoji and color fonts

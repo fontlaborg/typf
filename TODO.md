@@ -9,6 +9,12 @@
 
 No remaining tasks for v5.0.2. All planned work complete.
 
+## Completed (2026-02-11 JSONL font-loader/face-index/text-hint-normalization micro-sprint)
+
+- [x] Replace JSONL job font loading shim with real `TypfFontFace::from_file_index()` loading
+- [x] Respect JSONL `font.source.face_index` and include explicit `face_index=<n>` context in load-failure diagnostics
+- [x] Normalize JSONL optional `text.language`/`text.script` hints (trim + blank to `None`) before shaping, with regression tests
+
 ## Completed (2026-02-11 stream-diagnostics/color-input micro-sprint)
 
 - [x] Add line-aware JSONL stream diagnostics for parse and `job.id` validation failures (synthetic IDs + line-number context)
