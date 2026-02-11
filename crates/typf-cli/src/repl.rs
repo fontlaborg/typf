@@ -2,6 +2,7 @@
 //!
 //! Perfect for experimenting with fonts, testing text samples,
 //! and understanding how the pipeline works step by step.
+// this_file: crates/typf-cli/src/repl.rs
 
 #![allow(dead_code)] // Legacy REPL infrastructure - retained for future v2.1 REPL mode
 

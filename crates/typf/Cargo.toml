@@ -42,6 +42,16 @@ name = "quickstart_backends"
 path = "../../examples/quickstart_backends.rs"
 required-features = ["minimal"]
 
+[[example]]
+name = "external_layout_integration"
+path = "../../examples/external_layout_integration.rs"
+required-features = ["export-pnm", "minimal"]
+
+[[example]]
+name = "wgpu_mesh_upload"
+path = "../../examples/wgpu_mesh_upload.rs"
+# No required features - only uses typf-core
+
 [[bench]]
 harness = false
 name = "pipeline_bench"
@@ -74,6 +84,8 @@ wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
 criterion = "0.5"
+image = "0.25"
+image-compare = "0.4"
 typf-export = { workspace = true }
 typf-render-opixa = { workspace = true }
 typf-render-skia = { workspace = true }

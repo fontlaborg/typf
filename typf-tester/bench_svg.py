@@ -227,7 +227,7 @@ class SVGBenchmark:
             fastest_png = min(png_results, key=lambda r: r.avg_time_ms)
             smallest_png = min(png_results, key=lambda r: r.output_size_bytes)
 
-            print(f"\n📊 PNG Results:")
+            print("\n📊 PNG Results:")
             print(
                 f"   Fastest: {fastest_png.renderer} @ {fastest_png.avg_time_ms:.3f}ms"
             )
@@ -239,7 +239,7 @@ class SVGBenchmark:
             fastest_svg = min(svg_results, key=lambda r: r.avg_time_ms)
             smallest_svg = min(svg_results, key=lambda r: r.output_size_bytes)
 
-            print(f"\n🎨 SVG Results:")
+            print("\n🎨 SVG Results:")
             print(
                 f"   Fastest: {fastest_svg.renderer} @ {fastest_svg.avg_time_ms:.3f}ms"
             )
@@ -251,7 +251,7 @@ class SVGBenchmark:
         all_fastest = min(results, key=lambda r: r.avg_time_ms)
         all_smallest = min(results, key=lambda r: r.output_size_bytes)
 
-        print(f"\n🏆 Overall Winners:")
+        print("\n🏆 Overall Winners:")
         print(
             f"   Fastest: {all_fastest.renderer} {all_fastest.format.upper()} @ {all_fastest.avg_time_ms:.3f}ms"
         )
@@ -282,7 +282,7 @@ class SVGBenchmark:
             r.output_size_bytes for r in results if r.format == "svg"
         ) / max(svg_count, 1)
 
-        print(f"\n📈 Average Performance:")
+        print("\n📈 Average Performance:")
         print(f"   PNG: {png_avg_time:.3f}ms/op")
         print(f"   SVG: {svg_avg_time:.3f}ms/op")
 
@@ -296,7 +296,7 @@ class SVGBenchmark:
                     f"   → SVG is {png_avg_time / svg_avg_time:.2f}x faster on average"
                 )
 
-        print(f"\n💾 Average File Size:")
+        print("\n💾 Average File Size:")
         print(f"   PNG: {png_avg_size / 1024:.2f} KB")
         print(f"   SVG: {svg_avg_size / 1024:.2f} KB")
         print(

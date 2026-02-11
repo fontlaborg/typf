@@ -2,6 +2,7 @@
 //!
 //! This module defines the command-line interface structure
 //! following the linra Typf CLI specification.
+// this_file: crates/typf-cli/src/cli.rs
 
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;

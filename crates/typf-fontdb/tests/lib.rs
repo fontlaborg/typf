@@ -68,3 +68,57 @@ fn test_metrics_when_loading_real_font_then_matches_read_fonts_tables() {
         "line_gap should match OS/2 or hhea"
     );
 }
+
+#[test]
+fn test_variation_axes_when_loading_variable_font_then_returns_axes() {
+    let font_path = repo_test_font_path("Kalnia[wdth,wght].ttf");
+    let font = Arc::new(TypfFontFace::from_file(&font_path).expect("load variable font"));
+    let font_ref: Arc<dyn FontRef> = font;
+
+    let axes = font_ref
+        .variation_axes()
+        .expect("Variable font should have axes");
+
+    // Kalnia has wdth and wght axes
+    assert_eq!(axes.len(), 2, "Kalnia should have 2 axes");
+
+    // Check we got the right axis tags
+    let tags: Vec<&str> = axes.iter().map(|a| a.tag.as_str()).collect();
+    assert!(tags.contains(&"wdth"), "Should contain wdth axis");
+    assert!(tags.contains(&"wght"), "Should contain wght axis");
+
+    // Check wght axis has reasonable values
+    let wght = axes.iter().find(|a| a.tag == "wght").unwrap();
+    assert!(wght.min_value >= 100.0, "wght min should be >= 100");
+    assert!(wght.max_value <= 900.0, "wght max should be <= 900");
+    assert!(wght.default_value >= wght.min_value, "default >= min");
+    assert!(wght.default_value <= wght.max_value, "default <= max");
+}
+
+#[test]
+fn test_variation_axes_when_loading_static_font_then_returns_none() {
+    let font_path = repo_test_font_path("NotoSans-Regular.ttf");
+    let font = Arc::new(TypfFontFace::from_file(&font_path).expect("load static font"));
+    let font_ref: Arc<dyn FontRef> = font;
+
+    let axes = font_ref.variation_axes();
+    assert!(axes.is_none(), "Static font should not have variation axes");
+}
+
+#[test]
+fn test_is_variable_when_loading_variable_font_then_returns_true() {
+    let font_path = repo_test_font_path("Kalnia[wdth,wght].ttf");
+    let font = Arc::new(TypfFontFace::from_file(&font_path).expect("load variable font"));
+    let font_ref: Arc<dyn FontRef> = font;
+
+    assert!(font_ref.is_variable(), "Kalnia should be variable");
+}
+
+#[test]
+fn test_is_variable_when_loading_static_font_then_returns_false() {
+    let font_path = repo_test_font_path("NotoSans-Regular.ttf");
+    let font = Arc::new(TypfFontFace::from_file(&font_path).expect("load static font"));
+    let font_ref: Arc<dyn FontRef> = font;
+
+    assert!(!font_ref.is_variable(), "NotoSans should not be variable");
+}

@@ -24,7 +24,7 @@ Community project by FontLab https://www.fontlab.org/
 import json
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -924,7 +924,7 @@ class TypfTester:
             return 1
 
         print(f"Benchmarking {len(rendering_backends)} rendering backend(s)")
-        print(f"Strategy: Total time - Shaping time = Rendering time")
+        print("Strategy: Total time - Shaping time = Rendering time")
         print(f"Iterations: {iterations}")
         print(f"Sample texts: {len(self.sample_texts)}")
         print(f"Font sizes: {self.bench_sizes}")
@@ -1129,12 +1129,12 @@ class TypfTester:
             print("Error: No backends available")
             return 1
 
-        print(f"Benchmarking text length scaling")
+        print("Benchmarking text length scaling")
         print(f"Iterations: {iterations}")
         print(
             f"Text samples: {len(all_texts)} (from {min(len(t) for t in all_texts.values())} to {max(len(t) for t in all_texts.values())} chars)"
         )
-        print(f"Font size: 48px")
+        print("Font size: 48px")
         print()
 
         all_results = []
@@ -1603,7 +1603,7 @@ class TypfTester:
                         try:
                             linra.render_text(text, str(font_path), size=size)
                             times.append(time.perf_counter() - start)
-                        except Exception as e:
+                        except Exception:
                             break
 
                     if times:

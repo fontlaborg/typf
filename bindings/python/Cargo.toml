@@ -13,6 +13,7 @@ name = "typf"
 
 [dependencies]
 pyo3 = { version = "0.22", features = ["extension-module"] }
+numpy = { version = "0.22", optional = true }
 typf = { workspace = true, features = ["default"] }
 typf-core = { workspace = true }
 typf-export = { workspace = true }
@@ -63,3 +64,4 @@ render-vello = ["typf-render-vello", "typf/render-vello"]
 shaping-ct = ["typf-shape-ct", "typf/shaping-ct"]
 shaping-hb = ["typf-shape-hb", "typf/shaping-hb"]
 shaping-icu-hb = ["typf-shape-icu-hb", "typf/shaping-icu-hb"]
+numpy-interop = ["numpy"]

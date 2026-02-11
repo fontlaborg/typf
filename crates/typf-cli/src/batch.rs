@@ -2,6 +2,7 @@
 //!
 //! Process hundreds or thousands of text lines from files or stdin.
 //! Perfect for testing fonts, generating samples, or batch processing.
+// this_file: crates/typf-cli/src/batch.rs
 
 #![allow(dead_code)] // Legacy batch processing infrastructure - retained for future v2.1 REPL mode
 

@@ -12,13 +12,12 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use crate::limits::{
-    read_to_string_with_limit, validate_file_size_limit, MAX_FONT_FILE_BYTES,
-    MAX_JSONL_BATCH_INPUT_BYTES,
+    read_to_string_with_limit, validate_file_size_limit, validate_text_size_limit,
+    MAX_FONT_FILE_BYTES, MAX_JSONL_BATCH_INPUT_BYTES, MAX_TEXT_CONTENT_BYTES,
 };
 
 const MAX_BATCH_JOBS: usize = 10_000;
 const MAX_STREAM_UNIQUE_JOB_IDS: usize = 100_000;
-const MAX_TEXT_CONTENT_BYTES: usize = 1_000_000;
 
 /// A batch of rendering jobs to process
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -803,14 +802,7 @@ fn validate_jobs_not_empty(jobs: &[Job]) -> Result<(), String> {
 }
 
 fn validate_text_content(content: &str) -> Result<(), String> {
-    let size = content.len();
-    if size > MAX_TEXT_CONTENT_BYTES {
-        return Err(format!(
-            "text.content exceeds max size of {} bytes (got {})",
-            MAX_TEXT_CONTENT_BYTES, size
-        ));
-    }
-    Ok(())
+    validate_text_size_limit(content, MAX_TEXT_CONTENT_BYTES, "text.content")
 }
 
 fn validate_font_source_path(path: &Path) -> Result<(), String> {
@@ -836,33 +828,7 @@ fn parse_text_language(raw: Option<&str>) -> Result<Option<String>, String> {
 }
 
 fn parse_text_script(raw: Option<&str>) -> Result<Option<String>, String> {
-    let normalized = raw.map(str::trim).filter(|value| !value.is_empty());
-
-    match normalized {
-        None => Ok(None),
-        Some(value) if value.eq_ignore_ascii_case("auto") => Ok(None),
-        Some(value) => {
-            if value.len() != 4 {
-                return Err(format!(
-                    "'{}' must be exactly 4 ASCII letters (ISO 15924)",
-                    value
-                ));
-            }
-            if !value.chars().all(|ch| ch.is_ascii_alphabetic()) {
-                return Err(format!(
-                    "'{}' must contain only ASCII letters (ISO 15924)",
-                    value
-                ));
-            }
-
-            let mut chars = value.chars();
-            let first = chars.next().expect("len() == 4 ensures first char exists");
-            let mut canonical = String::with_capacity(4);
-            canonical.push(first.to_ascii_uppercase());
-            canonical.extend(chars.map(|ch| ch.to_ascii_lowercase()));
-            Ok(Some(canonical))
-        },
-    }
+    crate::script::normalize_script_tag(raw)
 }
 
 fn parse_text_direction(raw: Option<&str>) -> Result<typf_core::types::Direction, String> {
@@ -1871,6 +1837,12 @@ mod tests {
             "expected max-size guidance, got: {}",
             error
         );
+    }
+
+    #[test]
+    fn test_validate_text_content_when_at_limit_then_ok() {
+        let content = "a".repeat(MAX_TEXT_CONTENT_BYTES);
+        validate_text_content(&content).expect("text.content at limit should be accepted");
     }
 
     #[test]

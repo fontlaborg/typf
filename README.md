@@ -1,5 +1,5 @@
 <!-- this_file: README.md -->
-# Typf v5.0.1
+# Typf v5.0.2
 
 [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
@@ -338,7 +338,7 @@ The benchmark tool tests all shaper × renderer combinations across fonts, sizes
 
 ## Status
 
-**v5.0.1** - Production ready with enhanced caching and baseline consistency. 
+**v5.0.2** - Production ready with enhanced caching, baseline consistency, and visual regression testing. 
 
 - ✅ 6-stage pipeline with optimized Moka TinyLFU caching architecture
 - ✅ 5 shapers (added HarfBuzz Rust), 7 renderers (35 combinations) with consistent baselines
@@ -346,7 +346,7 @@ The benchmark tool tests all shaper × renderer combinations across fonts, sizes
 - ✅ Linra CLI (Rust + Python) with color palette support and zero-copy optimization
 - ✅ Python bindings (PyO3) with zero-copy font access and enhanced FFI
 - ✅ Linux, macOS, Windows, WASM with platform-specific optimizations
-- ✅ 414+ tests passing across workspace with cache test stabilization
+- ✅ 490 tests passing across workspace including 21 SSIM visual regression tests
 - ✅ macOS native backends (CoreText + CoreGraphics) with linra single-pass rendering
 - ✅ Comprehensive backend documentation and architectural examples
 - ✅ COLR v0/v1 color glyph support (skia/zeno/vello-cpu) with improved CPAL palette handling
@@ -385,7 +385,7 @@ Fix: Use smaller fonts, line wrapping, or SVG (no width limit).
 - [Documentation](src_docs/) - 24 chapters
 - [Examples](examples/README.md) - Working code samples
 - [Contributing](CONTRIBUTING.md) - Development setup
-- [PLAN.md](PLAN.md) - Roadmap
+- [TASKS.md](TASKS.md) - Roadmap
 
 ## License
 

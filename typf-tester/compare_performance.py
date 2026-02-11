@@ -60,7 +60,7 @@ def create_comparison_table(stats):
     fastest = renderer_avgs[0]
     slowest = renderer_avgs[-1]
 
-    print(f"\n📊 Performance Insights:")
+    print("\n📊 Performance Insights:")
     print(f"  • Fastest: {fastest[0]} at {fastest[2]:.1f} ops/sec")
     print(f"  • Slowest: {slowest[0]} at {slowest[2]:.1f} ops/sec")
     print(f"  • Speed ratio: {fastest[2] / slowest[2]:.1f}x faster")
@@ -68,7 +68,7 @@ def create_comparison_table(stats):
     # Bitmap renderers only (exclude JSON)
     bitmap_renderers = [r for r in renderer_avgs if r[0] not in ["json", "svg"]]
     if bitmap_renderers:
-        print(f"\n🎨 Bitmap Renderers:")
+        print("\n🎨 Bitmap Renderers:")
         for renderer, avg_time, avg_ops, samples in bitmap_renderers:
             print(f"  • {renderer:15s}: {avg_time:6.2f}ms  ({avg_ops:8.1f} ops/sec)")
 
@@ -108,10 +108,10 @@ def main():
     create_comparison_table(stats)
     create_visual_chart(stats)
 
-    print(f"\n✅ Analysis complete!")
+    print("\n✅ Analysis complete!")
     print(f"   Total backends tested: {len(data['backends'])}")
     print(f"   Unique renderers: {len(stats)}")
-    print(f"\nCommunity project by FontLab - https://www.fontlab.org/\n")
+    print("\nCommunity project by FontLab - https://www.fontlab.org/\n")
 
     return 0
 

@@ -46,7 +46,7 @@ The key documented failure point is the unreliable handling of bitmap-only glyph
 
 **2.2. Address Outline Conflicts:**
 
-*   **Rationale:** `CBDT`/`sbix` fonts often have degenerate or empty outlines (glyf table entries are often null, but the glyph ID is valid). The upstream fix noted in the `PLAN.md` removing `&& !outline_empty` for Skia/Zeno must be generalized.
+*   **Rationale:** `CBDT`/`sbix` fonts often have degenerate or empty outlines (glyf table entries are often null, but the glyph ID is valid). The upstream fix noted in the `TASKS.md` removing `&& !outline_empty` for Skia/Zeno must be generalized.
 *   **Action:** The source selection logic in `typf-render-color` **MUST NOT** rely on the presence of outlines when checking availability for bitmap sources (`sbix`, `CBDT`, `EBDT`). It should strictly prioritize the highest-ranked available source based on `GlyphSourcePreference`.
 
 ### Phase 3: Vector Renderer (`typf-render-svg`) Color Embedding

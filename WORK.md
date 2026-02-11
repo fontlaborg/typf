@@ -3,29 +3,41 @@
 
 **Session Date:** 2026-02-11
 **Version:** 5.0.2
-**Focus:** Render input-source exclusivity, size-capped text ingestion, and backend-token normalization micro-sprint
+**Focus:** Script normalization + shared limit helper dedup micro-sprint
 
 ## Completed
 
-- [x] Added explicit render input-source validation to reject ambiguous multi-source combinations (`positional text`, `--text`, `--text-file`)
-- [x] Switched render `--text-file` and stdin ingestion to bounded reads using shared limit helper (`MAX_TEXT_CONTENT_BYTES=1_000_000`)
-- [x] Normalized render `--shaper` and `--renderer` tokens (trim + lowercase + blank→`auto`) before backend selection
-- [x] Added unit and CLI smoke coverage for ambiguous text-source rejection, oversized text-file rejection, and case-insensitive backend token acceptance
+- Added `crates/typf-cli/src/script.rs` with shared ISO 15924 script-tag normalization (`None`/blank/`auto` => unset, strict 4-letter ASCII validation, canonical titlecase)
+- Rewired render CLI script parsing (`crates/typf-cli/src/commands/render.rs`) to use shared script normalization
+- Rewired JSONL script parsing (`crates/typf-cli/src/jsonl.rs`) to use shared script normalization
+- Added shared text-size constant + validator in `crates/typf-cli/src/limits.rs`:
+  - `MAX_TEXT_CONTENT_BYTES`
+  - `validate_text_size_limit(...)`
+- Replaced duplicated text-size guards in render CLI and JSONL with shared helper calls
+- Added boundary regression tests for text-size validation:
+  - render CLI boundary accept test
+  - JSONL boundary accept test
+  - limits helper at-limit and over-limit tests
+- Added missing `this_file` markers across `crates/typf-cli/src/*.rs` and `crates/typf-cli/src/commands/*.rs`
 
 ## Research Notes
 
-- Rust std I/O read-capping behavior (`Read::take`) used by shared input-limit helper:
-  https://doc.rust-lang.org/std/io/trait.Read.html#method.take
-- Clap argument-grouping semantics (`ArgGroup`) reviewed for input-source exclusivity tradeoffs:
-  https://docs.rs/clap/latest/clap/builder/struct.ArgGroup.html
+- RFC 5646 / BCP 47 syntax and canonical casing guidance:
+  https://www.rfc-editor.org/rfc/rfc5646
+- `language-tags` crate canonicalization API used elsewhere in typf-cli:
+  https://docs.rs/language-tags/latest/language_tags/struct.LanguageTag.html
 
 ## Verification Results
 
-- `cargo test -p typf-cli --all-features` : PASS
-- `./test.sh --quick` : PASS
+- `cargo test -p typf-cli --all-features`
+  - Result: PASS (177 unit tests + 26 CLI smoke tests)
+- `./test.sh --quick`
+  - Result: PASS (workspace fmt, clippy, Rust tests/doc-tests, Python lint, Python tests)
+  - Python tests: `27 passed`
 
 ## Notes
 
+- No new dependencies added.
 - Existing unrelated repository changes were preserved.
 
 ## Next

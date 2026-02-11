@@ -1,17 +1,17 @@
 # Code Quality Review: Typf Text Rendering Pipeline
 
 **Review Date:** 2025-12-16
-**Codebase Version:** 5.0.1
+**Codebase Version:** 5.0.2
 **Reviewer:** Automated codebase analysis
 
 ## Executive Summary
 
 Typf is a modular text rendering library implementing a six-stage pipeline (Input → Unicode → Font Selection → Shaping → Rendering → Export). The project demonstrates solid architectural design with trait-based backend abstraction, comprehensive CLI tooling, and real font testing infrastructure.
 
-**Overall Assessment: A- (88/100)**
+**Overall Assessment: A- (89/100)**
 
 ### Key Metrics
-- **Test Count:** 414 tests across workspace
+- **Test Count:** 490 tests across workspace
 - **Real Font Fixtures:** 10 fonts (Latin, Arabic, Variable, COLR/SVG/CBDT/sbix color)
 - **CLI Commands:** 3 (render, info, batch) with comprehensive options
 - **Backends:** 4 shapers, 8 renderers (including Vello GPU/CPU), 2 linra integrations
@@ -153,16 +153,17 @@ pub enum TypfError {
 
 ---
 
-## 4. Testing Infrastructure (85/100)
+## 4. Testing Infrastructure (88/100)
 
 ### 4.1 Test Coverage
 
-**Test Count:** 414 tests across workspace
+**Test Count:** 490 tests across workspace
 
 **Test Categories:**
 - Unit tests in each crate
 - Integration tests in `tests/` directories
 - CLI smoke tests (`crates/typf-cli/tests/cli_smoke.rs`, 582 lines)
+- Visual regression tests (`crates/typf/tests/visual_regression.rs`, 21 SSIM tests)
 - Property-based tests (`typf-unicode/src/proptests.rs`)
 - Benchmarks (`benches/comprehensive.rs`, `benches/pipeline_bench.rs`)
 - Fuzzing targets (`fuzz/fuzz_targets/`)
@@ -193,7 +194,7 @@ Comprehensive CLI smoke tests covering:
 - Help and version output
 
 **Issues:**
-- No visual regression testing (image comparison)
+- ~~No visual regression testing (image comparison)~~ ✓ Added in v5.0.2 (`visual_regression.rs`)
 - Limited cross-platform CI matrix
 - Mock usage in some unit tests (acceptable for isolation)
 
@@ -237,7 +238,7 @@ Comprehensive CLI smoke tests covering:
 ### 6.1 Cargo Configuration
 
 **Workspace Features:**
-- `[workspace.package]`: Centralized version (2.0.0), edition (2021)
+- `[workspace.package]`: Centralized version (5.0.2), edition (2021)
 - `[workspace.dependencies]`: 30+ centralized dependencies
 - `[workspace.lints.rust]`: `unsafe_code = "warn"`
 - `[workspace.lints.clippy]`: `unwrap_used`, `expect_used`, `panic` warnings
@@ -251,8 +252,7 @@ Comprehensive CLI smoke tests covering:
 ### 6.2 Issues
 
 - Feature flag complexity growing (50+ feature definitions)
-- Some commented-out workspace members
-- Missing MSRV enforcement in CI
+- MSRV set (`rust-version = "1.75"`) but not enforced in CI
 
 ---
 
@@ -297,10 +297,27 @@ Comprehensive CLI smoke tests covering:
 
 ### 8.2 Missing Documentation
 
-- API stability guarantees
+- ~~API stability guarantees~~ (see below)
 - Migration guides between versions
 - Contribution guidelines for backends
 - Troubleshooting guide
+
+### 8.3 API Stability Classification (v5.0.2)
+
+| API | Stability | Notes |
+|-----|-----------|-------|
+| **typf-core traits** (`Shaper`, `Renderer`, `Exporter`, `FontRef`) | 🟢 Stable | Core abstraction layer |
+| **typf-core types** (`ShapingResult`, `RenderOutput`, `RenderParams`) | 🟢 Stable | Data interchange types |
+| **typf-core ffi** (`PositionedGlyphC`, `ShapingResultC`, `GlyphIterator`) | 🟢 Stable | C-ABI compatible types |
+| **typf-core ffi mesh** (`Vertex2D`, `VertexUV`, `VertexColor`, `RenderMesh`) | 🟡 Experimental | GPU mesh types, new in v5.0.2 |
+| **typf-core geometry** (`PathOp`, `GlyphPath`, `GeometryData`) | 🟡 Experimental | Path output, new in v5.0.2 |
+| **CLI interface** | 🟢 Stable | Backward-compatible flags |
+| **Python bindings** (`Typf`, `TypfLinra`, `FontInfo`) | 🟢 Stable | Published API |
+| **Python bindings** (`ShapedGlyphs`, `PositionedGlyph`) | 🟡 Experimental | New in v5.0.2 |
+| **Rendering backends** | 🟢 Stable | All implement `Renderer` trait |
+| **Shaping backends** | 🟢 Stable | All implement `Shaper` trait |
+
+Legend: 🟢 Stable (no breaking changes planned) | 🟡 Experimental (may change) | 🔴 Deprecated
 
 ---
 
@@ -309,7 +326,7 @@ Comprehensive CLI smoke tests covering:
 ### High Priority
 
 1. ~~**Add Font Fuzzing:** Extend fuzz targets to cover font parsing (skrifa/read-fonts)~~ ✓ Complete
-2. **Visual Regression Testing:** Add image comparison tests for rendering output
+2. ~~**Visual Regression Testing:** Add image comparison tests for rendering output~~ ✓ Complete (SSIM tests in v5.0.2)
 3. **Windows Backend Completion:** typf-os-win needs feature parity with mac
 
 ### Medium Priority
@@ -317,7 +334,7 @@ Comprehensive CLI smoke tests covering:
 1. **Async Font Loading:** Add async APIs for server contexts
 2. **Feature Flag Simplification:** Reduce interdependencies
 3. **Cross-Platform CI:** Test on Windows and Linux CI runners
-4. **API Stability Markers:** Document stable vs experimental APIs
+4. ~~**API Stability Markers:** Document stable vs experimental APIs~~ ✓ Complete (see Section 8.3)
 
 ### Low Priority
 
@@ -329,16 +346,16 @@ Comprehensive CLI smoke tests covering:
 
 ## Conclusion
 
-Typf is a well-architected text rendering library with solid implementation quality. The CLI is fully functional, testing infrastructure includes real fonts, and the caching system is well-designed. The main areas for improvement are resource limits, Windows platform completion, and visual regression testing.
+Typf is a well-architected text rendering library with solid implementation quality. The CLI is fully functional, testing infrastructure includes real fonts and visual regression tests (SSIM comparison), and the caching system is well-designed. The main areas for improvement are resource limits and Windows platform completion.
 
 **Grade Distribution:**
 - Architecture: A (92/100)
 - Organization: A- (90/100)
 - Implementation: A- (88/100)
-- Testing: B+ (85/100)
+- Testing: A- (88/100)
 - Backends: B+ (86/100)
 - Build System: A- (88/100)
 - Security: B+ (85/100)
 - Documentation: B+ (85/100)
 
-**Final Grade: A- (88/100)**
+**Final Grade: A- (89/100)**

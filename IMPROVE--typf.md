@@ -284,7 +284,7 @@ These fold into your existing security posture (resource exhaustion defenses, fu
 
 ---
 
-## 3. Concrete task list (you could drop into PLAN.md)
+## 3. Concrete task list (you could drop into TASKS.md)
 
 Roughly ordered; many can be parallelized.
 

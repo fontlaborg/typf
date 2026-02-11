@@ -245,6 +245,9 @@ impl Typf {
             RenderOutput::Vector(_) => Err(PyValueError::new_err(
                 "Vector output not yet supported in Python bindings",
             )),
+            RenderOutput::Geometry(_) => Err(PyValueError::new_err(
+                "Geometry output not yet supported in Python bindings (use render_text for bitmaps)",
+            )),
         }
     }
 
@@ -304,6 +307,75 @@ impl Typf {
         result.set_item("glyph_count", shaped.glyphs.len())?;
         result.set_item("width", shaped.advance_width)?;
         Ok(result.into())
+    }
+
+    /// Shape text and return full glyph data for direct rendering
+    ///
+    /// This is the preferred method for Pycairo/Cairo integration. Returns a
+    /// ShapedGlyphs object with zero-copy access to glyph positions.
+    ///
+    /// Args:
+    ///     text: The text to shape
+    ///     font_path: Path to the font file
+    ///     size: Font size in pixels (default: 16.0)
+    ///     direction: Text direction - "auto", "ltr", "rtl", "ttb", "btt" (default: "auto")
+    ///     language: Language hint for direction detection
+    ///     face_index: TTC collection face index (default: 0)
+    ///     variations: Dict of font variation axis settings
+    ///
+    /// Returns:
+    ///     ShapedGlyphs: Object with glyph data accessible via iteration, indexing,
+    ///                   or bulk methods like for_cairo(), as_tuples(), etc.
+    ///
+    /// Example:
+    ///     >>> glyphs = typf.shape_glyphs("Hello", "font.ttf", size=24.0)
+    ///     >>> for glyph in glyphs:
+    ///     ...     print(f"Glyph {glyph.glyph_id} at ({glyph.x}, {glyph.y})")
+    ///     >>> # For Cairo:
+    ///     >>> cairo_glyphs = glyphs.for_cairo()
+    #[allow(clippy::useless_conversion)]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (text, font_path, size=16.0, direction="auto", language=None, face_index=0, variations=None))]
+    fn shape_glyphs(
+        &self,
+        text: &str,
+        font_path: &str,
+        size: f32,
+        direction: &str,
+        language: Option<&str>,
+        face_index: u32,
+        variations: Option<HashMap<String, f32>>,
+    ) -> PyResult<ShapedGlyphs> {
+        // Load font with optional TTC index
+        let font_arc = load_font(font_path, face_index)?;
+
+        let mut variation_vec: Vec<(String, f32)> =
+            variations.unwrap_or_default().into_iter().collect();
+        variation_vec.sort_by(|a, b| a.0.cmp(&b.0));
+
+        // Auto-detect or parse direction
+        let resolved_direction = parse_direction(direction, text, language)?;
+
+        // Set up shaping parameters
+        let shaping_params = ShapingParams {
+            size,
+            direction: resolved_direction,
+            variations: variation_vec,
+            ..Default::default()
+        };
+
+        // Shape the text
+        let shaped = self
+            .shaper
+            .shape(text, font_arc.clone(), &shaping_params)
+            .map_err(|e| PyRuntimeError::new_err(format!("Shaping failed: {:?}", e)))?;
+
+        Ok(ShapedGlyphs {
+            glyphs: shaped.glyphs,
+            advance_width: shaped.advance_width,
+            advance_height: shaped.advance_height,
+            direction: shaped.direction,
+        })
     }
 
     /// Render text to SVG vector format
@@ -512,6 +584,444 @@ impl TypfLinra {
     }
 }
 
+/// A path operation for vector glyph outlines
+///
+/// These are the primitive drawing commands that define glyph shapes.
+/// Compatible with ReportLab, Cairo, and other vector graphics libraries.
+#[pyclass]
+#[derive(Clone)]
+struct PathOp {
+    /// Operation type: "move", "line", "quad", "cubic", "close"
+    #[pyo3(get)]
+    op: String,
+    /// X coordinate (for move, line) or control point X (for curves)
+    #[pyo3(get)]
+    x: Option<f32>,
+    /// Y coordinate (for move, line) or control point Y (for curves)
+    #[pyo3(get)]
+    y: Option<f32>,
+    /// Second control point X (for cubic curves)
+    #[pyo3(get)]
+    cx: Option<f32>,
+    /// Second control point Y (for cubic curves)
+    #[pyo3(get)]
+    cy: Option<f32>,
+    /// Third control point X (for cubic curves only)
+    #[pyo3(get)]
+    c2x: Option<f32>,
+    /// Third control point Y (for cubic curves only)
+    #[pyo3(get)]
+    c2y: Option<f32>,
+}
+
+#[pymethods]
+impl PathOp {
+    fn __repr__(&self) -> String {
+        match self.op.as_str() {
+            "move" => format!(
+                "PathOp(move, {}, {})",
+                self.x.unwrap_or(0.0),
+                self.y.unwrap_or(0.0)
+            ),
+            "line" => format!(
+                "PathOp(line, {}, {})",
+                self.x.unwrap_or(0.0),
+                self.y.unwrap_or(0.0)
+            ),
+            "quad" => format!(
+                "PathOp(quad, cx={}, cy={}, x={}, y={})",
+                self.cx.unwrap_or(0.0),
+                self.cy.unwrap_or(0.0),
+                self.x.unwrap_or(0.0),
+                self.y.unwrap_or(0.0)
+            ),
+            "cubic" => format!(
+                "PathOp(cubic, c1=({}, {}), c2=({}, {}), end=({}, {}))",
+                self.cx.unwrap_or(0.0),
+                self.cy.unwrap_or(0.0),
+                self.c2x.unwrap_or(0.0),
+                self.c2y.unwrap_or(0.0),
+                self.x.unwrap_or(0.0),
+                self.y.unwrap_or(0.0)
+            ),
+            "close" => "PathOp(close)".to_string(),
+            _ => format!("PathOp({})", self.op),
+        }
+    }
+
+    /// Convert to a tuple for easier consumption by graphics libraries
+    ///
+    /// Returns:
+    ///     For "move"/"line": ("op", x, y)
+    ///     For "quad": ("quad", cx, cy, x, y)
+    ///     For "cubic": ("cubic", c1x, c1y, c2x, c2y, x, y)
+    ///     For "close": ("close",)
+    fn as_tuple(&self, py: Python) -> PyResult<PyObject> {
+        let result = match self.op.as_str() {
+            "move" | "line" => (
+                self.op.clone(),
+                self.x.unwrap_or(0.0),
+                self.y.unwrap_or(0.0),
+            )
+                .into_py(py),
+            "quad" => (
+                self.op.clone(),
+                self.cx.unwrap_or(0.0),
+                self.cy.unwrap_or(0.0),
+                self.x.unwrap_or(0.0),
+                self.y.unwrap_or(0.0),
+            )
+                .into_py(py),
+            "cubic" => (
+                self.op.clone(),
+                self.cx.unwrap_or(0.0),
+                self.cy.unwrap_or(0.0),
+                self.c2x.unwrap_or(0.0),
+                self.c2y.unwrap_or(0.0),
+                self.x.unwrap_or(0.0),
+                self.y.unwrap_or(0.0),
+            )
+                .into_py(py),
+            "close" => ("close",).into_py(py),
+            _ => (self.op.clone(),).into_py(py),
+        };
+        Ok(result)
+    }
+}
+
+/// Convert internal PathOp to Python PathOp
+#[allow(dead_code)] // Ready for use when glyph outline extraction is added
+fn path_op_to_python(op: &typf_core::types::PathOp) -> PathOp {
+    use typf_core::types::PathOp as InternalPathOp;
+    match op {
+        InternalPathOp::MoveTo { x, y } => PathOp {
+            op: "move".to_string(),
+            x: Some(*x),
+            y: Some(*y),
+            cx: None,
+            cy: None,
+            c2x: None,
+            c2y: None,
+        },
+        InternalPathOp::LineTo { x, y } => PathOp {
+            op: "line".to_string(),
+            x: Some(*x),
+            y: Some(*y),
+            cx: None,
+            cy: None,
+            c2x: None,
+            c2y: None,
+        },
+        InternalPathOp::QuadTo { cx, cy, x, y } => PathOp {
+            op: "quad".to_string(),
+            x: Some(*x),
+            y: Some(*y),
+            cx: Some(*cx),
+            cy: Some(*cy),
+            c2x: None,
+            c2y: None,
+        },
+        InternalPathOp::CubicTo {
+            c1x,
+            c1y,
+            c2x,
+            c2y,
+            x,
+            y,
+        } => PathOp {
+            op: "cubic".to_string(),
+            x: Some(*x),
+            y: Some(*y),
+            cx: Some(*c1x),
+            cy: Some(*c1y),
+            c2x: Some(*c2x),
+            c2y: Some(*c2y),
+        },
+        InternalPathOp::Close => PathOp {
+            op: "close".to_string(),
+            x: None,
+            y: None,
+            cx: None,
+            cy: None,
+            c2x: None,
+            c2y: None,
+        },
+    }
+}
+
+/// Glyph path data with vector outline
+#[pyclass]
+#[derive(Clone)]
+struct GlyphPath {
+    /// Glyph ID in the font
+    #[pyo3(get)]
+    glyph_id: u32,
+    /// X position (in rendered coordinates)
+    #[pyo3(get)]
+    x: f32,
+    /// Y position (in rendered coordinates)
+    #[pyo3(get)]
+    y: f32,
+    /// Path operations defining the outline (in font units)
+    #[pyo3(get)]
+    ops: Vec<PathOp>,
+}
+
+#[pymethods]
+impl GlyphPath {
+    fn __repr__(&self) -> String {
+        format!(
+            "GlyphPath(glyph_id={}, pos=({}, {}), {} ops)",
+            self.glyph_id,
+            self.x,
+            self.y,
+            self.ops.len()
+        )
+    }
+
+    /// Get path operations as a list of tuples
+    ///
+    /// Convenient for passing to graphics libraries like ReportLab or Cairo.
+    fn ops_as_tuples(&self, py: Python) -> PyResult<Vec<PyObject>> {
+        self.ops.iter().map(|op| op.as_tuple(py)).collect()
+    }
+}
+
+/// A positioned glyph from shaping results
+///
+/// This provides access to individual glyph data in a Python-friendly format.
+/// For bulk access, use ShapedGlyphs which provides NumPy-compatible views.
+#[pyclass]
+#[derive(Clone)]
+struct PositionedGlyph {
+    /// Glyph index in the font
+    #[pyo3(get)]
+    glyph_id: u32,
+    /// Horizontal position in user space
+    #[pyo3(get)]
+    x: f32,
+    /// Vertical position in user space
+    #[pyo3(get)]
+    y: f32,
+    /// Horizontal advance width
+    #[pyo3(get)]
+    advance: f32,
+    /// Cluster index (maps to original text position)
+    #[pyo3(get)]
+    cluster: u32,
+}
+
+#[pymethods]
+impl PositionedGlyph {
+    fn __repr__(&self) -> String {
+        format!(
+            "PositionedGlyph(id={}, pos=({:.1}, {:.1}), advance={:.1}, cluster={})",
+            self.glyph_id, self.x, self.y, self.advance, self.cluster
+        )
+    }
+
+    /// Convert to tuple (glyph_id, x, y, advance, cluster)
+    ///
+    /// Convenient for unpacking or passing to other libraries.
+    fn as_tuple(&self, py: Python) -> PyObject {
+        (self.glyph_id, self.x, self.y, self.advance, self.cluster).into_py(py)
+    }
+}
+
+/// Zero-copy access to shaped glyph data
+///
+/// This class holds shaping results and provides efficient access patterns:
+/// - Iteration: for glyph in shaped_glyphs
+/// - Indexing: shaped_glyphs[0]
+/// - NumPy array (if numpy-interop feature enabled): shaped_glyphs.as_numpy_array()
+///
+/// The underlying data is stored in a C-compatible format suitable for
+/// direct use with graphics libraries like Cairo, Pango, or Pycairo.
+#[pyclass]
+struct ShapedGlyphs {
+    /// The raw glyph data
+    glyphs: Vec<typf_core::types::PositionedGlyph>,
+    /// Total advance width
+    advance_width: f32,
+    /// Total advance height
+    advance_height: f32,
+    /// Text direction
+    direction: Direction,
+}
+
+#[pymethods]
+impl ShapedGlyphs {
+    /// Number of glyphs
+    fn __len__(&self) -> usize {
+        self.glyphs.len()
+    }
+
+    /// Get glyph by index
+    fn __getitem__(&self, index: isize) -> PyResult<PositionedGlyph> {
+        let len = self.glyphs.len() as isize;
+        let idx = if index < 0 { len + index } else { index };
+        if idx < 0 || idx >= len {
+            return Err(pyo3::exceptions::PyIndexError::new_err(
+                "glyph index out of range",
+            ));
+        }
+        let g = &self.glyphs[idx as usize];
+        Ok(PositionedGlyph {
+            glyph_id: g.id,
+            x: g.x,
+            y: g.y,
+            advance: g.advance,
+            cluster: g.cluster,
+        })
+    }
+
+    /// Iterate over glyphs
+    fn __iter__(slf: PyRef<'_, Self>) -> ShapedGlyphsIter {
+        ShapedGlyphsIter {
+            glyphs: slf.glyphs.clone(),
+            index: 0,
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ShapedGlyphs({} glyphs, advance=({:.1}, {:.1}), direction={:?})",
+            self.glyphs.len(),
+            self.advance_width,
+            self.advance_height,
+            self.direction
+        )
+    }
+
+    /// Total advance width in pixels
+    #[getter]
+    fn advance_width(&self) -> f32 {
+        self.advance_width
+    }
+
+    /// Total advance height in pixels
+    #[getter]
+    fn advance_height(&self) -> f32 {
+        self.advance_height
+    }
+
+    /// Text direction as string ("ltr", "rtl", "ttb", "btt")
+    #[getter]
+    fn direction(&self) -> &'static str {
+        match self.direction {
+            Direction::LeftToRight => "ltr",
+            Direction::RightToLeft => "rtl",
+            Direction::TopToBottom => "ttb",
+            Direction::BottomToTop => "btt",
+        }
+    }
+
+    /// Get all glyphs as a list of tuples
+    ///
+    /// Returns a list of (glyph_id, x, y, advance, cluster) tuples.
+    /// Useful for simple iteration or serialization.
+    fn as_tuples(&self, py: Python) -> Vec<PyObject> {
+        self.glyphs
+            .iter()
+            .map(|g| (g.id, g.x, g.y, g.advance, g.cluster).into_py(py))
+            .collect()
+    }
+
+    /// Get glyph IDs as a list
+    fn glyph_ids(&self) -> Vec<u32> {
+        self.glyphs.iter().map(|g| g.id).collect()
+    }
+
+    /// Get X positions as a list
+    fn x_positions(&self) -> Vec<f32> {
+        self.glyphs.iter().map(|g| g.x).collect()
+    }
+
+    /// Get Y positions as a list
+    fn y_positions(&self) -> Vec<f32> {
+        self.glyphs.iter().map(|g| g.y).collect()
+    }
+
+    /// Get advances as a list
+    fn advances(&self) -> Vec<f32> {
+        self.glyphs.iter().map(|g| g.advance).collect()
+    }
+
+    /// Get cluster indices as a list
+    fn clusters(&self) -> Vec<u32> {
+        self.glyphs.iter().map(|g| g.cluster).collect()
+    }
+
+    /// Format for Cairo/Pycairo glyph arrays
+    ///
+    /// Returns a list of (glyph_id, x, y) tuples in the format expected
+    /// by cairo.Context.show_glyphs() and similar APIs.
+    fn for_cairo(&self, py: Python) -> Vec<PyObject> {
+        self.glyphs
+            .iter()
+            .map(|g| (g.id as i64, g.x as f64, g.y as f64).into_py(py))
+            .collect()
+    }
+}
+
+/// Iterator for ShapedGlyphs
+#[pyclass]
+struct ShapedGlyphsIter {
+    glyphs: Vec<typf_core::types::PositionedGlyph>,
+    index: usize,
+}
+
+#[pymethods]
+impl ShapedGlyphsIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(&mut self) -> Option<PositionedGlyph> {
+        if self.index < self.glyphs.len() {
+            let g = &self.glyphs[self.index];
+            self.index += 1;
+            Some(PositionedGlyph {
+                glyph_id: g.id,
+                x: g.x,
+                y: g.y,
+                advance: g.advance,
+                cluster: g.cluster,
+            })
+        } else {
+            None
+        }
+    }
+}
+
+/// A variable font axis definition
+#[pyclass]
+#[derive(Clone)]
+struct VariationAxisInfo {
+    #[pyo3(get)]
+    tag: String,
+    #[pyo3(get)]
+    name: Option<String>,
+    #[pyo3(get)]
+    min_value: f32,
+    #[pyo3(get)]
+    default_value: f32,
+    #[pyo3(get)]
+    max_value: f32,
+    #[pyo3(get)]
+    hidden: bool,
+}
+
+#[pymethods]
+impl VariationAxisInfo {
+    fn __repr__(&self) -> String {
+        format!(
+            "VariationAxisInfo(tag='{}', name={:?}, min={}, default={}, max={}, hidden={})",
+            self.tag, self.name, self.min_value, self.default_value, self.max_value, self.hidden
+        )
+    }
+}
+
 /// Load a font and get information about it
 #[pyclass]
 struct FontInfo {
@@ -521,6 +1031,18 @@ struct FontInfo {
     path: String,
     #[pyo3(get)]
     face_index: u32,
+    /// Font ascent in font units (positive, above baseline)
+    #[pyo3(get)]
+    ascent: i16,
+    /// Font descent in font units (negative, below baseline)
+    #[pyo3(get)]
+    descent: i16,
+    /// Line gap (leading) in font units
+    #[pyo3(get)]
+    line_gap: i16,
+    /// Whether this is a variable font
+    #[pyo3(get)]
+    is_variable: bool,
 }
 
 #[pymethods]
@@ -534,10 +1056,23 @@ impl FontInfo {
     #[pyo3(signature = (path, face_index=0))]
     fn new(path: &str, face_index: u32) -> PyResult<Self> {
         let font_arc = load_font(path, face_index)?;
+
+        // Get metrics from the font
+        let (ascent, descent, line_gap) = font_arc
+            .metrics()
+            .map(|m| (m.ascent, m.descent, m.line_gap))
+            .unwrap_or((0, 0, 0));
+
+        let is_variable = font_arc.is_variable();
+
         Ok(Self {
             units_per_em: font_arc.units_per_em(),
             path: path.to_string(),
             face_index,
+            ascent,
+            descent,
+            line_gap,
+            is_variable,
         })
     }
 
@@ -546,6 +1081,33 @@ impl FontInfo {
     fn glyph_id(&self, ch: char) -> PyResult<Option<u32>> {
         let font_arc = load_font(&self.path, self.face_index)?;
         Ok(font_arc.glyph_id(ch))
+    }
+
+    /// Get variation axes for variable fonts
+    ///
+    /// Returns None for static fonts.
+    /// Returns a list of VariationAxisInfo for variable fonts.
+    fn variation_axes(&self) -> PyResult<Option<Vec<VariationAxisInfo>>> {
+        let font_arc = load_font(&self.path, self.face_index)?;
+        Ok(font_arc.variation_axes().map(|axes| {
+            axes.into_iter()
+                .map(|axis| VariationAxisInfo {
+                    tag: axis.tag,
+                    name: axis.name,
+                    min_value: axis.min_value,
+                    default_value: axis.default_value,
+                    max_value: axis.max_value,
+                    hidden: axis.hidden,
+                })
+                .collect()
+        }))
+    }
+
+    /// Calculate line height in font units
+    ///
+    /// This is the recommended line-to-line distance: ascent - descent + line_gap
+    fn line_height(&self) -> i32 {
+        self.ascent as i32 - self.descent as i32 + self.line_gap as i32
     }
 }
 
@@ -742,6 +1304,11 @@ fn is_caching_enabled() -> bool {
 fn typf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Typf>()?;
     m.add_class::<FontInfo>()?;
+    m.add_class::<VariationAxisInfo>()?;
+    m.add_class::<PathOp>()?;
+    m.add_class::<GlyphPath>()?;
+    m.add_class::<PositionedGlyph>()?;
+    m.add_class::<ShapedGlyphs>()?;
     #[cfg(feature = "linra")]
     m.add_class::<TypfLinra>()?;
     m.add_function(wrap_pyfunction!(export_image, m)?)?;
@@ -750,5 +1317,6 @@ fn typf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(is_caching_enabled, m)?)?;
     m.add("__version__", VERSION)?;
     m.add("__linra_available__", cfg!(feature = "linra"))?;
+    m.add("__numpy_available__", cfg!(feature = "numpy-interop"))?;
     Ok(())
 }

@@ -4,36 +4,9 @@
 resolver = "2"
 exclude = ["fuzz", "external"]
 members = [
-  "backends/typf-os",
-  # "backends/typf-render-mac",    # Same as cg
-  # "backends/typf-render-win",    # Windows Direct2D (needs Windows)
-  # Linra OS backends (single-pass shaping+rendering)
-  "backends/typf-os-mac",
-  "backends/typf-os-win",
-  "backends/typf-render-cg",
-  "backends/typf-render-color",
-  # "backends/typf-shape-mac",     # Same as ct
-  # "backends/typf-shape-win",     # Windows DirectWrite (needs Windows)
-  # Rendering backends
-  "backends/typf-render-json",
-  "backends/typf-render-opixa",
-  "backends/typf-render-skia",
-  "backends/typf-render-svg",
-  "backends/typf-render-vello-cpu",
-  "backends/typf-render-vello",
-  "backends/typf-render-zeno",
-  "backends/typf-shape-ct",
-  "backends/typf-shape-hb",
-  "backends/typf-shape-hr",
-  "backends/typf-shape-icu-hb",
-  # Shaping backends
-  "backends/typf-shape-none",
-  # Bindings
-  "bindings/python",
   # Core crates
   "crates/typf",
   "crates/typf-bench",
-  # CLI
   "crates/typf-cli",
   "crates/typf-core",
   "crates/typf-export",
@@ -41,10 +14,32 @@ members = [
   "crates/typf-fontdb",
   "crates/typf-input",
   "crates/typf-unicode",
+  # Shaping backends
+  "backends/typf-shape-ct",
+  "backends/typf-shape-hb",
+  "backends/typf-shape-hr",
+  "backends/typf-shape-icu-hb",
+  "backends/typf-shape-none",
+  # Rendering backends
+  "backends/typf-render-cg",
+  "backends/typf-render-color",
+  "backends/typf-render-json",
+  "backends/typf-render-opixa",
+  "backends/typf-render-skia",
+  "backends/typf-render-svg",
+  "backends/typf-render-vello",
+  "backends/typf-render-vello-cpu",
+  "backends/typf-render-zeno",
+  # Linra OS backends (single-pass shape+render)
+  "backends/typf-os",
+  "backends/typf-os-mac",
+  "backends/typf-os-win",
+  # Bindings
+  "bindings/python",
 ]
 
 [workspace.package]
-version = "5.0.1"
+version = "5.0.2"
 authors = ["Typf Contributors"]
 edition = "2021"
 rust-version = "1.75"

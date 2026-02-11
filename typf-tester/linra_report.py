@@ -9,7 +9,7 @@ comparisons into a single comprehensive report.
 import sys
 import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime
 
 
@@ -135,7 +135,7 @@ class LinraReport:
 
                 # Find fastest
                 fastest = min(benchmarks, key=lambda x: x.get('avg_time_ms', float('inf')))
-                lines.append(f"### ⚡ Fastest Configuration")
+                lines.append("### ⚡ Fastest Configuration")
                 lines.append("")
                 lines.append(f"- **Backend**: {fastest['shaper']} + {fastest['renderer']}")
                 lines.append(f"- **Text**: {fastest['text']}")
@@ -269,7 +269,7 @@ class LinraReport:
                 benchmark_data['benchmarks'],
                 key=lambda x: x.get('avg_time_ms', float('inf'))
             )
-            lines.append(f"### ⚡ For Maximum Performance")
+            lines.append("### ⚡ For Maximum Performance")
             lines.append(f"Use **{fastest['shaper']}** + **{fastest['renderer']}**")
             lines.append(f"- Average render time: {fastest['avg_time_ms']:.2f} ms")
             lines.append("")

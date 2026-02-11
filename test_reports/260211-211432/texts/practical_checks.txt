@@ -1,0 +1,9 @@
+Practical Artifact Checks
+=======================
+
+- latin_png: ok=True reason=ok path=images/latin.png
+- arabic_png: ok=True reason=ok path=images/arabic.png
+- variable_png: ok=True reason=ok path=images/variable_font.png
+- batch_latin_png: ok=True reason=ok path=artifacts/batch_output/batch_latin.png
+- mixed_svg: ok=True reason=ok path=artifacts/mixed_scripts.svg
+- batch_arabic_svg: ok=True reason=ok path=artifacts/batch_output/batch_arabic.svg

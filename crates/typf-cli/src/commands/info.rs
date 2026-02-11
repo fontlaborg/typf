@@ -1,6 +1,7 @@
 //! Info command implementation
 //!
 //! Displays information about available backends and formats.
+// this_file: crates/typf-cli/src/commands/info.rs
 
 use crate::cli::InfoArgs;
 use typf::error::Result;

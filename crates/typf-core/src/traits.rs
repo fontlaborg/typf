@@ -119,6 +119,19 @@ pub trait FontRef: Send + Sync {
     fn glyph_count(&self) -> Option<u32> {
         None // Not all implementations can provide this
     }
+
+    /// Variable font axes from the fvar table.
+    ///
+    /// Returns None for non-variable fonts or if axes cannot be parsed.
+    /// Returns Some(empty vec) if the font has an fvar table with no axes.
+    fn variation_axes(&self) -> Option<Vec<VariationAxis>> {
+        None // Static fonts return None
+    }
+
+    /// Whether this font is a variable font (has fvar table).
+    fn is_variable(&self) -> bool {
+        self.variation_axes().is_some_and(|axes| !axes.is_empty())
+    }
 }
 
 /// Where characters learn their positions

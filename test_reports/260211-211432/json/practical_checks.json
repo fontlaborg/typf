@@ -1,0 +1,57 @@
+{
+  "checks": [
+    {
+      "artifact": "latin_png",
+      "bytes": 6488,
+      "height": 102,
+      "ok": true,
+      "path": "images/latin.png",
+      "reason": "ok",
+      "width": 700
+    },
+    {
+      "artifact": "arabic_png",
+      "bytes": 4245,
+      "height": 129,
+      "ok": true,
+      "path": "images/arabic.png",
+      "reason": "ok",
+      "width": 303
+    },
+    {
+      "artifact": "variable_png",
+      "bytes": 7840,
+      "height": 115,
+      "ok": true,
+      "path": "images/variable_font.png",
+      "reason": "ok",
+      "width": 977
+    },
+    {
+      "artifact": "batch_latin_png",
+      "bytes": 3758,
+      "height": 80,
+      "ok": true,
+      "path": "artifacts/batch_output/batch_latin.png",
+      "reason": "ok",
+      "width": 403
+    },
+    {
+      "artifact": "mixed_svg",
+      "bytes": 3876,
+      "ok": true,
+      "path": "artifacts/mixed_scripts.svg",
+      "path_count": 15,
+      "reason": "ok"
+    },
+    {
+      "artifact": "batch_arabic_svg",
+      "bytes": 13645,
+      "ok": true,
+      "path": "artifacts/batch_output/batch_arabic.svg",
+      "path_count": 23,
+      "reason": "ok"
+    }
+  ],
+  "generated_at": "2026-02-11T20:14:51+00:00"
+}

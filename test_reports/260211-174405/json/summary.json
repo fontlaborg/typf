@@ -1,0 +1,49 @@
+{
+  "categories": {
+    "ai_analysis": {
+      "fail": 0,
+      "pass": 2,
+      "skip": 0,
+      "total": 2
+    },
+    "practical_tests": {
+      "fail": 0,
+      "pass": 6,
+      "skip": 0,
+      "total": 6
+    },
+    "sanity_tests": {
+      "fail": 1,
+      "pass": 1,
+      "skip": 0,
+      "total": 2
+    },
+    "smoke_tests": {
+      "fail": 0,
+      "pass": 4,
+      "skip": 0,
+      "total": 4
+    },
+    "unit_tests": {
+      "fail": 0,
+      "pass": 1,
+      "skip": 0,
+      "total": 1
+    }
+  },
+  "counts": {
+    "fail": 1,
+    "pass": 14,
+    "skip": 0,
+    "total_steps": 15
+  },
+  "generated_at": "2026-02-11T16:45:10+00:00",
+  "quick_mode": true,
+  "required_failures": [
+    "sanity_fmt"
+  ],
+  "run_finished_at": "2026-02-11T16:45:10+00:00",
+  "run_started_at": "2026-02-11T16:44:05+00:00",
+  "skip_ai": false,
+  "suite_duration_seconds": 60.479
+}

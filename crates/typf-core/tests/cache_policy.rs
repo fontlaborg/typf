@@ -152,6 +152,10 @@ impl typf_core::traits::Exporter for DummyExporter {
             RenderOutput::Bitmap(bmp) => Ok(bmp.data.clone()),
             RenderOutput::Vector(v) => Ok(v.data.as_bytes().to_vec()),
             RenderOutput::Json(s) => Ok(s.as_bytes().to_vec()),
+            RenderOutput::Geometry(g) => {
+                // Serialize geometry as simple byte representation for testing
+                Ok(format!("{} glyphs", g.glyphs.len()).into_bytes())
+            },
         }
     }
 

@@ -22,7 +22,7 @@ use read_fonts::{FontRef as ReadFontRef, TableProvider};
 use typf_core::{
     error::{FontLoadError, Result},
     traits::FontRef as TypfFontRef,
-    types::FontMetrics,
+    types::{FontMetrics, VariationAxis},
 };
 
 /// Source container for a font face (path or memory)
@@ -181,6 +181,46 @@ impl TypfFontFace {
         self.font_ref()
             .and_then(|font| font.maxp().ok().map(|maxp| maxp.num_glyphs() as u32))
     }
+
+    /// Returns variable font axes from the fvar table.
+    pub fn variation_axes(&self) -> Option<Vec<VariationAxis>> {
+        let font = self.font_ref()?;
+        let fvar = font.fvar().ok()?;
+        let axes_slice = fvar.axes().ok()?;
+        let name_table = font.name().ok();
+
+        let axes: Vec<VariationAxis> = axes_slice
+            .iter()
+            .map(|axis| {
+                let tag_bytes = axis.axis_tag().into_bytes();
+                let tag = String::from_utf8_lossy(&tag_bytes).to_string();
+
+                // Try to get the human-readable name from the name table
+                let name = name_table.as_ref().and_then(|nt| {
+                    let name_id = axis.axis_name_id();
+                    nt.name_record()
+                        .iter()
+                        .find(|record| record.name_id() == name_id)
+                        .and_then(|record| record.string(nt.string_data()).ok())
+                        .map(|s| s.to_string())
+                });
+
+                // Check if axis is hidden (flags bit 0)
+                let hidden = axis.flags() & 0x0001 != 0;
+
+                VariationAxis {
+                    tag,
+                    name,
+                    min_value: axis.min_value().to_f32(),
+                    default_value: axis.default_value().to_f32(),
+                    max_value: axis.max_value().to_f32(),
+                    hidden,
+                }
+            })
+            .collect();
+
+        Some(axes)
+    }
 }
 
 impl TypfFontRef for TypfFontFace {
@@ -210,6 +250,10 @@ impl TypfFontRef for TypfFontFace {
 
     fn glyph_count(&self) -> Option<u32> {
         self.glyph_count()
+    }
+
+    fn variation_axes(&self) -> Option<Vec<VariationAxis>> {
+        self.variation_axes()
     }
 }
 

@@ -6,6 +6,7 @@ use std::path::Path;
 
 pub const MAX_FONT_FILE_BYTES: u64 = 100 * 1024 * 1024;
 pub const MAX_JSONL_BATCH_INPUT_BYTES: u64 = 32 * 1024 * 1024;
+pub const MAX_TEXT_CONTENT_BYTES: usize = 1_000_000;
 
 pub fn read_to_string_with_limit<R: Read>(
     reader: R,
@@ -51,6 +52,17 @@ pub fn validate_file_size_limit(path: &Path, max_bytes: u64, label: &str) -> Res
         ));
     }
 
+    Ok(())
+}
+
+pub fn validate_text_size_limit(text: &str, max_bytes: usize, label: &str) -> Result<(), String> {
+    let size = text.len();
+    if size > max_bytes {
+        return Err(format!(
+            "{} exceeds max size of {} bytes (got {})",
+            label, max_bytes, size
+        ));
+    }
     Ok(())
 }
 
@@ -111,6 +123,25 @@ mod tests {
             .expect_err("oversized file should be rejected");
         std::fs::remove_file(&path).expect("temp file cleanup should succeed");
 
+        assert!(
+            error.contains("exceeds max size"),
+            "expected size-limit validation message, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_validate_text_size_limit_when_at_limit_then_succeeds() {
+        let text = "a".repeat(8);
+        let result = validate_text_size_limit(&text, 8, "input text");
+        assert!(result.is_ok(), "text exactly at limit should be accepted");
+    }
+
+    #[test]
+    fn test_validate_text_size_limit_when_over_limit_then_errors() {
+        let text = "a".repeat(9);
+        let error = validate_text_size_limit(&text, 8, "input text")
+            .expect_err("text over limit should be rejected");
         assert!(
             error.contains("exceeds max size"),
             "expected size-limit validation message, got: {}",

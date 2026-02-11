@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="zensical-0.0.10">
+      <meta name="generator" content="zensical-0.0.11">
     
     
       
@@ -34,7 +34,7 @@
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.eafc6f7f.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.bd6182e7.min.css">
       
         
           
@@ -1907,6 +1907,89 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#platform-constraints-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform Constraints and Limitations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Platform Constraints and Limitations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-is-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Is Supported
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-not-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Is NOT Supported
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#webgpu-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebGPU Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cross-origin-restrictions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Origin Restrictions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-time-feature-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build-Time Feature Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2518,6 +2601,89 @@
     <span class="md-ellipsis">
       
         Benchmarking
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#platform-constraints-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform Constraints and Limitations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Platform Constraints and Limitations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-is-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Is Supported
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-not-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Is NOT Supported
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#webgpu-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebGPU Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cross-origin-restrictions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Origin Restrictions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-time-feature-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build-Time Feature Selection
       
     </span>
   </a>
@@ -3185,6 +3351,269 @@
 </span><span id="__span-25-12"><a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>
 </span><span id="__span-25-13"><a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="sb">`Memory delta: </span><span class="si">${</span><span class="nx">memAfter</span><span class="p">.</span><span class="nx">used</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">memBefore</span><span class="p">.</span><span class="nx">used</span><span class="si">}</span><span class="sb"> bytes`</span><span class="p">);</span>
 </span></code></pre></div>
+<h2 id="platform-constraints-and-limitations">Platform Constraints and Limitations<a class="headerlink" href="#platform-constraints-and-limitations" title="Permanent link">&para;</a></h2>
+<h3 id="what-is-supported">What Is Supported<a class="headerlink" href="#what-is-supported" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>WASM Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Text shaping (HarfBuzz)</td>
+<td>✅ Supported</td>
+<td>Full complex script support</td>
+</tr>
+<tr>
+<td>Opixa renderer</td>
+<td>✅ Supported</td>
+<td>Pure Rust, no external deps</td>
+</tr>
+<tr>
+<td>Skia renderer</td>
+<td>✅ Supported</td>
+<td>via tiny-skia (CPU)</td>
+</tr>
+<tr>
+<td>Zeno renderer</td>
+<td>✅ Supported</td>
+<td>Pure Rust alternative</td>
+</tr>
+<tr>
+<td>PNG/SVG/JSON export</td>
+<td>✅ Supported</td>
+<td>All standard formats</td>
+</tr>
+<tr>
+<td>Variable fonts</td>
+<td>✅ Supported</td>
+<td>Full fvar axis support</td>
+</tr>
+<tr>
+<td>Color fonts (COLR)</td>
+<td>✅ Supported</td>
+<td>COLR v0/v1</td>
+</tr>
+<tr>
+<td>Bitmap fonts (sbix/CBDT)</td>
+<td>✅ Supported</td>
+<td>PNG decoding</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-is-not-supported">What Is NOT Supported<a class="headerlink" href="#what-is-not-supported" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Status</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vello GPU renderer</td>
+<td>❌ Not supported</td>
+<td>Requires WebGPU (see below)</td>
+</tr>
+<tr>
+<td>CoreText shaper</td>
+<td>❌ macOS only</td>
+<td>Platform-native API</td>
+</tr>
+<tr>
+<td>DirectWrite shaper</td>
+<td>❌ Windows only</td>
+<td>Platform-native API</td>
+</tr>
+<tr>
+<td>CoreGraphics renderer</td>
+<td>❌ macOS only</td>
+<td>Platform-native API</td>
+</tr>
+<tr>
+<td>Linra backends</td>
+<td>❌ Platform-specific</td>
+<td>Combined shape+render APIs</td>
+</tr>
+<tr>
+<td>System font discovery</td>
+<td>⚠️ Limited</td>
+<td>No filesystem access</td>
+</tr>
+<tr>
+<td>Async/parallel text shaping</td>
+<td>⚠️ Limited</td>
+<td>SharedArrayBuffer required</td>
+</tr>
+</tbody>
+</table>
+<h3 id="webgpu-constraints">WebGPU Constraints<a class="headerlink" href="#webgpu-constraints" title="Permanent link">&para;</a></h3>
+<p>WebGPU is the successor to WebGL and enables GPU-accelerated rendering in browsers. However, support is limited:</p>
+<p><strong>Current WebGPU Status (December 2025):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Browser</th>
+<th>WebGPU Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chrome 113+</td>
+<td>✅ Enabled by default</td>
+</tr>
+<tr>
+<td>Edge 113+</td>
+<td>✅ Enabled by default</td>
+</tr>
+<tr>
+<td>Firefox</td>
+<td>⚠️ Behind flag (<code>dom.webgpu.enabled</code>)</td>
+</tr>
+<tr>
+<td>Safari 17+</td>
+<td>✅ Enabled by default</td>
+</tr>
+<tr>
+<td>Mobile Safari</td>
+<td>⚠️ Limited support</td>
+</tr>
+<tr>
+<td>Mobile Chrome</td>
+<td>⚠️ Limited support</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Vello-GPU on WebGPU:</strong></p>
+<div class="language-javascript highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1">// Feature detection for WebGPU</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">hasWebGPU</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">navigator</span><span class="p">.</span><span class="nx">gpu</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">adapter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">navigator</span><span class="p">.</span><span class="nx">gpu</span><span class="p">.</span><span class="nx">requestAdapter</span><span class="p">();</span>
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">adapter</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="p">}</span>
+</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a>
+</span><span id="__span-26-12"><a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a><span class="c1">// Conditional renderer selection</span>
+</span><span id="__span-26-13"><a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a><span class="kd">const</span><span class="w"> </span><span class="nx">renderer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">hasWebGPU</span><span class="p">()</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;vello&#39;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;opixa&#39;</span><span class="p">;</span>
+</span><span id="__span-26-14"><a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a><span class="kd">const</span><span class="w"> </span><span class="nx">typf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">Typf</span><span class="p">.</span><span class="nx">create</span><span class="p">({</span><span class="w"> </span><span class="nx">renderer</span><span class="w"> </span><span class="p">});</span>
+</span></code></pre></div>
+<p><strong>WebGPU Limitations for Text Rendering:</strong></p>
+<ol>
+<li><strong>No compute shader fallback</strong> - Vello requires compute shaders; older WebGL-only browsers cannot use it</li>
+<li><strong>Memory constraints</strong> - GPU memory is more limited than CPU memory in browsers</li>
+<li><strong>Power consumption</strong> - GPU usage may affect battery life on mobile devices</li>
+<li><strong>Initialization overhead</strong> - WebGPU context creation adds ~50-100ms startup time</li>
+</ol>
+<h3 id="memory-constraints">Memory Constraints<a class="headerlink" href="#memory-constraints" title="Permanent link">&para;</a></h3>
+<p>WASM modules run with constrained memory:</p>
+<table>
+<thead>
+<tr>
+<th>Environment</th>
+<th>Default Memory</th>
+<th>Max Memory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chrome</td>
+<td>256 MB</td>
+<td>4 GB</td>
+</tr>
+<tr>
+<td>Firefox</td>
+<td>256 MB</td>
+<td>4 GB</td>
+</tr>
+<tr>
+<td>Safari</td>
+<td>256 MB</td>
+<td>2 GB</td>
+</tr>
+<tr>
+<td>Mobile browsers</td>
+<td>128 MB</td>
+<td>512 MB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Memory Management Best Practices:</strong></p>
+<div class="language-javascript highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1">// Monitor memory usage</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">used</span><span class="p">,</span><span class="w"> </span><span class="nx">available</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">typf</span><span class="p">.</span><span class="nx">getMemoryUsage</span><span class="p">();</span>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">usagePercent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">used</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">available</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">100</span><span class="p">;</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">usagePercent</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">70</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="w">  </span><span class="c1">// Clear caches before rendering more</span>
+</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a><span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">typf</span><span class="p">.</span><span class="nx">clearFontCache</span><span class="p">();</span>
+</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a><span class="p">}</span>
+</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>
+</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="c1">// Free large results immediately</span>
+</span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a><span class="kd">const</span><span class="w"> </span><span class="nx">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">typf</span><span class="p">.</span><span class="nx">renderText</span><span class="p">(</span><span class="nx">hugeText</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="p">);</span>
+</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a><span class="kd">const</span><span class="w"> </span><span class="nx">png</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">result</span><span class="p">.</span><span class="nx">asPng</span><span class="p">();</span>
+</span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a><span class="nx">result</span><span class="p">.</span><span class="nx">free</span><span class="p">();</span><span class="w"> </span><span class="c1">// Release WASM memory</span>
+</span><span id="__span-27-14"><a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a>
+</span><span id="__span-27-15"><a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a><span class="c1">// Use streaming for very large documents</span>
+</span><span id="__span-27-16"><a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a><span class="c1">// instead of loading everything at once</span>
+</span></code></pre></div>
+<h3 id="cross-origin-restrictions">Cross-Origin Restrictions<a class="headerlink" href="#cross-origin-restrictions" title="Permanent link">&para;</a></h3>
+<p>WASM text rendering may be affected by CORS policies:</p>
+<div class="language-javascript highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1">// Font loading requires CORS headers on font server:</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="c1">// Access-Control-Allow-Origin: *</span>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="c1">// For SharedArrayBuffer (parallel processing):</span>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="c1">// Cross-Origin-Opener-Policy: same-origin</span>
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a><span class="c1">// Cross-Origin-Embedder-Policy: require-corp</span>
+</span></code></pre></div>
+<h3 id="build-time-feature-selection">Build-Time Feature Selection<a class="headerlink" href="#build-time-feature-selection" title="Permanent link">&para;</a></h3>
+<p>Not all features are included in the default WASM build:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1"># Minimal WASM build (~1.5 MB)</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>wasm-pack<span class="w"> </span>build<span class="w"> </span>--features<span class="w"> </span>minimal
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="c1"># Full WASM build with all shapers/renderers (~4 MB)</span>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>wasm-pack<span class="w"> </span>build<span class="w"> </span>--features<span class="w"> </span>full
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>
+</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="c1"># Custom build</span>
+</span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>wasm-pack<span class="w"> </span>build<span class="w"> </span>--features<span class="w"> </span><span class="s2">&quot;shaping-hb render-opixa export-png&quot;</span>
+</span></code></pre></div>
+<p><strong>Recommended Configurations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Use Case</th>
+<th>Features</th>
+<th>Bundle Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple text</td>
+<td><code>minimal</code></td>
+<td>~1.5 MB</td>
+</tr>
+<tr>
+<td>Complex scripts</td>
+<td><code>shaping-hb</code></td>
+<td>~2.5 MB</td>
+</tr>
+<tr>
+<td>High quality</td>
+<td><code>render-skia</code></td>
+<td>~3 MB</td>
+</tr>
+<tr>
+<td>Full featured</td>
+<td><code>full</code></td>
+<td>~4 MB</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <p>WebAssembly brings Typf's text rendering to browsers with near-native performance. Use it for dynamic typography tools, real-time text effects, and font-intensive web applications.</p>
 

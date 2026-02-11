@@ -2,11 +2,13 @@
 //!
 //! A linra command-line interface for text shaping and rendering
 //! with support for multiple backends and output formats.
+// this_file: crates/typf-cli/src/main.rs
 
 mod cli;
 mod commands;
 mod language;
 mod limits;
+mod script;
 
 // Keep legacy modules for REPL and advanced batch
 mod batch;

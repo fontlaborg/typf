@@ -666,6 +666,143 @@ const memAfter = typf.getMemoryUsage();
 console.log(`Memory delta: ${memAfter.used - memBefore.used} bytes`);
 ```
 
+## Platform Constraints and Limitations
+
+### What Is Supported
+
+| Feature | WASM Status | Notes |
+|---------|-------------|-------|
+| Text shaping (HarfBuzz) | ✅ Supported | Full complex script support |
+| Opixa renderer | ✅ Supported | Pure Rust, no external deps |
+| Skia renderer | ✅ Supported | via tiny-skia (CPU) |
+| Zeno renderer | ✅ Supported | Pure Rust alternative |
+| PNG/SVG/JSON export | ✅ Supported | All standard formats |
+| Variable fonts | ✅ Supported | Full fvar axis support |
+| Color fonts (COLR) | ✅ Supported | COLR v0/v1 |
+| Bitmap fonts (sbix/CBDT) | ✅ Supported | PNG decoding |
+
+### What Is NOT Supported
+
+| Feature | Status | Reason |
+|---------|--------|--------|
+| Vello GPU renderer | ❌ Not supported | Requires WebGPU (see below) |
+| CoreText shaper | ❌ macOS only | Platform-native API |
+| DirectWrite shaper | ❌ Windows only | Platform-native API |
+| CoreGraphics renderer | ❌ macOS only | Platform-native API |
+| Linra backends | ❌ Platform-specific | Combined shape+render APIs |
+| System font discovery | ⚠️ Limited | No filesystem access |
+| Async/parallel text shaping | ⚠️ Limited | SharedArrayBuffer required |
+
+### WebGPU Constraints
+
+WebGPU is the successor to WebGL and enables GPU-accelerated rendering in browsers. However, support is limited:
+
+**Current WebGPU Status (December 2025):**
+
+| Browser | WebGPU Status |
+|---------|---------------|
+| Chrome 113+ | ✅ Enabled by default |
+| Edge 113+ | ✅ Enabled by default |
+| Firefox | ⚠️ Behind flag (`dom.webgpu.enabled`) |
+| Safari 17+ | ✅ Enabled by default |
+| Mobile Safari | ⚠️ Limited support |
+| Mobile Chrome | ⚠️ Limited support |
+
+**Vello-GPU on WebGPU:**
+
+```javascript
+// Feature detection for WebGPU
+async function hasWebGPU() {
+  if (!navigator.gpu) return false;
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    return adapter !== null;
+  } catch {
+    return false;
+  }
+}
+
+// Conditional renderer selection
+const renderer = await hasWebGPU() ? 'vello' : 'opixa';
+const typf = await Typf.create({ renderer });
+```
+
+**WebGPU Limitations for Text Rendering:**
+
+1. **No compute shader fallback** - Vello requires compute shaders; older WebGL-only browsers cannot use it
+2. **Memory constraints** - GPU memory is more limited than CPU memory in browsers
+3. **Power consumption** - GPU usage may affect battery life on mobile devices
+4. **Initialization overhead** - WebGPU context creation adds ~50-100ms startup time
+
+### Memory Constraints
+
+WASM modules run with constrained memory:
+
+| Environment | Default Memory | Max Memory |
+|-------------|----------------|------------|
+| Chrome | 256 MB | 4 GB |
+| Firefox | 256 MB | 4 GB |
+| Safari | 256 MB | 2 GB |
+| Mobile browsers | 128 MB | 512 MB |
+
+**Memory Management Best Practices:**
+
+```javascript
+// Monitor memory usage
+const { used, available } = typf.getMemoryUsage();
+const usagePercent = (used / available) * 100;
+
+if (usagePercent > 70) {
+  // Clear caches before rendering more
+  await typf.clearFontCache();
+}
+
+// Free large results immediately
+const result = await typf.renderText(hugeText, options);
+const png = result.asPng();
+result.free(); // Release WASM memory
+
+// Use streaming for very large documents
+// instead of loading everything at once
+```
+
+### Cross-Origin Restrictions
+
+WASM text rendering may be affected by CORS policies:
+
+```javascript
+// Font loading requires CORS headers on font server:
+// Access-Control-Allow-Origin: *
+
+// For SharedArrayBuffer (parallel processing):
+// Cross-Origin-Opener-Policy: same-origin
+// Cross-Origin-Embedder-Policy: require-corp
+```
+
+### Build-Time Feature Selection
+
+Not all features are included in the default WASM build:
+
+```bash
+# Minimal WASM build (~1.5 MB)
+wasm-pack build --features minimal
+
+# Full WASM build with all shapers/renderers (~4 MB)
+wasm-pack build --features full
+
+# Custom build
+wasm-pack build --features "shaping-hb render-opixa export-png"
+```
+
+**Recommended Configurations:**
+
+| Use Case | Features | Bundle Size |
+|----------|----------|-------------|
+| Simple text | `minimal` | ~1.5 MB |
+| Complex scripts | `shaping-hb` | ~2.5 MB |
+| High quality | `render-skia` | ~3 MB |
+| Full featured | `full` | ~4 MB |
+
 ---
 
 WebAssembly brings Typf's text rendering to browsers with near-native performance. Use it for dynamic typography tools, real-time text effects, and font-intensive web applications.
