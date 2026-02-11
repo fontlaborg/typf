@@ -44,6 +44,17 @@ fn temp_output(ext: &str) -> PathBuf {
     path
 }
 
+/// Create a temporary directory path
+fn temp_dir(prefix: &str) -> PathBuf {
+    let mut path = std::env::temp_dir();
+    let id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock should be after UNIX_EPOCH")
+        .as_nanos();
+    path.push(format!("typf_test_{}_{}", prefix, id));
+    path
+}
+
 // ============================================================================
 // Info Command Tests
 // ============================================================================
@@ -460,6 +471,38 @@ fn test_render_invalid_format_fails() {
 }
 
 #[test]
+fn test_render_non_finite_font_size_fails() {
+    let font = test_font("NotoSans-Regular.ttf");
+    if !font.exists() {
+        return;
+    }
+
+    let output = Command::new(typf_binary())
+        .args([
+            "render",
+            "Hello",
+            "-f",
+            font.to_str().unwrap(),
+            "-s",
+            "NaN",
+            "-q",
+        ])
+        .output()
+        .expect("Failed to execute typf render");
+
+    assert!(
+        !output.status.success(),
+        "render with non-finite font size should fail"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("finite") || stderr.contains("font size"),
+        "non-finite-size failure should mention size validation, got: {}",
+        stderr
+    );
+}
+
+#[test]
 fn test_render_corrupted_font_fails() {
     // Create a temporary file with invalid font data
     let temp_font = temp_output("ttf");
@@ -535,6 +578,53 @@ fn test_batch_invalid_json_fails() {
     );
 
     let _ = fs::remove_file(input_file);
+}
+
+#[test]
+fn test_batch_job_with_png4_format_succeeds() {
+    let font = test_font("NotoSans-Regular.ttf");
+    if !font.exists() {
+        return;
+    }
+
+    let input_file = temp_output("jsonl");
+    let output_dir = temp_dir("batch_png4");
+    fs::create_dir_all(&output_dir).expect("Failed to create temp output dir");
+    let output_name = "job_png4.png";
+
+    let jsonl = format!(
+        "{{\"text\":\"Hello\",\"font\":\"{}\",\"format\":\"png4\",\"output\":\"{}\"}}\n",
+        font.display(),
+        output_name
+    );
+    fs::write(&input_file, jsonl).expect("Failed to write batch job input");
+
+    let output = Command::new(typf_binary())
+        .args([
+            "batch",
+            "-i",
+            input_file.to_str().unwrap(),
+            "-o",
+            output_dir.to_str().unwrap(),
+            "-q",
+        ])
+        .output()
+        .expect("Failed to execute typf batch");
+
+    assert!(
+        output.status.success(),
+        "batch with png4 job format should succeed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let rendered = output_dir.join(output_name);
+    assert!(
+        rendered.exists(),
+        "png4 batch job should create output file"
+    );
+
+    let _ = fs::remove_file(input_file);
+    let _ = fs::remove_dir_all(output_dir);
 }
 
 // ============================================================================

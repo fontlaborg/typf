@@ -278,12 +278,15 @@ fn parse_output_format(raw: Option<&str>) -> Result<OutputFormat> {
     let normalized = raw.trim().to_ascii_lowercase();
     match normalized.as_str() {
         "png" => Ok(OutputFormat::Png),
+        "png1" => Ok(OutputFormat::Png1),
+        "png4" => Ok(OutputFormat::Png4),
+        "png8" => Ok(OutputFormat::Png8),
         "svg" => Ok(OutputFormat::Svg),
         "pbm" => Ok(OutputFormat::Pbm),
         "pgm" => Ok(OutputFormat::Pgm),
         "ppm" => Ok(OutputFormat::Ppm),
         _ => Err(TypfError::ConfigError(format!(
-            "Unsupported batch output format '{}'; expected one of: png, svg, pbm, pgm, ppm",
+            "Unsupported batch output format '{}'; expected one of: png, png1, png4, png8, svg, pbm, pgm, ppm",
             raw
         ))),
     }
@@ -388,6 +391,16 @@ mod tests {
     fn test_parse_output_format_when_uppercase_then_parsed_case_insensitively() {
         let format = parse_output_format(Some("SVG")).expect("uppercase SVG should parse");
         assert!(matches!(format, crate::cli::OutputFormat::Svg));
+    }
+
+    #[test]
+    fn test_parse_output_format_when_png_variants_then_supported() {
+        let png1 = parse_output_format(Some("png1")).expect("png1 should parse");
+        let png4 = parse_output_format(Some("PNG4")).expect("PNG4 should parse");
+        let png8 = parse_output_format(Some("png8")).expect("png8 should parse");
+        assert!(matches!(png1, crate::cli::OutputFormat::Png1));
+        assert!(matches!(png4, crate::cli::OutputFormat::Png4));
+        assert!(matches!(png8, crate::cli::OutputFormat::Png8));
     }
 
     #[test]
