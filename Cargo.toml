@@ -44,7 +44,7 @@ authors = ["Typf Contributors"]
 edition = "2021"
 rust-version = "1.75"
 repository = "https://github.com/fontlaborg/typf"
-license = "EVALUATION LICENSE"
+license = "Apache-2.0"
 
 [workspace.dependencies]
 anyhow = "1.0"

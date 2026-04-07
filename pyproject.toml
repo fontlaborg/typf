@@ -7,7 +7,7 @@ name = "typfpy"
 dynamic = ["version"]
 description = "High-performance text rendering pipeline"
 authors = [{name = "FontLab", email = "dev@fontlab.com"}]
-license = {text = "EVALUATION LICENSE"}
+license = {text = "Apache-2.0"}
 readme = "README.md"
 requires-python = ">=3.12"
 classifiers = [
