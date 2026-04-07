@@ -50,5 +50,5 @@ features = [
     "export-png",
     "export-svg"
 ]
-manifest-path = "bindings/python/Cargo.toml"
-python-source = "bindings/python/python"
+manifest-path = "bindings/py/Cargo.toml"
+python-source = "bindings/py/python"

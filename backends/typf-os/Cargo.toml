@@ -9,7 +9,7 @@ keywords = ["font", "text", "rendering", "platform"]
 categories = ["graphics", "text-processing"]
 
 [dependencies]
-typf-core = { path = "../../crates/typf-core" }
+typf-core = { path = "../../core" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 typf-os-mac = { path = "../typf-os-mac" }

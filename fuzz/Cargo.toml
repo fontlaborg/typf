@@ -11,16 +11,16 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 
 [dependencies.typf-unicode]
-path = "../crates/typf-unicode"
+path = "../unicode"
 
 [dependencies.typf-shape-hb]
 path = "../backends/typf-shape-hb"
 
 [dependencies.typf-core]
-path = "../crates/typf-core"
+path = "../core"
 
 [dependencies.typf-fontdb]
-path = "../crates/typf-fontdb"
+path = "../fontdb"
 
 [dependencies.read-fonts]
 version = "0.36"

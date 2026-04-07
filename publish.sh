@@ -52,7 +52,7 @@ check_dependencies() {
 
 # Function to get current version from workspace
 get_workspace_version() {
-    grep -E '^\s*version\s*=\s*' Cargo.toml | head -1 | sed -E 's/.*version\s*=\s*"([^"]+)".*/\1/'
+    grep -m1 -E '^\s*version\s*=' Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/'
 }
 
 # Function to check if crate version exists on crates.io
@@ -171,15 +171,15 @@ main() {
     
     # List of crates to publish (in order of dependency)
     local crates=(
-        "crates/typf-core:typf-core"
-        "crates/typf-unicode:typf-unicode"
-        "crates/typf-fontdb:typf-fontdb"
-        "crates/typf-input:typf-input"
-        "crates/typf-export:typf-export"
-        "crates/typf-export-svg:typf-export-svg"
-        "crates/typf-cli:typf-cli"
-        "crates/typf-bench:typf-bench"
-        "crates/typf:typf"
+        "core:typf-core"
+        "unicode:typf-unicode"
+        "fontdb:typf-fontdb"
+        "input:typf-input"
+        "export:typf-export"
+        "export-svg:typf-export-svg"
+        "cli:typf-cli"
+        "tools/typf-bench:typf-bench"
+        "main:typf"
     )
     
     local any_published=false

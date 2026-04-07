@@ -3269,6 +3269,7 @@ dependencies = [
 name = "typf-render-svg"
 version = "5.0.2"
 dependencies = [
+ "base64",
  "log",
  "skrifa 0.39.0",
  "typf-core",

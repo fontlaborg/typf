@@ -17,7 +17,7 @@ numpy = { version = "0.22", optional = true }
 typf = { workspace = true, features = ["default"] }
 typf-core = { workspace = true }
 typf-export = { workspace = true }
-typf-export-svg = { path = "../../crates/typf-export-svg", optional = true }
+typf-export-svg = { path = "../../export-svg", optional = true }
 typf-fontdb = { workspace = true }
 typf-os = { workspace = true, optional = true }
 typf-os-mac = { workspace = true, optional = true }

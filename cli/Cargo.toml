@@ -1,4 +1,4 @@
-# this_file: crates/typf-cli/Cargo.toml
+# this_file: cli/Cargo.toml
 
 [package]
 name = "typf-cli"

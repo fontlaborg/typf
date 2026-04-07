@@ -5,15 +5,15 @@ resolver = "2"
 exclude = ["fuzz", "external"]
 members = [
   # Core crates
-  "crates/typf",
-  "crates/typf-bench",
-  "crates/typf-cli",
-  "crates/typf-core",
-  "crates/typf-export",
-  "crates/typf-export-svg",
-  "crates/typf-fontdb",
-  "crates/typf-input",
-  "crates/typf-unicode",
+  "main",
+  "tools/typf-bench",
+  "cli",
+  "core",
+  "export",
+  "export-svg",
+  "fontdb",
+  "input",
+  "unicode",
   # Shaping backends
   "backends/typf-shape-ct",
   "backends/typf-shape-hb",
@@ -35,7 +35,7 @@ members = [
   "backends/typf-os-mac",
   "backends/typf-os-win",
   # Bindings
-  "bindings/python",
+  "bindings/py",
 ]
 
 [workspace.package]
@@ -82,12 +82,12 @@ thiserror = "2.0"
 # Rendering dependencies
 tiny-skia = "0.11"
 # Internal crates
-typf = { path = "crates/typf", version = "5.0.1" }
-typf-bench = { path = "crates/typf-bench", version = "5.0.1" }
-typf-core = { path = "crates/typf-core", version = "5.0.1" }
-typf-export = { path = "crates/typf-export", version = "5.0.1" }
-typf-fontdb = { path = "crates/typf-fontdb", version = "5.0.1" }
-typf-input = { path = "crates/typf-input", version = "5.0.1" }
+typf = { path = "main", version = "5.0.1" }
+typf-bench = { path = "tools/typf-bench", version = "5.0.1" }
+typf-core = { path = "core", version = "5.0.1" }
+typf-export = { path = "export", version = "5.0.1" }
+typf-fontdb = { path = "fontdb", version = "5.0.1" }
+typf-input = { path = "input", version = "5.0.1" }
 typf-os = { path = "backends/typf-os", version = "5.0.1" }
 # Linra OS backends
 typf-os-mac = { path = "backends/typf-os-mac", version = "5.0.1" }
@@ -108,7 +108,7 @@ typf-shape-hr = { path = "backends/typf-shape-hr", version = "5.0.1" }
 typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb", version = "5.0.1" }
 # Shaping backends
 typf-shape-none = { path = "backends/typf-shape-none", version = "5.0.1" }
-typf-unicode = { path = "crates/typf-unicode", version = "5.0.1" }
+typf-unicode = { path = "unicode", version = "5.0.1" }
 usvg = "0.45"
 zeno = "0.3"
 
