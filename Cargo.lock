@@ -3001,7 +3001,7 @@ dependencies = [
 
 [[package]]
 name = "typf"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "console_error_panic_hook",
  "criterion",
@@ -3030,7 +3030,7 @@ dependencies = [
 
 [[package]]
 name = "typf-bench"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "chrono",
  "clap",
@@ -3056,7 +3056,7 @@ dependencies = [
 
 [[package]]
 name = "typf-cli"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "base64",
  "clap",
@@ -3091,7 +3091,7 @@ dependencies = [
 
 [[package]]
 name = "typf-core"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "icu_properties",
  "log",
@@ -3103,7 +3103,7 @@ dependencies = [
 
 [[package]]
 name = "typf-export"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "base64",
  "image",
@@ -3114,7 +3114,7 @@ dependencies = [
 
 [[package]]
 name = "typf-export-svg"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "base64",
  "read-fonts 0.36.0",
@@ -3126,7 +3126,7 @@ dependencies = [
 
 [[package]]
 name = "typf-fontdb"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "log",
  "read-fonts 0.36.0",
@@ -3137,11 +3137,11 @@ dependencies = [
 
 [[package]]
 name = "typf-input"
-version = "5.0.8"
+version = "5.0.9"
 
 [[package]]
 name = "typf-os"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "typf-core",
  "typf-os-mac",
@@ -3150,7 +3150,7 @@ dependencies = [
 
 [[package]]
 name = "typf-os-mac"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "env_logger",
  "log",
@@ -3163,7 +3163,7 @@ dependencies = [
 
 [[package]]
 name = "typf-os-win"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "log",
  "lru",
@@ -3174,7 +3174,7 @@ dependencies = [
 
 [[package]]
 name = "typf-py"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "numpy",
  "pyo3",
@@ -3202,7 +3202,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-cg"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "env_logger",
  "log",
@@ -3214,7 +3214,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-color"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "flate2",
  "log",
@@ -3228,7 +3228,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-json"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "env_logger",
  "log",
@@ -3240,7 +3240,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-opixa"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "log",
  "rayon",
@@ -3251,7 +3251,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-skia"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "kurbo 0.11.3",
  "log",
@@ -3267,7 +3267,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-svg"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "base64",
  "log",
@@ -3280,7 +3280,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-vello"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "log",
  "pollster",
@@ -3295,7 +3295,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-vello-cpu"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "log",
  "skrifa 0.39.0",
@@ -3308,7 +3308,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-zeno"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "kurbo 0.11.3",
  "log",
@@ -3324,7 +3324,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-ct"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "env_logger",
  "log",
@@ -3338,7 +3338,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-hb"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "harfbuzz_rs",
  "log",
@@ -3350,7 +3350,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-hr"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "harfrust",
  "log",
@@ -3362,7 +3362,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-icu-hb"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "env_logger",
  "harfbuzz_rs",
@@ -3376,7 +3376,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-none"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "log",
  "typf-core",
@@ -3384,7 +3384,7 @@ dependencies = [
 
 [[package]]
 name = "typf-unicode"
-version = "5.0.8"
+version = "5.0.9"
 dependencies = [
  "icu_properties",
  "icu_segmenter",

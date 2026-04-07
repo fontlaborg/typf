@@ -124,11 +124,13 @@ pypi_published() {
     curl -sf "https://pypi.org/pypi/$package_name/$version/json" >/dev/null 2>&1
 }
 
-# Publish a single Rust crate with rate-limit awareness
+# Publish a single Rust crate with rate-limit retry
 publish_crate() {
     local crate_path="$1"
     local crate_name="$2"
     local version="$3"
+    local max_retries=5
+    local wait_secs=60
 
     if crate_published "$crate_name" "$version"; then
         log_warning "$crate_name@$version already on crates.io — skipping"
@@ -140,22 +142,55 @@ publish_crate() {
         return 0
     fi
 
-    log_info "Publishing $crate_name@$version ..."
     cd "$SCRIPT_DIR/$crate_path"
 
-    if ! cargo publish; then
-        log_error "Failed to publish $crate_name@$version"
-        cd "$SCRIPT_DIR"
-        return 1
-    fi
+    local attempt=0
+    while (( attempt < max_retries )); do
+        attempt=$((attempt + 1))
+        log_info "Publishing $crate_name@$version (attempt $attempt/$max_retries) ..."
 
+        local output
+        if output=$(cargo publish 2>&1); then
+            cd "$SCRIPT_DIR"
+            log_success "Published $crate_name@$version"
+            # Wait between publishes to avoid triggering rate limits
+            log_info "Waiting ${wait_secs}s before next publish ..."
+            sleep "$wait_secs"
+            return 0
+        fi
+
+        echo "$output"
+
+        if echo "$output" | grep -q "429\|Too Many Requests\|rate.limit"; then
+            # Try to parse retry-after from the error message
+            local retry_after
+            retry_after=$(echo "$output" | grep -oP 'try again after \K[^"]+' | head -1 || true)
+            if [[ -n "$retry_after" ]]; then
+                local now_epoch retry_epoch secs_to_wait
+                now_epoch=$(date +%s)
+                retry_epoch=$(date -j -f "%a, %d %b %Y %H:%M:%S %Z" "$retry_after" +%s 2>/dev/null || echo "0")
+                if (( retry_epoch > now_epoch )); then
+                    secs_to_wait=$((retry_epoch - now_epoch + 5))
+                else
+                    secs_to_wait=$((wait_secs * attempt))
+                fi
+            else
+                secs_to_wait=$((wait_secs * attempt))
+            fi
+
+            log_warning "Rate limited. Waiting ${secs_to_wait}s before retry ..."
+            sleep "$secs_to_wait"
+        else
+            # Non-rate-limit error — don't retry
+            log_error "Failed to publish $crate_name@$version"
+            cd "$SCRIPT_DIR"
+            return 1
+        fi
+    done
+
+    log_error "Failed to publish $crate_name@$version after $max_retries attempts"
     cd "$SCRIPT_DIR"
-    log_success "Published $crate_name@$version"
-
-    # crates.io rate limit: wait for the registry to index before next publish
-    log_info "Waiting 30s for crates.io rate limit ..."
-    sleep 30
-    return 0
+    return 1
 }
 
 # Publish Python package
@@ -213,47 +248,56 @@ do_publish() {
     fi
 
     local failed=()
+    local tier_failed=false
+
+    # Helper: publish a tier of crates; sets tier_failed=true on any failure
+    publish_tier() {
+        local tier_name="$1"; shift
+        if [[ "$tier_failed" == "true" ]]; then
+            log_warning "Skipping $tier_name — earlier dependency tier failed"
+            for spec in "$@"; do
+                failed+=("${spec#*:}")
+            done
+            return
+        fi
+        log_info "--- $tier_name ---"
+        for spec in "$@"; do
+            local path="${spec%:*}" name="${spec#*:}"
+            if ! publish_crate "$path" "$name" "$version"; then
+                failed+=("$name")
+                tier_failed=true
+            fi
+        done
+    }
 
     # Publish Rust crates in dependency order
     if [[ "$python_only" != "true" ]]; then
         log_info "Publishing Rust crates (in dependency order) ..."
 
-        # Tier 1: no internal deps
-        for spec in "core:typf-core" "unicode:typf-unicode"; do
-            local path="${spec%:*}" name="${spec#*:}"
-            if ! publish_crate "$path" "$name" "$version"; then
-                failed+=("$name")
-            fi
-        done
+        publish_tier "Tier 1: core libs (no internal deps)" \
+            "core:typf-core" \
+            "unicode:typf-unicode"
 
-        # Tier 2: depends on typf-core
-        for spec in "fontdb:typf-fontdb" "input:typf-input" "export:typf-export"; do
-            local path="${spec%:*}" name="${spec#*:}"
-            if ! publish_crate "$path" "$name" "$version"; then
-                failed+=("$name")
-            fi
-        done
+        publish_tier "Tier 2: depends on typf-core" \
+            "fontdb:typf-fontdb" \
+            "input:typf-input" \
+            "export:typf-export"
 
-        # Tier 3: depends on tier 2
-        for spec in "export-svg:typf-export-svg"; do
-            local path="${spec%:*}" name="${spec#*:}"
-            if ! publish_crate "$path" "$name" "$version"; then
-                failed+=("$name")
-            fi
-        done
+        publish_tier "Tier 3: depends on tier 2" \
+            "export-svg:typf-export-svg"
 
-        # Tier 4: CLI / main / bench
-        for spec in "cli:typf-cli" "tools/typf-bench:typf-bench" "main:typf"; do
-            local path="${spec%:*}" name="${spec#*:}"
-            if ! publish_crate "$path" "$name" "$version"; then
-                failed+=("$name")
-            fi
-        done
+        publish_tier "Tier 4: top-level crates" \
+            "main:typf" \
+            "cli:typf-cli" \
+            "tools/typf-bench:typf-bench"
     fi
 
     # Publish Python package
     if [[ "$rust_only" != "true" ]]; then
-        if ! publish_python "$version"; then
+        if [[ "$tier_failed" == "true" ]]; then
+            log_warning "Skipping Python publish — Rust crate failures"
+            failed+=("typfpy")
+        elif ! publish_python "$version"; then
             failed+=("typfpy")
         fi
     fi
