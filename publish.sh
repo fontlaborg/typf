@@ -402,24 +402,42 @@ publish_python() {
 #      typf-core       Core engine: the pipeline, caching, traits, FFI.
 #      typf-unicode    Unicode segmentation, bidi, normalization.
 #
-#    Tier 2 — Depends on typf-core.
+#    Tier 2 — Depends on typf-core only.
 #      typf-fontdb     Font discovery and metadata (wraps skrifa/read-fonts).
 #      typf-input      Input text preprocessing.
 #      typf-export     Output formats: PNG, PNM, raw pixels.
+#      typf-render-color  Color glyph renderer (COLR, SVG, bitmap).
+#      typf-render-opixa  Pure Rust rasterizer with SIMD.
+#      typf-render-json   JSON data exporter.
+#      typf-render-cg     CoreGraphics renderer (macOS).
+#      typf-shape-none    Minimal passthrough shaper.
+#      typf-shape-hb      HarfBuzz C shaper.
+#      typf-shape-hr      Pure Rust shaper via harfrust.
+#      typf-shape-ct      CoreText shaper (macOS).
+#      typf-shape-icu-hb  ICU + HarfBuzz shaper.
+#      typf-os-mac        CoreText linra backend (macOS).
+#      typf-os-win        DirectWrite linra backend (Windows).
 #
 #    Tier 3 — Depends on Tier 2 crates.
-#      typf-export-svg SVG output (needs typf-export + typf-render-color).
+#      typf-export-svg    SVG output (needs typf-render-color).
+#      typf-render-svg    SVG vector renderer (needs typf-export, render-color).
+#      typf-render-vello-cpu  Vello CPU renderer (needs typf-fontdb).
+#      typf-render-vello  Vello GPU renderer (needs typf-fontdb, shape-none).
+#      typf-os            Platform linra dispatcher (needs os-mac, os-win).
 #
-#    Tier 4 — Top of the tree. Depends on everything below.
+#    Tier 4 — Depends on Tier 3 crates.
+#      typf-render-skia   Skia renderer (needs typf-render-svg).
+#      typf-render-zeno   Zeno renderer (needs typf-render-svg).
+#
+#    Tier 5 — Top of the tree. Depends on everything below.
 #      typf            The main "batteries included" crate that re-exports
 #                      the full pipeline for users who want one dependency.
 #      typf-cli        Command-line tool: `typf render "Hello" -o hello.png`
 #      typf-bench      Benchmarking harness for shaper x renderer combos.
 #
-#  Backend crates (typf-shape-hb, typf-render-skia, etc.) are optional
-#  dependencies selected via feature flags. They're published as part of
-#  the workspace but don't appear in the tier chain — they have no
-#  internal dependents that would block downstream publishing.
+#  cargo publish requires ALL dependencies (including optional ones) to
+#  exist on crates.io during verification, so every backend crate must
+#  be published before any crate that references it.
 # ===========================================================================
 
 do_publish() {
@@ -449,8 +467,26 @@ do_publish() {
     # prevents a mid-tier failure from cascading into skipped downstream tiers.
     log_info "Validating crate metadata ..."
     local metadata_ok=true
-    for spec in "core:typf-core" "unicode:typf-unicode" "fontdb:typf-fontdb" \
-                "input:typf-input" "export:typf-export" "export-svg:typf-export-svg" \
+    for spec in "core:typf-core" "unicode:typf-unicode" \
+                "fontdb:typf-fontdb" "input:typf-input" "export:typf-export" \
+                "backends/typf-render-color:typf-render-color" \
+                "backends/typf-render-opixa:typf-render-opixa" \
+                "backends/typf-render-json:typf-render-json" \
+                "backends/typf-render-cg:typf-render-cg" \
+                "backends/typf-shape-none:typf-shape-none" \
+                "backends/typf-shape-hb:typf-shape-hb" \
+                "backends/typf-shape-hr:typf-shape-hr" \
+                "backends/typf-shape-ct:typf-shape-ct" \
+                "backends/typf-shape-icu-hb:typf-shape-icu-hb" \
+                "backends/typf-os-mac:typf-os-mac" \
+                "backends/typf-os-win:typf-os-win" \
+                "export-svg:typf-export-svg" \
+                "backends/typf-render-svg:typf-render-svg" \
+                "backends/typf-render-vello-cpu:typf-render-vello-cpu" \
+                "backends/typf-render-vello:typf-render-vello" \
+                "backends/typf-os:typf-os" \
+                "backends/typf-render-skia:typf-render-skia" \
+                "backends/typf-render-zeno:typf-render-zeno" \
                 "main:typf" "cli:typf-cli" "tools/typf-bench:typf-bench"; do
         local path="${spec%:*}" name="${spec#*:}"
         local toml="$SCRIPT_DIR/$path/Cargo.toml"
@@ -507,12 +543,31 @@ do_publish() {
         publish_tier "Tier 2: depends on typf-core" \
             "fontdb:typf-fontdb" \
             "input:typf-input" \
-            "export:typf-export"
+            "export:typf-export" \
+            "backends/typf-render-color:typf-render-color" \
+            "backends/typf-render-opixa:typf-render-opixa" \
+            "backends/typf-render-json:typf-render-json" \
+            "backends/typf-render-cg:typf-render-cg" \
+            "backends/typf-shape-none:typf-shape-none" \
+            "backends/typf-shape-hb:typf-shape-hb" \
+            "backends/typf-shape-hr:typf-shape-hr" \
+            "backends/typf-shape-ct:typf-shape-ct" \
+            "backends/typf-shape-icu-hb:typf-shape-icu-hb" \
+            "backends/typf-os-mac:typf-os-mac" \
+            "backends/typf-os-win:typf-os-win"
 
         publish_tier "Tier 3: depends on Tier 2 crates" \
-            "export-svg:typf-export-svg"
+            "export-svg:typf-export-svg" \
+            "backends/typf-render-svg:typf-render-svg" \
+            "backends/typf-render-vello-cpu:typf-render-vello-cpu" \
+            "backends/typf-render-vello:typf-render-vello" \
+            "backends/typf-os:typf-os"
 
-        publish_tier "Tier 4: top-level crates" \
+        publish_tier "Tier 4: depends on Tier 3 crates" \
+            "backends/typf-render-skia:typf-render-skia" \
+            "backends/typf-render-zeno:typf-render-zeno"
+
+        publish_tier "Tier 5: top-level crates" \
             "main:typf" \
             "cli:typf-cli" \
             "tools/typf-bench:typf-bench"
@@ -548,9 +603,27 @@ do_check() {
     log_info "Git tag version: $version"
 
     log_info "Rust crates:"
-    for spec in "core:typf-core" "unicode:typf-unicode" "fontdb:typf-fontdb" \
-                "input:typf-input" "export:typf-export" "export-svg:typf-export-svg" \
-                "cli:typf-cli" "tools/typf-bench:typf-bench" "main:typf"; do
+    for spec in "core:typf-core" "unicode:typf-unicode" \
+                "fontdb:typf-fontdb" "input:typf-input" "export:typf-export" \
+                "backends/typf-render-color:typf-render-color" \
+                "backends/typf-render-opixa:typf-render-opixa" \
+                "backends/typf-render-json:typf-render-json" \
+                "backends/typf-render-cg:typf-render-cg" \
+                "backends/typf-shape-none:typf-shape-none" \
+                "backends/typf-shape-hb:typf-shape-hb" \
+                "backends/typf-shape-hr:typf-shape-hr" \
+                "backends/typf-shape-ct:typf-shape-ct" \
+                "backends/typf-shape-icu-hb:typf-shape-icu-hb" \
+                "backends/typf-os-mac:typf-os-mac" \
+                "backends/typf-os-win:typf-os-win" \
+                "export-svg:typf-export-svg" \
+                "backends/typf-render-svg:typf-render-svg" \
+                "backends/typf-render-vello-cpu:typf-render-vello-cpu" \
+                "backends/typf-render-vello:typf-render-vello" \
+                "backends/typf-os:typf-os" \
+                "backends/typf-render-skia:typf-render-skia" \
+                "backends/typf-render-zeno:typf-render-zeno" \
+                "main:typf" "cli:typf-cli" "tools/typf-bench:typf-bench"; do
         local name="${spec#*:}"
         if crate_published "$name" "$version"; then
             echo -e "  $name@$version  ${GREEN}published${NC}"

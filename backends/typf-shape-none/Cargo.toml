@@ -3,6 +3,8 @@ name = "typf-shape-none"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+description = "Minimal passthrough shaper for Typf (simple LTR Latin text)"
+repository.workspace = true
 license.workspace = true
 
 [dependencies]

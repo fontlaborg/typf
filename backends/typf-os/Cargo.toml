@@ -1,21 +1,21 @@
 [package]
 name = "typf-os"
 version.workspace = true
-edition = "2021"
+edition.workspace = true
 description = "Platform-native linra text rendering dispatcher"
-license = "Apache-2.0"
-repository = "https://github.com/fontlaborg/typf"
+license.workspace = true
+repository.workspace = true
 keywords = ["font", "text", "rendering", "platform"]
 categories = ["graphics", "text-processing"]
 
 [dependencies]
-typf-core = { path = "../../core" }
+typf-core = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-typf-os-mac = { path = "../typf-os-mac" }
+typf-os-mac = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-typf-os-win = { path = "../typf-os-win" }
+typf-os-win = { workspace = true }
 
 [features]
 default = []
