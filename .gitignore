@@ -93,3 +93,13 @@ typf-tldr.txt
 test.ppm
 test-fonts/
 /.claude
+
+# MAD agent files (never commit)
+.agent-task
+.agent-done
+.agent-blocked
+.agent-error
+.mad-logs.jsonl
+
+# Worktrees directory
+worktrees/
