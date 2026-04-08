@@ -1,16 +1,12 @@
-//! Where fonts come to life: database and loading for Typf
+//! Font loading and face management for Typf.
 //!
-//! The third stage of the pipeline. Finds, loads, and manages fonts so
-//! your text can wear the right glyphs. Without fonts, text is just
-//! invisible characters floating in digital space.
+//! This crate turns raw font files into face objects that the rest of the
+//! pipeline can query. It keeps the original bytes in memory and creates parser
+//! views on demand, which is important for two reasons:
 //!
-//! ## Memory Management
-//!
-//! Fonts store their raw data and create `FontRef` on-demand for parsing.
-//! This avoids memory leaks from `Box::leak` and properly supports TTC
-//! font collections with multiple faces.
-
-// this_file: crates/typf-fontdb/src/lib.rs
+//! - it avoids leaking long-lived parser objects,
+//! - it supports collection files such as TTCs, where one file contains several
+//!   faces and each face needs its own index.
 
 use std::collections::HashMap;
 use std::fs;
@@ -25,7 +21,7 @@ use typf_core::{
     types::{FontMetrics, VariationAxis},
 };
 
-/// Source container for a font face (path or memory)
+/// Source descriptor for one loaded font face.
 #[derive(Clone, Debug)]
 pub struct TypfFontSource {
     path: Option<PathBuf>,
@@ -46,10 +42,11 @@ impl TypfFontSource {
     }
 }
 
-/// A font face that's been brought into memory, ready to shape text
+/// In-memory font face ready for shaping and rendering.
 ///
-/// Stores the raw font data and creates `FontRef` on-demand for parsing.
-/// For TTC collections, the `face_index` specifies which face to use.
+/// The face keeps the original font bytes and recreates parser views on demand.
+/// For collection files such as TTCs, `face_index` selects the face inside the
+/// shared file.
 pub struct TypfFontFace {
     data: Arc<Vec<u8>>,
     source: TypfFontSource,
@@ -58,12 +55,12 @@ pub struct TypfFontFace {
 }
 
 impl TypfFontFace {
-    /// Opens a font file from disk and makes it usable
+    /// Load the first face from a font file on disk.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         Self::from_file_index(path, 0)
     }
 
-    /// Opens a specific face from a font file (for TTC collections)
+    /// Load a specific face from a font file or collection.
     pub fn from_file_index(path: impl AsRef<Path>, face_index: u32) -> Result<Self> {
         let data = fs::read(path.as_ref())
             .map_err(|_| FontLoadError::FileNotFound(path.as_ref().display().to_string()))?;
@@ -71,12 +68,12 @@ impl TypfFontFace {
         Self::from_data_index_with_path(data, face_index, Some(path.as_ref().to_path_buf()))
     }
 
-    /// Turns raw font bytes into something we can work with
+    /// Load the first face from raw font bytes.
     pub fn from_data(data: Vec<u8>) -> Result<Self> {
         Self::from_data_index(data, 0)
     }
 
-    /// Turns raw font bytes into a specific face (for TTC collections)
+    /// Load a specific face from raw font bytes.
     pub fn from_data_index(data: Vec<u8>, face_index: u32) -> Result<Self> {
         Self::from_data_index_with_path(data, face_index, None)
     }
@@ -86,12 +83,9 @@ impl TypfFontFace {
         face_index: u32,
         path: Option<PathBuf>,
     ) -> Result<Self> {
-        // Validate the font data by attempting to parse it
         let font_ref = ReadFontRef::from_index(data.as_slice(), face_index)
             .map_err(|_| FontLoadError::InvalidData)?;
 
-        // Extract the fundamental measurement: units per em
-        // This tells us how big the font's grid is
         let units_per_em = font_ref
             .head()
             .map(|head| head.units_per_em())
@@ -131,52 +125,46 @@ impl TypfFontFace {
         })
     }
 
-    /// Returns the source descriptor (path + face index)
     pub fn source(&self) -> &TypfFontSource {
         &self.source
     }
 
-    /// Returns the face index for TTC collections (0 for single fonts)
     pub fn face_index(&self) -> u32 {
         self.source.face_index
     }
 
-    /// Returns the path if loaded from disk
     pub fn path(&self) -> Option<&Path> {
         self.source.path()
     }
 
-    /// Creates a FontRef on-demand for parsing operations
     fn font_ref(&self) -> Option<ReadFontRef<'_>> {
         ReadFontRef::from_index(self.data.as_slice(), self.source.face_index).ok()
     }
 
-    /// Finds which glyph draws this character
     pub fn glyph_id(&self, ch: char) -> Option<u32> {
         self.font_ref()
             .and_then(|font| font.cmap().ok()?.map_codepoint(ch).map(|gid| gid.to_u32()))
     }
 
-    /// Measures how wide this glyph will be
+    /// Return the advance width normalized to a 1000-unit em.
+    ///
+    /// Source fonts can use different units-per-em values. This method returns
+    /// a stable scale for callers that do not want to repeat that conversion.
     pub fn advance_width(&self, glyph_id: u32) -> f32 {
         self.font_ref()
             .and_then(|font| {
-                // Look up the horizontal metrics table
                 let hmtx = font.hmtx().ok()?;
 
-                // Get the advance width for this specific glyph
                 use read_fonts::types::GlyphId;
                 let glyph = GlyphId::new(glyph_id);
                 let advance = hmtx.advance(glyph)?;
 
-                // Convert from font units to something predictable
                 let upem = self.units_per_em as f32;
                 Some(advance as f32 / upem * 1000.0)
             })
-            .unwrap_or(500.0) // Reasonable default when metrics fail
+            .unwrap_or(500.0)
     }
 
-    /// Counts how many different glyphs this font contains
     pub fn glyph_count(&self) -> Option<u32> {
         self.font_ref()
             .and_then(|font| font.maxp().ok().map(|maxp| maxp.num_glyphs() as u32))
@@ -195,7 +183,6 @@ impl TypfFontFace {
                 let tag_bytes = axis.axis_tag().into_bytes();
                 let tag = String::from_utf8_lossy(&tag_bytes).to_string();
 
-                // Try to get the human-readable name from the name table
                 let name = name_table.as_ref().and_then(|nt| {
                     let name_id = axis.axis_name_id();
                     nt.name_record()
@@ -205,7 +192,6 @@ impl TypfFontFace {
                         .map(|s| s.to_string())
                 });
 
-                // Check if axis is hidden (flags bit 0)
                 let hidden = axis.flags() & 0x0001 != 0;
 
                 VariationAxis {
@@ -257,18 +243,16 @@ impl TypfFontRef for TypfFontFace {
     }
 }
 
-/// Your font library: keeps track of all loaded fonts
+/// Collection of loaded font faces and their source metadata.
 pub struct FontDatabase {
     fonts: Vec<Arc<TypfFontFace>>,
     sources: Vec<TypfFontSource>,
-    /// Cache to prevent loading the same font file multiple times.
-    /// Maps canonical (path, face_index) to their loaded fonts.
     path_cache: HashMap<(PathBuf, u32), Arc<TypfFontFace>>,
     default_font: Option<Arc<TypfFontFace>>,
 }
 
 impl FontDatabase {
-    /// Starts with an empty library
+    /// Create an empty font database.
     pub fn new() -> Self {
         Self {
             fonts: Vec::new(),
@@ -278,29 +262,24 @@ impl FontDatabase {
         }
     }
 
-    /// Loads a font file and remembers it for future use.
-    /// If the same path was already loaded, returns the cached font.
+    /// Load the first face from a file and reuse a cached copy when possible.
     pub fn load_font(&mut self, path: impl AsRef<Path>) -> Result<Arc<TypfFontFace>> {
         let path = path.as_ref();
 
-        // Try to canonicalize the path for reliable deduplication
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
         let face_index = 0;
         let cache_key = (canonical.clone(), face_index);
 
-        // Return cached font if already loaded
         if let Some(font) = self.path_cache.get(&cache_key) {
             return Ok(font.clone());
         }
 
-        // Load and cache the font
         let font = Arc::new(TypfFontFace::from_file(path)?);
         self.path_cache.insert(cache_key, font.clone());
         self.fonts.push(font.clone());
         self.sources
             .push(TypfFontSource::new(Some(canonical), face_index));
 
-        // First font loaded becomes the default
         if self.default_font.is_none() {
             self.default_font = Some(font.clone());
         }
@@ -308,14 +287,12 @@ impl FontDatabase {
         Ok(font)
     }
 
-    /// Adds a font from memory to the library
     pub fn load_font_data(&mut self, data: Vec<u8>) -> Result<Arc<TypfFontFace>> {
         let font = Arc::new(TypfFontFace::from_data(data)?);
         self.fonts.push(font.clone());
         self.sources
             .push(TypfFontSource::new(None, font.face_index()));
 
-        // First font loaded becomes the default
         if self.default_font.is_none() {
             self.default_font = Some(font.clone());
         }
@@ -323,28 +300,26 @@ impl FontDatabase {
         Ok(font)
     }
 
-    /// Returns the font we fall back to when nothing else is specified
     pub fn default_font(&self) -> Option<Arc<TypfFontFace>> {
         self.default_font.clone()
     }
 
-    /// Shows all fonts currently loaded
     pub fn fonts(&self) -> &[Arc<TypfFontFace>] {
         &self.fonts
     }
 
-    /// Shows all font sources currently known
     pub fn sources(&self) -> &[TypfFontSource] {
         &self.sources
     }
 
-    /// Looks up a font by name (simplified for now)
+    /// Temporary lookup stub.
+    ///
+    /// This currently returns the default font instead of performing a real
+    /// family-name search.
     pub fn find_font(&self, _name: &str) -> Option<Arc<TypfFontFace>> {
         self.default_font.clone()
     }
 
-    /// Clears all loaded fonts from the database.
-    /// Memory is properly reclaimed when all Arc references are dropped.
     pub fn clear(&mut self) {
         self.fonts.clear();
         self.sources.clear();
@@ -352,7 +327,6 @@ impl FontDatabase {
         self.default_font = None;
     }
 
-    /// Returns the number of fonts currently loaded.
     pub fn font_count(&self) -> usize {
         self.fonts.len()
     }

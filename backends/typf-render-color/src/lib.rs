@@ -1,51 +1,9 @@
 #![warn(missing_docs)]
-//! Color glyph renderer for Typf
+//! Color-glyph rendering support for Typf.
 //!
-//! This crate provides rendering support for:
-//! - COLR v0 and v1 color glyphs using skrifa's ColorPainter API
-//! - SVG table glyphs using resvg (optional, requires `svg` feature)
-//! - Bitmap glyphs (sbix, CBDT/CBLC) (optional, requires `bitmap` feature)
-//!
-//! # Quick Start
-//!
-//! ```no_run
-//! use typf_render_color::{render_glyph, has_any_color_support, RenderMethod};
-//!
-//! // Load font data
-//! let font_data = std::fs::read("path/to/emoji.ttf").unwrap();
-//!
-//! // Check if font has color support
-//! if has_any_color_support(&font_data) {
-//!     // Render glyph 42 at 64x64 pixels
-//!     let result = render_glyph(&font_data, 42, 64, 64, 64.0, 0).unwrap();
-//!
-//!     // Check which method was used
-//!     match result.method {
-//!         RenderMethod::ColrV1 => println!("Used COLR v1 with gradients"),
-//!         RenderMethod::ColrV0 => println!("Used COLR v0 layered"),
-//!         RenderMethod::Svg => println!("Used SVG table"),
-//!         RenderMethod::Bitmap => println!("Used embedded bitmap"),
-//!         RenderMethod::Outline => println!("Fell back to outline"),
-//!     }
-//!
-//!     // Access the rendered pixels
-//!     let pixels = result.pixmap.data();
-//! }
-//! ```
-//!
-//! # Features
-//!
-//! - `colr` (default) - COLR v0/v1 color glyph support
-//! - `svg` - SVG table glyph support (adds resvg, usvg, flate2)
-//! - `bitmap` - Bitmap glyph support (adds png)
-//!
-//! # Architecture
-//!
-//! 1. Detects if a glyph has color data (COLR, SVG, or bitmap table)
-//! 2. For COLR: Uses ColorPainter to receive paint commands from skrifa
-//! 3. For SVG: Parses and renders using resvg
-//! 4. For Bitmap: Decodes PNG/BGRA/mask data from bitmap tables
-//! 5. Renders to a tiny-skia Pixmap with proper layer compositing
+//! Fonts can store color glyphs in several formats, including COLR layers, SVG
+//! documents, and embedded bitmaps. This crate decodes those formats and paints
+//! the result into a `tiny-skia` pixmap.
 
 #[cfg(feature = "bitmap")]
 pub mod bitmap;
@@ -53,7 +11,6 @@ pub mod bitmap;
 #[cfg(feature = "svg")]
 pub mod svg;
 
-// Re-export common submodule types for convenience
 #[cfg(feature = "bitmap")]
 pub use bitmap::{
     get_bitmap_sizes, has_bitmap_glyphs, render_bitmap_glyph, render_bitmap_glyph_or_outline,
@@ -67,7 +24,6 @@ pub use svg::{
 };
 
 use skrifa::color::{Brush, ColorPainter, ColorStop, CompositeMode, Extend, Transform};
-// ColorGlyphFormat is pub use'd below for re-export
 use skrifa::outline::{DrawSettings, OutlinePen};
 use skrifa::raw::TableProvider;
 use skrifa::{GlyphId, MetadataProvider};
@@ -75,9 +31,8 @@ use tiny_skia::{
     BlendMode, Color, FillRule, GradientStop, LinearGradient, Mask, Paint, PathBuilder,
     PixmapPaint, Point, RadialGradient, SpreadMode,
 };
-// Pixmap is pub use'd below for re-export
 
-/// An OutlinePen that builds a tiny-skia Path
+/// Outline pen that records glyph curves into a `tiny-skia` path.
 struct TinySkiaPathPen {
     builder: PathBuilder,
 }
@@ -116,34 +71,23 @@ impl OutlinePen for TinySkiaPathPen {
     }
 }
 
-/// A ColorPainter implementation using tiny-skia for rendering
+/// `ColorPainter` implementation backed by `tiny-skia`.
 pub struct TinySkiaColorPainter<'a> {
-    /// The target pixmap to draw on
     pixmap: &'a mut Pixmap,
-    /// Stack of transformation matrices
     transform_stack: Vec<tiny_skia::Transform>,
-    /// Stack of clip masks
     clip_stack: Vec<Option<Mask>>,
-    /// Stack of layers for compositing
     layer_stack: Vec<LayerState>,
-    /// Color palette from CPAL table
     palette: &'a [skrifa::color::Color],
-    /// Font reference for glyph outlines
     font: &'a skrifa::FontRef<'a>,
-    /// Current font size for scaling
     size: f32,
 }
 
-/// State for a compositing layer
 struct LayerState {
-    /// The pixmap for this layer
     pixmap: Pixmap,
-    /// The composite mode to use when merging down
     composite_mode: CompositeMode,
 }
 
 impl<'a> TinySkiaColorPainter<'a> {
-    /// Create a new color painter
     pub fn new(
         pixmap: &'a mut Pixmap,
         palette: &'a [skrifa::color::Color],
@@ -183,7 +127,6 @@ impl<'a> TinySkiaColorPainter<'a> {
         }
     }
 
-    /// Get the current transformation matrix
     fn current_transform(&self) -> tiny_skia::Transform {
         self.transform_stack
             .last()
@@ -191,12 +134,10 @@ impl<'a> TinySkiaColorPainter<'a> {
             .unwrap_or(tiny_skia::Transform::identity())
     }
 
-    /// Convert skrifa Transform to tiny-skia Transform
     fn convert_transform(t: Transform) -> tiny_skia::Transform {
         tiny_skia::Transform::from_row(t.xx, t.yx, t.xy, t.yy, t.dx, t.dy)
     }
 
-    /// Convert CompositeMode to tiny-skia BlendMode
     fn convert_composite_mode(mode: CompositeMode) -> BlendMode {
         match mode {
             CompositeMode::Clear => BlendMode::Clear,
@@ -227,23 +168,19 @@ impl<'a> TinySkiaColorPainter<'a> {
             CompositeMode::HslSaturation => BlendMode::Saturation,
             CompositeMode::HslColor => BlendMode::Color,
             CompositeMode::HslLuminosity => BlendMode::Luminosity,
-            // Unknown mode from malformed font data - default to SrcOver
             CompositeMode::Unknown => BlendMode::SourceOver,
         }
     }
 
-    /// Get color from palette with alpha applied
     fn get_palette_color(&self, palette_index: u16, alpha: f32) -> Color {
         if let Some(color) = self.palette.get(palette_index as usize) {
             let a = (color.alpha as f32 / 255.0) * alpha;
             Color::from_rgba8(color.red, color.green, color.blue, (a * 255.0) as u8)
         } else {
-            // Fallback to black if palette index is invalid
             Color::from_rgba8(0, 0, 0, (alpha * 255.0) as u8)
         }
     }
 
-    /// Convert skrifa Extend to tiny-skia SpreadMode
     fn convert_extend(extend: Extend) -> SpreadMode {
         match extend {
             Extend::Pad | Extend::Unknown => SpreadMode::Pad,
@@ -252,7 +189,6 @@ impl<'a> TinySkiaColorPainter<'a> {
         }
     }
 
-    /// Convert color stops from skrifa format to tiny-skia GradientStops
     fn convert_color_stops(&self, color_stops: &[ColorStop]) -> Vec<GradientStop> {
         color_stops
             .iter()
@@ -263,34 +199,28 @@ impl<'a> TinySkiaColorPainter<'a> {
             .collect()
     }
 
-    /// Extract a glyph outline and create a clip mask from it
     fn create_glyph_clip_mask(&self, glyph_id: GlyphId) -> Option<Mask> {
         let outline_glyphs = self.font.outline_glyphs();
         let outline = outline_glyphs.get(glyph_id)?;
 
-        // Create a pen to capture the path
         let mut pen = TinySkiaPathPen::new();
 
-        // Draw the glyph outline at the current size
         let location = skrifa::instance::Location::default();
         let settings = DrawSettings::unhinted(skrifa::instance::Size::new(self.size), &location);
         outline.draw(settings, &mut pen).ok()?;
 
         let path = pen.finish()?;
 
-        // Create a mask from the path
         let width = self.pixmap.width();
         let height = self.pixmap.height();
         let mut mask = Mask::new(width, height)?;
 
-        // Apply current transform and fill the path into the mask
         let transform = self.current_transform();
         mask.fill_path(&path, FillRule::Winding, true, transform);
 
         Some(mask)
     }
 
-    /// Create a rectangular clip mask from a bounding box
     fn create_box_clip_mask(&self, clip_box: skrifa::raw::types::BoundingBox<f32>) -> Option<Mask> {
         let rect = tiny_skia::Rect::from_ltrb(
             clip_box.x_min,
@@ -358,7 +288,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
     fn fill(&mut self, brush: Brush<'_>) {
         let transform = self.current_transform();
 
-        // Get the target pixmap dimensions
         let (width, height) = if let Some(layer) = self.layer_stack.last() {
             (layer.pixmap.width(), layer.pixmap.height())
         } else {
@@ -375,10 +304,8 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                 paint.set_color(color);
                 paint.anti_alias = true;
 
-                // Fill the entire pixmap with the solid color, respecting clip
                 let rect = tiny_skia::Rect::from_xywh(0.0, 0.0, width as f32, height as f32);
                 if let Some(rect) = rect {
-                    // Get clip mask and target pixmap
                     let clip_mask = self.clip_stack.iter().rev().find_map(|m| m.as_ref());
                     let target = if let Some(layer) = self.layer_stack.last_mut() {
                         &mut layer.pixmap
@@ -398,7 +325,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                     return;
                 }
 
-                // If only one color stop, fill with solid color
                 if color_stops.len() == 1 {
                     let stop = &color_stops[0];
                     let color = self.get_palette_color(stop.palette_index, stop.alpha);
@@ -422,7 +348,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                 let stops = self.convert_color_stops(color_stops);
                 let spread_mode = Self::convert_extend(extend);
 
-                // Create linear gradient shader
                 if let Some(shader) = LinearGradient::new(
                     Point::from_xy(p0.x, p0.y),
                     Point::from_xy(p1.x, p1.y),
@@ -436,7 +361,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                         ..Default::default()
                     };
 
-                    // Fill the entire pixmap with the gradient, respecting clip
                     if let Some(rect) =
                         tiny_skia::Rect::from_xywh(0.0, 0.0, width as f32, height as f32)
                     {
@@ -469,7 +393,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                     return;
                 }
 
-                // If only one color stop, fill with solid color
                 if color_stops.len() == 1 {
                     let stop = &color_stops[0];
                     let color = self.get_palette_color(stop.palette_index, stop.alpha);
@@ -493,11 +416,9 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                 let stops = self.convert_color_stops(color_stops);
                 let spread_mode = Self::convert_extend(extend);
 
-                // tiny-skia's RadialGradient::new takes (start, end, radius, stops, mode, transform)
-                // where start and end are the two focal points and radius is the outer radius
-                // For COLRv1's two-point radial gradient with different radii,
-                // we approximate by using the larger radius
-                let radius = r0.max(r1).max(0.001); // Avoid zero radius
+                // tiny-skia exposes a single-radius radial gradient, so COLRv1's
+                // two-radius form is approximated with the larger radius.
+                let radius = r0.max(r1).max(0.001);
 
                 if let Some(shader) = RadialGradient::new(
                     Point::from_xy(c0.x, c0.y),
@@ -551,8 +472,8 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                 color_stops,
                 extend: _,
             } => {
-                // Sweep/conical gradients are not directly supported by tiny-skia
-                // Fall back to solid color from the middle color stop
+                // tiny-skia does not support sweep gradients, so this falls back
+                // to a solid color sampled from the middle stop.
                 if color_stops.is_empty() {
                     return;
                 }
@@ -566,7 +487,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                     color_stops.len()
                 );
 
-                // Use the middle color stop as fallback
                 let stop = &color_stops[color_stops.len() / 2];
                 let color = self.get_palette_color(stop.palette_index, stop.alpha);
                 let mut paint = Paint::default();
@@ -589,7 +509,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
     }
 
     fn push_layer(&mut self, composite_mode: CompositeMode) {
-        // Create a new layer with the same dimensions as the main pixmap
         let width = self.pixmap.width();
         let height = self.pixmap.height();
 
@@ -610,7 +529,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
                 quality: tiny_skia::FilterQuality::Bilinear,
             };
 
-            // Composite the layer onto the target (next layer or main pixmap)
             let target = if let Some(parent_layer) = self.layer_stack.last_mut() {
                 &mut parent_layer.pixmap
             } else {
@@ -629,7 +547,6 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
     }
 
     fn pop_layer_with_mode(&mut self, composite_mode: CompositeMode) {
-        // Override the stored composite mode with the provided one
         if let Some(mut layer) = self.layer_stack.pop() {
             layer.composite_mode = composite_mode;
             self.layer_stack.push(layer);
@@ -638,12 +555,11 @@ impl ColorPainter for TinySkiaColorPainter<'_> {
     }
 }
 
-// Re-export types for consumers
 pub use skrifa::color::{ColorGlyph, ColorGlyphFormat, ColorPalette, ColorPalettes, PaintError};
 pub use skrifa::instance::Location;
-pub use tiny_skia::Pixmap; // Re-exported so users don't need tiny-skia dependency
+pub use tiny_skia::Pixmap;
 
-/// Error type for color glyph rendering
+/// Errors returned while rendering a color glyph.
 #[derive(Debug)]
 pub enum ColorRenderError {
     /// Font parsing failed
@@ -693,18 +609,11 @@ impl From<bitmap::BitmapRenderError> for ColorRenderError {
     }
 }
 
-/// Render a color glyph to a pixmap
+/// Render one COLR glyph into a pixmap.
 ///
-/// # Arguments
-/// * `font_data` - Font file data
-/// * `glyph_id` - Glyph ID to render
-/// * `width` - Output pixmap width
-/// * `height` - Output pixmap height
-/// * `size` - Font size in pixels
-/// * `palette_index` - Color palette index (0 for default)
-///
-/// # Returns
-/// A pixmap containing the rendered glyph, or an error
+/// Use this when you already know the glyph should be handled through the COLR
+/// pipeline. For automatic fallback across COLR, SVG, bitmap, and outline
+/// sources, call [`render_glyph`] instead.
 pub fn render_color_glyph(
     font_data: &[u8],
     glyph_id: u32,
@@ -716,19 +625,10 @@ pub fn render_color_glyph(
     render_color_glyph_with_variations(font_data, glyph_id, width, height, size, palette_index, &[])
 }
 
-/// Render a color glyph from a variable font with specific axis values
+/// Render one COLR glyph with explicit variable-font coordinates.
 ///
-/// # Arguments
-/// * `font_data` - Font file data
-/// * `glyph_id` - Glyph ID to render
-/// * `width` - Output pixmap width
-/// * `height` - Output pixmap height
-/// * `size` - Font size in pixels
-/// * `palette_index` - Color palette index (0 for default)
-/// * `variations` - Slice of (axis_tag, value) pairs, e.g., `&[("wght", 700.0), ("wdth", 75.0)]`
-///
-/// # Returns
-/// A pixmap containing the rendered glyph, or an error
+/// `variations` is a slice of `(axis_tag, value)` pairs such as
+/// `[("wght", 700.0), ("wdth", 75.0)]`.
 pub fn render_color_glyph_with_variations(
     font_data: &[u8],
     glyph_id: u32,
@@ -741,34 +641,26 @@ pub fn render_color_glyph_with_variations(
     let font = skrifa::FontRef::new(font_data).map_err(|_| ColorRenderError::FontParseFailed)?;
     let glyph_id = GlyphId::new(glyph_id);
 
-    // Get color glyph (try v1 first, then v0)
     let color_glyph = font
         .color_glyphs()
         .get(glyph_id)
         .ok_or(ColorRenderError::GlyphNotFound)?;
 
-    // Get palette colors
     let palettes = ColorPalettes::new(&font);
     let palette = palettes
         .get(palette_index)
         .ok_or(ColorRenderError::NoPalette)?;
     let colors = palette.colors();
 
-    // Build location from variation settings
     let location = font.axes().location(variations.iter().copied());
 
-    // Get the actual COLR glyph bounding box in font units
-    // This is critical because COLR glyphs can extend beyond the outline bounds
     let upem = font.head().map(|h| h.units_per_em()).unwrap_or(1000) as f32;
     let scale = size / upem;
 
-    // Try to get the COLR bounds; fall back to the passed width/height if unavailable
     let location_ref = skrifa::instance::LocationRef::new(&[]);
     let colr_bbox = color_glyph.bounding_box(location_ref, skrifa::instance::Size::unscaled());
 
     let (pix_width, pix_height, translate_x, translate_y) = if let Some(bbox) = colr_bbox {
-        // COLR bbox is in font units; scale to pixels
-        // The bbox can have negative coordinates, so we need to translate
         let scaled_x0 = bbox.x_min * scale;
         let scaled_y0 = bbox.y_min * scale;
         let scaled_x1 = bbox.x_max * scale;
@@ -777,33 +669,20 @@ pub fn render_color_glyph_with_variations(
         let w = ((scaled_x1 - scaled_x0).ceil() as u32).max(1);
         let h = ((scaled_y1 - scaled_y0).ceil() as u32).max(1);
 
-        // Translation to shift content so bbox starts at (0, 0)
-        // After scaling, the top-left of content is at (scaled_x0, scaled_y0)
-        // We need to translate by -scaled_x0, -scaled_y0 to bring it to origin
-        // But since font coords are Y-up and pixmap is Y-down, we flip Y
         let tx = -scaled_x0;
-        // For Y: in font coords, y_max is the top. After flip, it becomes the bottom.
-        // We want the top (y_max in font coords) to be at y=0 in pixmap.
-        // So translate_y = scaled_y1 (which brings y_max to 0 in flipped coords)
         let ty = scaled_y1;
 
         (w, h, tx, ty)
     } else {
-        // Fallback to passed dimensions
         (width, height, 0.0, size)
     };
 
-    // Create output pixmap at the calculated size
     let mut pixmap =
         Pixmap::new(pix_width, pix_height).ok_or(ColorRenderError::PixmapCreationFailed)?;
 
-    // Create transform: scale from font units to pixels, flip Y, translate to origin
-    // Font coords: Y-up, origin at baseline
-    // Pixmap coords: Y-down, origin at top-left
     let transform =
         tiny_skia::Transform::from_scale(scale, -scale).post_translate(translate_x, translate_y);
 
-    // Create painter with transform and render
     {
         let mut painter =
             TinySkiaColorPainter::with_transform(&mut pixmap, colors, &font, size, transform);
@@ -813,17 +692,16 @@ pub fn render_color_glyph_with_variations(
     Ok(pixmap)
 }
 
-/// Check if a font has color glyphs (COLR table)
+/// Return true when the font exposes a COLR table.
 pub fn has_color_glyphs(font_data: &[u8]) -> bool {
     if let Ok(font) = skrifa::FontRef::new(font_data) {
-        // Check if COLR table exists
         font.colr().is_ok()
     } else {
         false
     }
 }
 
-/// Types of color font support available
+/// Color-glyph formats supported by a font.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorFontType {
     /// COLR v0 - layered color glyphs
@@ -836,10 +714,10 @@ pub enum ColorFontType {
     Bitmap,
 }
 
-/// Detect all color font capabilities in a font
+/// Detect the color-glyph formats supported by a font.
 ///
-/// Returns a list of color font types supported by the font.
-/// The order indicates preference (COLR v1 > COLR v0 > SVG > Bitmap).
+/// The returned order is the preferred render order: COLR v1, COLR v0, SVG,
+/// then bitmap data.
 pub fn detect_color_font_types(font_data: &[u8]) -> Vec<ColorFontType> {
     let mut types = Vec::new();
 
@@ -848,8 +726,6 @@ pub fn detect_color_font_types(font_data: &[u8]) -> Vec<ColorFontType> {
         Err(_) => return types,
     };
 
-    // Check COLR using color_glyphs() API
-    // Try to find any color glyph and check its format
     let color_glyphs = font.color_glyphs();
     let num_glyphs = font.maxp().map(|m| m.num_glyphs()).unwrap_or(0);
 
@@ -870,7 +746,6 @@ pub fn detect_color_font_types(font_data: &[u8]) -> Vec<ColorFontType> {
             .is_some()
         {
             has_colr_v0 = true;
-            // Don't break - keep looking for v1
         }
     }
 
@@ -881,7 +756,6 @@ pub fn detect_color_font_types(font_data: &[u8]) -> Vec<ColorFontType> {
         types.push(ColorFontType::ColrV0);
     }
 
-    // Check SVG table
     #[cfg(feature = "svg")]
     {
         if font.svg().is_ok() {
@@ -889,7 +763,6 @@ pub fn detect_color_font_types(font_data: &[u8]) -> Vec<ColorFontType> {
         }
     }
 
-    // Check bitmap tables
     #[cfg(feature = "bitmap")]
     {
         use skrifa::bitmap::BitmapStrikes;
@@ -902,22 +775,21 @@ pub fn detect_color_font_types(font_data: &[u8]) -> Vec<ColorFontType> {
     types
 }
 
-/// Check if a font has any color capabilities
+/// Return true when any color-glyph format is available.
 pub fn has_any_color_support(font_data: &[u8]) -> bool {
     !detect_color_font_types(font_data).is_empty()
 }
 
-/// Get the best color font type for rendering (highest quality first)
+/// Return the preferred color-glyph format for rendering.
 pub fn get_best_color_type(font_data: &[u8]) -> Option<ColorFontType> {
     detect_color_font_types(font_data).into_iter().next()
 }
 
-/// Get the color glyph format for a specific glyph
+/// Return the COLR format used by a specific glyph, if any.
 pub fn get_color_glyph_format(font_data: &[u8], glyph_id: u32) -> Option<ColorGlyphFormat> {
     let font = skrifa::FontRef::new(font_data).ok()?;
     let glyph_id = GlyphId::new(glyph_id);
 
-    // Check for COLRv1 first (more features)
     if font
         .color_glyphs()
         .get_with_format(glyph_id, ColorGlyphFormat::ColrV1)
@@ -926,7 +798,6 @@ pub fn get_color_glyph_format(font_data: &[u8], glyph_id: u32) -> Option<ColorGl
         return Some(ColorGlyphFormat::ColrV1);
     }
 
-    // Fall back to COLRv0
     if font
         .color_glyphs()
         .get_with_format(glyph_id, ColorGlyphFormat::ColrV0)
@@ -938,7 +809,7 @@ pub fn get_color_glyph_format(font_data: &[u8], glyph_id: u32) -> Option<ColorGl
     None
 }
 
-/// Result from unified glyph rendering
+/// Output from glyph rendering plus method metadata.
 #[derive(Debug)]
 pub struct RenderResult {
     /// The rendered pixmap
@@ -953,7 +824,7 @@ pub struct RenderResult {
     pub bearing_y: Option<f32>,
 }
 
-/// Method used for rendering a glyph
+/// Rendering path chosen for a glyph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RenderMethod {
     /// COLR v0 layered color
@@ -968,7 +839,7 @@ pub enum RenderMethod {
     Outline,
 }
 
-/// Content bounds within a pixmap (in pixel coordinates)
+/// Bounds of non-transparent pixels in a pixmap.
 #[derive(Debug, Clone, Copy)]
 pub struct ContentBounds {
     /// Leftmost column with non-transparent content (0-indexed)
@@ -993,10 +864,7 @@ impl ContentBounds {
     }
 }
 
-/// Compute the bounding box of non-transparent content in a pixmap
-///
-/// Returns None if the pixmap is fully transparent (no content).
-/// The bounds are in pixel coordinates with (0,0) at top-left.
+/// Compute the bounds of non-transparent pixels in a pixmap.
 pub fn compute_content_bounds(pixmap: &Pixmap) -> Option<ContentBounds> {
     let width = pixmap.width();
     let height = pixmap.height();
@@ -1009,7 +877,7 @@ pub fn compute_content_bounds(pixmap: &Pixmap) -> Option<ContentBounds> {
 
     for y in 0..height {
         for x in 0..width {
-            let idx = ((y * width + x) * 4 + 3) as usize; // Alpha channel
+            let idx = ((y * width + x) * 4 + 3) as usize;
             if data[idx] > 0 {
                 min_x = min_x.min(x);
                 max_x = max_x.max(x);
@@ -1020,7 +888,6 @@ pub fn compute_content_bounds(pixmap: &Pixmap) -> Option<ContentBounds> {
     }
 
     if min_x > max_x || min_y > max_y {
-        // Fully transparent
         None
     } else {
         Some(ContentBounds {
@@ -1032,21 +899,10 @@ pub fn compute_content_bounds(pixmap: &Pixmap) -> Option<ContentBounds> {
     }
 }
 
-/// Unified glyph renderer that auto-selects the best available method
+/// Render a glyph with the best available color source.
 ///
-/// Tries rendering methods in order of quality: COLR v1 > COLR v0 > SVG > Bitmap > Outline.
-/// Returns the rendered pixmap and which method was used.
-///
-/// # Arguments
-/// * `font_data` - Font file data
-/// * `glyph_id` - Glyph ID to render
-/// * `width` - Output pixmap width
-/// * `height` - Output pixmap height
-/// * `size` - Font size in pixels (ppem)
-/// * `palette_index` - Color palette index for COLR (0 for default)
-///
-/// # Returns
-/// A `RenderResult` with the pixmap and method used, or an error
+/// The fallback order is COLR v1, COLR v0, SVG, bitmap, then outline. The
+/// returned [`RenderResult`] reports which path was used.
 pub fn render_glyph(
     font_data: &[u8],
     glyph_id: u32,
@@ -1058,7 +914,10 @@ pub fn render_glyph(
     render_glyph_with_variations(font_data, glyph_id, width, height, size, palette_index, &[])
 }
 
-/// Unified glyph renderer that accepts variation settings
+/// Render a glyph with explicit variable-font coordinates.
+///
+/// This follows the same source-selection order as [`render_glyph`], but uses
+/// the supplied axis coordinates when the font supports variation settings.
 pub fn render_glyph_with_variations(
     font_data: &[u8],
     glyph_id: u32,
@@ -1071,7 +930,6 @@ pub fn render_glyph_with_variations(
     let font = skrifa::FontRef::new(font_data).map_err(|_| ColorRenderError::FontParseFailed)?;
     let gid = GlyphId::new(glyph_id);
 
-    // Try COLR v1 first
     if font
         .color_glyphs()
         .get_with_format(gid, ColorGlyphFormat::ColrV1)
@@ -1094,7 +952,6 @@ pub fn render_glyph_with_variations(
         });
     }
 
-    // Try COLR v0
     if font
         .color_glyphs()
         .get_with_format(gid, ColorGlyphFormat::ColrV0)
@@ -1117,10 +974,8 @@ pub fn render_glyph_with_variations(
         });
     }
 
-    // Try SVG with proper font-unit to pixel scaling
     #[cfg(feature = "svg")]
     {
-        // Get palette colors for CSS variable substitution
         let palettes = ColorPalettes::new(&font);
         let palette_colors: Vec<skrifa::color::Color> = palettes
             .get(palette_index)
@@ -1133,7 +988,7 @@ pub fn render_glyph_with_variations(
             width,
             height,
             &palette_colors,
-            size, // Pass font size as ppem for correct scaling
+            size,
         ) {
             return Ok(RenderResult {
                 pixmap,
@@ -1144,10 +999,8 @@ pub fn render_glyph_with_variations(
         }
     }
 
-    // Try bitmap with outline fallback - get bearing info from scaled result
     #[cfg(feature = "bitmap")]
     {
-        // Try scaled bitmap first (preserves bearing info)
         match bitmap::render_bitmap_glyph_scaled(font_data, glyph_id, size) {
             Ok(scaled) => Ok(RenderResult {
                 pixmap: scaled.pixmap,
@@ -1158,7 +1011,6 @@ pub fn render_glyph_with_variations(
             Err(bitmap::BitmapRenderError::NoBitmapTable)
             | Err(bitmap::BitmapRenderError::GlyphNotFound)
             | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {
-                // Fall back to outline rendering
                 let (pixmap, _used_bitmap) = bitmap::render_bitmap_glyph_or_outline(
                     font_data, glyph_id, width, height, size,
                 )?;
@@ -1173,7 +1025,6 @@ pub fn render_glyph_with_variations(
         }
     }
 
-    // Final fallback: outline only (no bitmap feature)
     #[cfg(not(feature = "bitmap"))]
     Err(ColorRenderError::GlyphNotFound)
 }
@@ -1261,26 +1112,20 @@ pub fn render_glyph_with_preference(
             GlyphSource::Svg => {
                 #[cfg(feature = "svg")]
                 {
-                    // Get palette colors for CSS variable substitution
                     let palettes = ColorPalettes::new(&font);
                     let palette_colors: Vec<skrifa::color::Color> = palettes
                         .get(palette_index)
                         .map(|p| p.colors().to_vec())
                         .unwrap_or_default();
 
-                    // Use ppem-aware SVG rendering for correct font-unit to pixel scaling
                     if let Ok(pixmap) = svg::render_svg_glyph_with_palette_and_ppem(
                         font_data,
                         glyph_id,
                         width,
                         height,
                         &palette_colors,
-                        size, // Pass font size as ppem for proper scaling
+                        size,
                     ) {
-                        // SVG viewBox is "0 -{upem} {upem} {upem}", meaning:
-                        // - Content origin (0,0) in SVG/font coords maps to bottom-left of pixmap
-                        // - bearing_x = 0 (content starts at x=0 in font coords)
-                        // - bearing_y = size (top of em-square is 'size' pixels above baseline)
                         return Ok((
                             RenderResult {
                                 pixmap,
@@ -1296,7 +1141,6 @@ pub fn render_glyph_with_preference(
             GlyphSource::Sbix | GlyphSource::Cbdt | GlyphSource::Ebdt => {
                 #[cfg(feature = "bitmap")]
                 {
-                    // Use render_bitmap_glyph_scaled to preserve bearing info
                     match bitmap::render_bitmap_glyph_scaled(font_data, glyph_id, size) {
                         Ok(scaled) => {
                             return Ok((
@@ -1311,15 +1155,12 @@ pub fn render_glyph_with_preference(
                         },
                         Err(bitmap::BitmapRenderError::NoBitmapTable)
                         | Err(bitmap::BitmapRenderError::GlyphNotFound)
-                        | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {
-                            // No bitmap for this glyph - continue to next source
-                        },
+                        | Err(bitmap::BitmapRenderError::UnsupportedFormat) => {},
                         Err(e) => return Err(e.into()),
                     }
                 }
             },
             GlyphSource::Glyf | GlyphSource::Cff | GlyphSource::Cff2 => {
-                // Outline rendering is handled in the caller; skip here.
                 continue;
             },
         }

@@ -1,11 +1,10 @@
-//! Where text gets professionally shaped: HarfBuzz backend
+//! HarfBuzz shaping backend for Typf.
 //!
-//! HarfBuzz is the gold standard for OpenType text shaping. It understands
-//! Arabic joins, Devanagari conjuncts, Thai vowel positioning, and all the
-//! complex ways that characters turn into glyphs. This is the shaper you want
-//! for real-world text in any language.
-
-// this_file: backends/typf-shape-hb/src/lib.rs
+//! Shaping is the step that turns characters into positioned glyphs. That work
+//! is simple for plain Latin text, but it becomes essential for Arabic joins,
+//! Devanagari conjuncts, Thai vowel placement, and any script where one
+//! character does not map cleanly to one painted glyph. This crate delegates
+//! that work to HarfBuzz and translates Typf's neutral API into HarfBuzz calls.
 
 use std::str::FromStr;
 use std::sync::Arc;
@@ -19,40 +18,34 @@ use typf_core::{
     ShapingParams,
 };
 
-// Re-export shared shaping cache from typf-core
 pub use typf_core::shaping_cache::{CacheStats, ShapingCache, ShapingCacheKey, SharedShapingCache};
 
-/// Professional text shaping powered by HarfBuzz
+/// Text shaper backed by HarfBuzz.
 ///
-/// Optionally caches shaping results to avoid expensive re-shaping of identical text.
+/// It optionally caches shaping results so repeated requests for the same text,
+/// font, language, and feature set do not pay the shaping cost again.
 pub struct HarfBuzzShaper {
-    /// Optional shaping cache for performance
     cache: Option<SharedShapingCache>,
 }
 
 impl HarfBuzzShaper {
-    /// Creates a new HarfBuzz shaper ready to handle any script
+    /// Create a HarfBuzz shaper without an internal cache.
     pub fn new() -> Self {
         Self { cache: None }
     }
 
-    /// Creates a new HarfBuzz shaper with caching enabled
-    ///
-    /// Uses default cache capacities (L1: 100, L2: 500 entries)
+    /// Create a HarfBuzz shaper with its own default cache.
     pub fn with_cache() -> Self {
         Self {
             cache: Some(Arc::new(std::sync::RwLock::new(ShapingCache::new()))),
         }
     }
 
-    /// Creates a new HarfBuzz shaper with a custom cache
-    ///
-    /// Useful for sharing a cache across multiple shapers
+    /// Create a HarfBuzz shaper that reuses an existing shared cache.
     pub fn with_shared_cache(cache: SharedShapingCache) -> Self {
         Self { cache: Some(cache) }
     }
 
-    /// Returns cache statistics if caching is enabled
     pub fn cache_stats(&self) -> Option<CacheStats> {
         self.cache
             .as_ref()
@@ -60,7 +53,6 @@ impl HarfBuzzShaper {
             .map(|c| c.stats())
     }
 
-    /// Returns the cache hit rate (0.0 to 1.0) if caching is enabled
     pub fn cache_hit_rate(&self) -> Option<f64> {
         self.cache
             .as_ref()
@@ -68,7 +60,7 @@ impl HarfBuzzShaper {
             .map(|c| c.hit_rate())
     }
 
-    /// Translates our direction enum to HarfBuzz's format
+    /// Convert Typf's direction enum into HarfBuzz's direction enum.
     fn to_hb_direction(dir: Direction) -> HbDirection {
         match dir {
             Direction::LeftToRight => HbDirection::Ltr,
@@ -94,7 +86,6 @@ impl Stage for HarfBuzzShaper {
         &self,
         ctx: typf_core::context::PipelineContext,
     ) -> Result<typf_core::context::PipelineContext> {
-        // HarfBuzz doesn't process pipeline context directly
         Ok(ctx)
     }
 }
@@ -119,10 +110,8 @@ impl Shaper for HarfBuzzShaper {
             });
         }
 
-        // Try to get the actual font data
         let font_data = font.data();
 
-        // Check cache if enabled
         let cache_key = if self.cache.is_some() {
             let key = ShapingCacheKey::new(
                 text,
@@ -134,7 +123,6 @@ impl Shaper for HarfBuzzShaper {
                 params.features.clone(),
                 params.variations.clone(),
             );
-            // Try to get from cache
             if let Some(ref cache) = self.cache {
                 if let Ok(cache_guard) = cache.read() {
                     if let Some(result) = cache_guard.get(&key) {
@@ -147,7 +135,6 @@ impl Shaper for HarfBuzzShaper {
             None
         };
         if font_data.is_empty() {
-            // No font data? Fall back to basic shaping
             let mut glyphs = Vec::new();
             let mut x_offset = 0.0;
 
@@ -172,7 +159,6 @@ impl Shaper for HarfBuzzShaper {
                 direction: params.direction,
             };
 
-            // Store fallback result in cache if enabled
             if let Some(key) = cache_key {
                 if let Some(ref cache) = self.cache {
                     if let Ok(cache_guard) = cache.write() {
@@ -184,15 +170,12 @@ impl Shaper for HarfBuzzShaper {
             return Ok(result);
         }
 
-        // Load the font into HarfBuzz
         let face = Face::from_bytes(font_data, 0);
         let mut hb_font = HbFont::new(face);
 
-        // HarfBuzz uses 26.6 fixed-point for coordinates
-        let scale = (params.size * 64.0) as i32; // 64 units per point
+        let scale = (params.size * 64.0) as i32;
         hb_font.set_scale(scale, scale);
 
-        // Apply variable font coordinates (weight, width, optical size, etc.)
         if !params.variations.is_empty() {
             let variations: Vec<harfbuzz_rs::Variation> = params
                 .variations
@@ -215,19 +198,16 @@ impl Shaper for HarfBuzzShaper {
             hb_font.set_variations(&variations);
         }
 
-        // Set up the text buffer with all our parameters
         let mut buffer = UnicodeBuffer::new()
             .add_str(text)
             .set_direction(Self::to_hb_direction(params.direction));
 
-        // Tell HarfBuzz which language rules to use
         if let Some(ref lang) = params.language {
             if let Ok(language) = harfbuzz_rs::Language::from_str(lang) {
                 buffer = buffer.set_language(language);
             }
         }
 
-        // Specify the script (crucial for languages like Arabic, Devanagari)
         if let Some(ref script_str) = params.script {
             if script_str.len() == 4 {
                 let bytes = script_str.as_bytes();
@@ -241,7 +221,6 @@ impl Shaper for HarfBuzzShaper {
             }
         }
 
-        // Convert OpenType features (liga, kern, etc.) to HarfBuzz format
         let hb_features: Vec<Feature> = params
             .features
             .iter()
@@ -261,10 +240,8 @@ impl Shaper for HarfBuzzShaper {
             })
             .collect();
 
-        // Let HarfBuzz work its magic
         let output = harfbuzz_rs::shape(&hb_font, buffer, &hb_features);
 
-        // Pull out the positioned glyphs HarfBuzz created
         let mut glyphs = Vec::new();
         let mut x_offset = 0.0;
 
@@ -293,7 +270,6 @@ impl Shaper for HarfBuzzShaper {
             direction: params.direction,
         };
 
-        // Store in cache if enabled
         if let Some(key) = cache_key {
             if let Some(ref cache) = self.cache {
                 if let Ok(cache_guard) = cache.write() {
@@ -306,7 +282,6 @@ impl Shaper for HarfBuzzShaper {
     }
 
     fn supports_script(&self, _script: &str) -> bool {
-        // HarfBuzz knows how to shape every script there is
         true
     }
 

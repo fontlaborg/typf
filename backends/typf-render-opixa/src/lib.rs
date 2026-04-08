@@ -1,19 +1,10 @@
-//! Opixa Renderer: where mathematical curves become beautiful pixels
+//! Monochrome rasterizer for Typf.
 //!
-//! Fonts store perfect vectors, but screens demand imperfect pixels. Opixa bridges
-//! this gap with surgical precision—no hinting artifacts, no blurry compromises,
-//! just crisp text that honors the font designer's original vision. This is
-//! pure Rust proving it can dance with C in the high-stakes world of typography.
-//!
-//! ## The Speed Symphony
-//!
-//! - `fixed`: Subpixel mathematics that dance between whole numbers
-//! - `curves`: Taming rebellious Bézier curves with subdivision magic
-//! - `edge`: The detective work of organizing line segments for rasterization
-//! - `scan_converter`: The conductor orchestrating our pixel-perfect performance
-//! - `grayscale`: The artist's touch that transforms crisp to smooth
-//! - `simd`: Four-way pixel processing that makes modern CPUs sing
-//! - `parallel`: Multi-cored mastery when you need all the horsepower
+//! Opixa is the pure-Rust renderer that turns shaped glyph outlines into pixel
+//! coverage data. It is focused on predictable outline rasterization rather than
+//! color-glyph support. The submodules divide that work into fixed-point math,
+//! curve flattening, edge handling, scan conversion, and optional SIMD or
+//! parallel acceleration.
 
 use std::sync::Arc;
 
@@ -25,27 +16,23 @@ pub mod grayscale;
 pub mod rasterizer;
 pub mod scan_converter;
 
-/// The ancient question: what defines the inside of a shape?
+/// Rule for deciding which parts of a path count as inside.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FillRule {
-    /// Non-zero winding: follow the curve's direction, count the crossings
-    /// Most fonts choose this—it matches the designer's original intent
+    /// Non-zero winding. Count edge crossings with direction.
     NonZeroWinding,
-    /// Even-odd rule: cross once = inside, cross twice = outside
-    /// Essential for complex glyphs that intersect themselves
+    /// Even-odd rule. An odd number of crossings means inside.
     EvenOdd,
 }
 
-/// The readability guardian: saving thin strokes from pixel oblivion
+/// Strategy for preserving very thin strokes.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DropoutMode {
-    /// Let nature take its course (fast but potentially illegible)
+    /// Do not apply dropout handling.
     None,
-    /// Basic gap detection when strokes get too thin for pixels
-    /// The sweet spot for most everyday text rendering
+    /// Basic protection for thin strokes that might otherwise disappear.
     Simple,
-    /// Smart perpendicular scanning preserves stroke integrity
-    /// For when text must remain readable at microscopic sizes
+    /// More expensive dropout handling for extreme small-size rendering.
     Smart,
 }
 
@@ -56,40 +43,25 @@ use typf_core::{
     Color, GlyphSource, RenderParams,
 };
 
-// SIMD gives us 4-8x speedup when modern CPUs are available
-// We fall back gracefully to scalar code on older hardware
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 mod simd;
 
-// Parallel processing makes large text blocks fly
-// We split the work across all available cores intelligently
 #[cfg(feature = "parallel")]
 pub mod parallel;
 
-/// Your artisan glyph crafter: precision in every pixel
+/// Renderer that rasterizes outline glyphs into bitmaps.
 ///
-/// This isn't just another rasterizer—Opixa treats every glyph as a masterpiece.
-/// We use scan conversion algorithms that respect font geometry while
-/// producing the smoothest text possible without grid fitting artifacts.
+/// It applies scan conversion to glyph outlines and composites the resulting
+/// coverage onto the target bitmap. Caching is optional and can avoid repeated
+/// rasterization of the same glyph at the same size.
 pub struct OpixaRenderer {
-    /// Maximum width for any bitmap.
-    /// Default: 65535 pixels, configurable via TYPF_MAX_BITMAP_WIDTH.
     max_width: u32,
-    /// Maximum height for any bitmap.
-    /// Default: 4095 pixels, configurable via TYPF_MAX_BITMAP_HEIGHT.
     max_height: u32,
-    /// Maximum total pixels (width × height).
-    /// Default: 4 megapixels, configurable via TYPF_MAX_BITMAP_PIXELS.
     max_pixels: u64,
-    /// Optional glyph cache for efficient repeated rendering
     cache: Option<Arc<glyph_cache::GlyphCache>>,
 }
 
 impl OpixaRenderer {
-    /// Ready your pixel artist for the transformation to come.
-    ///
-    /// Uses default limits: 65535 px width, 4095 px height, 4M total pixels.
-    /// Configure via TYPF_MAX_BITMAP_WIDTH, TYPF_MAX_BITMAP_HEIGHT, TYPF_MAX_BITMAP_PIXELS.
     pub fn new() -> Self {
         Self {
             max_width: typf_core::get_max_bitmap_width(),
@@ -99,15 +71,10 @@ impl OpixaRenderer {
         }
     }
 
-    /// Create renderer with glyph caching enabled
-    ///
-    /// The cache stores rendered glyph bitmaps to avoid re-rasterization.
-    /// Default capacity: 1000 glyphs (good for most text rendering).
     pub fn with_cache() -> Self {
         Self::with_cache_capacity(1000)
     }
 
-    /// Create renderer with custom cache capacity
     pub fn with_cache_capacity(capacity: usize) -> Self {
         Self {
             max_width: typf_core::get_max_bitmap_width(),
@@ -117,37 +84,27 @@ impl OpixaRenderer {
         }
     }
 
-    /// Get cache statistics if caching is enabled
     pub fn cache_stats(&self) -> Option<glyph_cache::GlyphCacheStats> {
         self.cache.as_ref().map(|c| c.stats())
     }
 
-    /// Get cache hit rate if caching is enabled
     pub fn cache_hit_rate(&self) -> Option<f64> {
         self.cache.as_ref().map(|c| c.hit_rate())
     }
 
-    /// Clear the glyph cache
     pub fn clear_cache(&self) {
         if let Some(ref cache) = self.cache {
             cache.clear();
         }
     }
 
-    /// Summon your parallel rendering team for big jobs
-    ///
-    /// Single glyphs don't need parallelism, but paragraphs and documents
-    /// benefit immensely from splitting work across available cores.
+    /// Create a parallel wrapper for larger rendering workloads.
     #[cfg(feature = "parallel")]
     pub fn with_parallel_rendering(&self) -> parallel::ParallelRenderer {
         parallel::ParallelRenderer::new()
     }
 
-    /// The final composition: where glyphs become art on canvas
-    ///
-    /// We take anti-aliased glyph coverage data and blend it into your final
-    /// image with proper alpha compositing. SIMD makes this operation
-    /// breathtakingly fast on modern processors.
+    /// Blend one rasterized glyph bitmap onto the destination canvas.
     fn composite_glyph(
         &self,
         canvas: &mut [u8],
@@ -157,7 +114,6 @@ impl OpixaRenderer {
         y: i32,
         color: Color,
     ) {
-        // Empty glyphs need no love—move along quickly
         if glyph.width == 0 || glyph.height == 0 {
             return;
         }
@@ -166,17 +122,12 @@ impl OpixaRenderer {
         let glyph_width = glyph.width;
         let glyph_height = glyph.height;
 
-        // Apply professional typography: bearings ensure perfect alignment
-        // These offsets are the difference between amateur and pro text layout
         let x = x + glyph.left;
-        let y = y - glyph.top; // Font coordinates are backward from screen coordinates
+        let y = y - glyph.top;
         let canvas_height = canvas.len() as u32 / (canvas_width * 4);
 
-        // Transform grayscale coverage into beautiful colored pixels
-        // Each coverage value becomes an alpha channel for our target color
         let mut colored_glyph = Vec::with_capacity((glyph_width * glyph_height * 4) as usize);
 
-        // Map coverage to alpha: more coverage = more opaque color
         for coverage in glyph_bitmap.iter() {
             let alpha = (*coverage as u16 * color.a as u16 / 255) as u8;
             colored_glyph.push(color.r);
@@ -185,19 +136,18 @@ impl OpixaRenderer {
             colored_glyph.push(alpha);
         }
 
-        // SIMD path: let modern CPUs do what they do best
         #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
         {
             for gy in 0..glyph_height {
                 let py = y + gy as i32;
                 if py < 0 || py >= canvas_height as i32 {
-                    continue; // No point processing pixels we can't see
+                    continue;
                 }
 
                 let px_start = x.max(0);
                 let px_end = (x + glyph_width as i32).min(canvas_width as i32);
                 if px_start >= px_end {
-                    continue; // Skip empty rows entirely for speed
+                    continue;
                 }
 
                 let glyph_x_start = (px_start - x) as u32;
@@ -207,7 +157,6 @@ impl OpixaRenderer {
                 let canvas_row_start = ((py as u32 * canvas_width + px_start as u32) * 4) as usize;
                 let glyph_row_start = ((gy * glyph_width + glyph_x_start) * 4) as usize;
 
-                // SIMD processes this entire row in massive parallel chunks
                 simd::blend_over(
                     &mut canvas[canvas_row_start..canvas_row_start + row_width],
                     &colored_glyph[glyph_row_start..glyph_row_start + row_width],
@@ -215,7 +164,6 @@ impl OpixaRenderer {
             }
         }
 
-        // Scalar path: the reliable workhorse that never fails
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         {
             for gy in 0..glyph_height {
@@ -223,19 +171,17 @@ impl OpixaRenderer {
                     let px = x + gx as i32;
                     let py = y + gy as i32;
 
-                    // Respect canvas boundaries—no memory corruption here
                     if px < 0 || py < 0 || px >= canvas_width as i32 || py >= canvas_height as i32 {
                         continue;
                     }
 
                     let coverage = glyph_bitmap[(gy * glyph_width + gx) as usize];
                     if coverage == 0 {
-                        continue; // Invisible pixels waste no processing time
+                        continue;
                     }
 
                     let canvas_idx = ((py as u32 * canvas_width + px as u32) * 4) as usize;
 
-                    // Porter-Duff blending: the industry standard for smooth edges
                     let alpha = (coverage as f32 / 255.0) * (color.a as f32 / 255.0);
                     let inv_alpha = 1.0 - alpha;
 
@@ -285,22 +231,17 @@ impl Renderer for OpixaRenderer {
             .into());
         }
 
-        // Extract raw font bytes for our rasterizer to analyze
         let font_data = font.data();
         let padding = params.padding as f32;
         let glyph_size = shaped.advance_height;
 
-        // Phase 1: Render all glyphs first to get accurate bounds
-        // This ensures we don't clip tall glyphs (emoji, Thai marks, Arabic diacritics)
         let mut rendered_glyphs: Vec<RenderedGlyph> = Vec::new();
-        let mut min_y: f32 = 0.0; // Relative to baseline
-        let mut max_y: f32 = 0.0; // Relative to baseline
+        let mut min_y: f32 = 0.0;
+        let mut max_y: f32 = 0.0;
 
-        // Create rasterizer only if we have glyphs
         let mut rasterizer = if !shaped.glyphs.is_empty() {
             match rasterizer::GlyphRasterizer::new(font_data, glyph_size) {
                 Ok(mut r) => {
-                    // Apply variable font customizations before any rendering
                     if !params.variations.is_empty() {
                         if let Err(e) = r.set_variations(&params.variations) {
                             log::warn!("Variable font setup failed: {}", e);
@@ -317,9 +258,7 @@ impl Renderer for OpixaRenderer {
             None
         };
 
-        // Render each glyph and collect bounds (with caching if enabled)
         for glyph in &shaped.glyphs {
-            // Try cache first if enabled
             let glyph_bitmap = if let Some(ref cache) = self.cache {
                 let cache_key = glyph_cache::GlyphCacheKey::new(
                     font_data,
@@ -331,7 +270,6 @@ impl Renderer for OpixaRenderer {
                 if let Some(cached) = cache.get(&cache_key) {
                     cached
                 } else {
-                    // Cache miss - render and store
                     let Some(ref mut rast) = rasterizer else {
                         log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
                         continue;
@@ -344,7 +282,7 @@ impl Renderer for OpixaRenderer {
                     ) {
                         Ok(b) => b,
                         Err(e) => {
-                            log::warn!("Glyph {} refused to render: {}", glyph.id, e);
+                            log::warn!("Glyph {} rasterization failed: {}", glyph.id, e);
                             continue;
                         },
                     };
@@ -353,7 +291,6 @@ impl Renderer for OpixaRenderer {
                     bitmap
                 }
             } else {
-                // No cache - render directly
                 let Some(ref mut rast) = rasterizer else {
                     log::warn!("Skipping glyph {} (no rasterizer available)", glyph.id);
                     continue;
@@ -362,20 +299,16 @@ impl Renderer for OpixaRenderer {
                 match rast.render_glyph(glyph.id, FillRule::NonZeroWinding, DropoutMode::None) {
                     Ok(bitmap) => bitmap,
                     Err(e) => {
-                        log::warn!("Glyph {} refused to render: {}", glyph.id, e);
+                        log::warn!("Glyph {} rasterization failed: {}", glyph.id, e);
                         continue;
                     },
                 }
             };
 
-            // Skip empty glyphs (like spaces)
             if glyph_bitmap.width == 0 || glyph_bitmap.height == 0 {
                 continue;
             }
 
-            // `top` is distance from baseline to top of glyph (positive = above baseline)
-            // glyph top relative to baseline = glyph.y + top
-            // glyph bottom relative to baseline = glyph.y + top - height
             let glyph_top = glyph.y + glyph_bitmap.top as f32;
             let glyph_bottom = glyph.y + glyph_bitmap.top as f32 - glyph_bitmap.height as f32;
 
@@ -389,7 +322,6 @@ impl Renderer for OpixaRenderer {
             });
         }
 
-        // Phase 2: Calculate canvas dimensions from actual glyph bounds
         let min_width = if shaped.glyphs.is_empty() && shaped.advance_width == 0.0 {
             1
         } else {
@@ -397,11 +329,6 @@ impl Renderer for OpixaRenderer {
         };
         let width = min_width.max(1);
 
-        // Height is from highest point above baseline to lowest point below.
-        //
-        // Baseline standardization (metrics-first):
-        // - Prefer font ascent/descent (stable across strings)
-        // - Expand to include any glyph bounds that exceed the metrics (effects, extreme accents)
         let (metrics_ascent, metrics_descent) = font
             .metrics()
             .filter(|m| m.units_per_em > 0 && (m.ascent != 0 || m.descent != 0))
@@ -419,18 +346,16 @@ impl Renderer for OpixaRenderer {
         let bottom = glyph_bottom.max(metrics_descent);
 
         let content_height = if rendered_glyphs.is_empty() {
-            16.0 // Default minimum for empty text
+            16.0
         } else {
             top + bottom
         };
         let height = (content_height + padding * 2.0).ceil() as u32;
 
-        // Sanity check: prevent impossible canvas sizes
         if width == 0 || height == 0 {
             return Err(RenderError::ZeroDimensions { width, height }.into());
         }
 
-        // Check per-dimension limits (width and height have separate limits)
         if width > self.max_width || height > self.max_height {
             return Err(RenderError::DimensionsTooLarge {
                 width,
@@ -441,7 +366,6 @@ impl Renderer for OpixaRenderer {
             .into());
         }
 
-        // Check total pixel count to prevent memory bombs
         let total_pixels = width as u64 * height as u64;
         if total_pixels > self.max_pixels {
             return Err(RenderError::TotalPixelsTooLarge {
@@ -453,10 +377,8 @@ impl Renderer for OpixaRenderer {
             .into());
         }
 
-        // Allocate our pristine canvas with proper RGBA layout
         let mut canvas = vec![0u8; (width * height * 4) as usize];
 
-        // Paint the background before any glyph work begins
         if let Some(bg) = params.background {
             for pixel in canvas.chunks_exact_mut(4) {
                 pixel[0] = bg.r;
@@ -466,14 +388,12 @@ impl Renderer for OpixaRenderer {
             }
         }
 
-        // Baseline position: padding + distance from top to baseline
         let baseline_y = if rendered_glyphs.is_empty() {
             padding
         } else {
             padding + top
         };
 
-        // Phase 3: Composite pre-rendered glyphs onto canvas
         for rg in rendered_glyphs {
             let x = (rg.glyph_x + padding) as i32;
             let y = (baseline_y + rg.glyph_y) as i32;
@@ -494,7 +414,6 @@ impl Renderer for OpixaRenderer {
     }
 }
 
-/// A rendered glyph ready for compositing
 struct RenderedGlyph {
     bitmap: rasterizer::GlyphBitmap,
     glyph_x: f32,

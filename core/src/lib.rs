@@ -1,95 +1,32 @@
-//! # typf-core: The Engine Room
+//! Core traits and shared types for Typf.
 //!
-//! Six stages from text to pixels. No magic, just engineering.
+//! This crate defines the common contract used by the rest of the Typf
+//! workspace: pipeline stages, shaping and rendering traits, shared error
+//! types, caches, and the data structures that move from one stage to the
+//! next.
 //!
-//! Text enters as Unicode chaos, exits as perfect pixels. This crate is the
-//! engine room that makes text rendering work when half your characters are
-//! Arabic and the other half are emoji.
+//! Typf models text rendering as six conceptual steps:
 //!
-//! ## The Pipeline: Brutal Simplicity
+//! 1. read input text,
+//! 2. analyse script and direction,
+//! 3. choose a font,
+//! 4. shape characters into positioned glyphs,
+//! 5. render those glyphs into pixels or vector data,
+//! 6. export the result.
 //!
-//! Every text walks this path, no shortcuts:
+//! The default pipeline currently exposes the shaping, rendering, and export
+//! steps directly. The earlier stages still matter because other crates may use
+//! them for bidi resolution, text segmentation, or font fallback.
 //!
-//! 1. **Input Parsing** - Raw strings → structured data. We don't guess encoding.
-//! 2. **Unicode Processing** - Bidi, scripts, segmentation. The hard stuff.
-//! 3. **Font Selection** - Right font for each character, period. Fallback that actually works.
-//! 4. **Shaping** - Characters → positioned glyphs. Where HarfBuzz lives.
-//! 5. **Rendering** - Glyphs → pixels/vectors. SIMD or die.
-//! 6. **Export** - Your format, ready to ship.
+//! To extend Typf, implement one or more of these traits:
 //!
-//! ## Build Your First Pipeline
+//! - [`Stage`] for a general pipeline step,
+//! - [`Shaper`] for text shaping,
+//! - [`Renderer`] for glyph rendering,
+//! - [`Exporter`] for serialization,
+//! - [`traits::FontRef`] for access to font data.
 //!
-//! ```rust,no_run
-//! use typf_core::{Pipeline, RenderParams, ShapingParams};
-//! use std::sync::Arc;
-//!
-//! # use typf_core::traits::*;
-//! # use typf_core::context::PipelineContext;
-//! # use typf_core::error::TypfError;
-//! # struct MyShaper;
-//! # impl Stage for MyShaper {
-//! #     fn name(&self) -> &'static str { "test" }
-//! #     fn process(&self, _ctx: PipelineContext) -> Result<PipelineContext, TypfError> { unimplemented!() }
-//! # }
-//! # impl Shaper for MyShaper {
-//! #     fn name(&self) -> &'static str { "test" }
-//! #     fn shape(&self, _: &str, _: Arc<dyn FontRef>, _: &ShapingParams)
-//! #         -> typf_core::Result<typf_core::types::ShapingResult> { unimplemented!() }
-//! # }
-//! # struct MyRenderer;
-//! # impl Stage for MyRenderer {
-//! #     fn name(&self) -> &'static str { "test" }
-//! #     fn process(&self, _ctx: PipelineContext) -> Result<PipelineContext, TypfError> { unimplemented!() }
-//! # }
-//! # impl Renderer for MyRenderer {
-//! #     fn name(&self) -> &'static str { "test" }
-//! #     fn render(&self, _: &typf_core::types::ShapingResult, _: Arc<dyn FontRef>, _: &RenderParams)
-//! #         -> typf_core::Result<typf_core::types::RenderOutput> { unimplemented!() }
-//! # }
-//! # struct MyExporter;
-//! # impl Stage for MyExporter {
-//! #     fn name(&self) -> &'static str { "test" }
-//! #     fn process(&self, _ctx: PipelineContext) -> Result<PipelineContext, TypfError> { unimplemented!() }
-//! # }
-//! # impl Exporter for MyExporter {
-//! #     fn name(&self) -> &'static str { "test" }
-//! #     fn export(&self, _: &typf_core::types::RenderOutput)
-//! #         -> typf_core::Result<Vec<u8>> { unimplemented!() }
-//! #     fn extension(&self) -> &'static str { "png" }
-//! #     fn mime_type(&self) -> &'static str { "image/png" }
-//! # }
-//! # fn load_font() -> Arc<dyn FontRef> { unimplemented!() }
-//!
-//! let pipeline = Pipeline::builder()
-//!     .shaper(Arc::new(MyShaper))
-//!     .renderer(Arc::new(MyRenderer))
-//!     .exporter(Arc::new(MyExporter))
-//!     .build()?;
-//!
-//! let font = load_font();
-//! let output = pipeline.process(
-//!     "Hello, World!",
-//!     font,
-//!     &ShapingParams::default(),
-//!     &RenderParams::default(),
-//! )?;
-//! # Ok::<(), typf_core::TypfError>(())
-//! ```
-//!
-//! ## The Traits That Power Everything
-//!
-//! Want to add your own backend? Implement one of these:
-//!
-//! - [`Stage`] - The foundation every pipeline component builds upon.
-//! - [`Shaper`] - Where characters become glyphs.
-//! - [`Renderer`] - Where glyphs become images.
-//! - [`Exporter`] - Where images become files.
-//! - [`traits::FontRef`] - Your window into font data.
-//!
-//! Data flows through the types in [`types`] - these structures carry
-//! the results from one stage to the next.
-
-// this_file: libs/typf/core/src/lib.rs
+//! Shared values passed between those steps live in [`types`].
 
 use std::collections::HashSet;
 
@@ -111,9 +48,6 @@ pub const DEFAULT_MAX_BITMAP_HEIGHT: u32 = 16 * 1024;
 /// A 4-megapixel RGBA8 bitmap consumes 16 MB.
 pub const DEFAULT_MAX_BITMAP_PIXELS: u64 = 1024 * 1024 * 1024;
 
-/// Get max bitmap width from environment or use default (16,777,216).
-///
-/// Set `TYPF_MAX_BITMAP_WIDTH` to override if you have infinite RAM.
 pub fn get_max_bitmap_width() -> u32 {
     std::env::var("TYPF_MAX_BITMAP_WIDTH")
         .ok()
@@ -121,9 +55,6 @@ pub fn get_max_bitmap_width() -> u32 {
         .unwrap_or(DEFAULT_MAX_BITMAP_WIDTH)
 }
 
-/// Get max bitmap height from environment or use default (16384).
-///
-/// Set `TYPF_MAX_BITMAP_HEIGHT` to override.
 pub fn get_max_bitmap_height() -> u32 {
     std::env::var("TYPF_MAX_BITMAP_HEIGHT")
         .ok()
@@ -131,9 +62,6 @@ pub fn get_max_bitmap_height() -> u32 {
         .unwrap_or(DEFAULT_MAX_BITMAP_HEIGHT)
 }
 
-/// Get max bitmap pixels from environment or use default (1 Gpix).
-///
-/// Set `TYPF_MAX_BITMAP_PIXELS` to override.
 pub fn get_max_bitmap_pixels() -> u64 {
     std::env::var("TYPF_MAX_BITMAP_PIXELS")
         .ok()
@@ -157,10 +85,6 @@ pub use error::{Result, TypfError};
 pub use pipeline::{Pipeline, PipelineBuilder};
 pub use traits::{Exporter, Renderer, Shaper, Stage};
 
-// =============================================================================
-// Security Limits
-// =============================================================================
-
 /// Maximum font size in pixels to prevent DoS attacks.
 ///
 /// Set very high (100K px) to catch only obvious attacks while
@@ -173,10 +97,10 @@ pub const MAX_FONT_SIZE: f32 = 100_000.0;
 /// allowing legitimate bulk text processing.
 pub const MAX_GLYPH_COUNT: usize = 10_000_000;
 
-/// The data structures that power the pipeline.
+/// The data structures that move through the pipeline.
 ///
-/// These structs are the blood cells of the system, carrying data
-/// from the heart (shaper) to the limbs (renderer/exporter).
+/// These types carry the output of one stage into the next, so they are shared
+/// across shapers, renderers, exporters, and bindings.
 pub mod types {
     /// Unique identifier for a glyph within a font.
     pub type GlyphId = u32;
@@ -216,7 +140,6 @@ pub mod types {
         pub hidden: bool,
     }
 
-    /// Which way the text flows.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Direction {
         /// Standard Latin, Cyrillic, etc.
@@ -229,7 +152,7 @@ pub mod types {
         BottomToTop,
     }
 
-    /// A glyph that knows exactly where it belongs.
+    /// One shaped glyph with its final position inside the run.
     #[derive(Debug, Clone, PartialEq)]
     pub struct PositionedGlyph {
         /// The glyph ID in the font.
@@ -244,7 +167,7 @@ pub mod types {
         pub cluster: u32,
     }
 
-    /// What emerges after shaping: glyphs positioned and ready to render.
+    /// Output from the shaping stage, ready for rendering.
     #[derive(Debug, Clone)]
     pub struct ShapingResult {
         /// The list of positioned glyphs.
@@ -257,7 +180,6 @@ pub mod types {
         pub direction: Direction,
     }
 
-    /// The forms output can take.
     #[derive(Debug, Clone)]
     pub enum RenderOutput {
         /// Rasterized bitmap (PNG, PBM, etc.).
@@ -289,7 +211,6 @@ pub mod types {
         }
     }
 
-    /// Raw pixel data from rasterized glyphs
     #[derive(Debug, Clone)]
     pub struct BitmapData {
         pub width: u32,
@@ -305,7 +226,6 @@ pub mod types {
         }
     }
 
-    /// How pixels are arranged in the bitmap
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum BitmapFormat {
         Rgba8,
@@ -314,14 +234,12 @@ pub mod types {
         Gray1,
     }
 
-    /// Scalable paths instead of pixels
     #[derive(Debug, Clone)]
     pub struct VectorData {
         pub format: VectorFormat,
         pub data: String,
     }
 
-    /// Which vector format we're speaking
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum VectorFormat {
         Svg,
@@ -472,7 +390,6 @@ pub mod types {
         }
     }
 
-    /// How text gets broken into manageable pieces
     #[derive(Debug, Clone)]
     pub struct SegmentOptions {
         pub language: Option<String>,
@@ -492,7 +409,6 @@ pub mod types {
         }
     }
 
-    /// Text that shares the same script, direction, and language
     #[derive(Debug, Clone)]
     pub struct TextRun {
         pub text: String,
@@ -504,7 +420,6 @@ pub mod types {
     }
 }
 
-/// How shaping should behave
 #[derive(Debug, Clone)]
 pub struct ShapingParams {
     pub size: f32,
@@ -593,7 +508,6 @@ pub fn validate_glyph_count(count: usize) -> Result<(), error::RenderError> {
     Ok(())
 }
 
-/// Which glyph data sources are allowed and in what order
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum GlyphSource {
     Glyf,
@@ -677,7 +591,6 @@ impl Default for GlyphSourcePreference {
     }
 }
 
-/// How rendering should look
 #[derive(Debug, Clone)]
 pub struct RenderParams {
     pub foreground: Color,
@@ -710,7 +623,6 @@ impl Default for RenderParams {
     }
 }
 
-/// Target output for rendering operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RenderMode {
     /// Raster output (default)
@@ -719,7 +631,6 @@ pub enum RenderMode {
     Vector(types::VectorFormat),
 }
 
-/// Simple RGBA color that works everywhere
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Color {
     pub r: u8,

@@ -1,6 +1,10 @@
-//! The engine that drives text through six stages to become images
-
-// this_file: crates/typf-core/src/pipeline.rs
+//! Pipeline orchestration for shaping, rendering, and export.
+//!
+//! [`Pipeline::process`] is the direct execution path: it calls the configured
+//! shaper, renderer, and exporter in sequence. [`Pipeline::execute`] runs the
+//! explicit stage list stored in a [`PipelineContext`]. In the default pipeline,
+//! the first three stages are placeholders reserved for future preprocessing and
+//! font-selection work.
 
 use crate::{
     context::PipelineContext,
@@ -12,27 +16,12 @@ use crate::{
 };
 use std::sync::{Arc, RwLock};
 
-/// Pipeline for text rendering: Shape → Render → Export
+/// Pipeline for text shaping, rendering, and export.
 ///
-/// The Pipeline provides two methods for processing text:
-///
-/// ## `process()` - Direct Backend Execution (Recommended)
-/// Directly chains the three core backends:
-/// - **Shaping** - Characters transform into positioned glyphs
-/// - **Rendering** - Glyphs become pixels or vectors
-/// - **Export** - Final output emerges as files
-///
-/// ## `execute()` - Stage-Based Execution
-/// Runs through six stages, with the first three being pass-through:
-/// 1. InputParsing - (pass-through, reserved for future use)
-/// 2. UnicodeProcessing - (pass-through, reserved for future use)
-/// 3. FontSelection - (pass-through, reserved for future use)
-/// 4. **Shaping** - Characters transform into positioned glyphs
-/// 5. **Rendering** - Glyphs become pixels or vectors
-/// 6. **Export** - Final output emerges as files
-///
-/// For most use cases, prefer `process()` which is simpler and avoids the
-/// pass-through stage overhead.
+/// Use [`Pipeline::process`] for the normal fast path. Use
+/// [`Pipeline::execute`] when you need the explicit stage list and a prepared
+/// [`PipelineContext`]. In the default configuration, only the shaping,
+/// rendering, and export stages do work; the earlier stages are placeholders.
 ///
 /// ```ignore
 /// use typf_core::Pipeline;
@@ -63,12 +52,6 @@ pub struct Pipeline {
     glyph_cache: Option<SharedGlyphCache>,
 }
 
-/// Controls runtime caching behaviour for pipelines.
-///
-/// **Note:** Caching is disabled by default. Enable it via:
-/// - `PipelineBuilder::enable_shaping_cache(true)` and/or
-/// - `PipelineBuilder::enable_glyph_cache(true)`
-/// - Or globally via `cache_config::set_caching_enabled(true)`
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CachePolicy {
     pub shaping: bool,
@@ -76,12 +59,11 @@ pub struct CachePolicy {
 }
 
 impl Pipeline {
-    /// Start building a new pipeline
     pub fn builder() -> PipelineBuilder {
         PipelineBuilder::new()
     }
 
-    /// Send text through all six stages and get the final bytes
+    /// Run the configured shaper, renderer, and exporter directly.
     pub fn process(
         &self,
         text: &str,
@@ -89,7 +71,6 @@ impl Pipeline {
         shaping_params: &ShapingParams,
         render_params: &RenderParams,
     ) -> Result<Vec<u8>> {
-        // Grab the three essential backends
         let shaper = self
             .shaper
             .as_ref()
@@ -103,7 +84,6 @@ impl Pipeline {
             .as_ref()
             .ok_or_else(|| TypfError::ConfigError("No exporter configured".into()))?;
 
-        // Shape → Render → Export
         let shaped = shaper.shape(text, font.clone(), shaping_params)?;
         let rendered = renderer.render(&shaped, font, render_params)?;
         let exported = exporter.export(&rendered)?;
@@ -111,9 +91,7 @@ impl Pipeline {
         Ok(exported)
     }
 
-    /// Run the full pipeline with a prepared context
     pub fn execute(&self, mut context: PipelineContext) -> Result<PipelineContext> {
-        // Backends need to know where they live
         if let Some(shaper) = &self.shaper {
             context.set_shaper(shaper.clone());
         }
@@ -124,7 +102,6 @@ impl Pipeline {
             context.set_exporter(exporter.clone());
         }
 
-        // One stage at a time, each transforms the context
         for stage in &self.stages {
             log::debug!("Executing stage: {}", stage.name());
             context = stage.process(context)?;
@@ -134,10 +111,10 @@ impl Pipeline {
     }
 }
 
-/// Build pipelines your way, piece by piece
+/// Builder for configuring a pipeline.
 ///
-/// Chain together the backends you need, customize stages, or use defaults.
-/// The builder pattern makes configuration clear and explicit.
+/// Use this to choose shaping, rendering, and export backends, or to replace
+/// the default stage list with custom stages.
 ///
 /// ```ignore
 /// use typf_core::Pipeline;
@@ -167,7 +144,6 @@ pub struct PipelineBuilder {
 }
 
 impl PipelineBuilder {
-    /// Start with a clean slate
     pub fn new() -> Self {
         Self {
             stages: Vec::new(),
@@ -180,57 +156,52 @@ impl PipelineBuilder {
         }
     }
 
-    /// Add your own stage to the flow
+    /// Add a custom stage to the explicit stage list.
     pub fn stage(mut self, stage: Box<dyn Stage>) -> Self {
         self.stages.push(stage);
         self
     }
 
-    /// Choose who turns characters into glyphs
+    /// Set the shaper backend.
     pub fn shaper(mut self, shaper: Arc<dyn Shaper>) -> Self {
         self.shaper = Some(shaper);
         self
     }
 
-    /// Choose who turns glyphs into pixels
+    /// Set the renderer backend.
     pub fn renderer(mut self, renderer: Arc<dyn Renderer>) -> Self {
         self.renderer = Some(renderer);
         self
     }
 
-    /// Choose who packages the final output
+    /// Set the exporter backend.
     pub fn exporter(mut self, exporter: Arc<dyn Exporter>) -> Self {
         self.exporter = Some(exporter);
         self
     }
 
-    /// Enable or disable shaping cache (default: disabled)
     pub fn enable_shaping_cache(mut self, enabled: bool) -> Self {
         self.cache_policy.shaping = enabled;
         self
     }
 
-    /// Enable or disable glyph/render cache (default: disabled)
     pub fn enable_glyph_cache(mut self, enabled: bool) -> Self {
         self.cache_policy.glyph = enabled;
         self
     }
 
-    /// Supply a shared shaping cache for reuse across pipelines
     pub fn with_shaping_cache(mut self, cache: SharedShapingCache) -> Self {
         self.shaping_cache = Some(cache);
         self
     }
 
-    /// Supply a shared glyph cache for reuse across pipelines
     pub fn with_glyph_cache(mut self, cache: SharedGlyphCache) -> Self {
         self.glyph_cache = Some(cache);
         self
     }
 
-    /// Create the pipeline, ready to run
+    /// Build the pipeline from the configured parts.
     pub fn build(self) -> Result<Pipeline> {
-        // No custom stages? Use the classic six
         let stages = if self.stages.is_empty() {
             vec![
                 Box::new(InputParsingStage) as Box<dyn Stage>,
@@ -296,11 +267,6 @@ impl Default for PipelineBuilder {
     }
 }
 
-// The six stages that make up the default pipeline
-// Note: The first three stages are pass-throughs reserved for future use.
-// All actual processing happens in Shaping, Rendering, and Export stages.
-
-/// Pass-through stage reserved for future input validation.
 struct InputParsingStage;
 impl Stage for InputParsingStage {
     fn name(&self) -> &'static str {
@@ -313,8 +279,6 @@ impl Stage for InputParsingStage {
     }
 }
 
-/// Pass-through stage reserved for future Unicode processing.
-/// For bidi/script handling, use `typf_unicode::UnicodeProcessor` directly.
 struct UnicodeProcessingStage;
 impl Stage for UnicodeProcessingStage {
     fn name(&self) -> &'static str {
@@ -327,8 +291,6 @@ impl Stage for UnicodeProcessingStage {
     }
 }
 
-/// Pass-through stage reserved for future font selection/fallback.
-/// For font loading, use `typf_fontdb` directly.
 struct FontSelectionStage;
 impl Stage for FontSelectionStage {
     fn name(&self) -> &'static str {
@@ -418,7 +380,6 @@ impl Stage for ExportStage {
     }
 }
 
-/// Wrapper adding backend-neutral shaping cache behaviour
 struct CachedShaper {
     inner: Arc<dyn Shaper>,
     cache: SharedShapingCache,
@@ -468,7 +429,6 @@ impl Shaper for CachedShaper {
     }
 }
 
-/// Wrapper adding backend-neutral render/glyph cache behaviour
 struct CachedRenderer {
     inner: Arc<dyn Renderer>,
     cache: SharedGlyphCache,
