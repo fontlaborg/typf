@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scanned_at": "2026-04-08T14:57:31.581Z",
+  "scanned_at": "2026-04-08T15:11:36.953Z",
   "files": [
     {
       "path": ".github/hooks/pre-commit.sample",
@@ -59,6 +59,13 @@
       "mtime": 1764744860144
     },
     {
+      "path": ".pytest_cache/README.md",
+      "title": "pytest cache directory #",
+      "summary": "This directory contains data from the pytest's cache plugin, which provides the `--lf` and `--ff` options, as well as the `cache` fixture. **Do not** commit this to version control. See [the docs](...",
+      "lines": 9,
+      "mtime": 1775661037235
+    },
+    {
       "path": "AGENTS.md",
       "title": "AGENTS.md",
       "summary": "Analyze the entire 'typf' project and update @./REVIEW.md so it’s a very detailed, comprehensive, professional review of the QUALITY of each function, method, class, file, module, package, crate in...",
@@ -89,9 +96,9 @@
     {
       "path": "CLAUDE.md",
       "title": "CLAUDE.md",
-      "summary": "This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. Typf is a modular text shaping and rendering engine. It takes a font file, a string, and param...",
-      "lines": 188,
-      "mtime": 1775658887795
+      "summary": "Analyze the entire 'typf' project and update @./REVIEW.md so it’s a very detailed, comprehensive, professional review of the QUALITY of each function, method, class, file, module, package, crate in...",
+      "lines": 1,
+      "mtime": 1775661096007
     },
     {
       "path": "CONTRIBUTING.md",
@@ -694,13 +701,6 @@
       "summary": "<!-- this_file: test_reports/260211-214006/README.md --> - **Generated:** 2026-02-11T20:40:54+00:00 - **Run started:** 2026-02-11T20:40:06+00:00 - **Run finished:** 2026-02-11T20:40:54+00:00 - **Qu...",
       "lines": 81,
       "mtime": 1770853217129
-    },
-    {
-      "path": "test_reports/260211-224031/README.md",
-      "title": "Test Report",
-      "summary": "<!-- this_file: test_reports/260211-224031/README.md --> - **Generated:** 2026-02-11T21:41:18+00:00 - **Run started:** 2026-02-11T21:40:31+00:00 - **Run finished:** 2026-02-11T21:41:18+00:00 - **Qu...",
-      "lines": 81,
-      "mtime": 1770853217131
     }
   ]
 }
