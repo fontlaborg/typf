@@ -4,14 +4,14 @@
 
 | Tool | Calls | Success | Failed | Avg Duration |
 |------|-------|---------|--------|--------------|
-| bash | 394 | 394 | 0 | 948ms |
-| read | 220 | 220 | 0 | 24ms |
-| todowrite | 37 | 37 | 0 | 5ms |
+| bash | 412 | 412 | 0 | 908ms |
+| read | 237 | 237 | 0 | 23ms |
+| todowrite | 38 | 38 | 0 | 5ms |
 | glob | 33 | 33 | 0 | 28ms |
-| task | 27 | 27 | 0 | 7494ms |
+| task | 29 | 29 | 0 | 9056ms |
 | grep | 20 | 20 | 0 | 38ms |
 | mad_register_agent | 19 | 19 | 0 | 16ms |
-| background_output | 13 | 13 | 0 | 19ms |
+| background_output | 15 | 15 | 0 | 19ms |
 | lsp_diagnostics | 9 | 9 | 0 | 1131ms |
 | search | 6 | 6 | 0 | 24ms |
 | session_list | 5 | 5 | 0 | 6ms |
@@ -32,3 +32,4 @@
 | websearch_web_search_exa | 1 | 0 | 1 | 1366ms |
 | background_cancel | 1 | 1 | 0 | 14ms |
 | pkg_audit | 1 | 1 | 0 | 2434ms |
+| lsp_symbols | 1 | 1 | 0 | 1425ms |
