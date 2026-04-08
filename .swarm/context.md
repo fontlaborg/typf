@@ -4,8 +4,8 @@
 
 | Tool | Calls | Success | Failed | Avg Duration |
 |------|-------|---------|--------|--------------|
-| bash | 412 | 412 | 0 | 908ms |
-| read | 237 | 237 | 0 | 23ms |
+| bash | 428 | 428 | 0 | 882ms |
+| read | 241 | 241 | 0 | 23ms |
 | todowrite | 38 | 38 | 0 | 5ms |
 | glob | 33 | 33 | 0 | 28ms |
 | task | 29 | 29 | 0 | 9056ms |
