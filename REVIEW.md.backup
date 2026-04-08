@@ -1,0 +1,54 @@
+# Quality Review: typf-core
+
+## Overview
+The `typf-core` crate serves as the backbone of the Typf project, defining the 6-stage pipeline and the contracts for shapers, renderers, and exporters. The codebase exhibits high maturity, particularly in its handling of memory safety, FFI boundaries, and caching strategies.
+
+## File-by-File Analysis
+
+### `core/src/lib.rs`
+- **Quality**: Excellent.
+- **Idiomatic Rust**: Uses `std::env` and `parse().ok()` pattern for configuration, which is clean and robust.
+- **Security**: Hardcoded limits for bitmaps (width, height, total pixels) are well-chosen and adjustable via environment variables.
+- **Organization**: Clear module structure and re-exports of common types.
+
+### `core/src/pipeline.rs`
+- **Quality**: High, but with minor locking inefficiencies.
+- **Design**: The `PipelineBuilder` correctly implements a default 6-stage flow while allowing custom stage injection.
+- **Optimization Opportunity**: `CachedShaper` and `CachedRenderer` wrap the cache in an extra `RwLock`. Since `moka::sync::Cache` is internally synchronized, this is redundant and adds latency.
+- **Logic**: The transition between `process` (fast path) and `execute` (stage-based path) is well-defined.
+
+### `core/src/context.rs`
+- **Quality**: Good.
+- **Design**: `PipelineContext` is a standard "God Object" for the pipeline pattern. It encapsulates the state correctly.
+- **Improvement**: Could benefit from a more "fluent" interface or a way to ensure stages don't access data they don't need (though the current simple approach is readable).
+
+### `core/src/traits.rs`
+- **Quality**: Professional.
+- **Abstraction**: `FontRef`, `Shaper`, `Renderer`, and `Exporter` traits are minimal and highly decoupled.
+- **Innovation**: `data_shared()` on `FontRef` is a great addition for zero-copy optimization in downstream consumers.
+- **Documentation**: Excellent doc comments explaining the "role" of each trait.
+
+### `core/src/cache.rs`
+- **Quality**: Exceptional.
+- **Algorithm**: Correct use of TinyLFU (via `moka`) for scan resistance. This is a critical feature for production font rendering.
+- **Memory Management**: Byte-weighted eviction is correctly implemented for `RenderOutput`, preventing OOM on pathological inputs.
+- **Metrics**: Built-in reporting for hit rates and access times is very useful for debugging performance.
+
+### `core/src/error.rs`
+- **Quality**: High.
+- **Robustness**: Uses `thiserror` for clean, descriptive errors. The hierarchy is logical and covers all major failure modes.
+- **UX**: Error messages include helpful hints for the user (e.g., suggesting smaller font sizes).
+
+### `core/src/linra.rs`
+- **Quality**: High.
+- **Performance**: Correctly identifies and models the single-pass optimization (Shape+Render).
+- **Consistency**: Provides conversion methods to standard `ShapingParams` and `RenderParams` for fallback/compatibility.
+
+### `core/src/ffi.rs`
+- **Quality**: Professional / Production Ready.
+- **Memory Safety**: Careful use of `std::mem::forget` and raw pointers. The `free` functions are mandatory and well-documented.
+- **GPU Integration**: `Vertex2D`, `VertexUV`, and `VertexColor` are `repr(C)` and correctly aligned for zero-copy GPU uploads.
+- **Tests**: Comprehensive unit tests for round-tripping and memory layout.
+
+## Overall Verdict
+The `core` crate is extremely high quality. It prioritizes performance and security without sacrificing maintainability. The main areas for improvement are minor performance optimizations related to locking and hashing.

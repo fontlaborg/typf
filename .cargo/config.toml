@@ -4,6 +4,12 @@ runner = "wasm-bindgen-test-runner"
 [target.wasm32-wasi]
 runner = "wasmtime"
 
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
 [build]
 # Optimize WASM builds for size
 rustflags = ["-C", "opt-level=z"]

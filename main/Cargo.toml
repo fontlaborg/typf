@@ -10,53 +10,53 @@ description = "Modular text shaping and rendering engine"
 
 [[example]]
 name = "basic"
-path = "../../examples/basic.rs"
+path = "../examples/basic.rs"
 required-features = ["export-pnm", "minimal"]
 
 [[example]]
 name = "pipeline"
-path = "../../examples/pipeline.rs"
+path = "../examples/pipeline.rs"
 required-features = ["export-pnm", "minimal"]
 
 [[example]]
 name = "formats"
-path = "../../examples/formats.rs"
+path = "../examples/formats.rs"
 required-features = ["export-pnm", "minimal"]
 
 [[example]]
 name = "harfbuzz"
-path = "../../examples/harfbuzz.rs"
+path = "../examples/harfbuzz.rs"
 required-features = ["fontdb", "shaping-hb"]
 
 [[example]]
 name = "variable_fonts"
-path = "../../examples/variable_fonts.rs"
+path = "../examples/variable_fonts.rs"
 required-features = ["shaping-hb"]
 
 [[example]]
 name = "long_text_handling"
-path = "../../examples/long_text_handling.rs"
+path = "../examples/long_text_handling.rs"
 required-features = ["export-svg", "shaping-hb"]
 
 [[example]]
 name = "quickstart_backends"
-path = "../../examples/quickstart_backends.rs"
+path = "../examples/quickstart_backends.rs"
 required-features = ["minimal"]
 
 [[example]]
 name = "external_layout_integration"
-path = "../../examples/external_layout_integration.rs"
+path = "../examples/external_layout_integration.rs"
 required-features = ["export-pnm", "minimal"]
 
 [[example]]
 name = "wgpu_mesh_upload"
-path = "../../examples/wgpu_mesh_upload.rs"
+path = "../examples/wgpu_mesh_upload.rs"
 # No required features - only uses typf-core
 
 [[bench]]
 harness = false
 name = "pipeline_bench"
-path = "../../benches/pipeline_bench.rs"
+path = "../benches/pipeline_bench.rs"
 
 [dependencies]
 console_error_panic_hook = { version = "0.1", optional = true }

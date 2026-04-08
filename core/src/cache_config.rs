@@ -185,23 +185,35 @@ mod tests {
 
         // Insert dummy data into shaping cache
         manager.cache_shaped(
-            crate::cache::ShapingCacheKey {
-                text_hash: 1,
-                font_id: "font1".to_string(),
-                params_hash: 1,
-            },
+            crate::shaping_cache::ShapingCacheKey::new(
+                "Test",
+                "hb",
+                b"font_data",
+                16.0,
+                None,
+                None,
+                vec![],
+                vec![],
+            ),
             std::sync::Arc::new(vec![1, 2, 3]),
         );
+        manager.shaping_cache.sync(); // Force pending insert to complete
         // Insert dummy data into glyph cache
         manager.cache_glyph(
-            crate::cache::GlyphCacheKey {
-                font_id: "font1".to_string(),
-                glyph_id: 100,
-                size: 16,
-                params_hash: 2,
-            },
+            crate::glyph_cache::GlyphCacheKey::new(
+                "renderer",
+                b"font_data",
+                &crate::types::ShapingResult {
+                    glyphs: vec![],
+                    advance_width: 0.0,
+                    advance_height: 0.0,
+                    direction: crate::types::Direction::LeftToRight,
+                },
+                &crate::RenderParams::default(),
+            ),
             std::sync::Arc::new(vec![4, 5, 6]),
         );
+        manager.glyph_cache.sync(); // Force pending insert to complete
 
         // Ensure caches are not empty
         assert!(

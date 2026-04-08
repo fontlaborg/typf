@@ -1,0 +1,139 @@
+    Checking typf-render-color v5.0.16 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/backends/typf-render-color)
+    Checking typf-fontdb v5.0.16 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/fontdb)
+    Checking typf-export v5.0.16 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/export)
+    Checking vello_common v0.0.4 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/external/vello/sparse_strips/vello_common)
+    Checking wgpu-core-deps-apple v27.0.0
+    Checking typf-render-opixa v5.0.16 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/backends/typf-render-opixa)
+    Checking image-compare v0.4.2
+    Checking typf-shape-hr v5.0.16 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/backends/typf-shape-hr)
+    Checking typf-core v5.0.16 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/core)
+    Checking wgpu-core v27.0.3
+error[E0603]: struct import `ShapingCacheKey` is private
+   --> core/src/cache_config.rs:188:27
+    |
+188 |             crate::cache::ShapingCacheKey {
+    |                           ^^^^^^^^^^^^^^^ private struct import
+    |
+note: the struct import `ShapingCacheKey` is defined here...
+   --> core/src/cache.rs:15:5
+    |
+ 15 | use crate::shaping_cache::ShapingCacheKey;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the struct `ShapingCacheKey` which is defined here
+   --> core/src/shaping_cache.rs:25:1
+    |
+ 25 | pub struct ShapingCacheKey {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^ you could import this directly
+help: consider importing this struct instead
+    |
+188 |             crate::shaping_cache::ShapingCacheKey {
+    |                    ++++++++
+help: import `ShapingCacheKey` directly
+    |
+188 -             crate::cache::ShapingCacheKey {
+188 +             shaping_cache::ShapingCacheKey {
+    |
+
+error[E0603]: struct import `GlyphCacheKey` is private
+   --> core/src/cache_config.rs:197:27
+    |
+197 |             crate::cache::GlyphCacheKey {
+    |                           ^^^^^^^^^^^^^ private struct import
+    |
+note: the struct import `GlyphCacheKey` is defined here...
+   --> core/src/cache.rs:14:5
+    |
+ 14 | use crate::glyph_cache::GlyphCacheKey;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: ...and refers to the struct `GlyphCacheKey` which is defined here
+   --> core/src/glyph_cache.rs:23:1
+    |
+ 23 | pub struct GlyphCacheKey {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^ you could import this directly
+help: consider importing this struct instead
+    |
+197 |             crate::glyph_cache::GlyphCacheKey {
+    |                    ++++++
+help: import `GlyphCacheKey` directly
+    |
+197 -             crate::cache::GlyphCacheKey {
+197 +             glyph_cache::GlyphCacheKey {
+    |
+
+error[E0560]: struct `shaping_cache::ShapingCacheKey` has no field named `text_hash`
+   --> core/src/cache_config.rs:189:17
+    |
+189 |                 text_hash: 1,
+    |                 ^^^^^^^^^ `shaping_cache::ShapingCacheKey` does not have this field
+    |
+    = note: available fields are: `text`, `backend`, `size`, `language`, `script` ... and 2 others
+
+error[E0308]: mismatched types
+   --> core/src/cache_config.rs:190:26
+    |
+190 |                 font_id: "font1".to_string(),
+    |                          ^^^^^^^^^^^^^^^^^^^ expected `u64`, found `String`
+
+error[E0560]: struct `shaping_cache::ShapingCacheKey` has no field named `params_hash`
+   --> core/src/cache_config.rs:191:17
+    |
+191 |                 params_hash: 1,
+    |                 ^^^^^^^^^^^ `shaping_cache::ShapingCacheKey` does not have this field
+    |
+    = note: available fields are: `text`, `backend`, `size`, `language`, `script` ... and 2 others
+
+error[E0308]: mismatched types
+   --> core/src/cache_config.rs:198:26
+    |
+198 |                 font_id: "font1".to_string(),
+    |                          ^^^^^^^^^^^^^^^^^^^ expected `u64`, found `String`
+
+error[E0560]: struct `glyph_cache::GlyphCacheKey` has no field named `glyph_id`
+   --> core/src/cache_config.rs:199:17
+    |
+199 |                 glyph_id: 100,
+    |                 ^^^^^^^^ `glyph_cache::GlyphCacheKey` does not have this field
+    |
+    = note: available fields are: `renderer`, `shaped_hash`, `render_hash`
+
+error[E0560]: struct `glyph_cache::GlyphCacheKey` has no field named `size`
+   --> core/src/cache_config.rs:200:17
+    |
+200 |                 size: 16,
+    |                 ^^^^ `glyph_cache::GlyphCacheKey` does not have this field
+    |
+    = note: available fields are: `renderer`, `shaped_hash`, `render_hash`
+
+error[E0560]: struct `glyph_cache::GlyphCacheKey` has no field named `params_hash`
+   --> core/src/cache_config.rs:201:17
+    |
+201 |                 params_hash: 2,
+    |                 ^^^^^^^^^^^ `glyph_cache::GlyphCacheKey` does not have this field
+    |
+    = note: available fields are: `renderer`, `shaped_hash`, `render_hash`
+
+warning: missing documentation for an associated function
+  --> backends/typf-render-color/src/lib.rs:91:5
+   |
+91 | /     pub fn new(
+92 | |         pixmap: &'a mut Pixmap,
+93 | |         palette: &'a [skrifa::color::Color],
+94 | |         font: &'a skrifa::FontRef<'a>,
+95 | |         size: f32,
+96 | |     ) -> Self {
+   | |_____________^
+   |
+note: the lint level is defined here
+  --> backends/typf-render-color/src/lib.rs:1:9
+   |
+ 1 | #![warn(missing_docs)]
+   |         ^^^^^^^^^^^^
+
+warning: `typf-render-color` (lib) generated 1 warning
+    Checking typf-render-svg v5.0.16 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/backends/typf-render-svg)
+    Checking typf-export-svg v5.0.16 (/Users/adam/Developer/vcs3/github.fontlaborg/typf/export-svg)
+Some errors have detailed explanations: E0308, E0560, E0603.
+For more information about an error, try `rustc --explain E0308`.
+error: could not compile `typf-core` (lib test) due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
+warning: `typf-render-color` (lib test) generated 1 warning (1 duplicate)

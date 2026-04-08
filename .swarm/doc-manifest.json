@@ -1,0 +1,706 @@
+{
+  "schema_version": 1,
+  "scanned_at": "2026-04-08T14:57:31.581Z",
+  "files": [
+    {
+      "path": ".github/hooks/pre-commit.sample",
+      "title": "Typf pre-commit hook",
+      "summary": "[Warning: 100+ docs found, listing first 100] set -e echo \"Running pre-commit checks...\" echo \"Checking code formatting...\" if ! cargo fmt --all -- --check; then echo \"❌ Code formatting check failed\" echo \"Run: cargo fmt --all\" exit 1 fi echo ...",
+      "lines": 45,
+      "mtime": 1764661941168
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "title": "bug_report.yml",
+      "summary": "name: Bug Report description: Report a bug or unexpected behavior title: \"[Bug]: \" labels: [\"bug\", \"triage\"] body: - type: markdown attributes: value: | Thanks for taking the time to report a bug! ...",
+      "lines": 138,
+      "mtime": 1764661941167
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/config.yml",
+      "title": "config.yml",
+      "summary": "blank_issues_enabled: false contact_links: - name: Questions & Discussions url: https://github.com/fontlaborg/typf/discussions about: Ask questions, share ideas, or discuss the project - name: Docu...",
+      "lines": 12,
+      "mtime": 1764661941167
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+      "title": "feature_request.yml",
+      "summary": "name: Feature Request description: Suggest a new feature or enhancement title: \"[Feature]: \" labels: [\"enhancement\", \"triage\"] body: - type: markdown attributes: value: | Thanks for suggesting a fe...",
+      "lines": 106,
+      "mtime": 1764661941167
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "title": "PULL_REQUEST_TEMPLATE.md",
+      "summary": "<!-- Provide a clear and concise description of your changes --> <!-- Mark the relevant option with an 'x' --> - [ ] Bug fix (non-breaking change that fixes an issue) - [ ] New feature (non-breakin...",
+      "lines": 162,
+      "mtime": 1764661941167
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "title": "CI workflow for typf",
+      "summary": "name: CI on: push: branches: [main] pull_request: branches: [main] env: CARGO_TERM_COLOR: always CARGO_INCREMENTAL: 0 RUST_BACKTRACE: 1 MSRV: \"1.75\" jobs: lint: name: Lint runs-on: ubuntu-24.04 steps:",
+      "lines": 294,
+      "mtime": 1770828449875
+    },
+    {
+      "path": ".github/workflows/fuzz.yml",
+      "title": "Run fuzz tests daily at 2 AM UTC",
+      "summary": "name: Fuzz Testing on: schedule: - cron: '0 2 * * *' workflow_dispatch: inputs: duration: description: 'Fuzz duration in seconds' required: false default: '300' target: description: 'Specific fuzz ...",
+      "lines": 172,
+      "mtime": 1764771389575
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "title": "Release workflow for typf",
+      "summary": "name: Release on: push: tags: - 'v*' workflow_dispatch: inputs: dry_run: description: 'Dry run (skip publishing)' required: false default: 'false' type: boolean env: CARGO_TERM_COLOR: always CARGO_...",
+      "lines": 536,
+      "mtime": 1764744860144
+    },
+    {
+      "path": "AGENTS.md",
+      "title": "AGENTS.md",
+      "summary": "Analyze the entire 'typf' project and update @./REVIEW.md so it’s a very detailed, comprehensive, professional review of the QUALITY of each function, method, class, file, module, package, crate in...",
+      "lines": 1,
+      "mtime": 1770840957413
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "title": "Typf Architecture",
+      "summary": "Typf is a modular text rendering library with a three-stage pipeline: **Shaping → Rendering → Export**. ``` ┌─────────────────────────────────────────────────────┐ │                      Pipeline  ...",
+      "lines": 278,
+      "mtime": 1765912520292
+    },
+    {
+      "path": "bindings/py/README.md",
+      "title": "Typf Python Bindings",
+      "summary": "High-performance text rendering for Python applications. ```bash uv pip install typfpy pip install typfpy ``` Or install from source with maturin: ```bash cd bindings/python uv pip install maturin ...",
+      "lines": 318,
+      "mtime": 1770853217122
+    },
+    {
+      "path": "CHANGELOG.md",
+      "title": "Changelog",
+      "summary": "<!-- this_file: CHANGELOG.md --> Changes to Typf. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0//), project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).",
+      "lines": 345,
+      "mtime": 1770853217108
+    },
+    {
+      "path": "CLAUDE.md",
+      "title": "CLAUDE.md",
+      "summary": "This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. Typf is a modular text shaping and rendering engine. It takes a font file, a string, and param...",
+      "lines": 188,
+      "mtime": 1775658887795
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "title": "Contributing to Typf",
+      "summary": "How to contribute code, documentation, and improvements to Typf. Be respectful. Be constructive. - Rust 1.70+ (install via [rustup](https://rustup.rs/)) - `uv` for Python development (install: `cur...",
+      "lines": 448,
+      "mtime": 1770828576423
+    },
+    {
+      "path": "docs/01-introduction/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 1921,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/02-quick-start/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 1954,
+      "mtime": 1770487563436
+    },
+    {
+      "path": "docs/03-architecture-overview/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2019,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/04-installation/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2450,
+      "mtime": 1770487563438
+    },
+    {
+      "path": "docs/05-six-stage-pipeline/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2170,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/06-backend-architecture/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2828,
+      "mtime": 1770487563439
+    },
+    {
+      "path": "docs/07-memory-management/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2551,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/08-performance-fundamentals/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2812,
+      "mtime": 1770487563436
+    },
+    {
+      "path": "docs/09-harfbuzz-shaping/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2302,
+      "mtime": 1770487563439
+    },
+    {
+      "path": "docs/10-platform-shapers/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2330,
+      "mtime": 1770487563438
+    },
+    {
+      "path": "docs/11-icu-harfbuzz-composition/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2309,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/12-none-shaper/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2349,
+      "mtime": 1770487563438
+    },
+    {
+      "path": "docs/13-skia-renderer/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2541,
+      "mtime": 1770487563438
+    },
+    {
+      "path": "docs/14-opixa-renderer/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2664,
+      "mtime": 1770487563439
+    },
+    {
+      "path": "docs/15-platform-renderers/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2703,
+      "mtime": 1770487563439
+    },
+    {
+      "path": "docs/16-zeno-renderer/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2923,
+      "mtime": 1770487563436
+    },
+    {
+      "path": "docs/17-export-formats/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 3064,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/18-rust-api/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2986,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/19-python-api/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 3197,
+      "mtime": 1770487563436
+    },
+    {
+      "path": "docs/20-cli-interface/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 3075,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/21-webassembly-integration/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 3755,
+      "mtime": 1770840957419
+    },
+    {
+      "path": "docs/22-performance-optimization/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 4246,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/23-deployment-integration/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 3079,
+      "mtime": 1770487563439
+    },
+    {
+      "path": "docs/24-troubleshooting-best-practices/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2988,
+      "mtime": 1770487563439
+    },
+    {
+      "path": "docs/25-benchmark-analysis/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2250,
+      "mtime": 1770487563439
+    },
+    {
+      "path": "docs/26-vello-gpu-platform-support/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 2359,
+      "mtime": 1770840957431
+    },
+    {
+      "path": "docs/404.html",
+      "title": "404.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 1577,
+      "mtime": 1770487563456
+    },
+    {
+      "path": "docs/assets/images/favicon.png",
+      "title": "favicon.png",
+      "summary": "�PNG \u001a \u0000\u0000\u0000\rIHDR\u0000\u0000\u00000\u0000\u0000\u00000\b\u0006\u0000\u0000\u0000W\u0002��\u0000\u0000\u0007\u0015IDATx�ŗ�OTW\u0010��\u0003/�7^T@~�*\u0002��*?EDEda��,�\u000fR�Ml��66�V\u0013k�\u0005e�\u001a��M�'H���hcc\u0013\u0001UAe}^,Y�a���=��ܽ�*��|�33��\u001c��]�|X���\t�HY� \u0000\u001d��A_E\u0018�z\u0004\u001a��Hm����8%%\u0019C�J[��\u0012�IKI!(ie�guc����\u001f...",
+      "lines": 8,
+      "mtime": 1765003550410
+    },
+    {
+      "path": "docs/assets/javascripts/bundle.21aa498e.min.js",
+      "title": "bundle.21aa498e.min.js",
+      "summary": "\"use strict\";(()=>{var yc=Object.create;var Ln=Object.defineProperty,xc=Object.defineProperties,wc=Object.getOwnPropertyDescriptor,Ec=Object.getOwnPropertyDescriptors,Tc=Object.getOwnPropertyNames,...",
+      "lines": 4,
+      "mtime": 1765003550410
+    },
+    {
+      "path": "docs/assets/javascripts/workers/search.5df7522c.min.js",
+      "title": "search.5df7522c.min.js",
+      "summary": "\"use strict\";(()=>{var ge=Object.create;var K=Object.defineProperty,me=Object.defineProperties,xe=Object.getOwnPropertyDescriptor,ye=Object.getOwnPropertyDescriptors,ve=Object.getOwnPropertyNames,W...",
+      "lines": 2,
+      "mtime": 1765003550410
+    },
+    {
+      "path": "docs/assets/stylesheets/classic/main.59dc44d5.min.css",
+      "title": "main.59dc44d5.min.css",
+      "summary": "@charset \"UTF-8\";html{-webkit-text-size-adjust:none;-moz-text-size-adjust:none;text-size-adjust:none;box-sizing:border-box}*,:after,:before{box-sizing:inherit}@media (prefers-reduced-motion){*,:aft...",
+      "lines": 1,
+      "mtime": 1765003550411
+    },
+    {
+      "path": "docs/assets/stylesheets/classic/palette.7dc9a0ad.min.css",
+      "title": "palette.7dc9a0ad.min.css",
+      "summary": "@media screen{[data-md-color-scheme=slate]{--md-default-fg-color:hsla(var(--md-hue),15%,90%,0.82);--md-default-fg-color--light:hsla(var(--md-hue),15%,90%,0.56);--md-default-fg-color--lighter:hsla(v...",
+      "lines": 1,
+      "mtime": 1765003550410
+    },
+    {
+      "path": "docs/assets/stylesheets/modern/main.bd6182e7.min.css",
+      "title": "main.bd6182e7.min.css",
+      "summary": "@charset \"UTF-8\";html{-webkit-text-size-adjust:none;-moz-text-size-adjust:none;text-size-adjust:none;box-sizing:border-box}*,:after,:before{box-sizing:inherit}@media (prefers-reduced-motion){*,:aft...",
+      "lines": 1,
+      "mtime": 1765003550411
+    },
+    {
+      "path": "docs/assets/stylesheets/modern/palette.dfe2e883.min.css",
+      "title": "palette.dfe2e883.min.css",
+      "summary": "@media screen{[data-md-color-scheme=slate]{--md-default-fg-color:hsla(var(--md-hue),15%,90%,0.82);--md-default-fg-color--light:hsla(var(--md-hue),15%,90%,0.56);--md-default-fg-color--lighter:hsla(v...",
+      "lines": 1,
+      "mtime": 1765003550411
+    },
+    {
+      "path": "docs/INDEX/index.html",
+      "title": "index.html",
+      "summary": "<!doctype html> <html lang=\"en\" class=\"no-js\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"description\" content=\"Typf: A production...",
+      "lines": 1725,
+      "mtime": 1770487563437
+    },
+    {
+      "path": "docs/search.json",
+      "title": "search.json",
+      "summary": "{\"config\":{\"separator\":\"[\\\\s\\\\-_,:!=\\\\[\\\\]()\\\\\\\\\\\"`/]+|\\\\.(?!\\\\d)\"},\"items\":[{\"location\":\"01-introduction/\",\"level\":1,\"title\":\"Introduction\",\"text\":\"<p>Your text breaks. Arabic renders backwards, H...",
+      "lines": 1,
+      "mtime": 1770840957419
+    },
+    {
+      "path": "docs/sitemap.xml",
+      "title": "sitemap.xml",
+      "summary": "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"> <url> <loc>https://fontlab.org/typf/01-introduction/</loc> </url> <url> <loc>https://fontlab.org/...",
+      "lines": 75,
+      "mtime": 1770487563438
+    },
+    {
+      "path": "examples/README.md",
+      "title": "Typf Examples - From Text to Beautiful Output",
+      "summary": "This is your playground for exploring Typf's text rendering capabilities. Each example starts with raw text and shows how different shapers, renderers, and exporters transform it into final output....",
+      "lines": 322,
+      "mtime": 1764743875986
+    },
+    {
+      "path": "external/parley/attributed_text/README.md",
+      "title": "Attributed Text",
+      "summary": "<div align=\"center\"> A library for working with attributed text. [![Linebender Zulip, #parley channel](https://img.shields.io/badge/Linebender-%23parley-blue?logo=Zulip)](https://xi.zulipchat.com/#...",
+      "lines": 78,
+      "mtime": 1764829937859
+    },
+    {
+      "path": "external/parley/CHANGELOG.md",
+      "title": "Changelog",
+      "summary": "<!-- Instructions This changelog follows the patterns described here: <https://keepachangelog.com/en/>. Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`....",
+      "lines": 450,
+      "mtime": 1764829937858
+    },
+    {
+      "path": "external/parley/fontique/README.md",
+      "title": "Fontique",
+      "summary": "<div align=\"center\"> **Font enumeration and fallback** [![Latest published fontique version.](https://img.shields.io/crates/v/fontique.svg)](https://crates.io/crates/fontique) [![Documentation buil...",
+      "lines": 55,
+      "mtime": 1764829937862
+    },
+    {
+      "path": "external/parley/parley_bench/README.md",
+      "title": "Parley Benchmarks",
+      "summary": "A suite of benchmarks used to evaluate Parley performance. This uses [Tango](https://github.com/bazhenov/tango) to perform paired benchmarking. Install [`cargo-export`](https://crates.io/crates/car...",
+      "lines": 28,
+      "mtime": 1764829937876
+    },
+    {
+      "path": "external/parley/parley_core/README.md",
+      "title": "Parley Core",
+      "summary": "<div align=\"center\"> **Low level text layout** [![Latest published version.](https://img.shields.io/crates/v/parley_core.svg)](https://crates.io/crates/parley_core) [![Documentation build status.](...",
+      "lines": 73,
+      "mtime": 1764829937877
+    },
+    {
+      "path": "external/parley/parley_dev/assets/text_samples/README.md",
+      "title": "Sample Text Attribution",
+      "summary": "The sample texts in this folder are all in the public domain, and were obtained from the linked pages (if modified, with the documented amendments): | Sample            | Title                     ...",
+      "lines": 10,
+      "mtime": 1764829937881
+    },
+    {
+      "path": "external/parley/parley_dev/README.md",
+      "title": "Parley Dev",
+      "summary": "Data and fonts used in Parley's tests and benchmarks. Some files included in this folder are under different licenses to the rest of this workspace: - The font file `Arimo-VariableFont_wght.ttf` in...",
+      "lines": 12,
+      "mtime": 1764829937878
+    },
+    {
+      "path": "external/parley/parley/README.md",
+      "title": "Parley",
+      "summary": "<div align=\"center\"> **Rich text layout** [![Latest published parley version.](https://img.shields.io/crates/v/parley.svg)](https://crates.io/crates/parley) [![Documentation build status.](https://...",
+      "lines": 56,
+      "mtime": 1764829937865
+    },
+    {
+      "path": "external/parley/parley/tests/README.md",
+      "title": "Usage",
+      "summary": "```bash $ cargo test ``` If a test fails, you can compare images in /parley/tests/current (images created by the current test) and /parley/tests/snapshots (the accepted versions). If you think that...",
+      "lines": 44,
+      "mtime": 1764829937869
+    },
+    {
+      "path": "external/parley/README.md",
+      "title": "Parley",
+      "summary": "<div align=\"center\"> **Rich text layout** [![Latest published parley version.](https://img.shields.io/crates/v/parley.svg)](https://crates.io/crates/parley) [![Documentation build status.](https://...",
+      "lines": 100,
+      "mtime": 1764829937859
+    },
+    {
+      "path": "external/parley/unicode_data_gen/README.md",
+      "title": "README.md",
+      "summary": "`unicode_data_gen` is a small CLI that refreshes the Unicode artefacts checked into the `unicode_data` crate. It pulls data from the canonical ICU4X upstream sources, recomputes Parley's composite ...",
+      "lines": 31,
+      "mtime": 1764829937885
+    },
+    {
+      "path": "external/parley/unicode_data/README.md",
+      "title": "Unicode Data",
+      "summary": "`unicode_data` packages the Unicode data that Parley's text analysis and shaping pipeline needs at runtime. It exposes a locale-invariant `CompositePropsV1` provider backed by a compact `CodePointT...",
+      "lines": 40,
+      "mtime": 1764829937882
+    },
+    {
+      "path": "external/parley/xtask/README.md",
+      "title": "Xtask dev utilities",
+      "summary": "This package provides the following commands: ```bash cargo xtask report  # Creates report cargo xtask review  # Interactive test blessing cargo xtask dead-snaphosts  # Detects dead snapshots ```",
+      "lines": 10,
+      "mtime": 1764829937885
+    },
+    {
+      "path": "external/swash/README.md",
+      "title": "swash",
+      "summary": "Swash is a pure Rust, cross-platform crate that provides font introspection, complex text shaping and glyph rendering. [![Crates.io][crates-badge]][crates-url] [![Docs.rs][docs-badge]][docs-url] [!...",
+      "lines": 124,
+      "mtime": 1764829944982
+    },
+    {
+      "path": "external/vello_svg/CHANGELOG.md",
+      "title": "Changelog",
+      "summary": "<!-- Instructions This changelog follows the patterns described here: <https://keepachangelog.com/en/1.0.0/>. Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, secu...",
+      "lines": 179,
+      "mtime": 1764829806377
+    },
+    {
+      "path": "external/vello_svg/examples/with_winit/README.md",
+      "title": "README.md",
+      "summary": "Running the viewer without any arguments will render a built-in set of public-domain SVG images: ```bash $ cargo run -p with_winit --release ``` Optionally, you can pass in paths to SVG files that ...",
+      "lines": 26,
+      "mtime": 1764829806380
+    },
+    {
+      "path": "external/vello_svg/README.md",
+      "title": "Vello SVG",
+      "summary": "<div align=\"center\"> **An integration to parse and render SVG with [Vello](https://vello.dev).** [![Linebender Zulip](https://img.shields.io/badge/Linebender-%23vello-blue?logo=Zulip)](https://xi.z...",
+      "lines": 112,
+      "mtime": 1764829806378
+    },
+    {
+      "path": "external/vello/CHANGELOG.md",
+      "title": "Changelog",
+      "summary": "<!-- Instructions This changelog follows the patterns described here: <https://keepachangelog.com/en/>. Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`....",
+      "lines": 402,
+      "mtime": 1764767145280
+    },
+    {
+      "path": "external/vello/doc/ARCHITECTURE.md",
+      "title": "Architecture",
+      "summary": "This document should be updated semi-regularly. Feel free to open an issue if it hasn't been updated in more than a year. The major goal of Vello is to provide a high quality GPU accelerated render...",
+      "lines": 97,
+      "mtime": 1764767145282
+    },
+    {
+      "path": "external/vello/examples/assets/colr_test_glyphs/README.md",
+      "title": "README.md",
+      "summary": "Font is taken from https://github.com/googlefonts/color-fonts",
+      "lines": 1,
+      "mtime": 1764767145283
+    },
+    {
+      "path": "external/vello/examples/assets/noto_color_emoji/README.md",
+      "title": "Noto Color Emoji Subset",
+      "summary": "This folder contains a small subset of [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji), licensed under the [OFL version 1.1](LICENSE). We do not include the full set of ...",
+      "lines": 14,
+      "mtime": 1764767145285
+    },
+    {
+      "path": "external/vello/examples/with_winit/README.md",
+      "title": "README.md",
+      "summary": "Running the viewer without any arguments will render a built-in set of public-domain SVG images: ```bash $ cargo run -p with_winit --release ``` Optionally, you can pass in paths to SVG files that ...",
+      "lines": 26,
+      "mtime": 1764767145289
+    },
+    {
+      "path": "external/vello/image_filters/README.md",
+      "title": "Vello Image Filters",
+      "summary": "In 2d Rendering, you often need to process images in ways which aren't just drawing of paths. For example, by blurring a background, zooming in, or inverting colors. This folder provides implementa...",
+      "lines": 45,
+      "mtime": 1764767145290
+    },
+    {
+      "path": "external/vello/README.md",
+      "title": "Vello",
+      "summary": "<!-- This repo-level readme needs restructuring, pending some Linebender templating decisions. https://xi.zulipchat.com/#narrow/channel/419691-linebender/topic/Bikeshedding.20badges/with/452312397 ...",
+      "lines": 303,
+      "mtime": 1764767145282
+    },
+    {
+      "path": "external/vello/sparse_strips/README.md",
+      "title": "Vello Sparse Strips",
+      "summary": "We are developing a new implementation for Vello that aims to: - Be compatible with a wider range of devices (should be able to run on GPUs without compute shader support, using only fragment and v...",
+      "lines": 49,
+      "mtime": 1764767145290
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_api/README.md",
+      "title": "Vello API",
+      "summary": "<div align=\"center\"> **Public API types** [![Latest published version.](https://img.shields.io/crates/v/vello_api.svg)](https://crates.io/crates/vello_api) [![Documentation build status.](https://i...",
+      "lines": 71,
+      "mtime": 1764767145291
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_bench/README.md",
+      "title": "Setup",
+      "summary": "In order to run the integration benchmarks with custom SVGs, you need to add the SVGs you want to run into the `data` folder. For each SVG file in that folder, a corresponding integration test will...",
+      "lines": 27,
+      "mtime": 1764767145291
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_common/CHANGELOG.md",
+      "title": "Changelog",
+      "summary": "<!-- Instructions This changelog follows the patterns described here: <https://keepachangelog.com/en/>. Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`....",
+      "lines": 85,
+      "mtime": 1764767145293
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_common/README.md",
+      "title": "Vello Common",
+      "summary": "<div align=\"center\"> **Shared data structures** [![Latest published version.](https://img.shields.io/crates/v/vello_common.svg)](https://crates.io/crates/vello_common) [![Documentation build status...",
+      "lines": 104,
+      "mtime": 1764767145293
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_cpu/CHANGELOG.md",
+      "title": "Changelog",
+      "summary": "<!-- Instructions This changelog follows the patterns described here: <https://keepachangelog.com/en/>. Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`....",
+      "lines": 90,
+      "mtime": 1764767145296
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_cpu/examples/wasm_cpu/README.md",
+      "title": "README.md",
+      "summary": "Run with `cargo run_wasm -p wasm_cpu --release` for scalar build. To run the demo with SIMD enabled use: `RUSTFLAGS=-Ctarget-feature=+simd128 cargo run_wasm -p wasm_cpu --release`",
+      "lines": 10,
+      "mtime": 1764767145297
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_cpu/examples/winit/README.md",
+      "title": "Vello CPU Winit Example",
+      "summary": "This example demonstrates rendering with Vello CPU using the winit windowing library. - CPU-based rendering using Vello CPU - Interactive scene viewer with multiple example scenes - Pan and zoom co...",
+      "lines": 40,
+      "mtime": 1764767145298
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_cpu/README.md",
+      "title": "Vello CPU",
+      "summary": "<div align=\"center\"> **CPU-based renderer** [![Latest published version.](https://img.shields.io/crates/v/vello_cpu.svg)](https://crates.io/crates/vello_cpu) [![Documentation build status.](https:/...",
+      "lines": 174,
+      "mtime": 1764767145297
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_example_scenes/README.md",
+      "title": "vello_example_scenes",
+      "summary": "A collection of scenes used for Vello Sparse Strips examples. This crate provides various scene implementations including: - Basic shapes and paths - Text rendering - Image handling - Gradients and...",
+      "lines": 12,
+      "mtime": 1764767145303
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_hybrid/CHANGELOG.md",
+      "title": "Changelog",
+      "summary": "<!-- Instructions This changelog follows the patterns described here: <https://keepachangelog.com/en/>. Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`....",
+      "lines": 38,
+      "mtime": 1764767145305
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_hybrid/examples/native_webgl/README.md",
+      "title": "Navigate to printed URL",
+      "summary": "Uses Vello Hybrid with a native WebGL2 backend in the browser. This example does not use wgpu. Run with `cargo run_wasm -p native_webgl --release`. In order to test this crate, you need to have [`w...",
+      "lines": 21,
+      "mtime": 1764767145305
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_hybrid/examples/wgpu_webgl/README.md",
+      "title": "Navigate to printed URL",
+      "summary": "Uses Vello Hybrid with a `wgpu` powered WebGL2 backend in the browser. Run with `cargo run_wasm -p wgpu_webgl --release`. In order to test this crate, you need to have [`wasm-pack`] installed. Inst...",
+      "lines": 21,
+      "mtime": 1764767145306
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_hybrid/examples/winit/README.md",
+      "title": "Vello Hybrid Winit Example",
+      "summary": "Run with: ```sh cargo run -p vello_hybrid_winit --release ``` Optionally, you can pass in paths to SVG files that you want to render: ```bash cargo run -p vello_hybrid_winit --release -- [SVG FILES...",
+      "lines": 28,
+      "mtime": 1764767145307
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_hybrid/README.md",
+      "title": "Vello Hybrid",
+      "summary": "<div align=\"center\"> **Hybrid CPU/GPU renderer** [![Apache 2.0 or MIT license.](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue.svg)](#license) \\ [![Linebender Zulip chat.](https://img...",
+      "lines": 64,
+      "mtime": 1764767145305
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_sparse_shaders/README.md",
+      "title": "Vello Sparse Shaders",
+      "summary": "<div align=\"center\"> [![Apache 2.0 or MIT license.](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue.svg)](#license) \\ [![Linebender Zulip chat.](https://img.shields.io/badge/Linebender...",
+      "lines": 63,
+      "mtime": 1764767145309
+    },
+    {
+      "path": "external/vello/sparse_strips/vello_sparse_tests/README.md",
+      "title": "Vello Sparse Tests",
+      "summary": "<div align=\"center\"> [![Apache 2.0 or MIT license.](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue.svg)](#license) \\ [![Linebender Zulip chat.](https://img.shields.io/badge/Linebender...",
+      "lines": 55,
+      "mtime": 1764767145310
+    },
+    {
+      "path": "fuzz/README.md",
+      "title": "Fuzz Testing - Crash Typf Before Your Users Do",
+      "summary": "Fuzzing throws random, malformed data at your code to find panics, crashes, and security vulnerabilities that normal testing misses. Typf handles complex Unicode text, font files, and rendering pip...",
+      "lines": 278,
+      "mtime": 1764661941207
+    },
+    {
+      "path": "README.md",
+      "title": "Typf v5.0.2",
+      "summary": "<!-- this_file: README.md --> [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions) [![Rust](https://img.shields.io/badge/rust-1.75%2B-orang...",
+      "lines": 393,
+      "mtime": 1770840957414
+    },
+    {
+      "path": "test_reports/260211-174405/README.md",
+      "title": "Test Report",
+      "summary": "<!-- this_file: test_reports/260211-174405/README.md --> - **Generated:** 2026-02-11T16:45:10+00:00 - **Run started:** 2026-02-11T16:44:05+00:00 - **Run finished:** 2026-02-11T16:45:10+00:00 - **Qu...",
+      "lines": 78,
+      "mtime": 1770840957432
+    },
+    {
+      "path": "test_reports/260211-211432/README.md",
+      "title": "Test Report",
+      "summary": "<!-- this_file: test_reports/260211-211432/README.md --> - **Generated:** 2026-02-11T20:15:19+00:00 - **Run started:** 2026-02-11T20:14:32+00:00 - **Run finished:** 2026-02-11T20:15:19+00:00 - **Qu...",
+      "lines": 81,
+      "mtime": 1770840957434
+    },
+    {
+      "path": "test_reports/260211-211927/README.md",
+      "title": "Test Report",
+      "summary": "<!-- this_file: test_reports/260211-211927/README.md --> - **Generated:** 2026-02-11T20:20:03+00:00 - **Run started:** 2026-02-11T20:19:27+00:00 - **Run finished:** 2026-02-11T20:20:03+00:00 - **Qu...",
+      "lines": 81,
+      "mtime": 1770841344389
+    },
+    {
+      "path": "test_reports/260211-214006/README.md",
+      "title": "Test Report",
+      "summary": "<!-- this_file: test_reports/260211-214006/README.md --> - **Generated:** 2026-02-11T20:40:54+00:00 - **Run started:** 2026-02-11T20:40:06+00:00 - **Run finished:** 2026-02-11T20:40:54+00:00 - **Qu...",
+      "lines": 81,
+      "mtime": 1770853217129
+    },
+    {
+      "path": "test_reports/260211-224031/README.md",
+      "title": "Test Report",
+      "summary": "<!-- this_file: test_reports/260211-224031/README.md --> - **Generated:** 2026-02-11T21:41:18+00:00 - **Run started:** 2026-02-11T21:40:31+00:00 - **Run finished:** 2026-02-11T21:41:18+00:00 - **Qu...",
+      "lines": 81,
+      "mtime": 1770853217131
+    }
+  ]
+}
