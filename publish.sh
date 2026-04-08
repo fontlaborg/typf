@@ -443,6 +443,33 @@ do_publish() {
         return 1
     fi
 
+    # Step 4: Verify every publishable crate has the metadata crates.io requires.
+    # crates.io rejects uploads missing `description`, `license`, or `repository`.
+    # Catching this here avoids burning rate-limit budget on doomed publishes and
+    # prevents a mid-tier failure from cascading into skipped downstream tiers.
+    log_info "Validating crate metadata ..."
+    local metadata_ok=true
+    for spec in "core:typf-core" "unicode:typf-unicode" "fontdb:typf-fontdb" \
+                "input:typf-input" "export:typf-export" "export-svg:typf-export-svg" \
+                "main:typf" "cli:typf-cli" "tools/typf-bench:typf-bench"; do
+        local path="${spec%:*}" name="${spec#*:}"
+        local toml="$SCRIPT_DIR/$path/Cargo.toml"
+        for field in description license repository; do
+            # Match both own field (description = "...") and workspace inheritance
+            # (description.workspace = true). The dot-form is how Cargo.toml
+            # delegates metadata to the workspace root.
+            if ! grep -qE "^${field}(\\.workspace)?\s*=" "$toml"; then
+                log_error "$name ($path/Cargo.toml): missing required field '$field'"
+                metadata_ok=false
+            fi
+        done
+    done
+    if [[ "$metadata_ok" != "true" ]]; then
+        log_error "Fix the missing metadata above, then re-run."
+        return 1
+    fi
+    log_success "All crate metadata valid"
+
     local failed=()
     local tier_failed=false
 
