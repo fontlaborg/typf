@@ -306,8 +306,10 @@ publish_crate() {
             # crates.io sometimes includes a human-readable timestamp:
             # "try again after Tue, 07 Apr 2026 22:17:27 GMT"
             # Try to parse it so we wait exactly long enough.
+            # Note: grep -P (Perl regex) is not available on macOS BSD grep,
+            # so we use sed instead for portability.
             local retry_after
-            retry_after=$(echo "$output" | grep -oP 'try again after \K[^"]+' | head -1 || true)
+            retry_after=$(echo "$output" | sed -n 's/.*try again after \([^"]*\).*/\1/p' | head -1 || true)
             local secs_to_wait
 
             if [[ -n "$retry_after" ]]; then

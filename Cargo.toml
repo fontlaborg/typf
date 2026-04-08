@@ -39,7 +39,7 @@ members = [
 ]
 
 [workspace.package]
-version = "5.0.14"
+version = "5.0.15"
 authors = ["Typf Contributors"]
 edition = "2021"
 rust-version = "1.75"
@@ -82,33 +82,33 @@ thiserror = "2.0"
 # Rendering dependencies
 tiny-skia = "0.11"
 # Internal crates
-typf = { path = "main", version = "5.0.14" }
-typf-bench = { path = "tools/typf-bench", version = "5.0.14" }
-typf-core = { path = "core", version = "5.0.14" }
-typf-export = { path = "export", version = "5.0.14" }
-typf-fontdb = { path = "fontdb", version = "5.0.14" }
-typf-input = { path = "input", version = "5.0.14" }
-typf-os = { path = "backends/typf-os", version = "5.0.14" }
+typf = { path = "main", version = "5.0.15" }
+typf-bench = { path = "tools/typf-bench", version = "5.0.15" }
+typf-core = { path = "core", version = "5.0.15" }
+typf-export = { path = "export", version = "5.0.15" }
+typf-fontdb = { path = "fontdb", version = "5.0.15" }
+typf-input = { path = "input", version = "5.0.15" }
+typf-os = { path = "backends/typf-os", version = "5.0.15" }
 # Linra OS backends
-typf-os-mac = { path = "backends/typf-os-mac", version = "5.0.14" }
-typf-os-win = { path = "backends/typf-os-win", version = "5.0.14" }
-typf-render-cg = { path = "backends/typf-render-cg", version = "5.0.14" }
-typf-render-color = { path = "backends/typf-render-color", version = "5.0.14" }
+typf-os-mac = { path = "backends/typf-os-mac", version = "5.0.15" }
+typf-os-win = { path = "backends/typf-os-win", version = "5.0.15" }
+typf-render-cg = { path = "backends/typf-render-cg", version = "5.0.15" }
+typf-render-color = { path = "backends/typf-render-color", version = "5.0.15" }
 # Rendering backends
-typf-render-json = { path = "backends/typf-render-json", version = "5.0.14" }
-typf-render-opixa = { path = "backends/typf-render-opixa", version = "5.0.14" }
-typf-render-skia = { path = "backends/typf-render-skia", version = "5.0.14" }
-typf-render-svg = { path = "backends/typf-render-svg", version = "5.0.14" }
-typf-render-vello-cpu = { path = "backends/typf-render-vello-cpu", version = "5.0.14" }
-typf-render-vello = { path = "backends/typf-render-vello", version = "5.0.14" }
-typf-render-zeno = { path = "backends/typf-render-zeno", version = "5.0.14" }
-typf-shape-ct = { path = "backends/typf-shape-ct", version = "5.0.14" }
-typf-shape-hb = { path = "backends/typf-shape-hb", version = "5.0.14" }
-typf-shape-hr = { path = "backends/typf-shape-hr", version = "5.0.14" }
-typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb", version = "5.0.14" }
+typf-render-json = { path = "backends/typf-render-json", version = "5.0.15" }
+typf-render-opixa = { path = "backends/typf-render-opixa", version = "5.0.15" }
+typf-render-skia = { path = "backends/typf-render-skia", version = "5.0.15" }
+typf-render-svg = { path = "backends/typf-render-svg", version = "5.0.15" }
+typf-render-vello-cpu = { path = "backends/typf-render-vello-cpu", version = "5.0.15" }
+typf-render-vello = { path = "backends/typf-render-vello", version = "5.0.15" }
+typf-render-zeno = { path = "backends/typf-render-zeno", version = "5.0.15" }
+typf-shape-ct = { path = "backends/typf-shape-ct", version = "5.0.15" }
+typf-shape-hb = { path = "backends/typf-shape-hb", version = "5.0.15" }
+typf-shape-hr = { path = "backends/typf-shape-hr", version = "5.0.15" }
+typf-shape-icu-hb = { path = "backends/typf-shape-icu-hb", version = "5.0.15" }
 # Shaping backends
-typf-shape-none = { path = "backends/typf-shape-none", version = "5.0.14" }
-typf-unicode = { path = "unicode", version = "5.0.14" }
+typf-shape-none = { path = "backends/typf-shape-none", version = "5.0.15" }
+typf-unicode = { path = "unicode", version = "5.0.15" }
 usvg = "0.45"
 zeno = "0.3"
 
