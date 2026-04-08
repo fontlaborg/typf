@@ -1,0 +1,436 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1775636629562,
+  "projectRoot": "/Users/adam/Developer/vcs3/github.fontlaborg/typf",
+  "techStack": {
+    "languages": [
+      {
+        "name": "Rust",
+        "version": "1.75",
+        "confidence": "high",
+        "markers": [
+          "Cargo.toml"
+        ]
+      },
+      {
+        "name": "Python",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "pyproject.toml"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "pytest",
+        "version": null,
+        "category": "testing"
+      }
+    ],
+    "packageManager": "cargo",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "cargo build",
+    "testCommand": "cargo test",
+    "lintCommand": "cargo clippy",
+    "devCommand": "cargo run",
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "examples",
+      "scripts"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "PLANSTEPS": {
+      "path": "PLANSTEPS",
+      "purpose": null,
+      "fileCount": 9,
+      "lastAccessed": 1775636629553,
+      "keyFiles": [
+        "01-rendering-quality-status.md",
+        "02-external-ecosystems.md",
+        "03-api-extension-typf-core.md",
+        "04-api-extension-typfpy.md",
+        "05-integration-recipes.md"
+      ]
+    },
+    "backends": {
+      "path": "backends",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1775636629554,
+      "keyFiles": []
+    },
+    "benches": {
+      "path": "benches",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775636629554,
+      "keyFiles": [
+        "comprehensive.rs",
+        "pipeline_bench.rs"
+      ]
+    },
+    "bindings": {
+      "path": "bindings",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1775636629554,
+      "keyFiles": []
+    },
+    "cli": {
+      "path": "cli",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775636629554,
+      "keyFiles": [
+        "Cargo.toml"
+      ]
+    },
+    "core": {
+      "path": "core",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1775636629554,
+      "keyFiles": [
+        "Cargo.toml"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1775636629555,
+      "keyFiles": []
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 3,
+      "lastAccessed": 1775636629555,
+      "keyFiles": [
+        "404.html",
+        "search.json",
+        "sitemap.xml"
+      ]
+    },
+    "examples": {
+      "path": "examples",
+      "purpose": "Example code",
+      "fileCount": 15,
+      "lastAccessed": 1775636629555,
+      "keyFiles": [
+        "README.md",
+        "all_formats.rs",
+        "backend_comparison.rs",
+        "basic.rs",
+        "external_layout_integration.rs"
+      ]
+    },
+    "export": {
+      "path": "export",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775636629556,
+      "keyFiles": [
+        "Cargo.toml"
+      ]
+    },
+    "export-svg": {
+      "path": "export-svg",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1775636629556,
+      "keyFiles": [
+        "Cargo.toml"
+      ]
+    },
+    "external": {
+      "path": "external",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1775636629557,
+      "keyFiles": []
+    },
+    "fontdb": {
+      "path": "fontdb",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775636629557,
+      "keyFiles": [
+        "Cargo.toml"
+      ]
+    },
+    "fuzz": {
+      "path": "fuzz",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1775636629557,
+      "keyFiles": [
+        "Cargo.lock",
+        "Cargo.toml",
+        "README.md"
+      ]
+    },
+    "input": {
+      "path": "input",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775636629558,
+      "keyFiles": [
+        "Cargo.toml"
+      ]
+    },
+    "main": {
+      "path": "main",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1775636629558,
+      "keyFiles": [
+        "Cargo.readme.XXXXXX.toml",
+        "Cargo.readme.generated.toml",
+        "Cargo.toml"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 11,
+      "lastAccessed": 1775636629558,
+      "keyFiles": [
+        "bench-compare.sh",
+        "bench.sh",
+        "build-wasm.sh",
+        "build.sh",
+        "count-tests.sh"
+      ]
+    },
+    "src_docs": {
+      "path": "src_docs",
+      "purpose": null,
+      "fileCount": 27,
+      "lastAccessed": 1775636629558,
+      "keyFiles": [
+        "01-introduction.md",
+        "02-quick-start.md",
+        "03-architecture-overview.md",
+        "04-installation.md",
+        "05-six-stage-pipeline.md"
+      ]
+    },
+    "target": {
+      "path": "target",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775636629559,
+      "keyFiles": [
+        "CACHEDIR.TAG"
+      ]
+    },
+    "test-fonts": {
+      "path": "test-fonts",
+      "purpose": null,
+      "fileCount": 10,
+      "lastAccessed": 1775636629559,
+      "keyFiles": [
+        "Kalnia[wdth,wght].ttf",
+        "Nabla-Regular-CBDT.ttf",
+        "Nabla-Regular-COLR.ttf",
+        "Nabla-Regular-SVG.ttf",
+        "Nabla-Regular-sbix.ttf"
+      ]
+    },
+    "test_reports": {
+      "path": "test_reports",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1775636629559,
+      "keyFiles": []
+    },
+    "tools": {
+      "path": "tools",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1775636629559,
+      "keyFiles": []
+    },
+    "typf-tester": {
+      "path": "typf-tester",
+      "purpose": null,
+      "fileCount": 11,
+      "lastAccessed": 1775636629559,
+      "keyFiles": [
+        "ANALYSIS.md",
+        "QUICKSTART.md",
+        "README.md",
+        "bench_svg.py",
+        "compare_performance.py"
+      ]
+    },
+    "unicode": {
+      "path": "unicode",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775636629559,
+      "keyFiles": [
+        "Cargo.toml"
+      ]
+    },
+    "cli/src": {
+      "path": "cli/src",
+      "purpose": "Source code",
+      "fileCount": 9,
+      "lastAccessed": 1775636629560,
+      "keyFiles": [
+        "batch.rs",
+        "cli.rs",
+        "jsonl.rs"
+      ]
+    },
+    "cli/tests": {
+      "path": "cli/tests",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1775636629560,
+      "keyFiles": [
+        "cli_smoke.rs"
+      ]
+    },
+    "core/src": {
+      "path": "core/src",
+      "purpose": "Source code",
+      "fileCount": 11,
+      "lastAccessed": 1775636629560,
+      "keyFiles": [
+        "cache.rs",
+        "cache_config.rs",
+        "context.rs"
+      ]
+    },
+    "core/tests": {
+      "path": "core/tests",
+      "purpose": "Test files",
+      "fileCount": 2,
+      "lastAccessed": 1775636629561,
+      "keyFiles": [
+        "cache_policy.rs",
+        "glyph_source_preference.rs"
+      ]
+    },
+    "export/src": {
+      "path": "export/src",
+      "purpose": "Source code",
+      "fileCount": 4,
+      "lastAccessed": 1775636629561,
+      "keyFiles": [
+        "json.rs",
+        "lib.rs",
+        "png.rs"
+      ]
+    },
+    "export-svg/src": {
+      "path": "export-svg/src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1775636629561,
+      "keyFiles": [
+        "lib.rs"
+      ]
+    },
+    "export-svg/tests": {
+      "path": "export-svg/tests",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1775636629561,
+      "keyFiles": [
+        "integration.rs"
+      ]
+    },
+    "fontdb/src": {
+      "path": "fontdb/src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1775636629561,
+      "keyFiles": [
+        "lib.rs"
+      ]
+    },
+    "fontdb/tests": {
+      "path": "fontdb/tests",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1775636629561,
+      "keyFiles": [
+        "lib.rs"
+      ]
+    },
+    "input/src": {
+      "path": "input/src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1775636629562,
+      "keyFiles": [
+        "lib.rs"
+      ]
+    },
+    "main/examples": {
+      "path": "main/examples",
+      "purpose": "Example code",
+      "fileCount": 0,
+      "lastAccessed": 1775636629562,
+      "keyFiles": []
+    },
+    "main/src": {
+      "path": "main/src",
+      "purpose": "Source code",
+      "fileCount": 2,
+      "lastAccessed": 1775636629562,
+      "keyFiles": [
+        "lib.rs",
+        "wasm.rs"
+      ]
+    },
+    "main/tests": {
+      "path": "main/tests",
+      "purpose": "Test files",
+      "fileCount": 4,
+      "lastAccessed": 1775636629562,
+      "keyFiles": [
+        "baseline_consistency.rs",
+        "color_font_regression.rs",
+        "integration_test.rs"
+      ]
+    },
+    "unicode/src": {
+      "path": "unicode/src",
+      "purpose": "Source code",
+      "fileCount": 3,
+      "lastAccessed": 1775636629562,
+      "keyFiles": [
+        "lib.rs",
+        "proptests.rs",
+        "tests.rs"
+      ]
+    }
+  },
+  "hotPaths": [],
+  "userDirectives": []
+}

@@ -6,6 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Benchmarking harness for Typf shaper and renderer combinations"
 
 [[bin]]
 name = "typf-bench"
