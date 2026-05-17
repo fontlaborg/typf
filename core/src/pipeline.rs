@@ -1,10 +1,38 @@
-//! Pipeline orchestration for shaping, rendering, and export.
+//! Pipeline orchestration: assembles a shaper, renderer, and exporter into one
+//! callable unit that transforms text into file bytes.
 //!
-//! [`Pipeline::process`] is the direct execution path: it calls the configured
-//! shaper, renderer, and exporter in sequence. [`Pipeline::execute`] runs the
-//! explicit stage list stored in a [`PipelineContext`]. In the default pipeline,
-//! the first three stages are placeholders reserved for future preprocessing and
-//! font-selection work.
+//! ## Two execution paths
+//!
+//! ### Fast path — [`Pipeline::process`]
+//!
+//! The normal way to render text. Calls the configured shaper, renderer, and
+//! exporter in sequence and returns the encoded bytes directly:
+//!
+//! ```text
+//! text ──▶ shaper.shape() ──▶ ShapingResult
+//!                                  │
+//!                                  ▼
+//!                          renderer.render() ──▶ RenderOutput
+//!                                                     │
+//!                                                     ▼
+//!                                             exporter.export() ──▶ Vec<u8>
+//! ```
+//!
+//! ### Stage path — [`Pipeline::execute`]
+//!
+//! Runs the explicit six-stage list stored inside a [`PipelineContext`]. The
+//! default stage list is:
+//!
+//! 1. **InputParsing** — reserved for future preprocessing (pass-through today)
+//! 2. **UnicodeProcessing** — reserved for bidi/script analysis (pass-through today)
+//! 3. **FontSelection** — reserved for font fallback logic (pass-through today)
+//! 4. **Shaping** — calls `shaper.shape()`, stores result in the context
+//! 5. **Rendering** — calls `renderer.render()`, stores result in the context
+//! 6. **Export** — calls `exporter.export()` if an exporter is configured
+//!
+//! The stage path exists so future work (bidi resolution, font fallback, text
+//! segmentation) can slot into the pipeline without changing the public API.
+//! For most use cases, [`Pipeline::process`] is all you need.
 
 use crate::{
     context::PipelineContext,
@@ -267,6 +295,11 @@ impl Default for PipelineBuilder {
     }
 }
 
+/// Stage 1: parse and validate raw input text.
+///
+/// Intended future home for: Unicode escape expansion, whitespace normalization,
+/// control-character stripping, and length/size pre-checks. Currently a
+/// pass-through — no transformation is applied.
 struct InputParsingStage;
 impl Stage for InputParsingStage {
     fn name(&self) -> &'static str {
@@ -279,6 +312,12 @@ impl Stage for InputParsingStage {
     }
 }
 
+/// Stage 2: resolve Unicode script, direction, and text runs.
+///
+/// Intended future home for: Unicode Bidirectional Algorithm (UAX #9),
+/// script itemization (splitting mixed-script text into homogeneous runs),
+/// and NFC/NFD normalization for shapers that require it. Currently a
+/// pass-through — the shaper backends handle normalization internally.
 struct UnicodeProcessingStage;
 impl Stage for UnicodeProcessingStage {
     fn name(&self) -> &'static str {
@@ -291,6 +330,12 @@ impl Stage for UnicodeProcessingStage {
     }
 }
 
+/// Stage 3: choose the best font for each run of text.
+///
+/// Intended future home for: system font discovery, per-script font fallback
+/// (e.g. automatically switching to a CJK font for Chinese characters inside
+/// a Latin string), and TTC face-index resolution. Currently a pass-through —
+/// the caller supplies the font explicitly.
 struct FontSelectionStage;
 impl Stage for FontSelectionStage {
     fn name(&self) -> &'static str {

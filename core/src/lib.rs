@@ -420,14 +420,71 @@ pub mod types {
     }
 }
 
+/// Parameters that control how text is shaped (step 1 of the pipeline).
+///
+/// Pass this to [`Shaper::shape`][crate::traits::Shaper::shape]. The shaper
+/// reads these values to select the right OpenType features, script-processing
+/// rules, and language-specific behaviour.
+///
+/// Most fields default to sensible values for left-to-right Latin text at 16px.
+/// Override only what you need.
+///
+/// ## OpenType features (`features`)
+///
+/// Features are four-letter tags that switch behaviour on or off in the font's
+/// GSUB/GPOS tables. Common examples:
+///
+/// - `("liga", 1)` — enable standard ligatures (fi, fl, ff, …)
+/// - `("kern", 1)` — enable kerning (AV closer than AX)
+/// - `("smcp", 1)` — enable small capitals
+/// - `("onum", 1)` — enable old-style (lowercase) numerals
+///
+/// The second value is a uint; 0 = off, 1 = on, higher values select alternates.
+///
+/// ## Variable font axes (`variations`)
+///
+/// Variable fonts encode a continuous design space. Supply axis coordinates to
+/// choose a point in that space:
+///
+/// - `("wght", 700.0)` — Bold weight
+/// - `("wdth", 75.0)` — Condensed width
+/// - `("slnt", -12.0)` — 12° slant
+///
+/// Axis names and ranges vary by font; query them via
+/// [`FontRef::variation_axes`][crate::traits::FontRef::variation_axes].
 #[derive(Debug, Clone)]
 pub struct ShapingParams {
+    /// Font size in pixels. Default: 16.0. Must be finite and positive.
     pub size: f32,
+    /// Text direction. Default: left-to-right.
+    ///
+    /// Set to `Direction::RightToLeft` for Arabic, Hebrew, etc. Most shapers
+    /// auto-detect direction from the text; setting this explicitly overrides
+    /// the auto-detection.
     pub direction: types::Direction,
+    /// BCP 47 language tag, e.g. `"ar"`, `"hi"`, `"tr"`, `"en"`.
+    ///
+    /// Informs the shaper about language-specific OpenType rules. For example,
+    /// Turkish dotless-i (`ı`) and dotted-I (`İ`) require `"tr"` to render
+    /// correctly. `None` lets the shaper use its default.
     pub language: Option<String>,
+    /// ISO 15924 script tag, e.g. `"Arab"`, `"Deva"`, `"Latn"`, `"Thai"`.
+    ///
+    /// Selects which OpenType script processing rules to activate. `None` lets
+    /// the shaper auto-detect from the text (recommended for most use cases).
     pub script: Option<String>,
+    /// OpenType feature overrides as `(tag, value)` pairs.
+    ///
+    /// See the field-level docs on this struct for examples.
     pub features: Vec<(String, u32)>,
+    /// Variable font axis coordinates as `(tag, value)` pairs.
+    ///
+    /// See the field-level docs on this struct for examples.
     pub variations: Vec<(String, f32)>,
+    /// Extra horizontal space between glyphs, in pixels. Default: 0.0.
+    ///
+    /// Added after the shaper's advance width for each glyph. Positive values
+    /// spread glyphs apart; negative values bring them closer together.
     pub letter_spacing: f32,
 }
 
@@ -591,20 +648,54 @@ impl Default for GlyphSourcePreference {
     }
 }
 
+/// Parameters that control how shaped glyphs are drawn (step 2 of the pipeline).
+///
+/// Pass this to [`Renderer::render`][crate::traits::Renderer::render]. The
+/// renderer reads these values to control colors, anti-aliasing, output mode,
+/// and which glyph data to read from color fonts.
 #[derive(Debug, Clone)]
 pub struct RenderParams {
+    /// Glyph color. Default: opaque black.
+    ///
+    /// Ignored for color glyphs (COLR/SVG/bitmap) — those carry their own colors.
     pub foreground: Color,
+    /// Canvas background color. `None` (default) means a transparent background.
+    ///
+    /// Set to `Some(Color::white())` for opaque white, e.g. for JPEG export.
     pub background: Option<Color>,
+    /// Extra pixels added around the text on all four sides. Default: 0.
+    ///
+    /// Useful when glyphs have ink outside their advance width (e.g. italic
+    /// cursive scripts, or descenders that extend below the baseline).
     pub padding: u32,
+    /// Whether to apply anti-aliasing. Default: true.
+    ///
+    /// Anti-aliasing smooths diagonal and curved edges by computing fractional
+    /// pixel coverage. Disable for pixel-art or bitmap-style rendering.
     pub antialias: bool,
-    /// Variable font variations like [("wght", 700.0), ("wdth", 100.0)]
-    /// Variable fonts need specific coordinates to render correctly
+    /// Variable font axis coordinates applied during rendering, as `(tag, value)` pairs.
+    ///
+    /// Renderers that read glyph outlines directly (opixa, skia, zeno, vello)
+    /// need these coordinates to instantiate the correct outline from the `gvar`
+    /// or `CFF2` table. Should match the values used in [`ShapingParams::variations`].
     pub variations: Vec<(String, f32)>,
-    /// CPAL color palette index for COLR color glyphs (0 = default palette)
+    /// CPAL palette index for COLR color glyphs. Default: 0 (the font's default palette).
+    ///
+    /// Color fonts (COLR format) can carry multiple named palettes (light mode,
+    /// dark mode, seasonal themes, etc.). Index 0 is always the default.
     pub color_palette: u16,
-    /// Allowed glyph sources (order + deny list)
+    /// Which glyph data sources to use, and in what priority order.
+    ///
+    /// A font can store the same character multiple ways: as a vector outline
+    /// (`glyf`/`CFF`), as layered colored paths (`COLR`), as an embedded SVG,
+    /// or as a pre-rendered bitmap (`sbix`/`CBDT`). This preference list
+    /// controls which representation the renderer picks when multiple are
+    /// available. Default: vector outlines first, bitmaps last.
     pub glyph_sources: GlyphSourcePreference,
-    /// Desired render output mode (bitmap or vector)
+    /// Whether to produce a raster bitmap or a vector document. Default: bitmap.
+    ///
+    /// Set to `RenderMode::Vector(VectorFormat::Svg)` to get an SVG string
+    /// instead of a pixel grid. Not all renderers support vector output.
     pub output: RenderMode,
 }
 

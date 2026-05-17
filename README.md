@@ -23,24 +23,67 @@ open hello.png
 
 That's it. Your text is rendered.
 
+## Who needs this
+
+You're building a tool that draws text and the usual "just use the OS" path
+isn't working. Maybe you're cross-platform and macOS, Windows, and Linux give
+different results. Maybe you're rendering Arabic and the letters aren't joining.
+Maybe you're generating PNGs in a server process with no display. Typf gives
+you one consistent pipeline you control end to end.
+
+## How text rendering actually works
+
+Most developers don't know why "fi" is sometimes one glyph, why Arabic letters
+change shape mid-word, or why "AV" looks tighter than "AX". Here's the short
+version:
+
+**Shaping** is the step most people skip and then wonder why things look wrong.
+A font is not a lookup table of character → picture. It's a program. For every
+run of text it specifies: which glyph IDs to use, whether to merge two
+characters into a ligature, how much to shift adjacent glyphs toward each other
+(kerning), and in what direction the whole run flows. Arabic letters have four
+contextual forms; Devanagari consonants stack into vertical conjuncts; even
+plain Latin has ligatures (fi, fl) and kerning pairs. The shaper reads the
+font's OpenType GSUB/GPOS tables and resolves all of that into a flat list of
+positioned glyph IDs.
+
+**Rendering** takes that list and draws it. Each glyph in the font is stored as
+Bézier curves. The renderer traces those curves and either rasterizes them into
+a pixel grid (bitmap output) or emits SVG path data (vector output).
+
+**Export** encodes the in-memory pixels or paths as PNG, PNM, SVG, JSON, etc.
+
+```text
+"Hello, مرحبا, 你好!"
+        │
+        ▼
+ ┌─────────────┐
+ │   Shaper    │  OpenType rules → which glyphs, where, in what direction
+ └──────┬──────┘
+        │  ShapingResult: glyph IDs + (x, y) positions
+        ▼
+ ┌─────────────┐
+ │  Renderer   │  Bézier curves → pixels or vector paths
+ └──────┬──────┘
+        │  RenderOutput: RGBA bitmap or SVG/JSON
+        ▼
+ ┌─────────────┐
+ │  Exporter   │  Pixels/paths → PNG, PNM, SVG, JSON bytes
+ └─────────────┘
+```
+
+Every box is swappable via a Rust trait. Five shaper implementations × seven
+renderer implementations = 35 valid backend combinations.
+
 ## What it does
 
-- **Complex scripts**: Arabic, Hindi, Thai with proper shaping
-- **Mixed languages**: RTL and LTR in the same line  
-- **Fast output**: PNG, SVG, JSON in <1ms with advanced caching
-- **Small footprint**: 500KB minimal build with selective features
-- **Multiple backends**: 5 shapers × 7 renderers (35 combinations)
-- **Color fonts**: COLR v0/v1, SVG, and bitmap glyph support
-- **GPU rendering**: Vello acceleration where available
-
-## How it works
-
-1. Text enters the pipeline
-2. Unicode scripts get detected  
-3. Fonts match and fallback when needed
-4. Characters become positioned glyphs
-5. Renderer draws them with SIMD
-6. Export writes your format
+- **Complex scripts**: Arabic, Hindi, Thai, Hebrew, CJK — correct shaping for all
+- **Mixed directions**: RTL and LTR in the same line, handled automatically
+- **Fast output**: PNG, SVG, JSON in <1ms with optional two-level caching
+- **Small footprint**: 500 KB minimal build; pay only for the backends you enable
+- **35 combinations**: 5 shapers × 7 renderers, all sharing the same pipeline API
+- **Color fonts**: COLR v0/v1, SVG glyphs, bitmap glyphs (sbix/CBDT/EBDT)
+- **GPU rendering**: Vello acceleration where available; CPU fallback everywhere else
 
 ## Choose your setup
 

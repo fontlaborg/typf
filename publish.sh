@@ -446,7 +446,10 @@ do_publish() {
     local rust_only="${1:-false}"
     local python_only="${2:-false}"
 
-    # Step 1: Read the version from the latest git tag.
+    # Step 1: Bump version tag via gitnextver, then read it.
+    log_info "Bumping version tag via gitnextver..."
+    uvx gitnextver@latest
+
     local version
     version=$(get_git_version)
     log_info "Version from git tag: $version"
