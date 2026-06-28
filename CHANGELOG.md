@@ -6,6 +6,62 @@ Changes to Typf.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0//),
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
+## [Unreleased]
+
+### Fixed
+- SVG path builders no longer swallow formatting errors: `typf-export-svg` and
+  `typf-render-svg` capture the first `write!` error and propagate it as a
+  `Result` (`ExportError::WriteFailed` / `RenderError::PathBuildingFailed`)
+  instead of discarding it with `let _ = write!(...)`.
+- Stale test-fixture paths that resolved *outside* the repository, so every
+  font-dependent test silently skipped (or, for the CLI smoke tests, hard
+  panicked). Fixed in `main/tests/{visual_regression,baseline_consistency,
+  color_font_regression,integration_test}.rs`, `fontdb/tests/lib.rs`, and the
+  CLI test helpers. The 21 SSIM visual-regression tests now actually execute.
+- CLI smoke tests now locate the binary via `CARGO_BIN_EXE_typf` instead of a
+  hand-rolled `target/debug/typf` path (which assumed a `crates/<name>` layout
+  and resolved outside the repo).
+- Flaky `cli_smoke` temp-file paths: file names now include a monotonic counter,
+  preventing same-nanosecond collisions under the parallel test runner that
+  intermittently failed `test_batch_invalid_json_fails`.
+- Pre-existing clippy errors surfaced by `cargo clippy --all-targets`:
+  `unnecessary_sort_by` in `typf-render-opixa` (`edge.rs`) and a `missing_docs`
+  error on `TinySkiaColorPainter::new` in `typf-render-color`.
+
+### Changed
+- `typf-render-opixa` SIMD: removed the half-wired aarch64 `blend_over_neon`
+  placeholder that loaded NEON vectors and then silently fell back to scalar.
+  `blend_over` now dispatches aarch64 directly to the scalar blend, producing
+  bit-identical output until a real, validated NEON kernel lands.
+- Cache documentation: the vestigial `MultiLevelCache` / `l1_*` / `l2_*` naming
+  is now documented in-code as historical — there is a single Moka TinyLFU cache
+  underneath; the names are retained only for API compatibility.
+
+### Removed
+- Dead CLI modules `cli/src/batch.rs`, `cli/src/jsonl.rs`, and `cli/src/repl.rs`
+  (unreachable legacy code), along with the now-unused `repl` cargo feature and
+  its `rustyline`/`colored` optional dependencies.
+
+### Added
+- `typf info` now prints the full 5 shapers × 7 renderers = 35 backend
+  combination matrix plus the single-pass linra backends, independent of
+  compiled features (covered by a new `cli_smoke` test).
+- Visual-regression fixture gate: a Rust test
+  (`test_ssim_fixtures_present_*`) and a CI step that fail loudly if the SSIM
+  baseline fonts are missing, instead of letting all 21 SSIM tests skip silently.
+
+### Documentation
+- New `src_docs/27-caching.md` (Moka TinyLFU caching strategy) and
+  `src_docs/28-gpu-vs-cpu-vello.md` (GPU `vello` vs CPU `vello-cpu`), wired into
+  `zensical.toml` navigation.
+- `CONTRIBUTING.md`: documented the `./test.sh --quick` path for contributors
+  without a full GPU backend.
+- `backends/typf-render-vello`: per-function comments noting that COLR v1, the
+  SVG glyph table, and bitmap strikes are unsupported (outline-only).
+- `core/src/pipeline.rs`: note that the single-pass `LinraRenderer` backends
+  bypass `Pipeline` entirely.
+- README: corrected the stale `v5.0.2` version in the title/status to `v5.0.20`.
+
 ## [5.0.2] - 2025-12-16
 
 ### Added

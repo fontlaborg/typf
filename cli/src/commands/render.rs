@@ -1196,9 +1196,9 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn test_font(name: &str) -> PathBuf {
+        // `CARGO_MANIFEST_DIR` is `<repo>/cli`; fonts live at `<repo>/test-fonts`.
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        path.pop(); // crates
-        path.pop(); // root
+        path.pop(); // repo root
         path.push("test-fonts");
         path.push(name);
         path

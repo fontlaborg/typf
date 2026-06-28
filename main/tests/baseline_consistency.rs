@@ -15,9 +15,9 @@ use typf_render_skia::SkiaRenderer;
 use typf_render_vello_cpu::VelloCpuRenderer;
 
 fn test_font_path(name: &str) -> PathBuf {
+    // `CARGO_MANIFEST_DIR` is `<repo>/main`; fonts live at `<repo>/test-fonts`.
+    // (The stale two-`parent()` path silently skipped these tests.)
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
         .parent()
         .unwrap()
         .join("test-fonts")

@@ -198,7 +198,7 @@ mod tests {
             std::sync::Arc::new(vec![1, 2, 3]),
         );
         manager.shaping_cache.sync(); // Force pending insert to complete
-        // Insert dummy data into glyph cache
+                                      // Insert dummy data into glyph cache
         manager.cache_glyph(
             crate::glyph_cache::GlyphCacheKey::new(
                 "renderer",

@@ -161,6 +161,11 @@ impl VelloRenderer {
     }
 
     /// Convert typf ShapingResult glyphs to Vello Glyph format.
+    ///
+    /// Only the glyph id and pen position are carried over. Color glyph tables
+    /// are **not** consulted here: `COLR` v1 (layered/gradient), the `SVG` table,
+    /// and bitmap strikes (`sbix`/`CBDT`/`EBDT`) are unsupported by this backend
+    /// and render as plain outlines filled with the single foreground paint.
     fn convert_glyphs(shaped: &ShapingResult) -> Vec<Glyph> {
         shaped
             .glyphs
@@ -289,6 +294,14 @@ impl Renderer for VelloRenderer {
         "vello"
     }
 
+    /// Render shaped glyphs to an RGBA bitmap on the GPU.
+    ///
+    /// Unsupported glyph formats: this backend rasterizes glyph **outlines**
+    /// only, filled with a single solid foreground paint. `COLR` v1
+    /// (layered/gradient color), `SVG`-table glyphs, and bitmap strikes
+    /// (`sbix`/`CBDT`/`EBDT`) are not handled — such glyphs appear as plain
+    /// monochrome outlines (or blank, if they have no outline). Use the
+    /// `skia`/`zeno` backends for full color-glyph support.
     fn render(
         &self,
         shaped: &ShapingResult,

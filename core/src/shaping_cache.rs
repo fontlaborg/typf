@@ -101,17 +101,23 @@ impl std::fmt::Debug for ShapingCache {
 }
 
 impl ShapingCache {
-    /// Create a new shaping cache with default capacities
+    /// Create a new shaping cache with a default capacity of 600 entries.
     ///
-    /// L1 (hot cache): 100 entries for frequently accessed results
-    /// L2 (LRU cache): 500 entries for less frequent access
+    /// The two numbers below are summed into a single Moka TinyLFU cache; the
+    /// `100`/`500` split is historical (a pre-Moka two-tier L1/L2 design) and no
+    /// longer reflects separate cache levels. Moka manages hot/cold admission
+    /// internally via TinyLFU.
     pub fn new() -> Self {
         Self {
             cache: MultiLevelCache::new(100, 500),
         }
     }
 
-    /// Create a shaping cache with custom capacities
+    /// Create a shaping cache with a custom capacity.
+    ///
+    /// `l1_size` and `l2_size` are kept as parameter names for API
+    /// compatibility; they are summed into one Moka TinyLFU cache (there is no
+    /// longer a separate L1/L2 tier).
     pub fn with_capacity(l1_size: usize, l2_size: usize) -> Self {
         Self {
             cache: MultiLevelCache::new(l1_size, l2_size),
@@ -120,7 +126,7 @@ impl ShapingCache {
 
     /// Get a cached shaping result
     ///
-    /// Returns `Some(result)` if the key exists in either cache level,
+    /// Returns `Some(result)` if the key exists in the Moka TinyLFU cache,
     /// `None` if not found or if caching is globally disabled.
     pub fn get(&self, key: &ShapingCacheKey) -> Option<ShapingResult> {
         if !cache_config::is_caching_enabled() {
@@ -131,8 +137,9 @@ impl ShapingCache {
 
     /// Insert a shaping result into the cache
     ///
-    /// The result is stored in both L1 and L2 caches for maximum availability.
-    /// Does nothing if caching is globally disabled.
+    /// The result is stored in the Moka TinyLFU cache, which decides admission
+    /// and eviction by access frequency. Does nothing if caching is globally
+    /// disabled.
     pub fn insert(&self, key: ShapingCacheKey, result: ShapingResult) {
         if !cache_config::is_caching_enabled() {
             return;

@@ -33,6 +33,17 @@
 //! The stage path exists so future work (bidi resolution, font fallback, text
 //! segmentation) can slot into the pipeline without changing the public API.
 //! For most use cases, [`Pipeline::process`] is all you need.
+//!
+//! ## Linra backends bypass this pipeline entirely
+//!
+//! The single-pass OS backends (the `LinraRenderer` trait in [`crate::linra`],
+//! implemented by `typf-os-mac` / `typf-os-win`) do **not** go through
+//! `Pipeline`. They fuse shaping and rendering into one native OS call
+//! (CoreText `CTLineDraw`, DirectWrite `DrawTextLayout`) and therefore never
+//! construct a [`ShapingResult`](crate::types::ShapingResult) or invoke the
+//! `Shaper`/`Renderer` traits. If you are tracing how text flows through
+//! `Pipeline`, be aware the linra path is a separate, parallel code path —
+//! changes here do not affect it and vice versa.
 
 use crate::{
     context::PipelineContext,

@@ -31,7 +31,52 @@ pub fn run(args: &InfoArgs) -> Result<()> {
         print_formats();
     }
 
+    if show_all {
+        println!();
+        print_combinations();
+    }
+
     Ok(())
+}
+
+/// All traditional shaper backends (the documented 5×7 matrix is independent of
+/// which features this binary was compiled with).
+const ALL_SHAPERS: [&str; 5] = ["none", "harfbuzz", "harfrust", "icu-hb", "coretext"];
+
+/// All traditional renderer backends.
+const ALL_RENDERERS: [&str; 7] = [
+    "opixa",
+    "skia",
+    "zeno",
+    "vello-cpu",
+    "vello",
+    "coregraphics",
+    "json",
+];
+
+/// Print the full shaper × renderer combination matrix.
+///
+/// Typf documents 5 shapers × 7 renderers = 35 traditional backend
+/// combinations. These are listed here regardless of compiled features so the
+/// matrix is discoverable. The single-pass "linra" backends are listed
+/// separately because they bypass the shaper/renderer split entirely.
+fn print_combinations() {
+    let total = ALL_SHAPERS.len() * ALL_RENDERERS.len();
+    println!(
+        "Backend combinations ({} shapers x {} renderers = {} total):",
+        ALL_SHAPERS.len(),
+        ALL_RENDERERS.len(),
+        total
+    );
+    for shaper in ALL_SHAPERS {
+        for renderer in ALL_RENDERERS {
+            println!("  combo: {shaper}+{renderer}");
+        }
+    }
+    println!();
+    println!("Single-pass (linra) backends bypass the matrix above:");
+    println!("  coretext-linra    - CoreText single-pass (macOS)");
+    println!("  directwrite-linra - DirectWrite single-pass (Windows)");
 }
 
 fn print_shapers() {

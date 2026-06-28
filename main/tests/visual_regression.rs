@@ -44,13 +44,45 @@ const MIN_SSIM_THRESHOLD: f64 = 0.90;
 const HIGH_SSIM_THRESHOLD: f64 = 0.99;
 
 fn test_font_path(name: &str) -> PathBuf {
+    // `CARGO_MANIFEST_DIR` is `<repo>/main`; test fonts live at `<repo>/test-fonts`.
+    // (Historically the crate sat at `<repo>/crates/typf`, which needed two
+    // `parent()` hops — that stale path silently skipped every SSIM test.)
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
         .parent()
         .unwrap()
         .join("test-fonts")
         .join(name)
+}
+
+/// Test fonts that every SSIM visual-regression test depends on.
+///
+/// Each individual SSIM test skips (passes) when its font is missing, which
+/// would let a dropped fixture silently turn the whole 21-test suite into
+/// no-ops. This test fails loudly instead, acting as the CI gate that the
+/// visual-regression baselines (the rendered output of these fonts) can
+/// actually be produced.
+const REQUIRED_SSIM_FONTS: &[&str] = &[
+    "NotoSans-Regular.ttf",
+    "NotoNaskhArabic-Regular.ttf",
+    "Kalnia[wdth,wght].ttf",
+    "Nabla-Regular-COLR.ttf",
+    "Nabla-Regular-SVG.ttf",
+];
+
+#[test]
+fn test_ssim_fixtures_present_when_suite_runs_then_all_fonts_exist() {
+    let missing: Vec<String> = REQUIRED_SSIM_FONTS
+        .iter()
+        .map(|name| test_font_path(name))
+        .filter(|path| !path.exists())
+        .map(|path| path.display().to_string())
+        .collect();
+
+    assert!(
+        missing.is_empty(),
+        "Missing SSIM visual-regression fixtures (the other tests would skip \
+         silently without these): {missing:?}"
+    );
 }
 
 /// Convert typf BitmapData to image_compare compatible grayscale buffer.

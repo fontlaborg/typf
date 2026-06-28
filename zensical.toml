@@ -24,7 +24,8 @@ nav = [
     "05-six-stage-pipeline.md",
     "06-backend-architecture.md",
     "07-memory-management.md",
-    "08-performance-fundamentals.md"
+    "08-performance-fundamentals.md",
+    "27-caching.md"
   ] },
   { "Shaping Backends" = [
     "09-harfbuzz-shaping.md",
@@ -48,7 +49,9 @@ nav = [
     "21-webassembly-integration.md",
     "22-performance-optimization.md",
     "23-deployment-integration.md",
-    "24-troubleshooting-best-practices.md"
+    "24-troubleshooting-best-practices.md",
+    "26-vello-gpu-platform-support.md",
+    "28-gpu-vs-cpu-vello.md"
   ] }
 ]
 

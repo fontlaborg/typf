@@ -26,9 +26,9 @@ use typf_shape_none::NoneShaper;
 
 /// Get path to test font fixtures
 fn test_font_path(name: &str) -> PathBuf {
+    // `CARGO_MANIFEST_DIR` is `<repo>/main`; fonts live at `<repo>/test-fonts`.
+    // (The stale two-`parent()` path silently skipped these tests.)
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
         .parent()
         .unwrap()
         .join("test-fonts")

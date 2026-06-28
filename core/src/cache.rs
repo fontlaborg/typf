@@ -36,10 +36,14 @@ pub fn get_cache_manager() -> &'static CacheManager {
 /// Can be overridden via `TYPF_CACHE_MAX_BYTES` environment variable.
 pub const DEFAULT_CACHE_MAX_BYTES: u64 = 512 * 1024 * 1024;
 
-/// Scan-resistant cache backed by Moka's TinyLFU
+/// Scan-resistant cache backed by Moka's TinyLFU.
 ///
 /// TinyLFU tracks frequency of both hits and misses, rejecting
 /// infrequent "scan" accesses that would pollute a pure LRU cache.
+///
+/// The `MultiLevelCache` name is historical: an earlier design used a two-tier
+/// L1/L2 layout. There is now a single Moka cache; the name (and the `l1_*` /
+/// `l2_*` metric fields) are retained only for API compatibility.
 pub struct MultiLevelCache<K, V>
 where
     K: Hash + Eq + Send + Sync + Clone + 'static,
@@ -67,10 +71,11 @@ where
     K: Hash + Eq + Send + Sync + Clone + 'static,
     V: Clone + Send + Sync + 'static,
 {
-    /// Build a scan-resistant cache with specified capacity
+    /// Build a scan-resistant cache with specified capacity.
     ///
-    /// The `l1_size` and `l2_size` parameters are combined for total capacity.
-    /// Moka's TinyLFU internally manages hot/cold separation.
+    /// The `l1_size` and `l2_size` parameters are vestigial names from the
+    /// pre-Moka two-tier design; they are simply summed into one Moka TinyLFU
+    /// cache, which manages hot/cold admission internally.
     pub fn new(l1_size: usize, l2_size: usize) -> Self {
         let total_capacity = (l1_size + l2_size) as u64;
         let cache = Cache::builder()

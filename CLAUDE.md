@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Typf is a modular text shaping and rendering engine. It takes a font file, a string, and parameters, then produces shaped, rasterized text as pixels or vector paths. The pipeline is: **Shaping** (text to positioned glyphs) **-> Rendering** (glyphs to pixels/vectors) **-> Export** (pixels to file format). There are 5 shapers x 7 renderers = 35 backend combinations, plus "linra" single-pass OS backends that bypass the intermediate step.
 
-Made by [FontLab](https://www.fontlab.org/). Current version: 5.0.15. MSRV: Rust 1.75.
+Made by [FontLab](https://www.fontlab.org/). Current version: 5.0.20 (version of record is the latest git tag). MSRV: Rust 1.75.
 
 ## Build & test commands
 
@@ -158,7 +158,7 @@ macOS builds add `shaping-mac` + `render-mac`. The CLI crate has its own paralle
 - macOS: CoreText shaper (`typf-shape-ct`) and CoreGraphics renderer (`typf-render-cg`) use `objc2` crates. Thread-local storage for OS handles.
 - Windows: DirectWrite backend (`typf-os-win`) — variable font support is incomplete (marked TODO).
 - WASM: `typf/src/wasm.rs` exists but uses MockFont — non-functional for real fonts currently.
-- ARM: NEON SIMD path in `typf-render-opixa/src/simd.rs` is incomplete (TODO) — falls back to scalar.
+- ARM: `typf-render-opixa/src/simd.rs` has no hand-written NEON kernel yet. `blend_over` dispatches aarch64 directly to the scalar blend (bit-identical output); the earlier half-wired `blend_over_neon` placeholder has been removed.
 
 ## Key files for understanding the codebase
 
@@ -181,7 +181,9 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`. Scop
 ## Known technical debt
 
 See REVIEW.md (detailed code quality audit) and TASKS.md (actionable improvement plan). Key areas:
-- Cache module has duplicate key types and vestigial L1/L2 naming from pre-Moka migration
-- Dead code modules in CLI (`batch.rs`, `jsonl.rs`, `repl.rs`)
-- SVG exporters silently swallow write errors (`let _ = write!(...)`)
+- Cache module still has duplicate key types; the vestigial L1/L2 naming is now documented in-code as historical (single Moka TinyLFU cache underneath)
 - Doc/code value mismatches in `core/src/lib.rs` for bitmap dimension constants
+
+Resolved (kept here for history):
+- ~~Dead code modules in CLI (`batch.rs`, `jsonl.rs`, `repl.rs`)~~ — removed (along with the unused `repl` feature and `rustyline`/`colored` deps)
+- ~~SVG exporters silently swallow write errors (`let _ = write!(...)`)~~ — `export-svg` and `typf-render-svg` now propagate write errors via `Result`

@@ -8,8 +8,10 @@ use typf_core::traits::FontRef;
 use typf_fontdb::TypfFontFace;
 
 fn repo_test_font_path(name: &str) -> PathBuf {
+    // `CARGO_MANIFEST_DIR` is `<repo>/fontdb`; fonts live at `<repo>/test-fonts`.
+    // (The stale `../../test-fonts` path silently skipped these tests.)
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../test-fonts")
+        .join("../test-fonts")
         .join(name)
 }
 

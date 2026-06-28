@@ -10,24 +10,40 @@
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Get the path to the typf binary
-fn typf_binary() -> PathBuf {
-    // During cargo test, the binary is in target/debug
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // crates
-    path.pop(); // root
-    path.push("target");
-    path.push("debug");
-    path.push("typf");
-    path
+/// Monotonic counter making temp paths unique even when two tests run in the
+/// same nanosecond on different threads. A bare timestamp collides under the
+/// parallel test runner, which previously made `test_batch_invalid_json_fails`
+/// flaky (it could read another test's empty input file).
+static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+fn unique_id() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock should be after UNIX_EPOCH")
+        .as_nanos();
+    let seq = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("{nanos}_{seq}")
 }
 
-/// Get the path to a test font
+/// Get the path to the typf binary.
+///
+/// Cargo sets `CARGO_BIN_EXE_<name>` for integration tests of the crate that
+/// declares the binary, so this is robust to the target directory location
+/// (workspace target dir, custom `CARGO_TARGET_DIR`, debug vs release). The
+/// previous hand-rolled `target/debug/typf` path assumed a `crates/<name>`
+/// layout and resolved outside the repo, making every CLI smoke test panic.
+fn typf_binary() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_typf"))
+}
+
+/// Get the path to a test font.
+///
+/// `CARGO_MANIFEST_DIR` is `<repo>/cli`; test fonts live at `<repo>/test-fonts`.
 fn test_font(name: &str) -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // crates
-    path.pop(); // root
+    path.pop(); // repo root
     path.push("test-fonts");
     path.push(name);
     path
@@ -36,22 +52,14 @@ fn test_font(name: &str) -> PathBuf {
 /// Create a temporary file path
 fn temp_output(ext: &str) -> PathBuf {
     let mut path = std::env::temp_dir();
-    let id = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    path.push(format!("typf_test_{}.{}", id, ext));
+    path.push(format!("typf_test_{}.{}", unique_id(), ext));
     path
 }
 
 /// Create a temporary directory path
 fn temp_dir(prefix: &str) -> PathBuf {
     let mut path = std::env::temp_dir();
-    let id = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("system clock should be after UNIX_EPOCH")
-        .as_nanos();
-    path.push(format!("typf_test_{}_{}", prefix, id));
+    path.push(format!("typf_test_{}_{}", prefix, unique_id()));
     path
 }
 
@@ -122,6 +130,36 @@ fn test_info_formats() {
     assert!(
         stdout.contains("png") || stdout.contains("svg") || stdout.contains("Format"),
         "Should list available formats"
+    );
+}
+
+#[test]
+fn test_info_lists_all_35_shaper_renderer_combinations() {
+    let output = Command::new(typf_binary())
+        .arg("info")
+        .output()
+        .expect("Failed to execute typf info");
+
+    assert!(output.status.success(), "info should succeed");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // The documented matrix is 5 shapers x 7 renderers = 35 combinations,
+    // listed regardless of which features the binary was built with.
+    assert!(
+        stdout.contains("5 shapers x 7 renderers = 35"),
+        "info should report the 5x7=35 combination matrix, got:\n{stdout}"
+    );
+
+    let combo_count = stdout.lines().filter(|l| l.contains("combo:")).count();
+    assert_eq!(
+        combo_count, 35,
+        "info should list exactly 35 shaper+renderer combinations, found {combo_count}"
+    );
+
+    // The single-pass linra backends must be discoverable too.
+    assert!(
+        stdout.contains("coretext-linra"),
+        "info should list the coretext-linra single-pass backend"
     );
 }
 

@@ -147,7 +147,7 @@ impl EdgeList {
 
     /// Restore order: sort everyone by their X position
     pub fn sort_by_x(&mut self) {
-        self.edges.sort_by(|a, b| a.x.cmp(&b.x));
+        self.edges.sort_by_key(|a| a.x);
     }
 
     /// Spring cleaning: remove edges that have finished their journey

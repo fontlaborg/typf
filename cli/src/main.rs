@@ -8,12 +8,6 @@ mod cli;
 mod commands;
 mod language;
 mod limits;
-mod script;
-
-// Keep legacy modules for REPL and advanced batch
-mod batch;
-mod jsonl;
-mod repl;
 
 use clap::Parser;
 use cli::{Cli, Commands};

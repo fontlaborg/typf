@@ -88,6 +88,11 @@ struct LayerState {
 }
 
 impl<'a> TinySkiaColorPainter<'a> {
+    /// Create a new color painter that draws into `pixmap`.
+    ///
+    /// `palette` supplies CPAL palette entries, `font` is the source face, and
+    /// `size` is the rendering size in pixels. The painter starts with an
+    /// identity transform and an empty clip/layer stack.
     pub fn new(
         pixmap: &'a mut Pixmap,
         palette: &'a [skrifa::color::Color],

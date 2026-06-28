@@ -61,6 +61,22 @@ Follow the style guidelines. Write tests for your code.
 
 ### 5. Test Changes
 
+The quickest way to run the full local gate (fmt + clippy + tests, Rust and
+Python) is the repo's `test.sh` wrapper:
+
+```bash
+./test.sh            # full suite: fmt, clippy, cargo test, Python tests
+./test.sh --quick    # skip slow tests — recommended if you do NOT have a GPU
+./test.sh --rust     # Rust only
+./test.sh --lint     # linting/formatting only, no tests
+```
+
+Use `./test.sh --quick` if you cannot build or run every backend locally (for
+example, the GPU `vello` renderer needs a working GPU). It runs the default
+feature set instead of `--all-features`, so it does not require the GPU stack.
+
+Or run the underlying commands directly:
+
 ```bash
 cargo test --workspace
 cargo test --package typf-core test_name

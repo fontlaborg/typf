@@ -243,7 +243,9 @@ impl SvgExporter {
             .draw(settings, &mut path_builder)
             .map_err(|_| ExportError::EncodingFailed("Outline extraction failed".to_string()))?;
 
-        let path = path_builder.finish();
+        let path = path_builder
+            .finish()
+            .map_err(|e| ExportError::WriteFailed(e.to_string()))?;
         if path.is_empty() {
             return Ok(GlyphOutline::EmptyOutline);
         }
@@ -350,6 +352,12 @@ impl Default for SvgExporter {
 struct SvgPathBuilder {
     commands: String,
     scale: f32,
+    /// First formatting error seen while building the path, if any.
+    ///
+    /// `OutlinePen` methods cannot return a `Result`, so any write failure is
+    /// captured here and surfaced by [`SvgPathBuilder::finish`] instead of being
+    /// silently discarded.
+    write_error: Option<std::fmt::Error>,
 }
 
 impl SvgPathBuilder {
@@ -357,11 +365,25 @@ impl SvgPathBuilder {
         Self {
             commands: String::new(),
             scale,
+            write_error: None,
         }
     }
 
-    fn finish(self) -> String {
-        self.commands
+    /// Record the outcome of a `write!` call, keeping the first error seen.
+    fn record(&mut self, result: std::fmt::Result) {
+        if self.write_error.is_none() {
+            if let Err(e) = result {
+                self.write_error = Some(e);
+            }
+        }
+    }
+
+    /// Finish building, returning the path string or the first write error.
+    fn finish(self) -> std::result::Result<String, std::fmt::Error> {
+        match self.write_error {
+            Some(e) => Err(e),
+            None => Ok(self.commands),
+        }
     }
 }
 
@@ -369,13 +391,15 @@ impl skrifa::outline::OutlinePen for SvgPathBuilder {
     fn move_to(&mut self, x: f32, y: f32) {
         let x = x * self.scale;
         let y = -y * self.scale; // Flip Y for SVG coordinate system
-        let _ = write!(&mut self.commands, "M{:.2},{:.2}", x, y);
+        let r = write!(&mut self.commands, "M{:.2},{:.2}", x, y);
+        self.record(r);
     }
 
     fn line_to(&mut self, x: f32, y: f32) {
         let x = x * self.scale;
         let y = -y * self.scale;
-        let _ = write!(&mut self.commands, "L{:.2},{:.2}", x, y);
+        let r = write!(&mut self.commands, "L{:.2},{:.2}", x, y);
+        self.record(r);
     }
 
     fn quad_to(&mut self, cx: f32, cy: f32, x: f32, y: f32) {
@@ -383,7 +407,8 @@ impl skrifa::outline::OutlinePen for SvgPathBuilder {
         let cy = -cy * self.scale;
         let x = x * self.scale;
         let y = -y * self.scale;
-        let _ = write!(&mut self.commands, "Q{:.2},{:.2} {:.2},{:.2}", cx, cy, x, y);
+        let r = write!(&mut self.commands, "Q{:.2},{:.2} {:.2},{:.2}", cx, cy, x, y);
+        self.record(r);
     }
 
     fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
@@ -393,11 +418,12 @@ impl skrifa::outline::OutlinePen for SvgPathBuilder {
         let cy1 = -cy1 * self.scale;
         let x = x * self.scale;
         let y = -y * self.scale;
-        let _ = write!(
+        let r = write!(
             &mut self.commands,
             "C{:.2},{:.2} {:.2},{:.2} {:.2},{:.2}",
             cx0, cy0, cx1, cy1, x, y
         );
+        self.record(r);
     }
 
     fn close(&mut self) {

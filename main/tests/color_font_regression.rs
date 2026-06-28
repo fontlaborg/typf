@@ -29,11 +29,12 @@ use typf_render_skia::SkiaRenderer;
 use typf_render_zeno::ZenoRenderer;
 use typf_shape_none::NoneShaper;
 
-/// Get path to test font fixtures
+/// Get path to test font fixtures.
+///
+/// `CARGO_MANIFEST_DIR` is `<repo>/main`; fonts live at `<repo>/test-fonts`.
+/// (The stale two-`parent()` path silently skipped these tests.)
 fn test_font_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
         .parent()
         .unwrap()
         .join("test-fonts")

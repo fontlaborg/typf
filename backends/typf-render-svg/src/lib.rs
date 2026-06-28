@@ -91,7 +91,9 @@ impl SvgRenderer {
             .draw(settings, &mut path_builder)
             .map_err(|_| RenderError::OutlineExtractionFailed)?;
 
-        let (path, min_y_svg, max_y_svg, bounds) = path_builder.finish_with_bounds();
+        let (path, min_y_svg, max_y_svg, bounds) = path_builder
+            .finish_with_bounds()
+            .map_err(|_| RenderError::PathBuildingFailed)?;
         Ok(GlyphPath {
             path,
             min_y_svg,
@@ -406,6 +408,12 @@ struct SvgPathBuilder {
     min_y_raw: f32,
     max_y_raw: f32,
     has_points: bool,
+    /// First formatting error seen while building the path, if any.
+    ///
+    /// `OutlinePen` methods cannot return a `Result`, so any write failure is
+    /// captured here and surfaced by [`SvgPathBuilder::finish_with_bounds`]
+    /// instead of being silently discarded.
+    write_error: Option<std::fmt::Error>,
 }
 
 impl SvgPathBuilder {
@@ -420,6 +428,16 @@ impl SvgPathBuilder {
             min_y_raw: 0.0,
             max_y_raw: 0.0,
             has_points: false,
+            write_error: None,
+        }
+    }
+
+    /// Record the outcome of a `write!` call, keeping the first error seen.
+    fn record(&mut self, result: std::fmt::Result) {
+        if self.write_error.is_none() {
+            if let Err(e) = result {
+                self.write_error = Some(e);
+            }
         }
     }
 
@@ -445,7 +463,14 @@ impl SvgPathBuilder {
         }
     }
 
-    fn finish_with_bounds(self) -> (String, f32, f32, Option<GlyphBounds>) {
+    #[allow(clippy::type_complexity)]
+    fn finish_with_bounds(
+        self,
+    ) -> std::result::Result<(String, f32, f32, Option<GlyphBounds>), std::fmt::Error> {
+        if let Some(e) = self.write_error {
+            return Err(e);
+        }
+
         let bounds = if self.has_points {
             Some(GlyphBounds {
                 min_x: self.min_x_raw,
@@ -457,7 +482,7 @@ impl SvgPathBuilder {
             None
         };
 
-        (self.commands, self.min_y_svg, self.max_y_svg, bounds)
+        Ok((self.commands, self.min_y_svg, self.max_y_svg, bounds))
     }
 }
 
@@ -467,7 +492,8 @@ impl skrifa::outline::OutlinePen for SvgPathBuilder {
         let y_raw = y * self.scale;
         let y_svg = -y_raw; // Flip Y for SVG coordinate system
         self.track_point(x, y_raw);
-        let _ = write!(&mut self.commands, "M{:.2},{:.2}", x, y_svg);
+        let r = write!(&mut self.commands, "M{:.2},{:.2}", x, y_svg);
+        self.record(r);
     }
 
     fn line_to(&mut self, x: f32, y: f32) {
@@ -475,7 +501,8 @@ impl skrifa::outline::OutlinePen for SvgPathBuilder {
         let y_raw = y * self.scale;
         let y_svg = -y_raw;
         self.track_point(x, y_raw);
-        let _ = write!(&mut self.commands, "L{:.2},{:.2}", x, y_svg);
+        let r = write!(&mut self.commands, "L{:.2},{:.2}", x, y_svg);
+        self.record(r);
     }
 
     fn quad_to(&mut self, cx: f32, cy: f32, x: f32, y: f32) {
@@ -488,11 +515,12 @@ impl skrifa::outline::OutlinePen for SvgPathBuilder {
         // Track control point and endpoint
         self.track_point(cx, cy_raw);
         self.track_point(x, y_raw);
-        let _ = write!(
+        let r = write!(
             &mut self.commands,
             "Q{:.2},{:.2} {:.2},{:.2}",
             cx, cy_svg, x, y_svg
         );
+        self.record(r);
     }
 
     fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
@@ -509,11 +537,12 @@ impl skrifa::outline::OutlinePen for SvgPathBuilder {
         self.track_point(cx0, cy0_raw);
         self.track_point(cx1, cy1_raw);
         self.track_point(x, y_raw);
-        let _ = write!(
+        let r = write!(
             &mut self.commands,
             "C{:.2},{:.2} {:.2},{:.2} {:.2},{:.2}",
             cx0, cy0_svg, cx1, cy1_svg, x, y_svg
         );
+        self.record(r);
     }
 
     fn close(&mut self) {

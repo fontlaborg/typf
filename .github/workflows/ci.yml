@@ -30,6 +30,29 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Verify SSIM visual-regression fixtures exist
+        # The 21 SSIM tests skip silently when their fonts are missing, which
+        # would turn the visual-regression suite into no-ops. Fail fast here if
+        # any required baseline font is absent.
+        run: |
+          missing=0
+          for f in \
+            "NotoSans-Regular.ttf" \
+            "NotoNaskhArabic-Regular.ttf" \
+            "Kalnia[wdth,wght].ttf" \
+            "Nabla-Regular-COLR.ttf" \
+            "Nabla-Regular-SVG.ttf"; do
+            if [ ! -f "test-fonts/$f" ]; then
+              echo "::error::Missing SSIM fixture: test-fonts/$f"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Visual-regression baselines are missing; failing the build."
+            exit 1
+          fi
+          echo "All SSIM visual-regression fixtures present."
+
       - name: Check formatting
         run: cargo fmt --check
 

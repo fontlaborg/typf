@@ -1,5 +1,5 @@
 <!-- this_file: README.md -->
-# Typf v5.0.2
+# Typf v5.0.20
 
 [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
@@ -183,7 +183,7 @@ The linra renderer bypasses the intermediate glyph extraction step, allowing Cor
 
 ## Caching
 
-Typf includes two-level caches for shaping and rendering results. **Caching is disabled by default** to ensure predictable behavior and memory usage.
+Typf includes scan-resistant caches (Moka TinyLFU) for shaping and rendering results. **Caching is disabled by default** to ensure predictable behavior and memory usage. See the [Caching chapter](https://fontlab.org/typf/27-caching/) for the full strategy.
 
 ### Enable caching
 
@@ -381,7 +381,7 @@ The benchmark tool tests all shaper × renderer combinations across fonts, sizes
 
 ## Status
 
-**v5.0.2** - Production ready with enhanced caching, baseline consistency, and visual regression testing. 
+**v5.0.20** - Production ready with enhanced caching, baseline consistency, and visual regression testing. 
 
 - ✅ 6-stage pipeline with optimized Moka TinyLFU caching architecture
 - ✅ 5 shapers (added HarfBuzz Rust), 7 renderers (35 combinations) with consistent baselines

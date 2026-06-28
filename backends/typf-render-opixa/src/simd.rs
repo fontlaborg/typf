@@ -146,43 +146,12 @@ pub unsafe fn blend_over_sse41(dst: &mut [u8], src: &[u8]) {
     }
 }
 
-/// NEON blending: ARM's answer to SIMD pixel processing
-#[cfg(target_arch = "aarch64")]
-#[inline]
-pub unsafe fn blend_over_neon(dst: &mut [u8], src: &[u8]) {
-    use std::arch::aarch64::*;
-
-    debug_assert_eq!(dst.len(), src.len());
-    debug_assert_eq!(dst.len() % 4, 0);
-
-    let len = dst.len();
-    let simd_len = len - (len % 16); // Process 16 bytes at a time (4 pixels)
-
-    let mut i = 0;
-    #[allow(clippy::never_loop, clippy::while_immutable_condition)]
-    if i < simd_len {
-        // Load 4 pixels
-        let _src_vec = vld1q_u8(src.as_ptr().add(i));
-        let _dst_vec = vld1q_u8(dst.as_ptr().add(i));
-
-        // Alpha extraction with NEON would go here
-        // TODO: Complete full NEON optimization for ARM devices
-        // For now, we gracefully fall back to scalar processing
-    }
-
-    // Reliable scalar processing that works everywhere
-    while i < len {
-        let src_alpha = src[i + 3];
-        let inv_alpha = 255 - src_alpha;
-
-        dst[i] = src[i].saturating_add(((dst[i] as u16 * inv_alpha as u16) >> 8) as u8);
-        dst[i + 1] = src[i + 1].saturating_add(((dst[i + 1] as u16 * inv_alpha as u16) >> 8) as u8);
-        dst[i + 2] = src[i + 2].saturating_add(((dst[i + 2] as u16 * inv_alpha as u16) >> 8) as u8);
-        dst[i + 3] = src[i + 3].saturating_add(((dst[i + 3] as u16 * inv_alpha as u16) >> 8) as u8);
-
-        i += 4;
-    }
-}
+// NOTE: A hand-written aarch64 NEON kernel is intentionally not provided yet.
+// Earlier revisions shipped a `blend_over_neon` that loaded NEON vectors and
+// then discarded them, silently falling back to scalar — a "half-wired" path
+// that looked accelerated but was not. Until a real, validated NEON kernel
+// lands, `blend_over` dispatches aarch64 directly to `blend_over_scalar` so the
+// behaviour is honest and bit-identical across architectures.
 
 /// The universal blender: works on any CPU, guaranteed
 #[inline]
@@ -219,10 +188,10 @@ pub fn blend_over(dst: &mut [u8], src: &[u8]) {
         }
     }
 
+    // aarch64: no validated NEON kernel yet — use the portable scalar blend so
+    // ARM output stays bit-identical to other targets (see note above).
     #[cfg(target_arch = "aarch64")]
-    unsafe {
-        blend_over_neon(dst, src);
-    }
+    blend_over_scalar(dst, src);
 
     // When no SIMD is available, use trustworthy scalar processing
     #[cfg(not(any(
