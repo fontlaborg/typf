@@ -312,6 +312,21 @@ typf render "Text" -f color.ttf \
   -o mono.png
 ```
 
+**TrueType hinting** (opixa renderer, via the [`typftth`](https://github.com/fontlaborg/typftth) interpreter):
+```bash
+# Run the font's fpgm/prep/glyph programs at 16 ppem and rasterize the hinted outline
+typf render "Hinted" -f hinted.ttf -s 16 --hinting tt -o hinted.png
+
+# Hint at one ppem, rasterize at another (grid-fit like a 12 ppem screen, draw at 48 px)
+typf render "Hinted" -f hinted.ttf -s 48 --hinting tt --ppem 12 -o zoomed.png
+
+# Does this font carry TrueType instructions at all?
+typf info --font hinted.ttf
+```
+`--hinting tt` is a no-op for CFF fonts and for `glyf` fonts without
+instructions; other renderers ignore it. Dropout control follows the font's
+SCANCTRL/SCANTYPE settings.
+
 **Batch processing:**
 ```bash
 # Create jobs file
