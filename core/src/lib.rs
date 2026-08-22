@@ -697,6 +697,11 @@ pub struct RenderParams {
     /// Set to `RenderMode::Vector(VectorFormat::Svg)` to get an SVG string
     /// instead of a pixel grid. Not all renderers support vector output.
     pub output: RenderMode,
+    /// Outline hinting. Default: `HintingMode::None`. Honoured by backends
+    /// that own their outline pipeline (`typf-render-opixa`).
+    pub hinting: HintingMode,
+    /// Integer pixels-per-em to hint at; `None` rounds the render size.
+    pub ppem: Option<u32>,
 }
 
 impl Default for RenderParams {
@@ -710,8 +715,26 @@ impl Default for RenderParams {
             color_palette: 0,
             glyph_sources: GlyphSourcePreference::default(),
             output: RenderMode::Bitmap,
+            hinting: HintingMode::None,
+            ppem: None,
         }
     }
+}
+
+/// How glyph outlines are hinted before rasterization.
+///
+/// Only backends that own their outline pipeline honour this (today:
+/// `typf-render-opixa`). Others ignore it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[non_exhaustive]
+pub enum HintingMode {
+    /// Unhinted outlines (the default).
+    #[default]
+    None,
+    /// Run the font's TrueType instructions (`fpgm`/`prep`/glyph programs)
+    /// with the `typftth` interpreter at an integer ppem. Fonts without
+    /// `glyf` hints render unhinted.
+    TrueType,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

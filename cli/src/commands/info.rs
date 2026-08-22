@@ -7,6 +7,10 @@ use crate::cli::InfoArgs;
 use typf::error::Result;
 
 pub fn run(args: &InfoArgs) -> Result<()> {
+    if let Some(path) = &args.font {
+        return print_font(path, args.face_index);
+    }
+
     // If no specific flags, show all info
     let show_all = !args.shapers && !args.renderers && !args.formats;
 
@@ -141,4 +145,73 @@ fn print_formats() {
     println!("  png               - PNG RGBA (full color with alpha)");
     println!("  svg               - Scalable Vector Graphics");
     println!("  ppm               - Portable Pixmap (RGB, legacy)");
+}
+
+/// Describe one font face: metrics, axes, and the TrueType hinting tables the
+/// `tt` hinting mode depends on.
+fn print_font(path: &std::path::Path, face_index: u32) -> Result<()> {
+    use skrifa::raw::{types::Tag, TableProvider};
+    use typf_core::traits::FontRef;
+    use typf_fontdb::TypfFontFace;
+
+    let face = TypfFontFace::from_file_index(path, face_index)?;
+    let font = face
+        .font_ref()
+        .ok_or(typf::error::FontLoadError::InvalidData)?;
+
+    println!("{}", path.display());
+    println!("  face index:   {face_index}");
+    println!("  unitsPerEm:   {}", face.units_per_em());
+    println!("  glyphs:       {}", face.glyph_count().unwrap_or(0));
+    match face.variation_axes() {
+        Some(axes) if !axes.is_empty() => {
+            for a in axes {
+                println!(
+                    "  axis {}:    {}..{}..{}{}",
+                    a.tag,
+                    a.min_value,
+                    a.default_value,
+                    a.max_value,
+                    if a.hidden { " (hidden)" } else { "" }
+                );
+            }
+        },
+        _ => println!("  axes:         none (static)"),
+    }
+
+    let len = |tag: &[u8; 4]| font.table_data(Tag::new(tag)).map(|d| d.len()).unwrap_or(0);
+    let has_glyf = font.table_data(Tag::new(b"glyf")).is_some();
+    let fpgm = len(b"fpgm");
+    let prep = len(b"prep");
+    let cvt = len(b"cvt ") / 2;
+    let hinted_glyphs = font
+        .loca(None)
+        .ok()
+        .zip(font.glyf().ok())
+        .map(|(loca, glyf)| {
+            (0..face.glyph_count().unwrap_or(0))
+                .filter(|&gid| {
+                    matches!(
+                        loca.get_glyf(skrifa::raw::types::GlyphId::new(gid), &glyf),
+                        Ok(Some(skrifa::raw::tables::glyf::Glyph::Simple(g))) if g.instruction_length() > 0
+                    ) || matches!(
+                        loca.get_glyf(skrifa::raw::types::GlyphId::new(gid), &glyf),
+                        Ok(Some(skrifa::raw::tables::glyf::Glyph::Composite(g))) if g.instructions().is_some_and(|i| !i.is_empty())
+                    )
+                })
+                .count()
+        })
+        .unwrap_or(0);
+
+    println!("  outlines:     {}", if has_glyf { "glyf (TrueType)" } else { "CFF/CFF2 (no TrueType hinting)" });
+    println!("  fpgm:         {fpgm} bytes");
+    println!("  prep:         {prep} bytes");
+    println!("  cvt:          {cvt} entries");
+    println!("  hinted glyphs: {hinted_glyphs}");
+    let usable = has_glyf && (fpgm > 0 || prep > 0 || hinted_glyphs > 0);
+    println!(
+        "  --hinting tt: {}",
+        if usable { "applicable" } else { "no effect (no TrueType instructions)" }
+    );
+    Ok(())
 }

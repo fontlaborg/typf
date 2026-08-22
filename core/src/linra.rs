@@ -108,6 +108,8 @@ impl LinraRenderParams {
             color_palette: self.color_palette,
             glyph_sources: crate::GlyphSourcePreference::default(),
             output: crate::RenderMode::Bitmap,
+            hinting: crate::HintingMode::None,
+            ppem: None,
         }
     }
 }

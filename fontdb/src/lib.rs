@@ -137,8 +137,31 @@ impl TypfFontFace {
         self.source.path()
     }
 
-    fn font_ref(&self) -> Option<ReadFontRef<'_>> {
+    /// Borrow the face as a `read-fonts` [`FontRef`](ReadFontRef), honouring
+    /// `face_index` for collections. Use this to reach any table (or any
+    /// `skrifa` API through [`skrifa::MetadataProvider`]) without re-parsing.
+    pub fn font_ref(&self) -> Option<ReadFontRef<'_>> {
         ReadFontRef::from_index(self.data.as_slice(), self.source.face_index).ok()
+    }
+
+    /// `skrifa` outline collection for this face (glyf/CFF/CFF2), ready for
+    /// `get(gid).draw(settings, pen)`.
+    pub fn outline_glyphs(&self) -> Option<skrifa::outline::OutlineGlyphCollection<'_>> {
+        use skrifa::MetadataProvider;
+        Some(self.font_ref()?.outline_glyphs())
+    }
+
+    /// Normalised variation location for user-space `(tag, value)` pairs
+    /// (`avar` applied). Unknown tags are ignored; missing axes use defaults.
+    /// Static fonts yield an empty location.
+    pub fn location(&self, variations: &[(String, f32)]) -> skrifa::instance::Location {
+        use skrifa::MetadataProvider;
+        match self.font_ref() {
+            Some(font) => font
+                .axes()
+                .location(variations.iter().map(|(tag, v)| (tag.as_str(), *v))),
+            None => skrifa::instance::Location::default(),
+        }
     }
 
     pub fn glyph_id(&self, ch: char) -> Option<u32> {
@@ -342,6 +365,58 @@ impl Default for FontDatabase {
 mod tests {
     use super::*;
     use typf_core::traits::FontRef;
+
+    fn test_font_path(name: &str) -> PathBuf {
+        let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        p.pop();
+        p.push("test-fonts");
+        p.push(name);
+        p
+    }
+
+    #[test]
+    fn test_font_ref_and_outline_glyphs_when_static_font_then_available() {
+        let Ok(face) = TypfFontFace::from_file(test_font_path("NotoSans-Regular.ttf")) else {
+            return;
+        };
+        let font = face.font_ref().expect("font_ref must parse face 0");
+        assert!(font.table_data(read_fonts::types::Tag::new(b"glyf")).is_some(), "NotoSans has glyf");
+        let outlines = face.outline_glyphs().expect("outline collection");
+        assert!(outlines.get(read_fonts::types::GlyphId::new(36)).is_some(), "gid 36 has an outline");
+        assert!(face.location(&[("wght".to_string(), 700.0)]).coords().is_empty(), "static font has no axes");
+    }
+
+    #[test]
+    fn test_location_when_variable_font_then_normalised() {
+        let Ok(face) = TypfFontFace::from_file(test_font_path("Kalnia[wdth,wght].ttf")) else {
+            return;
+        };
+        let default = face.location(&[]);
+        assert!(default.coords().iter().all(|c| c.to_bits() == 0), "default location is all zeros");
+        let bold = face.location(&[("wght".to_string(), 700.0), ("zzzz".to_string(), 1.0)]);
+        assert_eq!(bold.coords().len(), 2, "one coord per fvar axis, unknown tag ignored");
+        assert!(bold.coords()[0].to_bits() > 0, "wght (axis 0) above default is positive");
+    }
+
+    #[test]
+    fn test_font_ref_when_ttc_index_then_distinct_faces() {
+        // macOS ships collections; skip elsewhere.
+        let ttc = Path::new("/System/Library/Fonts/Supplemental/Arial Unicode.ttf");
+        let ttc = if ttc.exists() { ttc.to_path_buf() } else { PathBuf::from("/System/Library/Fonts/Helvetica.ttc") };
+        if !ttc.exists() {
+            return;
+        }
+        let Ok(face0) = TypfFontFace::from_file_index(&ttc, 0) else { return };
+        assert_eq!(face0.face_index(), 0);
+        assert!(face0.font_ref().is_some());
+        if let Ok(face1) = TypfFontFace::from_file_index(&ttc, 1) {
+            assert_eq!(face1.face_index(), 1);
+            let n0 = face0.font_ref().and_then(|f| f.head().ok()).map(|h| h.checksum_adjustment());
+            let n1 = face1.font_ref().and_then(|f| f.head().ok()).map(|h| h.checksum_adjustment());
+            assert_ne!(n0, n1, "face 0 and face 1 of a collection must differ");
+        }
+        assert!(TypfFontFace::from_file_index(&ttc, 999).is_err(), "out-of-range face index fails");
+    }
 
     #[test]
     fn test_empty_database() {

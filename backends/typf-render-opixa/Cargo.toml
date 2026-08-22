@@ -13,7 +13,10 @@ log = { workspace = true }
 rayon = { version = "1.8", optional = true }
 read-fonts = { workspace = true }
 skrifa = { workspace = true }
+typftth = { workspace = true, optional = true }
 
 [features]
-default = []
+default = ["tth"]
 parallel = ["rayon"]
+# TrueType hinting via the typftth interpreter (HintingMode::TrueType)
+tth = ["dep:typftth"]

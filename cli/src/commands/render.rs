@@ -147,6 +147,16 @@ pub fn run(args: &RenderArgs) -> Result<()> {
 
     let glyph_sources = parse_glyph_sources(&args.glyph_source)?;
 
+    let hinting = match args.hinting.to_ascii_lowercase().as_str() {
+        "none" | "off" | "" => typf_core::HintingMode::None,
+        "tt" | "truetype" | "typftth" => typf_core::HintingMode::TrueType,
+        other => {
+            return Err(TypfError::ConfigError(format!(
+                "unknown --hinting '{other}' (expected none|tt)"
+            )))
+        },
+    };
+
     let render_params = RenderParams {
         foreground,
         background: Some(background),
@@ -156,6 +166,8 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         color_palette,
         glyph_sources,
         output: output_mode,
+        hinting,
+        ppem: args.ppem,
     };
 
     let (shaping_cache_on, glyph_cache_on, caching_allowed) = cache_flags(
@@ -1223,6 +1235,8 @@ mod tests {
             text: Some("Hello".to_string()),
             font_file: Some(test_font(name)),
             face_index,
+            hinting: "none".to_string(),
+            ppem: None,
             instance: None,
             text_arg: None,
             text_file: None,
@@ -1360,6 +1374,8 @@ mod tests {
             text: Some("Hello".to_string()),
             font_file: Some(oversized_path.clone()),
             face_index: 0,
+            hinting: "none".to_string(),
+            ppem: None,
             instance: None,
             text_arg: None,
             text_file: None,

@@ -247,6 +247,7 @@ impl Renderer for OpixaRenderer {
                             log::warn!("Variable font setup failed: {}", e);
                         }
                     }
+                    r.set_hinting(params.hinting, params.ppem);
                     Some(r)
                 },
                 Err(e) => {
@@ -265,7 +266,8 @@ impl Renderer for OpixaRenderer {
                     glyph.id,
                     glyph_size,
                     &params.variations,
-                );
+                )
+                .with_hinting(params.hinting, params.ppem);
 
                 if let Some(cached) = cache.get(&cache_key) {
                     cached

@@ -22,11 +22,26 @@ pub struct GlyphCacheKey {
     pub glyph_id: u32,
     /// Size in fixed-point (size * 100 for hash stability)
     pub size: u32,
+    /// Hinting mode (0 = none, 1 = TrueType) and hint ppem (0 = from size),
+    /// so hinted and unhinted bitmaps never alias.
+    pub hinting: u8,
+    pub ppem: u32,
     /// Hash of variation coordinates
     pub variations_hash: u64,
 }
 
 impl GlyphCacheKey {
+    /// Tag the key with the hinting configuration.
+    pub fn with_hinting(mut self, hinting: typf_core::HintingMode, ppem: Option<u32>) -> Self {
+        self.hinting = match hinting {
+            typf_core::HintingMode::None => 0,
+            typf_core::HintingMode::TrueType => 1,
+            _ => 255,
+        };
+        self.ppem = ppem.unwrap_or(0);
+        self
+    }
+
     /// Create a new cache key
     pub fn new(font_data: &[u8], glyph_id: u32, size: f32, variations: &[(String, f32)]) -> Self {
         // Hash font data
@@ -46,6 +61,8 @@ impl GlyphCacheKey {
             font_id,
             glyph_id,
             size: (size * 100.0) as u32,
+            hinting: 0,
+            ppem: 0,
             variations_hash,
         }
     }
@@ -158,6 +175,18 @@ impl GlyphCacheStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_cache_key_hinting_does_not_alias() {
+        use typf_core::HintingMode;
+        let base = GlyphCacheKey::new(b"font1", 65, 16.0, &[]);
+        let none = base.clone().with_hinting(HintingMode::None, None);
+        let tt16 = base.clone().with_hinting(HintingMode::TrueType, Some(16));
+        let tt17 = base.clone().with_hinting(HintingMode::TrueType, Some(17));
+        assert_eq!(base, none, "None hinting without ppem equals the plain key");
+        assert_ne!(none, tt16, "hinting mode must be part of the key");
+        assert_ne!(tt16, tt17, "ppem must be part of the key");
+    }
 
     #[test]
     fn test_cache_key_creation() {

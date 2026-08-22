@@ -44,6 +44,15 @@ pub struct InfoArgs {
     /// List available output formats
     #[arg(long)]
     pub formats: bool,
+
+    /// Describe a font file instead: glyph count, axes, and TrueType hinting
+    /// tables (fpgm/prep/cvt, hinted glyph count) relevant to `--hinting tt`.
+    #[arg(long, value_name = "FILE")]
+    pub font: Option<std::path::PathBuf>,
+
+    /// Face index inside a collection (used with --font)
+    #[arg(long, default_value_t = 0)]
+    pub face_index: u32,
 }
 
 /// Arguments for the render command
@@ -121,6 +130,14 @@ pub struct RenderArgs {
     /// Margin in pixels
     #[arg(short = 'm', long = "margin", default_value = "10")]
     pub margin: u32,
+
+    /// Outline hinting: none, tt (TrueType instructions via typftth; opixa only)
+    #[arg(long = "hinting", default_value = "none")]
+    pub hinting: String,
+
+    /// Integer pixels-per-em to hint at (default: rounded font size)
+    #[arg(long = "ppem")]
+    pub ppem: Option<u32>,
 
     /// Optical sizing: auto, none
     #[arg(long = "font-optical-sizing", default_value = "auto")]

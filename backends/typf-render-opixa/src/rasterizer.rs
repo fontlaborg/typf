@@ -38,6 +38,16 @@ pub struct GlyphRasterizer<'a> {
     oversample: u8,
     /// Variable font coordinates for infinite font variation
     location: skrifa::instance::Location,
+    /// Outline hinting mode (see `set_hinting`)
+    hinting: typf_core::HintingMode,
+    /// Integer ppem to hint at (`None` = rounded size)
+    ppem: Option<u32>,
+    /// Lazily built typftth hinter for the current size/location
+    #[cfg(feature = "tth")]
+    hinter: Option<typftth::hinter::Hinter<'a>>,
+    /// Raw font bytes, for the hinter
+    #[cfg(feature = "tth")]
+    font_data: &'a [u8],
 }
 
 impl<'a> GlyphRasterizer<'a> {
@@ -63,7 +73,86 @@ impl<'a> GlyphRasterizer<'a> {
             size,
             oversample: 4, // 4x oversampling by default
             location: skrifa::instance::Location::default(),
+            hinting: typf_core::HintingMode::None,
+            ppem: None,
+            #[cfg(feature = "tth")]
+            hinter: None,
+            #[cfg(feature = "tth")]
+            font_data,
         })
+    }
+
+    /// Select outline hinting. With `HintingMode::TrueType` (feature `tth`)
+    /// glyphs with TrueType instructions are hinted by `typftth` at `ppem`
+    /// (default: the render size rounded) before scan conversion; fonts or
+    /// glyphs without hints fall back to the unhinted path.
+    pub fn set_hinting(&mut self, hinting: typf_core::HintingMode, ppem: Option<u32>) {
+        self.hinting = hinting;
+        self.ppem = ppem;
+        #[cfg(feature = "tth")]
+        {
+            self.hinter = None;
+        }
+    }
+
+    /// Integer ppem used for hinting.
+    pub fn hint_ppem(&self) -> u32 {
+        self.ppem.unwrap_or_else(|| self.size.round().max(1.0) as u32)
+    }
+
+    /// Lazily build the typftth hinter for the current size/location.
+    #[cfg(feature = "tth")]
+    fn hinter(&mut self) -> Option<&mut typftth::hinter::Hinter<'a>> {
+        if self.hinting != typf_core::HintingMode::TrueType {
+            return None;
+        }
+        if self.hinter.is_none() {
+            let font = typftth::loader::HintFont::parse(self.font_data, 0).ok()?;
+            if !font.is_hinted() {
+                return None;
+            }
+            let coords: Vec<typftth::F2Dot14> =
+                self.location.coords().iter().map(|c| typftth::F2Dot14(c.to_bits())).collect();
+            let ppem = self.hint_ppem() as i32;
+            match typftth::hinter::Hinter::new(font, ppem, &coords) {
+                Ok(h) => self.hinter = Some(h),
+                Err(e) => {
+                    log::warn!("typftth setup failed, rendering unhinted: {e}");
+                    return None;
+                },
+            }
+        }
+        self.hinter.as_mut()
+    }
+
+    /// Draw the glyph outline into `pen`, hinted when configured.
+    /// Returns `Ok(true)` if the hinted path was used.
+    fn draw_outline(
+        &mut self,
+        glyph_id: u32,
+        pen: &mut impl skrifa::outline::OutlinePen,
+    ) -> Result<bool, String> {
+        #[cfg(feature = "tth")]
+        if let Some(hinter) = self.hinter() {
+            match hinter.hint_glyph(glyph_id, &mut typftth::NoTrace) {
+                Ok(g) => {
+                    emit_truetype_contours(&g.zone, pen);
+                    return Ok(true);
+                },
+                Err(e) => log::debug!("typftth: glyph {glyph_id} unhinted ({e})"),
+            }
+        }
+        let skrifa_gid = SkrifaGlyphId::new(glyph_id);
+        let outline_glyphs = self.font.outline_glyphs();
+        let glyph = outline_glyphs
+            .get(skrifa_gid)
+            .ok_or_else(|| format!("Glyph {} not found", glyph_id))?;
+        let location = self.location.clone();
+        let draw_settings = DrawSettings::unhinted(Size::new(self.size), location.coords());
+        glyph
+            .draw(draw_settings, pen)
+            .map_err(|e| format!("Failed to draw outline: {:?}", e))?;
+        Ok(false)
     }
 
     /// Shape your variable font: bend axes to your will
@@ -122,20 +211,12 @@ impl<'a> GlyphRasterizer<'a> {
     ///
     /// Set up variable variations with `set_variations()` if needed
     pub fn render_glyph(
-        &self,
+        &mut self,
         glyph_id: u32,
         fill_rule: FillRule,
         dropout_mode: DropoutMode,
     ) -> Result<GlyphBitmap, String> {
         // Note: Scaling is handled by DrawSettings, which uses self.size directly
-
-        // Get glyph outlines - use GlyphId::new for full u32 range (>65k glyph IDs)
-        let skrifa_gid = SkrifaGlyphId::new(glyph_id);
-        let outline_glyphs = self.font.outline_glyphs();
-
-        let glyph = outline_glyphs
-            .get(skrifa_gid)
-            .ok_or_else(|| format!("Glyph {} not found", glyph_id))?;
 
         // Bounds detection: how much canvas do we really need?
         // We'll draw into a temporary pen to find the glyph's natural size
@@ -190,16 +271,8 @@ impl<'a> GlyphRasterizer<'a> {
             fn close(&mut self) {}
         }
 
-        let size_setting = Size::new(self.size);
-
-        // Variable font location comes from our stored coordinates
-        let location_ref = self.location.coords();
-        let draw_settings = DrawSettings::unhinted(size_setting, location_ref);
-
         let mut bounds_calc = BoundsCalculator::new();
-        glyph
-            .draw(draw_settings, &mut bounds_calc)
-            .map_err(|e| format!("Failed to calculate bounds: {:?}", e))?;
+        self.draw_outline(glyph_id, &mut bounds_calc)?;
 
         if !bounds_calc.has_points {
             // Empty glyph (spaces, tabs, etc.) - perfectly valid, just needs no canvas
@@ -312,14 +385,8 @@ impl<'a> GlyphRasterizer<'a> {
             y_offset,
         };
 
-        // Draw the glyph outline
-        let size_setting = Size::new(self.size);
-        let location_ref = self.location.coords(); // Use stored variations
-        let draw_settings = DrawSettings::unhinted(size_setting, location_ref);
-
-        glyph
-            .draw(draw_settings, &mut transform_pen)
-            .map_err(|e| format!("Failed to draw outline: {:?}", e))?;
+        // Draw the glyph outline (hinted when configured)
+        self.draw_outline(glyph_id, &mut transform_pen)?;
 
         // The final touch: smooth those crisp pixels into beauty
         // This downsampling creates the anti-aliased effect readers love
@@ -368,8 +435,66 @@ pub struct GlyphBitmap {
     pub data: Vec<u8>,
 }
 
+/// Emit a hinted TrueType zone as pen callbacks, in pixel units. Applies the
+/// TrueType implied-on-curve rule between consecutive off-curve points.
+#[cfg(feature = "tth")]
+fn emit_truetype_contours(zone: &typftth::Zone, pen: &mut impl skrifa::outline::OutlinePen) {
+    let px = |v: i32| v as f32 / 64.0;
+    let n_outline = zone.outline_points;
+    for c in 0..zone.contour_count {
+        let start = zone.sp[c] as usize;
+        let end = zone.ep[c] as usize;
+        if start > end || end >= n_outline {
+            continue;
+        }
+        let count = end - start + 1;
+        let on = |i: usize| zone.on_curve[start + (i % count)] & typftth::zone::ONCURVE != 0;
+        let pt = |i: usize| {
+            let k = start + (i % count);
+            (px(zone.x[k]), px(zone.y[k]))
+        };
+        // Find a starting on-curve point (or synthesize the midpoint of the first two off-curve points).
+        let first_on = (0..count).find(|&i| on(i));
+        let (sx, sy, start_idx) = match first_on {
+            Some(i) => {
+                let (x, y) = pt(i);
+                (x, y, i)
+            },
+            None => {
+                let (x0, y0) = pt(0);
+                let (x1, y1) = pt(1);
+                ((x0 + x1) / 2.0, (y0 + y1) / 2.0, 0)
+            },
+        };
+        pen.move_to(sx, sy);
+        let mut prev_off: Option<(f32, f32)> = None;
+        let steps = if first_on.is_some() { count } else { count + 1 };
+        for i in (start_idx + 1..).take(steps) {
+            let (x, y) = pt(i);
+            if on(i) {
+                match prev_off.take() {
+                    Some((cx, cy)) => pen.quad_to(cx, cy, x, y),
+                    None => pen.line_to(x, y),
+                }
+            } else if let Some((cx, cy)) = prev_off {
+                let mx = (cx + x) / 2.0;
+                let my = (cy + y) / 2.0;
+                pen.quad_to(cx, cy, mx, my);
+                prev_off = Some((x, y));
+            } else {
+                prev_off = Some((x, y));
+            }
+        }
+        if let Some((cx, cy)) = prev_off {
+            pen.quad_to(cx, cy, sx, sy);
+        }
+        pen.close();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     // Real font testing happens in integration tests
     // Unit tests would need embedded font data, which we avoid
 }
+

@@ -217,3 +217,44 @@ fn test_opixa_supports_format() {
     assert!(!renderer.supports_format("svg")); // Raster renderer doesn't support SVG
     assert!(!renderer.supports_format("png")); // PNG encoding is done by exporter, not renderer
 }
+
+/// TrueType hinting (typftth) must change the rasterized pixels of a hinted
+/// font at a small size, and must be deterministic.
+#[test]
+fn test_opixa_truetype_hinting_changes_small_size_output() {
+    use typf_core::HintingMode;
+
+    let font = match load_font("NotoSans-Regular.ttf") {
+        Some(f) => f,
+        None => return,
+    };
+
+    let renderer = OpixaRenderer::new();
+    let mut shaped = simple_shaping_result();
+    shaped.advance_height = 16.0;
+
+    let unhinted = RenderParams::default();
+    let hinted = RenderParams {
+        hinting: HintingMode::TrueType,
+        ppem: Some(16),
+        ..Default::default()
+    };
+
+    let bitmap = |params: &RenderParams| match renderer
+        .render(&shaped, font.clone(), params)
+        .expect("render should succeed")
+    {
+        RenderOutput::Bitmap(b) => b,
+        _ => panic!("expected bitmap output"),
+    };
+
+    let a = bitmap(&unhinted);
+    let b = bitmap(&hinted);
+    let b2 = bitmap(&hinted);
+
+    assert_eq!(b.data, b2.data, "hinted render must be deterministic");
+    assert!(
+        a.width != b.width || a.height != b.height || a.data != b.data,
+        "TrueType hinting should change the 16 ppem raster of a hinted font"
+    );
+}

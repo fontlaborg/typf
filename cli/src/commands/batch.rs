@@ -273,6 +273,8 @@ fn process_job(job: &BatchJob, output_file: &Path, args: &BatchArgs) -> Result<(
         line_height: 120,
         width_height: "none".to_string(),
         margin: 10,
+        hinting: "none".to_string(),
+        ppem: None,
         font_optical_sizing: "auto".to_string(),
         foreground: job
             .foreground

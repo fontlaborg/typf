@@ -8,6 +8,25 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
+### Added
+- **TrueType hinting via `typftth`.** `RenderParams` gains `hinting: HintingMode`
+  (`None` | `TrueType`) and `ppem: Option<u32>`. The `opixa` backend (feature
+  `tth`, on by default) runs the font's `fpgm`/`prep`/glyph programs with the
+  `typftth` interpreter at the rounded size and rasterizes the hinted 26.6
+  points; other backends ignore the field. Glyph-cache keys include hinting
+  mode and ppem so hinted and unhinted renders never alias.
+- CLI: `typf render --hinting tt|none [--ppem N]`; `typf info --font FILE
+  [--face-index N]` prints units-per-em, axes, outline flavour, `fpgm`/`prep`/
+  `cvt` sizes and the number of instructed glyphs.
+- `typf-fontdb`: `TypfFontFace::font_ref()` (face-index aware `read-fonts`
+  `FontRef`), `outline_glyphs()` (skrifa outline collection) and
+  `location(&[(tag, value)])` (normalised, `avar`-applied skrifa `Location`),
+  so downstream code can use `read-fonts`/`skrifa` directly on a loaded face.
+
+### Changed
+- `read-fonts` and `skrifa` are workspace dependencies; the skia, zeno and
+  export-svg crates now inherit them instead of pinning their own versions.
+
 ### Fixed
 - SVG path builders no longer swallow formatting errors: `typf-export-svg` and
   `typf-render-svg` capture the first `write!` error and propagate it as a
