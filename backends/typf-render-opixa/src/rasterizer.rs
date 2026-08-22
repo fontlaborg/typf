@@ -125,6 +125,23 @@ impl<'a> GlyphRasterizer<'a> {
         self.hinter.as_mut()
     }
 
+    /// Dropout mode actually used: the caller's choice, unless it is `None`
+    /// and the font's `prep` enabled dropout control through SCANCTRL /
+    /// SCANTYPE for this ppem (TrueType hinting active only).
+    fn effective_dropout_mode(&mut self, requested: DropoutMode) -> DropoutMode {
+        if requested != DropoutMode::None {
+            return requested;
+        }
+        #[cfg(feature = "tth")]
+        {
+            let ppem = self.hint_ppem();
+            if let Some(h) = self.hinter() {
+                return dropout_from_scan_control(h.machine().params.scan_control, ppem);
+            }
+        }
+        DropoutMode::None
+    }
+
     /// Draw the glyph outline into `pen`, hinted when configured.
     /// Returns `Ok(true)` if the hinted path was used.
     fn draw_outline(
@@ -311,7 +328,7 @@ impl<'a> GlyphRasterizer<'a> {
         // Prepare our canvas, oversized for smooth anti-aliasing
         let mut scan_converter = ScanConverter::new(width, height);
         scan_converter.set_fill_rule(fill_rule);
-        scan_converter.set_dropout_mode(dropout_mode);
+        scan_converter.set_dropout_mode(self.effective_dropout_mode(dropout_mode));
 
         // Transform magic: where do pixels go in our oversized canvas?
         // skrifa handled font units → pixels, now we apply oversampling
@@ -492,9 +509,46 @@ fn emit_truetype_contours(zone: &typftth::Zone, pen: &mut impl skrifa::outline::
     }
 }
 
-#[cfg(test)]
-mod tests {
-    // Real font testing happens in integration tests
-    // Unit tests would need embedded font data, which we avoid
+/// Map TrueType SCANCTRL (low 16 bits) + SCANTYPE (high 16 bits) to a
+/// [`DropoutMode`] the way FreeType's `tt_loader` does: dropout is enabled when
+/// the threshold is 0xFF, or bit 8 is set and `ppem <= threshold`; bit 11
+/// disables it above the threshold. SCANTYPE 0–3 = simple, 4–5 = smart,
+/// 6–7 = none.
+#[cfg(feature = "tth")]
+fn dropout_from_scan_control(sc: typftth::gs::ScanControl, ppem: u32) -> DropoutMode {
+    let ctrl = u32::from(sc.low());
+    let threshold = ctrl & 0xFF;
+    let enabled = threshold == 0xFF
+        || (ctrl & 0x100 != 0 && ppem <= threshold)
+        || (ctrl & 0x800 != 0 && ppem <= threshold);
+    let disabled = ctrl & 0x800 != 0 && ppem > threshold;
+    if !enabled || disabled {
+        return DropoutMode::None;
+    }
+    match sc.kind() {
+        0..=3 => DropoutMode::Simple,
+        4 | 5 => DropoutMode::Smart,
+        _ => DropoutMode::None,
+    }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Real font testing happens in integration tests
+    // Unit tests would need embedded font data, which we avoid
+
+    #[cfg(feature = "tth")]
+    #[test]
+    fn test_dropout_from_scan_control() {
+        use typftth::gs::ScanControl;
+        let sc = |ctrl: u32, kind: u16| ScanControl(ctrl | (u32::from(kind) << 16));
+        assert_eq!(dropout_from_scan_control(sc(0, 0), 12), DropoutMode::None, "SCANCTRL 0 = off");
+        assert_eq!(dropout_from_scan_control(sc(0xFF, 0), 200), DropoutMode::Simple, "0xFF = always");
+        assert_eq!(dropout_from_scan_control(sc(0x111, 0), 17), DropoutMode::Simple, "ppem <= 17");
+        assert_eq!(dropout_from_scan_control(sc(0x111, 0), 18), DropoutMode::None, "ppem > 17");
+        assert_eq!(dropout_from_scan_control(sc(0x1FF, 4), 9), DropoutMode::Smart, "SCANTYPE 4 = smart");
+        assert_eq!(dropout_from_scan_control(sc(0x1FF, 6), 9), DropoutMode::None, "SCANTYPE 6 = off");
+    }
+}
