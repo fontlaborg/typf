@@ -76,7 +76,7 @@ rayon = "1.10"
 # External dependencies
 read-fonts = "0.36"
 # TrueType hinting interpreter (hinted outlines for opixa)
-typftth = { version = "0.1.0", default-features = false, features = ["std", "loader"] }
+typftth = { version = "0.2.0", default-features = false, features = ["std", "loader"] }
 # SVG glyph rendering
 resvg = "0.45"
 skrifa = "0.39"

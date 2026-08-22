@@ -3295,9 +3295,9 @@ dependencies = [
 
 [[package]]
 name = "typftth"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46f9391a3b9d3e4cf3536160c54f0ffcad00d05faf50e38e4e5ec6a83f79904a"
+checksum = "289b334a5723b2d4f68b14897fa7131d29e4a6ad61100aed665d27997f4e98a1"
 dependencies = [
  "read-fonts 0.36.0",
  "skrifa 0.39.0",

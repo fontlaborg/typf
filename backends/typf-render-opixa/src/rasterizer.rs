@@ -114,7 +114,12 @@ impl<'a> GlyphRasterizer<'a> {
             let coords: Vec<typftth::F2Dot14> =
                 self.location.coords().iter().map(|c| typftth::F2Dot14(c.to_bits())).collect();
             let ppem = self.hint_ppem() as i32;
-            match typftth::hinter::Hinter::new(font, ppem, &coords) {
+            // Behave like FreeType's v35 grayscale target: fonts that gate
+            // hinting on the rasterizer version take their usual branches
+            // and out-of-range CVT indices do not abort the glyph program.
+            let variation = !font.axes.is_empty();
+            let options = typftth::hinter::HinterOptions::freetype(typftth::GetInfoProfile::freetype_v35(true, variation));
+            match typftth::hinter::Hinter::with_options(font, ppem, &coords, options, &mut typftth::NoTrace) {
                 Ok(h) => self.hinter = Some(h),
                 Err(e) => {
                     log::warn!("typftth setup failed, rendering unhinted: {e}");

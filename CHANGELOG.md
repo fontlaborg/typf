@@ -14,7 +14,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
   `tth`, on by default) runs the font's `fpgm`/`prep`/glyph programs with the
   `typftth` interpreter at the rounded size and rasterizes the hinted 26.6
   points; other backends ignore the field. Glyph-cache keys include hinting
-  mode and ppem so hinted and unhinted renders never alias. When hinting is
+  mode and ppem so hinted and unhinted renders never alias. Uses typftth
+  0.2.0 with its FreeType profile (v35 grayscale `GETINFO`, lenient CVT
+  access, bit-exact FreeType CVT scaling). When hinting is
   active and no dropout mode is requested, `prep`'s SCANCTRL/SCANTYPE select
   opixa's `DropoutMode` (simple/smart/none) per ppem like FreeType.
 - CLI: `typf render --hinting tt|none [--ppem N]`; `typf info --font FILE
