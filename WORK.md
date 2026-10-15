@@ -33,6 +33,18 @@ Verification completed before initial release-preparation commit:
 
 Official documentation consulted: PyO3 0.22 building/distribution, Maturin layout/distribution/config, Cargo publishing, wgpu 26 PollType, GitHub runner reference, and maturin-action inputs.
 
+## Review correction round 1
+
+- R1: tag jobs build and audit assets and create the GitHub release independently of registry credentials; registry uploads run only for an explicit manual `build_only=false` dispatch. Fatal upload propagation is tested with a temporary Cargo stub, without uploading anything.
+- R2: regenerated both uv locks for `typf`, Click and Python >=3.11; both `uv lock --check --python 3.11` gates pass and run in release validation.
+- R3: sdist audit now requires one root PKG-INFO with the exact name/version/Python minimum. Positive and six negative cases cover stale/other/minimum/missing/nested/ambiguous metadata.
+- R4: unsupported native-facade platforms retain shared types without native constructors; Python native dependencies and exports are OS-gated, preserving macOS and Windows backends. Facade checks pass for GNU/musl x64/arm64.
+- Fixed the Windows 0.58 API compilation errors, loaded caller font bytes through a registered in-memory DirectWrite loader/custom collection, used a multithreaded D2D factory and per-call WIC objects, balanced COM initialization, and matched WIC BGRA bytes to the RGBA output contract. MSVC-target check and clippy with all targets pass; actual Windows native rendering remains a CI acceptance check.
+- All platform smoke tests now download a pinned, hash-verified Noto Sans fixture; musllinux tests install and render inside the matching native PyPA image. Native macOS/Windows linra rendering is required in smoke tests.
+- Windows CLI uses native path conversion for compiler remapping. CLI payloads are audited before upload and all assets are audited before GitHub release creation. The audit rejects the previously leaked Windows executable.
+
+Fresh local verification: 557 Rust tests pass, 18 ignored; workspace all-target/all-feature clippy passes; seven release regression tests pass; both uv locks check; actionlint, format and Ruff pass. The rebuilt ABI3 wheel passes 28 Python tests on each of 3.11–3.14, plus four portable renderer and native macOS linra smoke tests with the pinned font. Rebuilt wheel/sdist pass artifact and Twine checks. Full Linux wheels, Windows runtime, and the replacement Windows CLI privacy audit require the controller's CI rerun; these are not claimed verified locally.
+
 ---
 
 # Current Work Session

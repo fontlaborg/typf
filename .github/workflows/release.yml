@@ -31,6 +31,11 @@ jobs:
         with:
           python-version: '3.11'
       - uses: dtolnay/rust-toolchain@stable
+      - uses: astral-sh/setup-uv@v6
+      - name: Check both Python lockfiles
+        run: |
+          uv lock --check --python 3.11
+          uv lock --check --python 3.11 --project bindings/py
       - name: Validate checked-in version; never rewrite manifests in CI
         env:
           EXPECTED_VERSION: ${{ inputs.version }}
@@ -80,15 +85,20 @@ jobs:
       - name: Audit wheel payload
         shell: bash
         run: python scripts/release.py audit dist/*.whl
-      - name: Install smoke font
-        if: runner.os == 'Linux' && matrix.manylinux == '2_28'
-        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+      - name: Fetch pinned smoke font
+        run: python scripts/fetch_smoke_font.py
       - name: Install wheel and smoke render with a real font
         if: matrix.manylinux != 'musllinux_1_2'
         shell: bash
         run: |
           python -m pip install dist/*.whl
-          python scripts/smoke_wheel.py
+          python scripts/smoke_wheel.py test-fonts/NotoSans-Regular.ttf
+      - name: Smoke test musllinux wheel on its native runtime
+        if: matrix.manylinux == 'musllinux_1_2'
+        shell: bash
+        run: |
+          docker run --rm --volume "$PWD:/io:ro" '${{ matrix.container }}' \
+            /bin/sh -c '/opt/python/cp311-cp311/bin/python -m pip install /io/dist/*.whl && /opt/python/cp311-cp311/bin/python /io/scripts/smoke_wheel.py /io/test-fonts/NotoSans-Regular.ttf'
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}-${{ matrix.target }}-${{ matrix.manylinux }}
@@ -129,13 +139,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
       - name: Build CLI
         shell: bash
         run: |
-          export RUSTFLAGS="--remap-path-prefix=$GITHUB_WORKSPACE=/typf --remap-path-prefix=$HOME=/build"
+          workspace="$GITHUB_WORKSPACE"
+          user_home="$HOME"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            workspace="$(cygpath -w "$GITHUB_WORKSPACE")"
+            user_home="$(cygpath -w "$HOME")"
+          fi
+          export RUSTFLAGS="--remap-path-prefix=$workspace=/typf --remap-path-prefix=$user_home=/build"
           cargo build --locked --release -p typf-cli --target '${{ matrix.target }}'
       - name: Package binary
         shell: bash
@@ -146,6 +165,9 @@ jobs:
           else
             tar -czf dist/typf-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release typf
           fi
+      - name: Audit CLI artifact before upload
+        shell: bash
+        run: python scripts/release.py audit-binary dist/*
       - uses: actions/upload-artifact@v4
         with:
           name: rust-${{ matrix.target }}
@@ -154,7 +176,7 @@ jobs:
 
   publish-crates:
     needs: [validate, wheels, sdist, binaries]
-    if: github.event_name == 'push' || !inputs.build_only
+    if: github.event_name == 'workflow_dispatch' && !inputs.build_only
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -169,7 +191,7 @@ jobs:
 
   publish-pypi:
     needs: [wheels, sdist, publish-crates]
-    if: github.event_name == 'push' || !inputs.build_only
+    if: github.event_name == 'workflow_dispatch' && !inputs.build_only
     runs-on: ubuntu-24.04
     environment:
       name: pypi
@@ -189,15 +211,23 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    needs: [binaries, wheels, sdist, publish-pypi]
+    needs: [validate, binaries, wheels, sdist]
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+      - name: Audit all release assets before creating the release
+        run: |
+          python scripts/release.py audit artifacts/wheels-*/*.whl artifacts/sdist/*.tar.gz
+          python scripts/release.py audit-binary artifacts/rust-*/*
       - name: Collect assets and checksums
         run: |
           mkdir release-assets

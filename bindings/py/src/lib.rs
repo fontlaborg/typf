@@ -11,7 +11,10 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 use std::collections::HashMap;
 use std::sync::Arc;
-#[cfg(feature = "linra")]
+#[cfg(any(
+    all(feature = "linra-mac", target_os = "macos"),
+    all(feature = "linra-win", target_os = "windows")
+))]
 use typf_core::linra::{LinraRenderParams, LinraRenderer};
 use typf_core::{
     traits::{Exporter, Renderer, Shaper},
@@ -444,13 +447,19 @@ impl Typf {
 /// This class provides maximum performance by using platform-native APIs
 /// that shape and render text in a single operation. Available on macOS
 /// (CoreText) and Windows (DirectWrite).
-#[cfg(feature = "linra")]
+#[cfg(any(
+    all(feature = "linra-mac", target_os = "macos"),
+    all(feature = "linra-win", target_os = "windows")
+))]
 #[pyclass]
 struct TypfLinra {
     renderer: Arc<dyn LinraRenderer>,
 }
 
-#[cfg(feature = "linra")]
+#[cfg(any(
+    all(feature = "linra-mac", target_os = "macos"),
+    all(feature = "linra-win", target_os = "windows")
+))]
 #[pymethods]
 impl TypfLinra {
     /// Creates a new linra renderer
@@ -462,7 +471,7 @@ impl TypfLinra {
     #[pyo3(signature = (renderer="auto"))]
     fn new(renderer: &str) -> PyResult<Self> {
         let renderer: Arc<dyn LinraRenderer> = match renderer {
-            #[cfg(feature = "linra-mac")]
+            #[cfg(all(feature = "linra-mac", target_os = "macos"))]
             "auto" | "coretext" | "ct" | "mac" | "linra-mac" => {
                 Arc::new(typf_os_mac::CoreTextLinraRenderer::new())
             }
@@ -1309,14 +1318,23 @@ fn typf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<GlyphPath>()?;
     m.add_class::<PositionedGlyph>()?;
     m.add_class::<ShapedGlyphs>()?;
-    #[cfg(feature = "linra")]
+    #[cfg(any(
+        all(feature = "linra-mac", target_os = "macos"),
+        all(feature = "linra-win", target_os = "windows")
+    ))]
     m.add_class::<TypfLinra>()?;
     m.add_function(wrap_pyfunction!(export_image, m)?)?;
     m.add_function(wrap_pyfunction!(render_simple, m)?)?;
     m.add_function(wrap_pyfunction!(set_caching_enabled, m)?)?;
     m.add_function(wrap_pyfunction!(is_caching_enabled, m)?)?;
     m.add("__version__", VERSION)?;
-    m.add("__linra_available__", cfg!(feature = "linra"))?;
+    m.add(
+        "__linra_available__",
+        cfg!(any(
+            all(feature = "linra-mac", target_os = "macos"),
+            all(feature = "linra-win", target_os = "windows")
+        )),
+    )?;
     m.add("__numpy_available__", cfg!(feature = "numpy-interop"))?;
     Ok(())
 }

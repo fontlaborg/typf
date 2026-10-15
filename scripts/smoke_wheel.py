@@ -37,6 +37,17 @@ def main():
         assert typf.export_image(image, format="png").startswith(b"\x89PNG\r\n\x1a\n")
         assert b"<svg" in typf.export_image(image, format="svg")
         print(f"{renderer}: {image['width']}x{image['height']}, PNG and SVG")
+    if sys.platform in ("darwin", "win32"):
+        assert typf.__linra_available__, "Native linra backend must remain available"
+        image = typf.TypfLinra().render_text("Native Typf", str(font), size=36)
+        assert image["width"] > 0 and image["height"] > 0
+        assert any(image["data"][3::4]), "Native linra produced no visible pixels"
+        assert typf.export_image(image, format="png").startswith(b"\x89PNG\r\n\x1a\n")
+        print(f"native linra: {image['width']}x{image['height']}, PNG")
+    else:
+        assert not typf.__linra_available__, (
+            "Unsupported platform advertised native linra"
+        )
     print(f"typf and typfpy {typf.__version__}: smoke passed")
 
 

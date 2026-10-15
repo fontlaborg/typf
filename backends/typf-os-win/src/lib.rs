@@ -21,6 +21,8 @@
 
 #![cfg(windows)]
 
+// this_file: backends/typf-os-win/src/lib.rs
+
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
@@ -38,28 +40,54 @@ use typf_core::{
 use windows::{
     core::PCWSTR,
     Win32::{
-        Foundation::{BOOL, FALSE, TRUE},
+        Foundation::RPC_E_CHANGED_MODE,
         Graphics::{
             Direct2D::{
-                Common::{D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT, D2D_RECT_F},
-                D2D1CreateFactory, ID2D1Factory, ID2D1RenderTarget, D2D1_BITMAP_PROPERTIES,
-                D2D1_FACTORY_TYPE_SINGLE_THREADED, D2D1_RENDER_TARGET_PROPERTIES,
+                Common::{D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT},
+                D2D1CreateFactory, ID2D1Factory, ID2D1RenderTarget,
+                D2D1_FACTORY_TYPE_MULTI_THREADED, D2D1_RENDER_TARGET_PROPERTIES,
                 D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1_RENDER_TARGET_USAGE_NONE,
             },
             DirectWrite::{
-                DWriteCreateFactory, IDWriteFactory, IDWriteFontFace, IDWriteTextFormat,
-                IDWriteTextLayout, DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL,
-                DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_MEASURING_MODE_NATURAL,
-                DWRITE_TEXT_METRICS,
+                DWriteCreateFactory, IDWriteFactory5, IDWriteFontCollection1,
+                IDWriteInMemoryFontFileLoader, IDWriteTextFormat, IDWriteTextLayout,
+                DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+                DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_METRICS,
             },
-            Dxgi::Common::DXGI_FORMAT_R8G8B8A8_UNORM,
+            Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM,
             Imaging::{CLSID_WICImagingFactory, IWICImagingFactory, WICBitmapCacheOnLoad},
         },
         System::Com::{
-            CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
+            CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
+            COINIT_MULTITHREADED,
         },
     },
 };
+
+fn native_error(error: impl std::fmt::Display) -> TypfError {
+    TypfError::RenderingFailed(RenderError::BackendError(error.to_string()))
+}
+
+/// Balance COM initialization on the render thread without changing an existing STA.
+struct ComApartment(bool);
+
+impl ComApartment {
+    fn new() -> Result<Self> {
+        let result = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
+        if result.is_err() && result != RPC_E_CHANGED_MODE {
+            return Err(native_error(result));
+        }
+        Ok(Self(result.is_ok()))
+    }
+}
+
+impl Drop for ComApartment {
+    fn drop(&mut self) {
+        if self.0 {
+            unsafe { CoUninitialize() };
+        }
+    }
+}
 
 /// Cache key for DirectWrite font instances
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -99,8 +127,10 @@ impl FontCacheKey {
 
 /// Cached font entry that keeps font data alive
 struct CachedFont {
-    /// The DirectWrite font face
-    font_face: IDWriteFontFace,
+    /// Custom collection containing the caller's font bytes.
+    collection: IDWriteFontCollection1,
+    /// NUL-terminated family name within the custom collection.
+    family_name: Vec<u16>,
     /// Font data kept alive to prevent use-after-free
     _data: Arc<[u8]>,
 }
@@ -111,11 +141,11 @@ struct CachedFont {
 /// call for maximum performance on Windows.
 pub struct DirectWriteLinraRenderer {
     /// DirectWrite factory
-    dwrite_factory: IDWriteFactory,
+    dwrite_factory: IDWriteFactory5,
     /// Direct2D factory
     d2d_factory: ID2D1Factory,
-    /// WIC factory for bitmap creation
-    wic_factory: IWICImagingFactory,
+    /// Registered memory loader; DirectWrite copies the supplied font bytes.
+    font_loader: IDWriteInMemoryFontFileLoader,
     /// Font cache to avoid expensive font creation
     font_cache: RwLock<LruCache<FontCacheKey, Arc<CachedFont>>>,
 }
@@ -127,39 +157,33 @@ impl DirectWriteLinraRenderer {
     /// Returns an error if COM initialization or factory creation fails.
     pub fn new() -> Result<Self> {
         unsafe {
-            // Initialize COM
-            CoInitializeEx(None, COINIT_MULTITHREADED).ok();
-
             // Create DirectWrite factory
-            let dwrite_factory: IDWriteFactory = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED)
+            let dwrite_factory: IDWriteFactory5 = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED)
                 .map_err(|e| {
-                    TypfError::RenderingFailed(RenderError::BackendError(format!(
-                        "Failed to create DirectWrite factory: {e}"
-                    )))
-                })?;
+                TypfError::RenderingFailed(RenderError::BackendError(format!(
+                    "Failed to create DirectWrite factory: {e}"
+                )))
+            })?;
 
             // Create Direct2D factory
             let d2d_factory: ID2D1Factory =
-                D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, None).map_err(|e| {
+                D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, None).map_err(|e| {
                     TypfError::RenderingFailed(RenderError::BackendError(format!(
                         "Failed to create Direct2D factory: {e}"
                     )))
                 })?;
 
-            // Create WIC factory for bitmap handling
-            let wic_factory: IWICImagingFactory =
-                CoCreateInstance(&CLSID_WICImagingFactory, None, CLSCTX_INPROC_SERVER).map_err(
-                    |e| {
-                        TypfError::RenderingFailed(RenderError::BackendError(format!(
-                            "Failed to create WIC factory: {e}"
-                        )))
-                    },
-                )?;
+            let font_loader = dwrite_factory
+                .CreateInMemoryFontFileLoader()
+                .map_err(native_error)?;
+            dwrite_factory
+                .RegisterFontFileLoader(&font_loader)
+                .map_err(native_error)?;
 
             Ok(Self {
                 dwrite_factory,
                 d2d_factory,
-                wic_factory,
+                font_loader,
                 font_cache: RwLock::new(LruCache::new(NonZeroUsize::new(100).unwrap())),
             })
         }
@@ -196,47 +220,43 @@ impl DirectWriteLinraRenderer {
         Ok(())
     }
 
-    /// Create IDWriteFontFace from font data
-    fn create_font_face(
-        &self,
-        data: Arc<[u8]>,
-        _variations: &[(String, f32)],
-    ) -> Result<IDWriteFontFace> {
+    /// Load the supplied font bytes into a DirectWrite custom collection.
+    fn create_font_collection(&self, data: Arc<[u8]>) -> Result<CachedFont> {
         Self::validate_font_data(&data)?;
-
+        let size = u32::try_from(data.len()).map_err(|_| native_error("Font exceeds 4 GiB"))?;
         unsafe {
-            // Create font file from memory
-            let font_file = self
-                .dwrite_factory
-                .CreateFontFileReference(
-                    PCWSTR::null(), // We use in-memory font
+            // A null owner asks DirectWrite to copy the bytes, per its lifetime contract.
+            let file = self
+                .font_loader
+                .CreateInMemoryFontFileReference(
+                    &self.dwrite_factory,
+                    data.as_ptr().cast(),
+                    size,
                     None,
                 )
-                .map_err(|e| {
-                    TypfError::RenderingFailed(RenderError::BackendError(format!(
-                        "Failed to create font file reference: {e}"
-                    )))
-                })?;
-
-            // Create font face
-            let font_face = self
+                .map_err(native_error)?;
+            let builder = self
                 .dwrite_factory
-                .CreateFontFace(
-                    windows::Win32::Graphics::DirectWrite::DWRITE_FONT_FACE_TYPE_TRUETYPE,
-                    &[font_file],
-                    0,
-                    windows::Win32::Graphics::DirectWrite::DWRITE_FONT_SIMULATIONS_NONE,
-                )
-                .map_err(|e| {
-                    TypfError::RenderingFailed(RenderError::BackendError(format!(
-                        "Failed to create font face: {e}"
-                    )))
-                })?;
-
-            // TODO: Apply variable font variations using IDWriteFontFace3::GetFontAxisValues
-            // and IDWriteFontFace5::CreateFontFaceReference
-
-            Ok(font_face)
+                .CreateFontSetBuilder()
+                .map_err(native_error)?;
+            builder.AddFontFile(&file).map_err(native_error)?;
+            let set = builder.CreateFontSet().map_err(native_error)?;
+            let collection = self
+                .dwrite_factory
+                .CreateFontCollectionFromFontSet(&set)
+                .map_err(native_error)?;
+            let names = collection
+                .GetFontFamily(0)
+                .and_then(|family| family.GetFamilyNames())
+                .map_err(native_error)?;
+            let mut family_name =
+                vec![0; names.GetStringLength(0).map_err(native_error)? as usize + 1];
+            names.GetString(0, &mut family_name).map_err(native_error)?;
+            Ok(CachedFont {
+                collection,
+                family_name,
+                _data: data,
+            })
         }
     }
 
@@ -258,12 +278,7 @@ impl DirectWriteLinraRenderer {
         }
 
         let data_arc: Arc<[u8]> = Arc::from(data);
-        let font_face = self.create_font_face(Arc::clone(&data_arc), &params.variations)?;
-
-        let cached_font = Arc::new(CachedFont {
-            font_face,
-            _data: data_arc,
-        });
+        let cached_font = Arc::new(self.create_font_collection(data_arc)?);
 
         {
             let mut cache = self.font_cache.write();
@@ -274,20 +289,21 @@ impl DirectWriteLinraRenderer {
     }
 
     /// Create text format for the given parameters
-    fn create_text_format(&self, params: &LinraRenderParams) -> Result<IDWriteTextFormat> {
+    fn create_text_format(
+        &self,
+        font: &CachedFont,
+        params: &LinraRenderParams,
+    ) -> Result<IDWriteTextFormat> {
         unsafe {
-            // Use default system font family - actual font face is applied via SetFontCollection
-            let font_family: Vec<u16> = "Segoe UI\0".encode_utf16().collect();
-
             self.dwrite_factory
                 .CreateTextFormat(
-                    PCWSTR(font_family.as_ptr()),
-                    None,
+                    PCWSTR(font.family_name.as_ptr()),
+                    &font.collection,
                     DWRITE_FONT_WEIGHT_NORMAL,
                     DWRITE_FONT_STYLE_NORMAL,
                     DWRITE_FONT_STRETCH_NORMAL,
                     params.size,
-                    PCWSTR::null(),
+                    windows::core::w!("en-us"),
                 )
                 .map_err(|e| {
                     TypfError::RenderingFailed(RenderError::BackendError(format!(
@@ -342,6 +358,19 @@ impl DirectWriteLinraRenderer {
     }
 }
 
+impl Drop for DirectWriteLinraRenderer {
+    fn drop(&mut self) {
+        self.font_cache.write().clear();
+        // All collection/font references are gone before unregistering the loader.
+        if let Err(error) = unsafe {
+            self.dwrite_factory
+                .UnregisterFontFileLoader(&self.font_loader)
+        } {
+            log::warn!("Failed to unregister DirectWrite font loader: {error}");
+        }
+    }
+}
+
 impl Default for DirectWriteLinraRenderer {
     fn default() -> Self {
         Self::new().expect("Failed to create DirectWriteLinraRenderer")
@@ -375,11 +404,11 @@ impl LinraRenderer for DirectWriteLinraRenderer {
             }));
         }
 
-        // Get or create cached font (currently unused due to DirectWrite complexity)
-        let _cached_font = self.get_font_face(&font, params)?;
+        // Load the caller's font, rather than substituting a system family.
+        let cached_font = self.get_font_face(&font, params)?;
 
         // Create text format
-        let text_format = self.create_text_format(params)?;
+        let text_format = self.create_text_format(&cached_font, params)?;
 
         // Create text layout with large max dimensions for initial measurement
         let layout = self.create_text_layout(text, &text_format, 10000.0, 10000.0)?;
@@ -401,10 +430,14 @@ impl LinraRenderer for DirectWriteLinraRenderer {
         // Create bitmap buffer
         let mut buffer = vec![0u8; (width * height * 4) as usize];
 
+        let _apartment = ComApartment::new()?;
         unsafe {
+            // WIC objects stay on the calling thread and are never shared.
+            let wic_factory: IWICImagingFactory =
+                CoCreateInstance(&CLSID_WICImagingFactory, None, CLSCTX_INPROC_SERVER)
+                    .map_err(native_error)?;
             // Create WIC bitmap
-            let wic_bitmap = self
-                .wic_factory
+            let wic_bitmap = wic_factory
                 .CreateBitmap(
                     width,
                     height,
@@ -421,7 +454,7 @@ impl LinraRenderer for DirectWriteLinraRenderer {
             let render_target_props = D2D1_RENDER_TARGET_PROPERTIES {
                 r#type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
                 pixelFormat: D2D1_PIXEL_FORMAT {
-                    format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                    format: DXGI_FORMAT_B8G8R8A8_UNORM,
                     alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
                 },
                 dpiX: 96.0,
@@ -484,18 +517,20 @@ impl LinraRenderer for DirectWriteLinraRenderer {
 
             // Lock WIC bitmap and copy to output buffer
             let lock = wic_bitmap
-                .Lock(None, windows::Win32::Graphics::Imaging::WICBitmapLockRead)
+                .Lock(
+                    std::ptr::null(),
+                    windows::Win32::Graphics::Imaging::WICBitmapLockRead.0 as u32,
+                )
                 .map_err(|e| {
                     TypfError::RenderingFailed(RenderError::BackendError(format!(
                         "Failed to lock bitmap: {e}"
                     )))
                 })?;
 
-            let mut stride = 0u32;
             let mut data_size = 0u32;
             let mut data_ptr = std::ptr::null_mut();
 
-            lock.GetStride(&mut stride).map_err(|e| {
+            let stride = lock.GetStride().map_err(|e| {
                 TypfError::RenderingFailed(RenderError::BackendError(format!(
                     "Failed to get stride: {e}"
                 )))
@@ -521,6 +556,10 @@ impl LinraRenderer for DirectWriteLinraRenderer {
             }
         }
 
+        // WIC stores premultiplied BGRA; the public bitmap contract is RGBA.
+        for pixel in buffer.chunks_exact_mut(4) {
+            pixel.swap(0, 2);
+        }
         Ok(RenderOutput::Bitmap(BitmapData {
             width,
             height,

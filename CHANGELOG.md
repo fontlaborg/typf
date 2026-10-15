@@ -22,6 +22,13 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Force bundled static HarfBuzz in release builds to avoid raising the macOS floor through locally installed libraries.
 - Align the root and binding Python build metadata and document the supported installation names.
 
+### Release review corrections
+- Separate tag asset releases from explicit manual registry uploads, and validate both Python lockfiles.
+- Enforce exact sdist metadata before uploading and audit native CLI payloads as well as Python distributions.
+- Make the native dispatcher compile on unsupported platforms without advertising native rendering; gate Python native dependencies and exports by OS.
+- Repair Windows 0.58 signatures, COM thread ownership, caller-font loading and BGRA output conversion while retaining DirectWrite rendering.
+- Exercise installed musllinux wheels and macOS/Windows native rendering with a pinned Noto Sans fixture instead of varying system fonts.
+
 ### Verification
 - Workspace tests and clippy with all targets pass on the local macOS host; formatting passes after normalizing existing hinting/fontdb formatting.
 - Static HarfBuzz ABI3 wheel passes all 28 Python tests on each of CPython 3.11, 3.12, 3.13 and 3.14, plus real-font CPU rendering and a Vello GPU smoke.

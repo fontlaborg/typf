@@ -154,24 +154,16 @@ def audit_archive(path):
             if item.isfile()
         ]
     with archive:
-        for name, data in entries:
-            if PRIVATE_NAMES.intersection(Path(name).parts) or name.endswith(
-                (".pyc", ".log")
-            ):
-                raise ValueError(f"Private file in {path.name}: {name}")
-            if any(
-                marker in data
-                for marker in (
-                    b"/Users/",
-                    b"C:\\Users\\",
-                    b"C:/Users/",
-                    b"/home/runner/work/",
-                    b"pypi-AgEI",
-                )
-            ):
-                raise ValueError(
-                    f"Private build path or credential in {path.name}: {name}"
-                )
+        audit_private(path, entries)
+        if path.name.endswith(".tar.gz"):
+            metadata = [
+                data
+                for name, data in entries
+                if len(Path(name).parts) == 2 and Path(name).name == "PKG-INFO"
+            ]
+            if len(metadata) != 1:
+                raise ValueError("Expected one root PKG-INFO metadata record")
+            audit_metadata(metadata[0])
         if path.suffix == ".whl":
             if "-cp311-abi3-" not in path.name:
                 raise ValueError(f"Expected cp311-abi3 wheel: {path.name}")
@@ -180,37 +172,76 @@ def audit_archive(path):
             ]
             if len(metadata) != 1:
                 raise ValueError("Expected one wheel METADATA")
-            fields = email.message_from_bytes(metadata[0])
-            version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"][
-                "package"
-            ]["version"]
-            if (fields["Name"], fields["Version"], fields["Requires-Python"]) != (
-                "typf",
-                version,
-                ">=3.11",
-            ):
-                raise ValueError("Wheel metadata does not match release")
+            audit_metadata(metadata[0])
             names = {name for name, _ in entries}
             if not {"typf/__init__.py", "typfpy/__init__.py"}.issubset(names):
                 raise ValueError("Wheel must contain typf and typfpy")
             audit_macos(path, entries)
 
 
+def audit_metadata(data):
+    """Require the exact project, version and Python floor before uploading."""
+    fields = email.message_from_bytes(data)
+    version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"][
+        "version"
+    ]
+    expected = {"Name": "typf", "Version": version, "Requires-Python": ">=3.11"}
+    if any(fields.get_all(key) != [value] for key, value in expected.items()):
+        raise ValueError("Distribution metadata does not match release")
+
+
+def audit_private(path, entries):
+    """Apply the same private-file and source-path boundary to every artifact."""
+    for name, data in entries:
+        if PRIVATE_NAMES.intersection(Path(name).parts) or name.endswith(
+            (".pyc", ".log")
+        ):
+            raise ValueError(f"Private file in {path.name}: {name}")
+        markers = (
+            b"/Users/",
+            b"C:\\Users\\",
+            b"C:/Users/",
+            b"/home/runner/work/",
+            b"pypi-AgEI",
+        )
+        if any(marker in data for marker in markers):
+            raise ValueError(f"Private build path or credential in {path.name}: {name}")
+
+
+def audit_binary(path):
+    """Audit raw Windows executables and packaged Unix CLI binaries."""
+    if path.name.endswith(".tar.gz"):
+        with tarfile.open(path) as archive:
+            entries = [
+                (item.name, archive.extractfile(item).read())
+                for item in archive
+                if item.isfile()
+            ]
+    else:
+        entries = [(path.name, path.read_bytes())]
+    audit_private(path, entries)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["validate", "order", "audit"])
+    parser.add_argument(
+        "command", choices=["validate", "order", "audit", "audit-binary"]
+    )
     parser.add_argument("paths", nargs="*")
     parser.add_argument("--version")
     args = parser.parse_args()
     metadata = validate(args.version)
     if args.command == "order":
         print("\n".join(p["name"] for p in publish_order(metadata)))
-    elif args.command == "audit":
+    elif args.command in ("audit", "audit-binary"):
         if not args.paths:
             parser.error("audit requires at least one archive")
         for pattern in args.paths:
             path = Path(pattern)
-            audit_archive(path)
+            if args.command == "audit-binary":
+                audit_binary(path)
+            else:
+                audit_archive(path)
             print(f"Audited {path.name}")
     else:
         print(f"Validated {len(metadata['workspace_members'])} workspace packages")

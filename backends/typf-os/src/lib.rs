@@ -28,6 +28,11 @@
 //! | macOS    | CoreText (CTLineDraw) | Implemented |
 //! | Windows  | DirectWrite (DrawTextLayout) | Implemented |
 //! | Linux    | - | Not supported |
+//!
+//! On unsupported platforms this crate exports the shared trait and parameters
+//! only. Native renderer types and constructors are available on macOS/Windows.
+
+// this_file: backends/typf-os/src/lib.rs
 
 // Re-export the linra renderer trait and params from typf-core
 pub use typf_core::linra::{LinraRenderParams, LinraRenderer};
@@ -51,9 +56,7 @@ pub type OsRenderer = typf_os_win::DirectWriteLinraRenderer;
 ///
 /// This is the simplest way to get started with platform-native text rendering.
 ///
-/// # Panics
-///
-/// Panics at compile time if the current platform is not supported.
+/// This constructor is exported only on supported native platforms.
 ///
 /// # Example
 ///
@@ -73,16 +76,14 @@ pub fn create_renderer() -> typf_core::error::Result<OsRenderer> {
     typf_os_win::DirectWriteLinraRenderer::new()
 }
 
-// Compile-time error for unsupported platforms
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-compile_error!(
-    "typf-os requires macOS or Windows. For other platforms, use the separate \
-     shaper and renderer backends (e.g., typf-shape-hb + typf-render-skia)."
-);
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_shared_parameters_available_on_every_platform() {
+        assert_eq!(LinraRenderParams::with_size(24.0).size, 24.0);
+    }
 
     #[test]
     #[cfg(target_os = "macos")]

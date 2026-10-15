@@ -21,9 +21,6 @@ typf-core = { workspace = true }
 typf-export = { workspace = true }
 typf-export-svg = { path = "../../export-svg", version = "5.1.0", optional = true }
 typf-fontdb = { workspace = true }
-typf-os = { workspace = true, optional = true }
-typf-os-mac = { workspace = true, optional = true }
-typf-os-win = { workspace = true, optional = true }
 typf-render-cg = { workspace = true, optional = true }
 typf-render-json = { workspace = true, optional = true }
 typf-render-opixa = { workspace = true, optional = true }
@@ -36,6 +33,15 @@ typf-shape-hb = { workspace = true, optional = true }
 typf-shape-icu-hb = { workspace = true, optional = true }
 typf-shape-none = { workspace = true }
 typf-unicode = { workspace = true }
+
+[target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
+typf-os = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+typf-os-mac = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+typf-os-win = { workspace = true, optional = true }
 
 [features]
 default = [
