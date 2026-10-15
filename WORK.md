@@ -21,9 +21,14 @@ Verification completed before initial release-preparation commit:
 - Release helper regression tests: 3 PASS; validator checks all 27 packages.
 - `actionlint .github/workflows/release.yml`: PASS.
 - Core/input `cargo publish --dry-run --locked --allow-dirty`: PASS, no uploads.
-- Sdist payload audit: PASS; clean unpacked-source compilation in progress at commit time.
-- Initial repaired ABI3 wheel: real-font opixa/skia/zeno/Vello CPU rendering PASS; initial Python 3.11 tests 26 passed, 2 skipped (fixture-path change subsequently corrected).
-- Final static HarfBuzz wheel build, Python 3.11–3.14 clean-install tests, and all-crate payload listing are in progress. These are not claimed complete here.
+- Sdist payload audit: PASS; clean unpacked source builds offline without the ignored external checkout. Maturin prunes workspace members, so its source lockfile is refreshed by a normal source build; forcing `--locked` on the first unpacked build is unsupported.
+- Final static HarfBuzz ABI3 wheel: PASS payload and macOS deployment/native link audit; no external Homebrew dylibs remain.
+- Clean installs on CPython 3.11.17, 3.12.15, 3.13.16 and 3.14.8: 28 tests PASS each (112 total), no skips. Both imports and version metadata agree.
+- Real-font opixa/skia/zeno/Vello CPU PNG and SVG smoke: PASS on each of the four Python versions; Vello GPU additionally rendered visible pixels.
+- `cargo test --workspace --all-features`: 556 passed, 18 ignored, zero failures. Default workspace: 552 passed, 18 ignored.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`: PASS.
+- All 27 crate package file lists: PASS; no private agent notes or coordination state.
+- `uvx twine check` on final wheel and sdist: PASS.
 - GitHub platform builds have not run in this local task; controller must validate downloadable artifacts before publication.
 
 Official documentation consulted: PyO3 0.22 building/distribution, Maturin layout/distribution/config, Cargo publishing, wgpu 26 PollType, GitHub runner reference, and maturin-action inputs.

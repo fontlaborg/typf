@@ -74,7 +74,7 @@ jobs:
           working-directory: bindings/py
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
-          args: --locked --release --auditwheel repair --out ../../dist --interpreter python3.11
+          args: --locked --release --auditwheel repair --out ../../dist --interpreter ${{ runner.os == 'Linux' && 'python3.11' || 'python' }}
           before-script-linux: |
             if command -v apk >/dev/null; then
               apk add --no-cache harfbuzz-dev pkgconf

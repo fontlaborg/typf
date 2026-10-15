@@ -24,7 +24,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ### Verification
 - Workspace tests and clippy with all targets pass on the local macOS host; formatting passes after normalizing existing hinting/fontdb formatting.
-- Initial stable ABI wheel passes real-font rendering with opixa, skia, zeno and Vello CPU. Final static wheel and multi-platform CI validation are recorded in the release work log.
+- Static HarfBuzz ABI3 wheel passes all 28 Python tests on each of CPython 3.11, 3.12, 3.13 and 3.14, plus real-font CPU rendering and a Vello GPU smoke.
+- Full-feature Rust workspace: 556 passed, 18 ignored; all-target/all-feature clippy passes. Wheel and sdist pass payload and metadata audits; all 27 crate payload lists exclude private notes.
+- Multi-platform CI artifacts remain subject to controller verification before publication.
 
 
 ### Added
@@ -204,7 +206,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ### Verification
 - Workspace tests and clippy with all targets pass on the local macOS host; formatting passes after normalizing existing hinting/fontdb formatting.
-- Initial stable ABI wheel passes real-font rendering with opixa, skia, zeno and Vello CPU. Final static wheel and multi-platform CI validation are recorded in the release work log.
+- Static HarfBuzz ABI3 wheel passes all 28 Python tests on each of CPython 3.11, 3.12, 3.13 and 3.14, plus real-font CPU rendering and a Vello GPU smoke.
+- Full-feature Rust workspace: 556 passed, 18 ignored; all-target/all-feature clippy passes. Wheel and sdist pass payload and metadata audits; all 27 crate payload lists exclude private notes.
+- Multi-platform CI artifacts remain subject to controller verification before publication.
 
 
 ### Fixed
