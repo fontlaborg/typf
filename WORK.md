@@ -29,7 +29,7 @@ Verification completed before initial release-preparation commit:
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings`: PASS.
 - All 27 crate package file lists: PASS; no private agent notes or coordination state.
 - `uvx twine check` on final wheel and sdist: PASS.
-- GitHub platform builds have not run in this local task; controller must validate downloadable artifacts before publication.
+- Controller launched the GitHub platform build. The first musllinux jobs exposed an unnecessary package-manager install and an environment forwarding gap. Removed the system HarfBuzz install, explicitly forwarded the bundled-build switch into Docker, and selected PyPA musllinux images with CPython 3.11. Updated workflow passes actionlint. Controller must verify the rerun and downloaded artifacts before publication.
 
 Official documentation consulted: PyO3 0.22 building/distribution, Maturin layout/distribution/config, Cargo publishing, wgpu 26 PollType, GitHub runner reference, and maturin-action inputs.
 
