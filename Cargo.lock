@@ -246,6 +246,9 @@ name = "bitflags"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
+dependencies = [
+ "serde_core",
+]
 
 [[package]]
 name = "bitstream-io"
@@ -1670,9 +1673,9 @@ dependencies = [
 
 [[package]]
 name = "naga"
-version = "27.0.3"
+version = "26.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "066cf25f0e8b11ee0df221219010f213ad429855f57c494f995590c861a9a7d8"
+checksum = "916cbc7cb27db60be930a4e2da243cf4bc39569195f22fd8ee419cd31d5b662c"
 dependencies = [
  "arrayvec",
  "bit-set",
@@ -1681,7 +1684,7 @@ dependencies = [
  "cfg_aliases",
  "codespan-reporting",
  "half",
- "hashbrown 0.16.0",
+ "hashbrown 0.15.5",
  "hexf-parse",
  "indexmap",
  "libm",
@@ -1924,9 +1927,9 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
 name = "ordered-float"
-version = "5.1.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f4779c6901a562440c3786d08192c6fbda7c1c2060edd10006b05ee35d10f2d"
+checksum = "e2c1f9f56e534ac6a9b8a4600bdf0f530fb393b5f393e7b4d03489c3cf0c3f01"
 dependencies = [
  "num-traits",
 ]
@@ -2901,7 +2904,7 @@ dependencies = [
 
 [[package]]
 name = "typf"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "console_error_panic_hook",
  "criterion",
@@ -2930,7 +2933,7 @@ dependencies = [
 
 [[package]]
 name = "typf-bench"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "chrono",
  "clap",
@@ -2956,7 +2959,7 @@ dependencies = [
 
 [[package]]
 name = "typf-cli"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "base64",
  "clap",
@@ -2989,7 +2992,7 @@ dependencies = [
 
 [[package]]
 name = "typf-core"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "icu_properties",
  "log",
@@ -3001,7 +3004,7 @@ dependencies = [
 
 [[package]]
 name = "typf-export"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "base64",
  "image",
@@ -3012,7 +3015,7 @@ dependencies = [
 
 [[package]]
 name = "typf-export-svg"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "base64",
  "read-fonts 0.36.0",
@@ -3024,7 +3027,7 @@ dependencies = [
 
 [[package]]
 name = "typf-fontdb"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "log",
  "read-fonts 0.36.0",
@@ -3035,11 +3038,11 @@ dependencies = [
 
 [[package]]
 name = "typf-input"
-version = "5.0.16"
+version = "5.1.0"
 
 [[package]]
 name = "typf-os"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "typf-core",
  "typf-os-mac",
@@ -3048,7 +3051,7 @@ dependencies = [
 
 [[package]]
 name = "typf-os-mac"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "env_logger",
  "log",
@@ -3061,7 +3064,7 @@ dependencies = [
 
 [[package]]
 name = "typf-os-win"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "log",
  "lru",
@@ -3072,7 +3075,7 @@ dependencies = [
 
 [[package]]
 name = "typf-py"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "numpy",
  "pyo3",
@@ -3100,7 +3103,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-cg"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "env_logger",
  "log",
@@ -3112,7 +3115,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-color"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "flate2",
  "log",
@@ -3126,7 +3129,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-json"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "env_logger",
  "log",
@@ -3138,7 +3141,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-opixa"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "log",
  "rayon",
@@ -3150,7 +3153,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-skia"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "kurbo 0.11.3",
  "log",
@@ -3166,7 +3169,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-svg"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "base64",
  "log",
@@ -3179,7 +3182,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-vello"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "log",
  "pollster",
@@ -3194,7 +3197,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-vello-cpu"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "log",
  "skrifa 0.39.0",
@@ -3207,7 +3210,7 @@ dependencies = [
 
 [[package]]
 name = "typf-render-zeno"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "kurbo 0.11.3",
  "log",
@@ -3223,7 +3226,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-ct"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "env_logger",
  "log",
@@ -3237,7 +3240,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-hb"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "harfbuzz_rs",
  "log",
@@ -3249,7 +3252,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-hr"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "harfrust",
  "log",
@@ -3261,7 +3264,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-icu-hb"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "env_logger",
  "harfbuzz_rs",
@@ -3275,7 +3278,7 @@ dependencies = [
 
 [[package]]
 name = "typf-shape-none"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "log",
  "typf-core",
@@ -3283,7 +3286,7 @@ dependencies = [
 
 [[package]]
 name = "typf-unicode"
-version = "5.0.16"
+version = "5.1.0"
 dependencies = [
  "icu_properties",
  "icu_segmenter",
@@ -3436,6 +3439,8 @@ dependencies = [
 [[package]]
 name = "vello_common"
 version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a235ba928b3109ad9e7696270edb09445a52ae1c7c08e6d31a19b1cdd6cbc24a"
 dependencies = [
  "bytemuck",
  "fearless_simd",
@@ -3450,15 +3455,18 @@ dependencies = [
 [[package]]
 name = "vello_cpu"
 version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0bd1fcf9c1814f17a491e07113623d44e3ec1125a9f3401f5e047d6d326da21"
 dependencies = [
  "bytemuck",
- "hashbrown 0.15.5",
  "vello_common",
 ]
 
 [[package]]
 name = "vello_hybrid"
 version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25707b2b4f5fe1f4f1b764ce78154629dab8c7f9cee18b4264569c6a01f15b53"
 dependencies = [
  "bytemuck",
  "guillotiere",
@@ -3473,6 +3481,8 @@ dependencies = [
 [[package]]
 name = "vello_sparse_shaders"
 version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a49fba8e6c201b4764f2574661eb18e7b98e0b5efff91cda2782205abfbdc2e2"
 
 [[package]]
 name = "version_check"
@@ -3571,16 +3581,16 @@ checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 
 [[package]]
 name = "wgpu"
-version = "27.0.1"
+version = "26.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfe68bac7cde125de7a731c3400723cadaaf1703795ad3f4805f187459cd7a77"
+checksum = "70b6ff82bbf6e9206828e1a3178e851f8c20f1c9028e74dd3a8090741ccd5798"
 dependencies = [
  "arrayvec",
  "bitflags 2.10.0",
  "cfg-if",
  "cfg_aliases",
  "document-features",
- "hashbrown 0.16.0",
+ "hashbrown 0.15.5",
  "log",
  "portable-atomic",
  "profiling",
@@ -3594,18 +3604,17 @@ dependencies = [
 
 [[package]]
 name = "wgpu-core"
-version = "27.0.3"
+version = "26.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27a75de515543b1897b26119f93731b385a19aea165a1ec5f0e3acecc229cae7"
+checksum = "d5f62f1053bd28c2268f42916f31588f81f64796e2ff91b81293515017ca8bd9"
 dependencies = [
  "arrayvec",
  "bit-set",
  "bit-vec",
  "bitflags 2.10.0",
- "bytemuck",
  "cfg_aliases",
  "document-features",
- "hashbrown 0.16.0",
+ "hashbrown 0.15.5",
  "indexmap",
  "log",
  "naga",
@@ -3625,27 +3634,27 @@ dependencies = [
 
 [[package]]
 name = "wgpu-core-deps-apple"
-version = "27.0.0"
+version = "26.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0772ae958e9be0c729561d5e3fd9a19679bcdfb945b8b1a1969d9bfe8056d233"
+checksum = "18ae5fbde6a4cbebae38358aa73fcd6e0f15c6144b67ef5dc91ded0db125dbdf"
 dependencies = [
  "wgpu-hal",
 ]
 
 [[package]]
 name = "wgpu-core-deps-windows-linux-android"
-version = "27.0.0"
+version = "26.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71197027d61a71748e4120f05a9242b2ad142e3c01f8c1b47707945a879a03c3"
+checksum = "720a5cb9d12b3d337c15ff0e24d3e97ed11490ff3f7506e7f3d98c68fa5d6f14"
 dependencies = [
  "wgpu-hal",
 ]
 
 [[package]]
 name = "wgpu-hal"
-version = "27.0.4"
+version = "26.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b21cb61c57ee198bc4aff71aeadff4cbb80b927beb912506af9c780d64313ce"
+checksum = "a8d0e67224cc7305b3b4eb2cc57ca4c4c3afc665c1d1bee162ea806e19c47bdd"
 dependencies = [
  "android_system_properties",
  "arrayvec",
@@ -3660,14 +3669,13 @@ dependencies = [
  "gpu-alloc",
  "gpu-allocator",
  "gpu-descriptor",
- "hashbrown 0.16.0",
+ "hashbrown 0.15.5",
  "libc",
  "libloading",
  "log",
  "metal",
  "naga",
  "objc",
- "once_cell",
  "ordered-float",
  "parking_lot",
  "portable-atomic",
@@ -3685,9 +3693,9 @@ dependencies = [
 
 [[package]]
 name = "wgpu-types"
-version = "27.0.1"
+version = "26.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afdcf84c395990db737f2dd91628706cb31e86d72e53482320d368e52b5da5eb"
+checksum = "eca7a8d8af57c18f57d393601a1fb159ace8b2328f1b6b5f80893f7d672c9ae2"
 dependencies = [
  "bitflags 2.10.0",
  "bytemuck",

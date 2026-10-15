@@ -1,28 +1,30 @@
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.14,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "typfpy"
+name = "typf"
 dynamic = ["version"]
 description = "High-performance text rendering pipeline"
 authors = [{name = "FontLab", email = "dev@fontlab.com"}]
 license = {text = "Apache-2.0"}
-readme = "README.md"
-requires-python = ">=3.12"
+readme = "bindings/py/README.md"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Rust",
     "Topic :: Multimedia :: Graphics",
     "Topic :: Text Processing :: Fonts",
 ]
 
 dependencies = [
-    "fire>=0.5.0",
+    "click>=8.0",
 ]
 
 [project.optional-dependencies]
@@ -34,21 +36,19 @@ dev = [
 ]
 
 [project.scripts]
+typf = "typfpy.cli:main"
 typfpy = "typfpy.cli:main"
 
 [tool.maturin]
+auditwheel = "repair"
 module-name = "typfpy.typf"
-features = [
-    "pyo3/extension-module",
-    "shaping-hb",
-    "shaping-ct",
-    "shaping-icu-hb",
-    "render-json",
-    "render-cg",
-    "render-skia",
-    "render-zeno",
-    "export-png",
-    "export-svg"
-]
 manifest-path = "bindings/py/Cargo.toml"
 python-source = "bindings/py/python"
+python-packages = ["typf", "typfpy"]
+exclude = ["**/__pycache__/**", "**/*.pyc", "**/.DS_Store", "**/.env", "**/CLAUDE.md", "**/AGENTS.md", "**/WORK.md", "**/REVIEW.md", "**/TASKS.md", "**/.superpowers/**", "**/.omc/**", "**/.codegraph/**"]
+features = ["pyo3/extension-module", "shaping-hb", "render-opixa", "export-png", "export-svg", "linra-mac", "linra-win", "render-vello-cpu", "render-vello"]
+
+# SBOM generators currently record absolute local Cargo package paths.
+[tool.maturin.sbom]
+rust = false
+auditwheel = false

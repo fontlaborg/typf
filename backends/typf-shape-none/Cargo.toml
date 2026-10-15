@@ -1,6 +1,8 @@
 [package]
+exclude = ["**/CLAUDE.md", "**/AGENTS.md", "**/WORK.md", "**/REVIEW.md", "**/TASKS.md", "**/.env", "**/.DS_Store", "**/__pycache__/**", "**/*.pyc", "**/*.log"]
 name = "typf-shape-none"
 version.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 edition.workspace = true
 description = "Minimal passthrough shaper for Typf (simple LTR Latin text)"

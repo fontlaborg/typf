@@ -1,5 +1,6 @@
 # this_file: backends/typf-render-color/Cargo.toml
 [package]
+exclude = ["**/CLAUDE.md", "**/AGENTS.md", "**/WORK.md", "**/REVIEW.md", "**/TASKS.md", "**/.env", "**/.DS_Store", "**/__pycache__/**", "**/*.pyc", "**/*.log"]
 name = "typf-render-color"
 version.workspace = true
 edition.workspace = true

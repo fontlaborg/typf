@@ -21,7 +21,7 @@ cd typf
 
 # Or install components separately
 cargo install --path crates/typf-cli
-cd bindings/python && pip install -e .
+cd bindings/py && pip install -e .
 ```
 
 ## Requirements
@@ -87,7 +87,7 @@ git clone https://github.com/fontlaborg/typf.git
 cd typf
 cargo build --release --workspace
 cargo install --path crates/typf-cli
-cd bindings/python && pip install -e .
+cd bindings/py && pip install -e .
 ```
 
 ### Cargo Only (CLI)
@@ -99,7 +99,7 @@ cargo install typf-cli
 ### Python Only
 
 ```bash
-pip install typfpy
+pip install typf==5.1.0
 ```
 
 ### Pre-built Binaries
@@ -230,3 +230,10 @@ cargo build --release --features shaping-hb,render-skia
 ---
 
 Typf is installed. Start rendering text.
+
+## Python 5.1.0 compatibility
+
+Install `typf==5.1.0` on standard CPython 3.11–3.14. The `cp311-abi3` wheels
+use the stable Python ABI; both `typf` and `typfpy` imports remain available.
+Wheels include the compiled renderer and its required non-system libraries.
+Source builds require Rust 1.86 or newer and a C++ compiler for HarfBuzz.

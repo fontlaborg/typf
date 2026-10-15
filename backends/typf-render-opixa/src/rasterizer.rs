@@ -97,7 +97,8 @@ impl<'a> GlyphRasterizer<'a> {
 
     /// Integer ppem used for hinting.
     pub fn hint_ppem(&self) -> u32 {
-        self.ppem.unwrap_or_else(|| self.size.round().max(1.0) as u32)
+        self.ppem
+            .unwrap_or_else(|| self.size.round().max(1.0) as u32)
     }
 
     /// Lazily build the typftth hinter for the current size/location.
@@ -111,15 +112,27 @@ impl<'a> GlyphRasterizer<'a> {
             if !font.is_hinted() {
                 return None;
             }
-            let coords: Vec<typftth::F2Dot14> =
-                self.location.coords().iter().map(|c| typftth::F2Dot14(c.to_bits())).collect();
+            let coords: Vec<typftth::F2Dot14> = self
+                .location
+                .coords()
+                .iter()
+                .map(|c| typftth::F2Dot14(c.to_bits()))
+                .collect();
             let ppem = self.hint_ppem() as i32;
             // Behave like FreeType's v35 grayscale target: fonts that gate
             // hinting on the rasterizer version take their usual branches
             // and out-of-range CVT indices do not abort the glyph program.
             let variation = !font.axes.is_empty();
-            let options = typftth::hinter::HinterOptions::freetype(typftth::GetInfoProfile::freetype_v35(true, variation));
-            match typftth::hinter::Hinter::with_options(font, ppem, &coords, options, &mut typftth::NoTrace) {
+            let options = typftth::hinter::HinterOptions::freetype(
+                typftth::GetInfoProfile::freetype_v35(true, variation),
+            );
+            match typftth::hinter::Hinter::with_options(
+                font,
+                ppem,
+                &coords,
+                options,
+                &mut typftth::NoTrace,
+            ) {
                 Ok(h) => self.hinter = Some(h),
                 Err(e) => {
                     log::warn!("typftth setup failed, rendering unhinted: {e}");
@@ -549,11 +562,35 @@ mod tests {
     fn test_dropout_from_scan_control() {
         use typftth::gs::ScanControl;
         let sc = |ctrl: u32, kind: u16| ScanControl(ctrl | (u32::from(kind) << 16));
-        assert_eq!(dropout_from_scan_control(sc(0, 0), 12), DropoutMode::None, "SCANCTRL 0 = off");
-        assert_eq!(dropout_from_scan_control(sc(0xFF, 0), 200), DropoutMode::Simple, "0xFF = always");
-        assert_eq!(dropout_from_scan_control(sc(0x111, 0), 17), DropoutMode::Simple, "ppem <= 17");
-        assert_eq!(dropout_from_scan_control(sc(0x111, 0), 18), DropoutMode::None, "ppem > 17");
-        assert_eq!(dropout_from_scan_control(sc(0x1FF, 4), 9), DropoutMode::Smart, "SCANTYPE 4 = smart");
-        assert_eq!(dropout_from_scan_control(sc(0x1FF, 6), 9), DropoutMode::None, "SCANTYPE 6 = off");
+        assert_eq!(
+            dropout_from_scan_control(sc(0, 0), 12),
+            DropoutMode::None,
+            "SCANCTRL 0 = off"
+        );
+        assert_eq!(
+            dropout_from_scan_control(sc(0xFF, 0), 200),
+            DropoutMode::Simple,
+            "0xFF = always"
+        );
+        assert_eq!(
+            dropout_from_scan_control(sc(0x111, 0), 17),
+            DropoutMode::Simple,
+            "ppem <= 17"
+        );
+        assert_eq!(
+            dropout_from_scan_control(sc(0x111, 0), 18),
+            DropoutMode::None,
+            "ppem > 17"
+        );
+        assert_eq!(
+            dropout_from_scan_control(sc(0x1FF, 4), 9),
+            DropoutMode::Smart,
+            "SCANTYPE 4 = smart"
+        );
+        assert_eq!(
+            dropout_from_scan_control(sc(0x1FF, 6), 9),
+            DropoutMode::None,
+            "SCANTYPE 6 = off"
+        );
     }
 }

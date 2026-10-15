@@ -1,6 +1,7 @@
 # this_file: cli/Cargo.toml
 
 [package]
+exclude = ["**/CLAUDE.md", "**/AGENTS.md", "**/WORK.md", "**/REVIEW.md", "**/TASKS.md", "**/.env", "**/.DS_Store", "**/__pycache__/**", "**/*.pyc", "**/*.log"]
 name = "typf-cli"
 version.workspace = true
 authors.workspace = true

@@ -203,7 +203,14 @@ fn print_font(path: &std::path::Path, face_index: u32) -> Result<()> {
         })
         .unwrap_or(0);
 
-    println!("  outlines:     {}", if has_glyf { "glyf (TrueType)" } else { "CFF/CFF2 (no TrueType hinting)" });
+    println!(
+        "  outlines:     {}",
+        if has_glyf {
+            "glyf (TrueType)"
+        } else {
+            "CFF/CFF2 (no TrueType hinting)"
+        }
+    );
     println!("  fpgm:         {fpgm} bytes");
     println!("  prep:         {prep} bytes");
     println!("  cvt:          {cvt} entries");
@@ -211,7 +218,11 @@ fn print_font(path: &std::path::Path, face_index: u32) -> Result<()> {
     let usable = has_glyf && (fpgm > 0 || prep > 0 || hinted_glyphs > 0);
     println!(
         "  --hinting tt: {}",
-        if usable { "applicable" } else { "no effect (no TrueType instructions)" }
+        if usable {
+            "applicable"
+        } else {
+            "no effect (no TrueType instructions)"
+        }
     );
     Ok(())
 }

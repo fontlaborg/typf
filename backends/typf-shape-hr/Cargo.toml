@@ -1,6 +1,8 @@
 [package]
+exclude = ["**/CLAUDE.md", "**/AGENTS.md", "**/WORK.md", "**/REVIEW.md", "**/TASKS.md", "**/.env", "**/.DS_Store", "**/__pycache__/**", "**/*.pyc", "**/*.log"]
 name = "typf-shape-hr"
 version.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

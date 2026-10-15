@@ -1,4 +1,35 @@
 <!-- this_file: WORK.md -->
+# Release 5.1.0 preparation
+
+Date: 2026-10-15. Work remains local until the release controller verifies and publishes.
+
+- Aligned all 27 workspace package versions and internal requirements at 5.1.0.
+- Published Python identity is `typf`; `typfpy` remains a compatible API and CLI.
+- Standard CPython >=3.11 stable ABI wheels, classifiers through 3.14.
+- Replaced ignored Vello source paths with published 0.0.4 CPU/common/hybrid crates; aligned wgpu 26 and its poll API. No renderer removed.
+- Rust minimum corrected to dependency-required 1.86 and inherited by all members.
+- Replaced release automation with validated build-only and publication paths; default manual runs need no registry secret.
+- Added topological publication order covering every workspace package, artifact payload checks, macOS native dependency/tag audit, installed-wheel identity checks and real-font rendering smoke tests.
+- Excluded private agent documents, coordination state and bytecode from packages; disabled Maturin SBOM generation because it records absolute local Cargo source paths.
+- Static bundled HarfBuzz selected by `HARFBUZZ_SYS_NO_PKG_CONFIG=1` in release builds. Maturin native repair remains enabled for other dependencies.
+
+Verification completed before initial release-preparation commit:
+
+- `cargo test --workspace`: PASS (full log retained locally).
+- `cargo clippy --workspace --all-targets -- -D warnings`: PASS.
+- `cargo fmt --all --check`: PASS.
+- Release helper regression tests: 3 PASS; validator checks all 27 packages.
+- `actionlint .github/workflows/release.yml`: PASS.
+- Core/input `cargo publish --dry-run --locked --allow-dirty`: PASS, no uploads.
+- Sdist payload audit: PASS; clean unpacked-source compilation in progress at commit time.
+- Initial repaired ABI3 wheel: real-font opixa/skia/zeno/Vello CPU rendering PASS; initial Python 3.11 tests 26 passed, 2 skipped (fixture-path change subsequently corrected).
+- Final static HarfBuzz wheel build, Python 3.11–3.14 clean-install tests, and all-crate payload listing are in progress. These are not claimed complete here.
+- GitHub platform builds have not run in this local task; controller must validate downloadable artifacts before publication.
+
+Official documentation consulted: PyO3 0.22 building/distribution, Maturin layout/distribution/config, Cargo publishing, wgpu 26 PollType, GitHub runner reference, and maturin-action inputs.
+
+---
+
 # Current Work Session
 
 **Session Date:** 2026-02-11

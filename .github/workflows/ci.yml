@@ -15,7 +15,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: 1
-  MSRV: "1.75"
+  MSRV: "1.86"
 
 jobs:
   # Format and lint check (fast fail)
@@ -72,7 +72,7 @@ jobs:
         include:
           # MSRV check on Linux only
           - os: ubuntu-24.04
-            rust: "1.75"
+            rust: "1.86"
             features: default
           # Nightly for experimental features
           - os: ubuntu-24.04

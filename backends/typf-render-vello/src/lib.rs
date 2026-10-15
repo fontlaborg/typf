@@ -273,7 +273,7 @@ impl VelloRenderer {
         let buffer_slice = readback_buffer.slice(..);
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
         device
-            .poll(wgpu::PollType::wait_indefinitely())
+            .poll(wgpu::PollType::wait())
             .map_err(|e| VelloError::ReadbackFailed(format!("{:?}", e)))?;
 
         // Read data and remove row padding

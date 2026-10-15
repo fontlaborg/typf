@@ -1,14 +1,14 @@
 <!-- this_file: README.md -->
-# Typf v5.0.20
+# Typf v5.1.0
 
 [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions)
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-1.86%2B-orange.svg)](https://www.rust-lang.org)
 
 Your text looks wrong. Arabic renders backwards, Hindi characters break, Thai glyphs collide. Typf fixes this in under a millisecond.
 
 Render "Hello, مرحبا, 你好!" correctly the first time. No excuses.
 
-> Note: Typf is a community project by [FontLab](https://www.fontlab.org/) and is currently published under an [evaluation license](./LICENSE).
+> Note: Typf is a community project by [FontLab](https://www.fontlab.org/) and is published under the [Apache 2.0 license](./LICENSE).
 
 ## Quick start
 
@@ -232,7 +232,7 @@ TYPF_CACHE=1 ./your_app          # Enable at startup
 Typf now uses the **Moka TinyLFU caching system** for improved performance:
 
 - **Shaping cache**: Keys on text + font + size + language + features + variations
-- **Glyph cache**: Keys on shaped result + render params + font  
+- **Glyph cache**: Keys on shaped result + render params + font
 - **TinyLFU admission**: Tracks frequency of both hits AND misses for smarter caching
 - **Time-to-idle**: 10-minute automatic cleanup prevents unbounded memory growth
 - **Scan-resistant**: Optimized for workloads with many unique text inputs (font matching)
@@ -362,10 +362,11 @@ let exported = exporter.export(&rendered)?;
 
 **Python:**
 ```python
-import typf
+from typf import Typf, export_image
 
-result = typf.render_text("Hello, مرحبا", font_path="arial.ttf")
-result.save("output.png")
+result = Typf().render_text("Hello, مرحبا", font_path="arial.ttf", size=48)
+with open("output.png", "wb") as output:
+    output.write(export_image(result, format="png"))
 ```
 
 ## Test your system
@@ -396,7 +397,7 @@ The benchmark tool tests all shaper × renderer combinations across fonts, sizes
 
 ## Status
 
-**v5.0.20** - Production ready with enhanced caching, baseline consistency, and visual regression testing. 
+**v5.1.0** - Production ready with enhanced caching, baseline consistency, and visual regression testing.
 
 - ✅ 6-stage pipeline with optimized Moka TinyLFU caching architecture
 - ✅ 5 shapers (added HarfBuzz Rust), 7 renderers (35 combinations) with consistent baselines
@@ -419,7 +420,7 @@ The benchmark tool tests all shaper × renderer combinations across fonts, sizes
 ## Limits
 
 **Bitmap width**: ~10,000 pixels max
-- 48px font: ~200 characters  
+- 48px font: ~200 characters
 - 24px font: ~400 characters
 - 12px font: ~800 characters
 
@@ -431,7 +432,7 @@ Fix: Use smaller fonts, line wrapping, or SVG (no width limit).
 - "undeclared type" → `cargo build --all-features`
 - "Package not found" → `cargo build --no-default-features --features minimal`
 
-**Runtime errors:**  
+**Runtime errors:**
 - "no attribute 'Typf'" → Rebuild Python bindings
 - "Invalid bitmap dimensions" → Text too wide, use smaller font or SVG
 - "Font not found" → Check path and format (TrueType/OpenType)

@@ -1,6 +1,8 @@
 [package]
+exclude = ["**/CLAUDE.md", "**/AGENTS.md", "**/WORK.md", "**/REVIEW.md", "**/TASKS.md", "**/.env", "**/.DS_Store", "**/__pycache__/**", "**/*.pyc", "**/*.log"]
 name = "typf-render-vello-cpu"
 version.workspace = true
+rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Vello CPU renderer backend for typf"
@@ -12,9 +14,9 @@ log = { workspace = true }
 thiserror = { workspace = true }
 skrifa = { workspace = true }
 
-# Vello dependencies (from external/)
-vello_cpu = { path = "../../external/vello/sparse_strips/vello_cpu", default-features = false, features = ["std", "png", "text"] }
-vello_common = { path = "../../external/vello/sparse_strips/vello_common", default-features = false, features = ["std", "text"] }
+# Published Vello dependencies (keep CPU/common/hybrid on the same release)
+vello_cpu = { version = "=0.0.4", default-features = false, features = ["std", "png", "text"] }
+vello_common = { version = "=0.0.4", default-features = false, features = ["std", "text"] }
 
 [dev-dependencies]
 typf-fontdb = { workspace = true }

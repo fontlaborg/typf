@@ -1,535 +1,217 @@
-# Release workflow for typf
-#
-# Triggered on version tags (v*). Builds binaries and wheels for all platforms,
-# creates a GitHub release, and publishes to crates.io and PyPI.
-#
-# Platform matrix (December 2025):
-#   Rust: linux-x64, linux-arm64, linux-x64-musl, linux-arm64-musl,
-#         macos-x64, macos-arm64, windows-x64, windows-arm64
-#   Python: 3.12-3.13 on manylinux, musllinux, macOS, Windows
-
+# this_file: .github/workflows/release.yml
 name: Release
-
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: 'Dry run (skip publishing)'
-        required: false
-        default: 'false'
+      build_only:
+        description: Build downloadable artifacts without publishing
         type: boolean
+        default: true
+      version:
+        description: Expected workspace version
+        type: string
+        default: '5.1.0'
 
+permissions:
+  contents: read
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
-  RUST_BACKTRACE: 1
+  # harfbuzz-sys otherwise picks up newer system dylibs and raises the OS floor.
+  HARFBUZZ_SYS_NO_PKG_CONFIG: 1
 
 jobs:
-  # Validate tag format and extract version
   validate:
-    name: Validate Release
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Extract version from tag
-        id: version
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/v}"
-          else
-            VERSION="0.0.0-dev"
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-          # Check if prerelease (contains - like alpha, beta, rc)
-          if [[ "$VERSION" == *-* ]]; then
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
-          fi
-
-          echo "Version: $VERSION"
-
-      - name: Validate version format
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$ ]]; then
-            echo "Error: Invalid version format '$VERSION'"
-            exit 1
-          fi
-
-  # Set version in all manifests
-  set-version:
-    name: Set Version
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-edit
-        run: cargo install cargo-edit
-
-      - name: Set workspace version
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          cargo set-version --workspace "$VERSION"
-
-      - name: Verify version
-        run: |
-          grep -E '^version = ' Cargo.toml | head -1
-
-  # Build Rust binaries for all platforms
-  build-rust:
-    name: Build Rust (${{ matrix.target }})
-    needs: [validate, set-version]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux x64
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-gnu
-            cross: false
-          # Linux x64 musl (static)
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-musl
-            cross: true
-          # Linux arm64
-          - os: ubuntu-24.04
-            target: aarch64-unknown-linux-gnu
-            cross: true
-          # Linux arm64 musl (static)
-          - os: ubuntu-24.04
-            target: aarch64-unknown-linux-musl
-            cross: true
-          # macOS x64
-          - os: macos-13
-            target: x86_64-apple-darwin
-            cross: false
-          # macOS arm64
-          - os: macos-14
-            target: aarch64-apple-darwin
-            cross: false
-          # Windows x64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            cross: false
-          # Windows arm64
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            cross: false
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install cross
-        if: matrix.cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
-
-      - name: Install system dependencies (Linux)
-        if: runner.os == 'Linux' && !matrix.cross
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libharfbuzz-dev
-
-      - name: Install system dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install harfbuzz
-
-      - name: Install cargo-edit
-        run: cargo install cargo-edit
-
-      - name: Set version
-        run: |
-          cargo set-version --workspace "${{ needs.validate.outputs.version }}"
-
-      - name: Build (native)
-        if: ${{ !matrix.cross }}
-        run: |
-          cargo build --release --target ${{ matrix.target }} --package typf-cli
-
-      - name: Build (cross)
-        if: matrix.cross
-        run: |
-          cross build --release --target ${{ matrix.target }} --package typf-cli
-
-      - name: Package (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          cd target/${{ matrix.target }}/release
-          tar czf ../../../typf-${{ matrix.target }}.tar.gz typf
-          cd ../../..
-          sha256sum typf-${{ matrix.target }}.tar.gz > typf-${{ matrix.target }}.tar.gz.sha256
-
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cd target/${{ matrix.target }}/release
-          Compress-Archive -Path typf.exe -DestinationPath ../../../typf-${{ matrix.target }}.zip
-          cd ../../..
-          (Get-FileHash typf-${{ matrix.target }}.zip -Algorithm SHA256).Hash.ToLower() + "  typf-${{ matrix.target }}.zip" | Out-File -Encoding ASCII typf-${{ matrix.target }}.zip.sha256
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust-${{ matrix.target }}
-          path: |
-            typf-${{ matrix.target }}.*
-          if-no-files-found: error
-
-  # Build Python wheels for all platforms
-  build-python:
-    name: Build Python Wheels
-    needs: [validate, set-version]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux x64 - manylinux
-          - os: ubuntu-24.04
-            target: x86_64
-            manylinux: auto
-          # Linux x64 - musllinux
-          - os: ubuntu-24.04
-            target: x86_64
-            manylinux: musllinux_1_2
-          # Linux arm64 - manylinux
-          - os: ubuntu-24.04
-            target: aarch64
-            manylinux: auto
-          # Linux arm64 - musllinux
-          - os: ubuntu-24.04
-            target: aarch64
-            manylinux: musllinux_1_2
-          # macOS x64
-          - os: macos-13
-            target: x86_64
-            manylinux: ''
-          # macOS arm64
-          - os: macos-14
-            target: aarch64
-            manylinux: ''
-          # Windows x64
-          - os: windows-latest
-            target: x64
-            manylinux: ''
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install system dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libharfbuzz-dev
-
-      - name: Install system dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install harfbuzz
-
-      - name: Build wheels (Linux)
-        if: runner.os == 'Linux'
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.target }}
-          manylinux: ${{ matrix.manylinux }}
-          args: --release --out dist --interpreter 3.12 3.13
-          before-script-linux: |
-            if [ "${{ matrix.manylinux }}" = "musllinux_1_2" ]; then
-              apk add --no-cache harfbuzz-dev
-            else
-              yum install -y harfbuzz-devel || apt-get install -y libharfbuzz-dev || true
-            fi
-
-      - name: Build wheels (macOS/Windows)
-        if: runner.os != 'Linux'
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.target }}
-          args: --release --out dist --interpreter 3.12 3.13
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-${{ matrix.os }}-${{ matrix.target }}-${{ matrix.manylinux || 'native' }}
-          path: dist/*.whl
-          if-no-files-found: error
-
-  # Build source distribution
-  build-sdist:
-    name: Build Source Distribution
-    needs: [validate, set-version]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate checked-in version; never rewrite manifests in CI
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          expected="${EXPECTED_VERSION:-${GITHUB_REF_NAME#v}}"
+          python scripts/release.py validate --version "$expected"
+          python -m unittest discover -s scripts -p test_release.py
 
-      - name: Build sdist
+  wheels:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, target: x86_64, manylinux: '2_28'}
+          - {os: ubuntu-24.04-arm, target: aarch64, manylinux: '2_28'}
+          - {os: ubuntu-24.04, target: x86_64, manylinux: musllinux_1_2}
+          - {os: ubuntu-24.04-arm, target: aarch64, manylinux: musllinux_1_2}
+          - {os: macos-15-intel, target: x86_64, manylinux: 'off'}
+          - {os: macos-14, target: aarch64, manylinux: 'off'}
+          - {os: windows-2022, target: x64, manylinux: 'off'}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Remap private build paths
+        shell: bash
+        run: |
+          workspace="$GITHUB_WORKSPACE"
+          user_home="$HOME"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            workspace="$(cygpath -w "$GITHUB_WORKSPACE")"
+            user_home="$(cygpath -w "$HOME")"
+          fi
+          echo "RUSTFLAGS=--remap-path-prefix=$workspace=/typf --remap-path-prefix=$user_home=/build --remap-path-prefix=/io=/typf --remap-path-prefix=/root=/build" >> "$GITHUB_ENV"
+      - name: Build stable ABI wheel from the binding project
         uses: PyO3/maturin-action@v1
         with:
-          command: sdist
-          args: --out dist
+          working-directory: bindings/py
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: --locked --release --auditwheel repair --out ../../dist --interpreter python3.11
+          before-script-linux: |
+            if command -v apk >/dev/null; then
+              apk add --no-cache harfbuzz-dev pkgconf
+            elif command -v dnf >/dev/null; then
+              dnf install -y harfbuzz-devel pkgconf-pkg-config
+            else
+              yum install -y harfbuzz-devel pkgconfig
+            fi
+      - name: Audit wheel payload
+        shell: bash
+        run: python scripts/release.py audit dist/*.whl
+      - name: Install smoke font
+        if: runner.os == 'Linux' && matrix.manylinux == '2_28'
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+      - name: Install wheel and smoke render with a real font
+        if: matrix.manylinux != 'musllinux_1_2'
+        shell: bash
+        run: |
+          python -m pip install dist/*.whl
+          python scripts/smoke_wheel.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.target }}-${{ matrix.manylinux }}
+          path: dist/*.whl
+          if-no-files-found: error
 
-      - name: Upload sdist
-        uses: actions/upload-artifact@v4
+  sdist:
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: PyO3/maturin-action@v1
+        with:
+          working-directory: bindings/py
+          command: sdist
+          args: --out ../../dist
+      - run: python scripts/release.py audit dist/*.tar.gz
+      - uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/*.tar.gz
           if-no-files-found: error
 
-  # Create GitHub Release
-  create-release:
-    name: Create GitHub Release
-    needs: [validate, build-rust, build-python, build-sdist]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  binaries:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, target: x86_64-unknown-linux-gnu}
+          - {os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu}
+          - {os: macos-15-intel, target: x86_64-apple-darwin}
+          - {os: macos-14, target: aarch64-apple-darwin}
+          - {os: windows-2022, target: x86_64-pc-windows-msvc}
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          path: artifacts
-
-      - name: Prepare release assets
+          targets: ${{ matrix.target }}
+      - name: Build CLI
+        shell: bash
         run: |
-          mkdir release-assets
-          # Move Rust binaries
-          find artifacts/rust-* -type f -name "typf-*" -exec mv {} release-assets/ \;
-          # Move Python wheels
-          find artifacts/wheels-* -type f -name "*.whl" -exec mv {} release-assets/ \;
-          # Move sdist
-          find artifacts/sdist -type f -name "*.tar.gz" -exec mv {} release-assets/ \;
-
-          # Generate checksums file
-          cd release-assets
-          sha256sum * > SHA256SUMS
-          cd ..
-
-          ls -la release-assets/
-
-      - name: Generate release notes
-        id: release_notes
+          export RUSTFLAGS="--remap-path-prefix=$GITHUB_WORKSPACE=/typf --remap-path-prefix=$HOME=/build"
+          cargo build --locked --release -p typf-cli --target '${{ matrix.target }}'
+      - name: Package binary
+        shell: bash
         run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          cat > release-notes.md << EOF
-          ## typf v$VERSION
-
-          ### Installation
-
-          **Rust (cargo):**
-          \`\`\`bash
-          cargo install typf-cli
-          \`\`\`
-
-          **Python (pip):**
-          \`\`\`bash
-          pip install typfpy
-          \`\`\`
-
-          **Binary downloads:**
-          - Linux x64: \`typf-x86_64-unknown-linux-gnu.tar.gz\`
-          - Linux arm64: \`typf-aarch64-unknown-linux-gnu.tar.gz\`
-          - macOS x64: \`typf-x86_64-apple-darwin.tar.gz\`
-          - macOS arm64: \`typf-aarch64-apple-darwin.tar.gz\`
-          - Windows x64: \`typf-x86_64-pc-windows-msvc.zip\`
-
-          ### Checksums
-          See \`SHA256SUMS\` in release assets.
-          EOF
-
-      - name: Create release
-        uses: softprops/action-gh-release@v2
+          mkdir -p dist
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            cp target/${{ matrix.target }}/release/typf.exe dist/
+          else
+            tar -czf dist/typf-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release typf
+          fi
+      - uses: actions/upload-artifact@v4
         with:
-          name: typf v${{ needs.validate.outputs.version }}
-          body_path: release-notes.md
-          draft: false
-          prerelease: ${{ needs.validate.outputs.is_prerelease == 'true' }}
-          files: release-assets/*
-          fail_on_unmatched_files: true
+          name: rust-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
 
-  # Publish to crates.io
   publish-crates:
-    name: Publish to crates.io
-    needs: [validate, create-release]
-    runs-on: ubuntu-latest
-    if: ${{ !inputs.dry_run }}
+    needs: [validate, wheels, sdist, binaries]
+    if: github.event_name == 'push' || !inputs.build_only
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish every workspace crate in dependency order
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: ./scripts/publish.sh --crates
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libharfbuzz-dev
-
-      - name: Install cargo-edit
-        run: cargo install cargo-edit
-
-      - name: Set version
-        run: |
-          cargo set-version --workspace "${{ needs.validate.outputs.version }}"
-
-      # Layer 0: No dependencies
-      - name: Publish Layer 0
-        run: |
-          cargo publish -p typf-core --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-unicode --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-
-      - name: Wait for index
-        run: sleep 30
-
-      # Layer 1: Basic crates
-      - name: Publish Layer 1
-        run: |
-          cargo publish -p typf-fontdb --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-input --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-export --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-shape-none --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-render-opixa --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-render-json --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-render-svg --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-
-      - name: Wait for index
-        run: sleep 30
-
-      # Layer 2: Advanced crates
-      - name: Publish Layer 2
-        run: |
-          cargo publish -p typf-export-svg --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-shape-hb --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-render-color --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-render-zeno --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-render-skia --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-os --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-
-      - name: Wait for index
-        run: sleep 30
-
-      # Layer 3: Platform-specific crates
-      - name: Publish Layer 3
-        run: |
-          cargo publish -p typf-shape-icu-hb --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-shape-ct --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-render-cg --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-os-mac --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-os-win --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-
-      - name: Wait for index
-        run: sleep 30
-
-      # Layer 4: Main typf crate
-      - name: Publish Layer 4
-        run: |
-          cargo publish -p typf --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-
-      - name: Wait for index
-        run: sleep 30
-
-      # Layer 5: CLI and bench
-      - name: Publish Layer 5
-        run: |
-          cargo publish -p typf-cli --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-          cargo publish -p typf-bench --no-verify --token ${{ secrets.CRATES_IO_TOKEN }} || true
-
-  # Publish to PyPI
   publish-pypi:
-    name: Publish to PyPI
-    needs: [validate, build-python, build-sdist, create-release]
-    runs-on: ubuntu-latest
-    if: ${{ !inputs.dry_run }}
+    needs: [wheels, sdist, publish-crates]
+    if: github.event_name == 'push' || !inputs.build_only
+    runs-on: ubuntu-24.04
     environment:
       name: pypi
-      url: https://pypi.org/project/typfpy/
+      url: https://pypi.org/project/typf/
     permissions:
-      id-token: write  # For trusted publishing
+      id-token: write
     steps:
-      - name: Download wheels
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           pattern: wheels-*
           path: dist
           merge-multiple: true
-
-      - name: Download sdist
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: sdist
           path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
 
-      - name: List distribution files
-        run: ls -la dist/
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          skip-existing: true
-
-  # Build and deploy documentation
-  build-docs:
-    name: Build Documentation
-    needs: [validate, create-release]
-    runs-on: ubuntu-latest
+  github-release:
+    needs: [binaries, wheels, sdist, publish-pypi]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libharfbuzz-dev
-
-      - name: Build Rust docs
-        run: cargo doc --workspace --all-features --no-deps
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/download-artifact@v4
         with:
-          python-version: '3.12'
-
-      - name: Install uv
-        run: pip install uv
-
-      - name: Build docs site
+          path: artifacts
+      - name: Collect assets and checksums
         run: |
-          if command -v zensical &>/dev/null; then
-            zensical build
-          else
-            echo "zensical not installed, skipping docs site build"
-          fi
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+          mkdir release-assets
+          find artifacts -type f -exec cp {} release-assets/ \;
+          cd release-assets
+          sha256sum ./* > SHA256SUMS
+      - uses: softprops/action-gh-release@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/doc
-          destination_dir: rustdoc
+          generate_release_notes: true
+          files: release-assets/*
+          fail_on_unmatched_files: true

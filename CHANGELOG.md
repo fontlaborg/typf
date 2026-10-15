@@ -8,6 +8,25 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
+## [5.1.0] - 2026-10-15
+
+### Release packaging
+- Align all 27 workspace packages and internal dependency requirements at 5.1.0.
+- Publish the Python distribution as `typf`, retaining `typfpy` imports and CLI compatibility; add the `typf` console command.
+- Require standard CPython 3.11+, classify through 3.14, and build `cp311-abi3` wheels.
+- Replace ignored Vello checkout dependencies with published Vello 0.0.4 crates and matching wgpu 26; preserve GPU and CPU renderers.
+- Correct the declared Rust minimum to 1.86, required by published Vello dependencies.
+- Validate checked-in versions before releases; publish every workspace crate in dependency order and stop on upload failures.
+- Build wheels and sdist from `bindings/py`, with explicit manual build-only execution that needs no registry secrets.
+- Exclude private agent notes and coordination files from distributions, remap compiler source paths, repair native dependencies, and audit payloads and macOS deployment targets.
+- Force bundled static HarfBuzz in release builds to avoid raising the macOS floor through locally installed libraries.
+- Align the root and binding Python build metadata and document the supported installation names.
+
+### Verification
+- Workspace tests and clippy with all targets pass on the local macOS host; formatting passes after normalizing existing hinting/fontdb formatting.
+- Initial stable ABI wheel passes real-font rendering with opixa, skia, zeno and Vello CPU. Final static wheel and multi-platform CI validation are recorded in the release work log.
+
+
 ### Added
 - **TrueType hinting via `typftth`.** `RenderParams` gains `hinting: HintingMode`
   (`None` | `TrueType`) and `ppem: Option<u32>`. The `opixa` backend (feature
@@ -168,6 +187,25 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Updated documentation structure and working files
 
 ## [Unreleased]
+
+## [5.1.0] - 2026-10-15
+
+### Release packaging
+- Align all 27 workspace packages and internal dependency requirements at 5.1.0.
+- Publish the Python distribution as `typf`, retaining `typfpy` imports and CLI compatibility; add the `typf` console command.
+- Require standard CPython 3.11+, classify through 3.14, and build `cp311-abi3` wheels.
+- Replace ignored Vello checkout dependencies with published Vello 0.0.4 crates and matching wgpu 26; preserve GPU and CPU renderers.
+- Correct the declared Rust minimum to 1.86, required by published Vello dependencies.
+- Validate checked-in versions before releases; publish every workspace crate in dependency order and stop on upload failures.
+- Build wheels and sdist from `bindings/py`, with explicit manual build-only execution that needs no registry secrets.
+- Exclude private agent notes and coordination files from distributions, remap compiler source paths, repair native dependencies, and audit payloads and macOS deployment targets.
+- Force bundled static HarfBuzz in release builds to avoid raising the macOS floor through locally installed libraries.
+- Align the root and binding Python build metadata and document the supported installation names.
+
+### Verification
+- Workspace tests and clippy with all targets pass on the local macOS host; formatting passes after normalizing existing hinting/fontdb formatting.
+- Initial stable ABI wheel passes real-font rendering with opixa, skia, zeno and Vello CPU. Final static wheel and multi-platform CI validation are recorded in the release work log.
+
 
 ### Fixed
 - Fixed doc comment for `get_max_bitmap_height()` in `crates/typf-core/src/lib.rs` to reflect the actual default value of 16384 pixels.

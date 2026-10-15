@@ -4,7 +4,7 @@ Python parity tests for PNG/SVG export.
 These tests verify that the Python bindings produce valid output
 matching the Rust library's behavior.
 """
-# this_file: bindings/python/tests/test_exports.py
+# this_file: bindings/py/tests/test_exports.py
 
 from pathlib import Path
 

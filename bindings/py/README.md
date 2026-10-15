@@ -2,20 +2,26 @@
 
 High-performance text rendering for Python applications.
 
+Version 5.1.0 requires standard CPython 3.11 or newer. Prebuilt stable ABI
+wheels cover Linux (glibc and musl), macOS and Windows x64. Install the `typf`
+distribution; both `import typf` and the compatible `import typfpy` work.
+The `typf` and `typfpy` commands expose the same CLI.
+Free-threaded CPython is outside this stable ABI wheel contract.
+
 ## Installation
 
 ```bash
 # Using uv (recommended)
-uv pip install typfpy
+uv pip install typf==5.1.0
 
 # Or using pip
-pip install typfpy
+pip install typf==5.1.0
 ```
 
 Or install from source with maturin:
 
 ```bash
-cd bindings/python
+cd bindings/py
 
 # Using uv (recommended)
 uv pip install maturin
@@ -280,7 +286,7 @@ typfpy info [OPTIONS]
 pip install maturin
 
 # Build and install in development mode
-cd bindings/python
+cd bindings/py
 maturin develop
 
 # Build release wheel
