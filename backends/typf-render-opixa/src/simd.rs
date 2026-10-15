@@ -4,7 +4,12 @@
 //! that power through SIMD instructions—AVX2 on new x86_64, SSE4.1 on older chips,
 //! and NEON on ARM. The result: blending that flies at >10GB/s throughput.
 
-#[cfg(target_arch = "x86_64")]
+// this_file: backends/typf-render-opixa/src/simd.rs
+
+#[cfg(all(
+    target_arch = "x86_64",
+    any(target_feature = "avx2", target_feature = "sse4.1")
+))]
 use std::arch::x86_64::*;
 
 /// AVX2 blending: 8 pixels at once for breathtaking speed

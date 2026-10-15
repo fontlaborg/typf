@@ -112,7 +112,7 @@ impl Typf {
             "none" => Arc::new(typf_shape_none::NoneShaper::new()),
             #[cfg(feature = "shaping-hb")]
             "harfbuzz" | "hb" => Arc::new(typf_shape_hb::HarfBuzzShaper::new()),
-            #[cfg(feature = "shaping-ct")]
+            #[cfg(all(feature = "shaping-ct", target_os = "macos"))]
             "coretext" | "ct" | "mac" => Arc::new(typf_shape_ct::CoreTextShaper::new()),
             #[cfg(feature = "shaping-icu-hb")]
             "icu-hb" | "icu-harfbuzz" => Arc::new(typf_shape_icu_hb::IcuHarfBuzzShaper::new()),
@@ -129,7 +129,7 @@ impl Typf {
             #[cfg(feature = "render-json")]
             "json" => Arc::new(typf_render_json::JsonRenderer::new()),
             "opixa" => Arc::new(typf_render_opixa::OpixaRenderer::new()),
-            #[cfg(feature = "render-cg")]
+            #[cfg(all(feature = "render-cg", target_os = "macos"))]
             "coregraphics" | "cg" | "mac" => Arc::new(typf_render_cg::CoreGraphicsRenderer::new()),
             #[cfg(feature = "render-skia")]
             "skia" => Arc::new(typf_render_skia::SkiaRenderer::new()),

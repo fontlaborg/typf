@@ -27,6 +27,23 @@ def main():
         raise RuntimeError("Smoke test requires a real font file")
     assert typf.Typf is typfpy.Typf, "Both imports must expose the same API"
     assert typf.__version__ == importlib.metadata.version("typf")
+    if sys.platform == "darwin":
+        native_pipeline = typf.Typf(shaper="coretext", renderer="coregraphics")
+        native_image = native_pipeline.render_text("CoreText Typf", str(font), size=36)
+        assert any(native_image["data"][3::4]), (
+            "CoreText/CoreGraphics produced no visible pixels"
+        )
+    else:
+        for backend in (
+            {"shaper": "coretext"},
+            {"shaper": "none", "renderer": "coregraphics"},
+        ):
+            try:
+                typf.Typf(**backend)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(f"macOS backend unexpectedly available: {backend}")
     for renderer in ("opixa", "skia", "zeno", "vello-cpu"):
         image = typf.Typf(shaper="harfbuzz", renderer=renderer).render_text(
             "Typf AV fi", str(font), size=36

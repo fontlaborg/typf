@@ -45,6 +45,14 @@ Official documentation consulted: PyO3 0.22 building/distribution, Maturin layou
 
 Fresh local verification: 557 Rust tests pass, 18 ignored; workspace all-target/all-feature clippy passes; seven release regression tests pass; both uv locks check; actionlint, format and Ruff pass. The rebuilt ABI3 wheel passes 28 Python tests on each of 3.11–3.14, plus four portable renderer and native macOS linra smoke tests with the pinned font. Rebuilt wheel/sdist pass artifact and Twine checks. Full Linux wheels, Windows runtime, and the replacement Windows CLI privacy audit require the controller's CI rerun; these are not claimed verified locally.
 
+## Review correction round 2
+
+- Audited every OS-native backend reference in the Python binding. CoreText and CoreGraphics constructor arms now require macOS as well as their Cargo feature, matching the already-correct native linra guards. Their direct dependencies now live in the macOS target table; Mac native defaults remain enabled.
+- Matched the x86 SIMD intrinsic import to the AVX2/SSE4.1 implementation guards, removing the generic x64 Linux unused-import warning without changing blending.
+- Reproduced the two original binding errors locally, then checked the whole binding source on GNU/musl x64/arm64 and Windows MSVC with all renderer/native features enabled. Cross checks omit the two C-backed HarfBuzz shapers because a cross C++ sysroot is unavailable; the next configured CI wheel build remains required.
+- Added a runtime-platform regression for CoreText/CoreGraphics availability. The installed-wheel smoke also exercises their real-font render on macOS and requires their rejection on other platforms.
+- Fresh local Mac ABI3 wheel: 29 Python tests pass, plus pinned-font portable/native smoke. Workspace all-target/all-feature clippy, targeted opixa tests, generic x64 Linux opixa clippy, release helper tests, lock checks and formatting pass.
+
 ---
 
 # Current Work Session

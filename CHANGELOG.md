@@ -26,6 +26,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 - Separate tag asset releases from explicit manual registry uploads, and validate both Python lockfiles.
 - Enforce exact sdist metadata before uploading and audit native CLI payloads as well as Python distributions.
 - Make the native dispatcher compile on unsupported platforms without advertising native rendering; gate Python native dependencies and exports by OS.
+- Gate CoreText/CoreGraphics Python constructors and direct dependencies to macOS while keeping native Mac defaults; cover runtime availability and native rendering in installed-wheel checks.
+- Gate x86 intrinsic imports with the same AVX2/SSE4.1 conditions as their implementations.
 - Repair Windows 0.58 signatures, COM thread ownership, caller-font loading and BGRA output conversion while retaining DirectWrite rendering.
 - Exercise installed musllinux wheels and macOS/Windows native rendering with a pinned Noto Sans fixture instead of varying system fonts.
 
