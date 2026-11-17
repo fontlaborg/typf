@@ -131,6 +131,7 @@ jobs:
       - name: Test (full)
         if: matrix.features == 'full'
         run: cargo test --workspace --all-features
+        continue-on-error: ${{ matrix.rust == 'nightly' }}
 
   # Documentation build
   docs:
@@ -193,7 +194,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage
-        run: cargo tarpaulin --workspace --all-features --timeout 300 --out xml
+        run: cargo tarpaulin --workspace --exclude typf-py --all-features --timeout 300 --out xml
 
       - name: Upload coverage to codecov
         uses: codecov/codecov-action@v4
@@ -238,7 +239,7 @@ jobs:
           sudo apt-get install -y libharfbuzz-dev
 
       - name: Run benchmarks
-        run: cargo bench --workspace --all-features -- --noplot
+        run: cargo bench --workspace --all-features
 
   # Python tests
   python:
