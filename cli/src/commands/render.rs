@@ -38,12 +38,18 @@ pub fn run(args: &RenderArgs) -> Result<()> {
     // Check if using linra (single-pass) renderer
     // "auto" now defaults to linra if available (unless SVG output requested)
     let use_linra = if normalized_renderer == "auto" {
-        // Auto-select: use linra if available, but not for SVG output
-        #[cfg(feature = "linra")]
+        // Auto-select: use linra if a platform backend exists, but not for SVG output
+        #[cfg(any(
+            all(feature = "linra-mac", target_os = "macos"),
+            all(feature = "linra-win", target_os = "windows")
+        ))]
         {
             !matches!(args.format, OutputFormat::Svg)
         }
-        #[cfg(not(feature = "linra"))]
+        #[cfg(not(any(
+            all(feature = "linra-mac", target_os = "macos"),
+            all(feature = "linra-win", target_os = "windows")
+        )))]
         {
             false
         }

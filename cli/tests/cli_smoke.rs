@@ -719,7 +719,8 @@ fn test_batch_job_with_png4_format_succeeds() {
 
     let jsonl = format!(
         "{{\"text\":\"Hello\",\"font\":\"{}\",\"format\":\"png4\",\"output\":\"{}\"}}\n",
-        font.display(),
+        // Forward slashes keep Windows paths valid inside the JSON string.
+        font.display().to_string().replace('\\', "/"),
         output_name
     );
     fs::write(&input_file, jsonl).expect("Failed to write batch job input");
