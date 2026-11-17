@@ -12,6 +12,8 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib"]
 name = "typf"
+# Same lib name as the `typf` crate; skip it in `cargo doc --workspace`.
+doc = false
 
 [dependencies]
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py311"] }
@@ -22,7 +24,7 @@ typf-export = { workspace = true }
 typf-export-svg = { path = "../../export-svg", version = "5.1.0", optional = true }
 typf-fontdb = { workspace = true }
 typf-render-json = { workspace = true, optional = true }
-typf-render-opixa = { workspace = true, optional = true }
+typf-render-opixa = { workspace = true }
 typf-render-skia = { workspace = true, optional = true }
 typf-render-zeno = { workspace = true, optional = true }
 typf-render-vello-cpu = { workspace = true, optional = true }
@@ -64,7 +66,8 @@ linra-mac = ["linra", "typf-os-mac"]
 linra-win = ["linra", "typf-os-win"]
 render-cg = ["typf-render-cg", "typf/render-cg"]
 render-json = ["typf-render-json", "typf/render-json"]
-render-opixa = ["typf-render-opixa", "typf/render-opixa"]
+# Opixa is the always-available default renderer (like the "none" shaper).
+render-opixa = ["typf/render-opixa"]
 render-skia = ["typf-render-skia", "typf/render-skia"]
 render-zeno = ["typf-render-zeno", "typf/render-zeno"]
 render-vello-cpu = ["typf-render-vello-cpu", "typf/render-vello-cpu"]
