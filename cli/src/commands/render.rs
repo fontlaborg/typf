@@ -59,11 +59,11 @@ pub fn run(args: &RenderArgs) -> Result<()> {
         // Fall back to the matching system shaper for consistent results.
         let fallback = match normalized_renderer.as_str() {
             "linra-mac" | "linra" => {
-                #[cfg(feature = "shaping-ct")]
+                #[cfg(all(feature = "shaping-ct", target_os = "macos"))]
                 {
                     Some("ct")
                 }
-                #[cfg(not(feature = "shaping-ct"))]
+                #[cfg(not(all(feature = "shaping-ct", target_os = "macos")))]
                 {
                     Some("hb")
                 }
@@ -934,7 +934,7 @@ fn select_shaper(shaper_name: &str) -> Result<Arc<dyn Shaper + Send + Sync>> {
         #[cfg(feature = "shaping-hb")]
         "hb" | "harfbuzz" => Ok(Arc::new(typf_shape_hb::HarfBuzzShaper::new())),
 
-        #[cfg(feature = "shaping-ct")]
+        #[cfg(all(feature = "shaping-ct", target_os = "macos"))]
         "ct" | "coretext" | "mac" => Ok(Arc::new(typf_shape_ct::CoreTextShaper::new())),
 
         #[cfg(feature = "shaping-icu-hb")]
@@ -953,7 +953,7 @@ fn select_renderer(renderer_name: &str) -> Result<Arc<dyn Renderer + Send + Sync
 
         "svg" => Ok(Arc::new(SvgRenderer::new())),
 
-        #[cfg(feature = "render-cg")]
+        #[cfg(all(feature = "render-cg", target_os = "macos"))]
         "cg" | "coregraphics" | "mac" => Ok(Arc::new(typf_render_cg::CoreGraphicsRenderer::new())),
 
         #[cfg(feature = "render-skia")]
@@ -989,7 +989,7 @@ fn is_linra_renderer(renderer_name: &str) -> bool {
 #[cfg(feature = "linra")]
 fn select_linra_renderer(renderer_name: &str) -> Result<Arc<dyn LinraRenderer>> {
     match renderer_name {
-        #[cfg(feature = "linra-mac")]
+        #[cfg(all(feature = "linra-mac", target_os = "macos"))]
         "auto" | "linra" | "linra-mac" | "linra-os" => {
             Ok(Arc::new(typf_os_mac::CoreTextLinraRenderer::new()))
         },

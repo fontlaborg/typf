@@ -18,7 +18,7 @@ use typf_fontdb::TypfFontFace;
 use typf_render_opixa::OpixaRenderer;
 use typf_shape_none::NoneShaper;
 
-#[cfg(feature = "render-cg")]
+#[cfg(all(feature = "render-cg", target_os = "macos"))]
 use typf_render_cg::CoreGraphicsRenderer;
 #[cfg(feature = "render-skia")]
 use typf_render_skia::SkiaRenderer;
@@ -28,7 +28,7 @@ use typf_render_vello::VelloRenderer;
 use typf_render_vello_cpu::VelloCpuRenderer;
 #[cfg(feature = "render-zeno")]
 use typf_render_zeno::ZenoRenderer;
-#[cfg(feature = "shaping-ct")]
+#[cfg(all(feature = "shaping-ct", target_os = "macos"))]
 use typf_shape_ct::CoreTextShaper;
 #[cfg(feature = "shaping-hb")]
 use typf_shape_hb::HarfBuzzShaper;
@@ -286,7 +286,7 @@ impl BenchmarkRunner {
         #[cfg(feature = "shaping-hb")]
         shapers.push(Arc::new(HarfBuzzShaper::new()));
 
-        #[cfg(feature = "shaping-ct")]
+        #[cfg(all(feature = "shaping-ct", target_os = "macos"))]
         shapers.push(Arc::new(CoreTextShaper::new()));
 
         #[cfg(feature = "shaping-icu-hb")]
@@ -307,7 +307,7 @@ impl BenchmarkRunner {
         #[cfg(feature = "render-zeno")]
         renderers.push(Arc::new(ZenoRenderer::new()));
 
-        #[cfg(feature = "render-cg")]
+        #[cfg(all(feature = "render-cg", target_os = "macos"))]
         renderers.push(Arc::new(CoreGraphicsRenderer::new()));
 
         #[cfg(feature = "render-vello-cpu")]
