@@ -288,7 +288,7 @@ impl<'a> GlyphIterator<'a> {
     }
 }
 
-impl<'a> Iterator for GlyphIterator<'a> {
+impl Iterator for GlyphIterator<'_> {
     type Item = PositionedGlyphC;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -307,7 +307,7 @@ impl<'a> Iterator for GlyphIterator<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for GlyphIterator<'a> {}
+impl ExactSizeIterator for GlyphIterator<'_> {}
 
 // =============================================================================
 // Stage 5: Mesh ABI for GPU Upload

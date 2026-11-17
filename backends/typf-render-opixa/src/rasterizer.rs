@@ -363,7 +363,7 @@ impl<'a> GlyphRasterizer<'a> {
             y_offset: f32,
         }
 
-        impl<'p> skrifa::outline::OutlinePen for TransformPen<'p> {
+        impl skrifa::outline::OutlinePen for TransformPen<'_> {
             fn move_to(&mut self, x: f32, y: f32) {
                 let tx = x * self.scale + self.x_offset;
                 let ty = -y * self.scale + self.y_offset; // Flip Y for bitmap coordinates
