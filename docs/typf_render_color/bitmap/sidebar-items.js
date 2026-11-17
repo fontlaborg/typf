@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BitmapRenderError"],"fn":["get_bitmap_sizes","has_bitmap_glyphs","render_bitmap_glyph","render_bitmap_glyph_or_outline","render_bitmap_glyph_scaled"],"struct":["ScaledBitmapGlyph"]};

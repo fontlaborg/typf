@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["SvgRenderError"],"fn":["get_svg_document","has_svg_glyphs","render_svg_glyph","render_svg_glyph_with_palette","render_svg_glyph_with_palette_and_ppem"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_CACHE_MAX_BYTES"],"fn":["get_cache_manager","get_cache_max_bytes"],"struct":["CacheManager","CacheMetrics","CacheStats","MultiLevelCache","RenderOutputCache"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FLATNESS_THRESHOLD"],"fn":["compute_cubic_flatness","compute_quadratic_flatness","subdivide_cubic","subdivide_quadratic"]};

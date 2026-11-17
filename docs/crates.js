@@ -1,0 +1,2 @@
+window.ALL_CRATES = ["typf","typf_bench","typf_cli","typf_core","typf_export","typf_export_svg","typf_fontdb","typf_input","typf_os","typf_os_mac","typf_os_win","typf_render_cg","typf_render_color","typf_render_json","typf_render_opixa","typf_render_skia","typf_render_svg","typf_render_vello","typf_render_vello_cpu","typf_render_zeno","typf_shape_ct","typf_shape_hb","typf_shape_hr","typf_shape_icu_hb","typf_shape_none","typf_unicode"];
+//{"start":21,"fragment_lengths":[6,13,11,12,14,18,14,13,10,14,14,17,20,19,20,19,18,20,24,19,16,16,16,20,18,15]}

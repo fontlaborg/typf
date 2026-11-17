@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["typf",[["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"typf/commands/batch/struct.BatchJob.html\" title=\"struct typf::commands::batch::BatchJob\">BatchJob</a>",0]]],["typf_bench",[["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"typf_bench/struct.BenchmarkOutput.html\" title=\"struct typf_bench::BenchmarkOutput\">BenchmarkOutput</a>",0],["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"typf_bench/struct.BenchmarkResult.html\" title=\"struct typf_bench::BenchmarkResult\">BenchmarkResult</a>",0]]],["typf_render_json",[["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"typf_render_json/struct.HbGlyphInfo.html\" title=\"struct typf_render_json::HbGlyphInfo\">HbGlyphInfo</a>",0],["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"typf_render_json/struct.JsonOutput.html\" title=\"struct typf_render_json::JsonOutput\">JsonOutput</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[313,625,628]}

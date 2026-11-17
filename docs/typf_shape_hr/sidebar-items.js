@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["CacheStats","HarfrustShaper","ShapingCache","ShapingCacheKey"],"type":["SharedShapingCache"]};

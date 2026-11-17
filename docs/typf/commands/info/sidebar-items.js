@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ALL_RENDERERS","ALL_SHAPERS"],"fn":["print_combinations","print_font","print_formats","print_renderers","print_shapers","run"]};

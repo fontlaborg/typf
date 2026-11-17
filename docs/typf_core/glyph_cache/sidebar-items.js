@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["GlyphCache","GlyphCacheKey"],"type":["SharedGlyphCache"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_FONT_FILE_BYTES"],"fn":["read_to_string_with_limit","validate_file_size_limit"]};

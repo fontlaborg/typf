@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["typf",[]],["typf_render_json",[["impl Renderer for <a class=\"struct\" href=\"typf_render_json/struct.JsonRenderer.html\" title=\"struct typf_render_json::JsonRenderer\">JsonRenderer</a>",0]]],["typf_render_opixa",[["impl Renderer for <a class=\"struct\" href=\"typf_render_opixa/struct.OpixaRenderer.html\" title=\"struct typf_render_opixa::OpixaRenderer\">OpixaRenderer</a>",0]]],["typf_render_skia",[["impl Renderer for <a class=\"struct\" href=\"typf_render_skia/struct.SkiaRenderer.html\" title=\"struct typf_render_skia::SkiaRenderer\">SkiaRenderer</a>",0]]],["typf_render_svg",[["impl Renderer for <a class=\"struct\" href=\"typf_render_svg/struct.SvgRenderer.html\" title=\"struct typf_render_svg::SvgRenderer\">SvgRenderer</a>",0]]],["typf_render_vello",[["impl Renderer for <a class=\"struct\" href=\"typf_render_vello/struct.VelloRenderer.html\" title=\"struct typf_render_vello::VelloRenderer\">VelloRenderer</a>",0]]],["typf_render_vello_cpu",[["impl Renderer for <a class=\"struct\" href=\"typf_render_vello_cpu/struct.VelloCpuRenderer.html\" title=\"struct typf_render_vello_cpu::VelloCpuRenderer\">VelloCpuRenderer</a>",0]]],["typf_render_zeno",[["impl Renderer for <a class=\"struct\" href=\"typf_render_zeno/struct.ZenoRenderer.html\" title=\"struct typf_render_zeno::ZenoRenderer\">ZenoRenderer</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[11,183,189,183,177,189,210,183]}

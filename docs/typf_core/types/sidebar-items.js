@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BitmapFormat","Direction","GlyphType","PathOp","RenderOutput","VectorFormat"],"struct":["BitmapData","FontMetrics","GeometryData","GlyphPath","PositionedGlyph","SegmentOptions","ShapingResult","TextRun","VariationAxis","VectorData"],"type":["GlyphId"]};

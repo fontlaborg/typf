@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["parse_batch_backend","parse_batch_font_path","parse_batch_language","parse_optional_trimmed","parse_output_format","process_job","resolve_output_file","run","validate_output_pattern","validate_relative_output_path"],"struct":["BatchJob"]};

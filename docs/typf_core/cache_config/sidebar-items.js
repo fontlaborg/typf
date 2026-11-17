@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["clear_all_caches","is_caching_enabled","scoped_caching_enabled","set_caching_enabled"],"struct":["ScopedCachingEnabled"]};

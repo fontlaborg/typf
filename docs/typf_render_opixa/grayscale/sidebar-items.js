@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["GrayscaleLevel"],"fn":["render_grayscale","render_grayscale_direct"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DirectionC"],"struct":["GlyphIterator","GlyphMesh","PositionedGlyphC","RenderMesh","ShapingResultC","Vertex2D","VertexColor","VertexUV"]};
