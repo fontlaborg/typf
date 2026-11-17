@@ -66,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-14, windows-latest]
+        os: [ubuntu-24.04, macos-15, windows-latest]
         rust: [stable]
         features: [default, minimal, full]
         include:
@@ -79,6 +79,9 @@ jobs:
             rust: nightly
             features: full
     runs-on: ${{ matrix.os }}
+    env:
+      # Windows runners expose a software GPU adapter that crashes wgpu tests.
+      TYPF_SKIP_GPU_TESTS: ${{ startsWith(matrix.os, 'windows') && '1' || '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -194,7 +197,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage
-        run: cargo tarpaulin --workspace --exclude typf-py --all-features --timeout 300 --out xml
+        run: cargo tarpaulin --engine llvm --workspace --exclude typf-py --all-features --timeout 300 --out xml
 
       - name: Upload coverage to codecov
         uses: codecov/codecov-action@v4
