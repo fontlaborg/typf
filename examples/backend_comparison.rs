@@ -10,7 +10,7 @@
 //! cargo run --example backend_comparison --features shaping-hb
 //! ```
 //!
-//! Community project by FontLab - https://www.fontlab.org/
+//! Community project by FontLab - <https://www.fontlab.org/>
 
 use std::sync::Arc;
 use typf_core::{

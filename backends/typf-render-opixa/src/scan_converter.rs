@@ -257,7 +257,7 @@ impl ScanConverter {
 
     /// Rasterize outline to grayscale bitmap (allocating).
     ///
-    /// Returns a new Vec<u8> containing grayscale pixels (0 = white, 255 = black).
+    /// Returns a new `Vec<u8>` containing grayscale pixels (0 = white, 255 = black).
     pub fn rasterize(&mut self) -> Vec<u8> {
         let mut mono = vec![0u8; self.width * self.height];
         self.render_mono(&mut mono);

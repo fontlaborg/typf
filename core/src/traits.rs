@@ -27,7 +27,7 @@
 //!
 //! A [`Shaper`] reads the font's OpenType rules (GSUB/GPOS tables) and figures
 //! out *which* glyph IDs to use, in *what order*, at *what positions*. The
-//! result is a [`ShapingResult`][crate::types::ShapingResult]: a flat list of
+//! result is a [`ShapingResult`]: a flat list of
 //! glyph IDs each carrying an (x, y) offset from the run origin.
 //!
 //! ## What "rendering" means
@@ -39,7 +39,7 @@
 //!
 //! ## What "exporting" means
 //!
-//! The rendered pixels or paths live in memory as a [`RenderOutput`][crate::types::RenderOutput].
+//! The rendered pixels or paths live in memory as a [`RenderOutput`].
 //! An [`Exporter`] encodes that into bytes you can write to disk — PNG, PNM,
 //! SVG, JSON, etc.
 
@@ -228,7 +228,7 @@ pub trait Shaper: Send + Sync {
 
     /// Turn `text` into a list of positioned glyphs using `font` and `params`.
     ///
-    /// The returned [`ShapingResult`] contains one [`PositionedGlyph`][crate::types::PositionedGlyph]
+    /// The returned [`ShapingResult`] contains one [`PositionedGlyph`]
     /// per rendered glyph (which may differ in count from the input codepoints —
     /// ligatures merge multiple codepoints; some scripts expand one codepoint
     /// into several glyphs).
@@ -261,8 +261,8 @@ pub trait Shaper: Send + Sync {
 /// - **Rasterizes** the curves into a pixel grid with anti-aliasing, or
 /// - **Traces** the curves into SVG path data for vector output.
 ///
-/// The output is a [`RenderOutput`] — either a [`BitmapData`][crate::types::BitmapData]
-/// (RGBA pixels) or [`VectorData`][crate::types::VectorData] (SVG/PDF text).
+/// The output is a [`RenderOutput`] — either a [`BitmapData`]
+/// (RGBA pixels) or [`VectorData`] (SVG/PDF text).
 ///
 /// ## Available implementations
 ///

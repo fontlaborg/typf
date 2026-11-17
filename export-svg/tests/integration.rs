@@ -1,6 +1,6 @@
 //! Integration tests for SVG exporter
 //!
-//! Community project by FontLab - https://www.fontlab.org/
+//! Community project by FontLab - <https://www.fontlab.org/>
 
 // this_file: crates/typf-export-svg/tests/integration.rs
 

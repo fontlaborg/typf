@@ -422,7 +422,7 @@ pub mod types {
 
 /// Parameters that control how text is shaped (step 1 of the pipeline).
 ///
-/// Pass this to [`Shaper::shape`][crate::traits::Shaper::shape]. The shaper
+/// Pass this to [`Shaper::shape`]. The shaper
 /// reads these values to select the right OpenType features, script-processing
 /// rules, and language-specific behaviour.
 ///
@@ -650,7 +650,7 @@ impl Default for GlyphSourcePreference {
 
 /// Parameters that control how shaped glyphs are drawn (step 2 of the pipeline).
 ///
-/// Pass this to [`Renderer::render`][crate::traits::Renderer::render]. The
+/// Pass this to [`Renderer::render`]. The
 /// renderer reads these values to control colors, anti-aliasing, output mode,
 /// and which glyph data to read from color fonts.
 #[derive(Debug, Clone)]

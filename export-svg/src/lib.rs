@@ -15,7 +15,7 @@
 //!
 //! - `bitmap-embed` - Enables embedding bitmap glyphs (CBDT/sbix) as base64 PNG `<image>` elements
 //!
-//! Community project by FontLab - https://www.fontlab.org/
+//! Community project by FontLab - <https://www.fontlab.org/>
 
 // this_file: crates/typf-export-svg/src/lib.rs
 

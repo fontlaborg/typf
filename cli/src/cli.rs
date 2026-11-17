@@ -123,6 +123,8 @@ pub struct RenderArgs {
     #[arg(short = 'L', long = "line-height", default_value = "120")]
     pub line_height: u32,
 
+    // Doc text doubles as clap help, so keep the literal placeholders.
+    #[allow(rustdoc::invalid_html_tags)]
     /// Canvas size spec: <width>x<height>, <width>x, x<height>, or none
     #[arg(short = 'W', long = "width-height", default_value = "none")]
     pub width_height: String,
