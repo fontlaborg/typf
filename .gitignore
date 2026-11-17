@@ -91,7 +91,6 @@ typf-tester/output/*.png
 typf-tester/output/*.svg
 typf-tldr.txt
 test.ppm
-test-fonts/
 /.claude
 
 # MAD agent files (never commit)
@@ -103,3 +102,7 @@ test-fonts/
 
 # Worktrees directory
 worktrees/
+
+# OFL test fixtures (see test-fonts/README.md)
+!test-fonts/*.ttf
+!test-fonts/*.otf
