@@ -92,21 +92,25 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: clippy
 
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.features }}
-
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libharfbuzz-dev
+          echo "HB_VERSION=$(dpkg-query -W -f='${Version}' libharfbuzz-dev)" >> "$GITHUB_ENV"
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install harfbuzz
+          echo "HB_VERSION=$(brew list --versions harfbuzz | tr ' ' '-')" >> "$GITHUB_ENV"
+
+      # Build scripts cache absolute harfbuzz link paths (e.g. the Homebrew
+      # Cellar version), so key the cache on the installed harfbuzz version.
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.features }}-hb-${{ env.HB_VERSION }}
 
       - name: Clippy (minimal)
         if: matrix.features == 'minimal'
