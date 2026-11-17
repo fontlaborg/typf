@@ -87,6 +87,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
+          components: clippy
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -212,7 +213,7 @@ jobs:
 
       - name: Build minimal release binary
         run: |
-          cargo build --release --package typf-cli --no-default-features --features minimal
+          cargo build --release --package typf-cli --no-default-features
           ls -lh target/release/typf
           size_kb=$(du -k target/release/typf | cut -f1)
           echo "Binary size: ${size_kb}KB"
