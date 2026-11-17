@@ -91,8 +91,21 @@ fn simple_shaping_result() -> ShapingResult {
     }
 }
 
+/// True when `TYPF_SKIP_GPU_TESTS` is set. Some CI runners (Windows) expose a
+/// software adapter that crashes the process instead of returning an error.
+fn gpu_tests_disabled() -> bool {
+    let disabled = std::env::var_os("TYPF_SKIP_GPU_TESTS").is_some_and(|v| !v.is_empty());
+    if disabled {
+        eprintln!("Skipping GPU test: TYPF_SKIP_GPU_TESTS is set");
+    }
+    disabled
+}
+
 /// Try to create a GPU renderer, skipping test if no GPU available
 fn try_create_renderer() -> Option<VelloRenderer> {
+    if gpu_tests_disabled() {
+        return None;
+    }
     match VelloRenderer::new() {
         Ok(r) => Some(r),
         Err(e) => {
@@ -106,6 +119,9 @@ fn try_create_renderer() -> Option<VelloRenderer> {
 fn test_vello_renderer_creation() {
     // This test verifies we can at least attempt to create a renderer
     // It may fail if no GPU is available, which is acceptable
+    if gpu_tests_disabled() {
+        return;
+    }
     let result = VelloRenderer::new();
     match result {
         Ok(renderer) => {
@@ -287,6 +303,9 @@ fn test_vello_with_custom_config() {
         power_preference: wgpu::PowerPreference::LowPower,
         ..Default::default()
     };
+    if gpu_tests_disabled() {
+        return;
+    }
 
     match VelloRenderer::with_config(config) {
         Ok(renderer) => {

@@ -79,6 +79,8 @@ fn check_golden(name: &str, actual: &str) {
             )
         });
 
+        // Windows checkouts may convert golden files to CRLF.
+        let expected = expected.replace("\r\n", "\n");
         if actual.trim() != expected.trim() {
             eprintln!("=== EXPECTED ===");
             eprintln!("{}", expected);
