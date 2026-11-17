@@ -22,6 +22,13 @@ python="${PYTHON:-python3}"
 if "$crates"; then
     order=$("$python" scripts/release.py order)
     while IFS= read -r package; do
+        version=$(cargo metadata --no-deps --format-version 1 \
+            | "$python" -c 'import json,sys; p=sys.argv[1]; print(next(x["version"] for x in json.load(sys.stdin)["packages"] if x["name"]==p))' "$package")
+        if curl -fsS -A "typf-release (github.com/fontlaborg/typf)" \
+            "https://crates.io/api/v1/crates/$package/$version" >/dev/null 2>&1; then
+            echo "skip $package $version (already on crates.io)"
+            continue
+        fi
         if "$dry_run"; then
             echo "cargo publish --locked -p $package"
         else
