@@ -1,0 +1,5 @@
+# cargo-audit configuration (mirrors deny.toml [advisories].ignore)
+[advisories]
+# pyo3 0.22 advisories. Neither affected API (`PyString::from_object`,
+# `PyCFunction::new_closure`) is used by typf. Remove once pyo3 is upgraded.
+ignore = ["RUSTSEC-2025-0020", "RUSTSEC-2026-0177"]

@@ -59,7 +59,7 @@ icu_properties = "2.1"
 icu_segmenter = "2.1"
 kurbo = "0.11"
 log = "0.4"
-lru = "0.16"
+lru = "0.18"
 # High-performance cache with TinyLFU (scan-resistant)
 moka = { version = "0.12", features = ["sync"] }
 # macOS objc2 ecosystem
