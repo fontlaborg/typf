@@ -8,6 +8,24 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html/).
 
 ## [Unreleased]
 
+## [5.1.1] - 2026-11-17
+
+### Fixed
+- `renderer=auto` selects linra only where a macOS or Windows backend exists, so Linux no longer picks an unavailable renderer.
+- The Python bindings always include the Opixa renderer, so builds without default features work.
+- CoreText, CoreGraphics and linra-mac code in the CLI and `typf-bench` compiles only on macOS.
+- Rust 1.86 builds again: `zune-jpeg` is pinned to 0.5.6, and lints flagged by clippy 1.86 are fixed.
+- Rustdoc warnings that failed the docs build are fixed, and the bindings crate no longer clashes with `typf` in `cargo doc`.
+
+### Changed
+- `lru` 0.16 → 0.18 and `crossbeam-epoch` 0.9.21 to clear security advisories; `deny.toml` uses the cargo-deny v2 schema.
+- The SSIM test fonts in `test-fonts/` (SIL OFL) are now committed.
+- Golden-file tests ignore CRLF line endings; `TYPF_SKIP_GPU_TESTS` skips the Vello GPU tests.
+- CI and release builds run macOS jobs on `macos-15`.
+
+### Known issues
+- pyo3 0.22 advisories RUSTSEC-2025-0020 and RUSTSEC-2026-0177 are ignored; typf does not call the affected functions. Fixing them needs pyo3 0.30.
+
 ## [5.1.0] - 2026-10-15
 
 ### Release packaging

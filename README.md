@@ -1,5 +1,5 @@
 <!-- this_file: README.md -->
-# Typf v5.1.0
+# Typf v5.1.1
 
 [![CI](https://github.com/fontlaborg/typf/workflows/CI/badge.svg)](https://github.com/fontlaborg/typf/actions)
 [![Rust](https://img.shields.io/badge/rust-1.86%2B-orange.svg)](https://www.rust-lang.org)

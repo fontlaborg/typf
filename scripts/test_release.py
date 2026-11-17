@@ -52,19 +52,19 @@ class ReleaseTests(unittest.TestCase):
                 archive.addfile(member, io.BytesIO(payload))
 
     def test_sdist_release_identity(self):
-        valid = "Metadata-Version: 2.1\nName: typf\nVersion: 5.1.0\nRequires-Python: >=3.11\n"
+        valid = "Metadata-Version: 2.1\nName: typf\nVersion: 5.1.1\nRequires-Python: >=3.11\n"
         cases = [
-            ("valid", [("typf-5.1.0/PKG-INFO", valid)], False),
+            ("valid", [("typf-5.1.1/PKG-INFO", valid)], False),
             (
                 "old version",
-                [("typf-5.1.0/PKG-INFO", valid.replace("5.1.0", "5.0.16"))],
+                [("typf-5.1.1/PKG-INFO", valid.replace("5.1.1", "5.0.16"))],
                 True,
             ),
             (
                 "other project",
                 [
                     (
-                        "typf-5.1.0/PKG-INFO",
+                        "typf-5.1.1/PKG-INFO",
                         valid.replace("Name: typf", "Name: unrelated"),
                     )
                 ],
@@ -72,19 +72,19 @@ class ReleaseTests(unittest.TestCase):
             ),
             (
                 "old Python",
-                [("typf-5.1.0/PKG-INFO", valid.replace(">=3.11", ">=3.9"))],
+                [("typf-5.1.1/PKG-INFO", valid.replace(">=3.11", ">=3.9"))],
                 True,
             ),
-            ("missing metadata", [("typf-5.1.0/README.md", "hello")], True),
-            ("nested metadata", [("typf-5.1.0/nested/PKG-INFO", valid)], True),
+            ("missing metadata", [("typf-5.1.1/README.md", "hello")], True),
+            ("nested metadata", [("typf-5.1.1/nested/PKG-INFO", valid)], True),
             (
                 "ambiguous metadata",
-                [("typf-5.1.0/PKG-INFO", valid), ("other/PKG-INFO", valid)],
+                [("typf-5.1.1/PKG-INFO", valid), ("other/PKG-INFO", valid)],
                 True,
             ),
         ]
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "typf-5.1.0.tar.gz"
+            path = Path(directory) / "typf-5.1.1.tar.gz"
             for name, records, rejected in cases:
                 with self.subTest(name=name):
                     self.make_sdist(path, records)
@@ -129,7 +129,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_private_payload_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
-            archive = Path(directory) / "typf-5.1.0-cp311-abi3-test.whl"
+            archive = Path(directory) / "typf-5.1.1-cp311-abi3-test.whl"
             with zipfile.ZipFile(archive, "w") as wheel:
                 wheel.writestr("typf/.env", "secret")
             with self.assertRaisesRegex(ValueError, "Private"):
